@@ -1,0 +1,10 @@
+---
+description: Always read AGENTS.md at the start of work on this project
+alwaysApply: true
+---
+
+# Read AGENTS.md First
+
+At the start of any work on this project, **read AGENTS.md** (project root).
+
+AGENTS.md is the single source of project context, mission structure, Eden callouts, GUI conventions, implemented patterns, and guidelines. Following it ensures edits stay consistent and leverage existing best practices.

@@ -1,0 +1,315 @@
+class Header {
+    gameType = "Coop";
+    minPlayers = 1;
+    maxPlayers = 8;
+};
+
+respawn = 2;           // BASE -- respawn at base marker
+respawnDelay = 10;
+respawnOnStart = -1;
+respawnTemplates[] = { "Base", "Spectator" };
+
+// Face's Dynamic Sandbox GUI -- base controls (import can fail with some mod combinations)
+#include "rsc\BaseControls.hpp"
+
+// Display base -- must be defined before use (game class can be undefined with mod combos)
+class RscDisplayEmpty { idd = -1; movingEnable = 1; enableSimulation = 1; };
+
+// Manage Vehicles dialog -- larger, easier to use, aligned buttons (layout aligned with Missions/Scenario)
+class RscDisplayVehicle: RscDisplayEmpty {
+    idd = 60001;
+    movingEnable = 1;
+    enableSimulation = 1;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]); };";
+    class controlsBackground {
+        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.96; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
+        class Title: RscText { idc = -1; text = "MANAGE VEHICLES"; x = 0.02; y = 0.02; w = 0.96; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+    };
+    class controls {
+        // Filter row: labels above boxes. Faction 50% wider, Search moved right
+        class CatLabel: RscText { idc = -1; text = "Type"; x = 0.03; y = 0.07; w = 0.14; h = 0.03; sizeEx = 0.032; };
+        class CatList: RscListBox { idc = 60170; x = 0.03; y = 0.10; w = 0.14; h = 0.10; rowHeight = 0.045; sizeEx = 0.035; onLBSelChanged = "['categoryChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class FactionLabel: RscText { idc = -1; text = "Faction"; x = 0.19; y = 0.07; w = 0.42; h = 0.03; sizeEx = 0.032; };
+        class FactionList: RscListBox { idc = 60181; x = 0.19; y = 0.10; w = 0.42; h = 0.10; rowHeight = 0.045; sizeEx = 0.035; onLBSelChanged = "['filterChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class SearchLabel: RscText { idc = -1; text = "Search"; x = 0.63; y = 0.07; w = 0.20; h = 0.03; sizeEx = 0.032; };
+        class SearchEdit: RscEdit { idc = 60180; x = 0.63; y = 0.10; w = 0.33; h = 0.045; sizeEx = 0.035; onKeyUp = "['filterChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        // Left panel: Select vehicle + preview (no vehicle info box)
+        class VehicleListLabel: RscText { idc = -1; text = "Select vehicle"; x = 0.03; y = 0.22; w = 0.46; h = 0.03; sizeEx = 0.03; };
+        class VehicleList: RscListBox { idc = 60100; x = 0.03; y = 0.25; w = 0.46; h = 0.48; rowHeight = 0.038; sizeEx = 0.033; onLBSelChanged = "['heliSel', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]); ['updateButtons', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class VehiclePreview: RscPicture { idc = 60101; x = 0.03; y = 0.75; w = 0.18; h = 0.12; text = ""; colorBackground[] = {0.08, 0.08, 0.12, 0.9}; };
+        class SpawnBtn: RscButton { idc = 60102; text = "Spawn selected"; x = 0.03; y = 0.89; w = 0.46; h = 0.045; sizeEx = 0.038; action = "['spawn', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        // Right panel: Vehicles at base (same height as left list)
+        class SpawnedLabel: RscText { idc = -1; text = "Vehicles at base"; x = 0.51; y = 0.22; w = 0.46; h = 0.03; sizeEx = 0.03; };
+        class SpawnedList: RscListBox { idc = 60110; x = 0.51; y = 0.25; w = 0.46; h = 0.48; rowHeight = 0.038; sizeEx = 0.033; onLBSelChanged = "['updateButtons', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class DespawnBtn: RscButton { idc = 60111; text = "Despawn selected"; x = 0.51; y = 0.89; w = 0.46; h = 0.045; sizeEx = 0.038; action = "['despawn', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class CloseBtn: RscButton { idc = 60140; text = "CLOSE"; x = 0.84; y = 0.93; w = 0.14; h = 0.045; sizeEx = 0.038; action = "closeDialog 0;"; };
+    };
+};
+
+// Manage Missions dialog -- list + description, no map (map control caused crashes)
+class RscDisplayMissions: RscDisplayEmpty {
+    idd = 60002;
+    movingEnable = 1;
+    enableSimulation = 1;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]); };";
+    class controlsBackground {
+        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.96; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
+        class Title: RscText { idc = -1; text = "MANAGE MISSIONS"; x = 0.02; y = 0.02; w = 0.96; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+    };
+    class controls {
+        // Left: mission list + buttons
+        class MissionLabel: RscText { idc = -1; text = "Select mission"; x = 0.04; y = 0.09; w = 0.28; h = 0.03; sizeEx = 0.032; };
+        class MissionList: RscListBox { idc = 60120; x = 0.04; y = 0.13; w = 0.28; h = 0.44; rowHeight = 0.038; sizeEx = 0.032; onLBSelChanged = "['missionSelChanged', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]); ['updateButtons', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
+        class StartMissionBtn: RscButton { idc = 60121; text = "START MISSION"; x = 0.04; y = 0.60; w = 0.28; h = 0.045; sizeEx = 0.035; action = "['startMission', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
+        class AbortMissionBtn: RscButton { idc = 60122; text = "ABORT MISSION"; x = 0.04; y = 0.65; w = 0.28; h = 0.045; sizeEx = 0.035; action = "['abortMission', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
+        // Right: description (full height, no map)
+        class DescLabel: RscText { idc = -1; text = "Description"; x = 0.33; y = 0.09; w = 0.30; h = 0.03; sizeEx = 0.032; };
+        class DescText: RscEdit { idc = 60131; x = 0.33; y = 0.13; w = 0.63; h = 0.52; style = 16; sizeEx = 0.032; colorText[] = {0.9, 0.9, 0.9, 1}; colorDisabled[] = {0.9, 0.9, 0.9, 1}; colorBackground[] = {0.08, 0.08, 0.12, 0.9}; text = ""; };
+        // Bottom: status + close
+        class StatusLabel: RscText { idc = -1; text = "Status:"; x = 0.04; y = 0.78; w = 0.06; h = 0.03; sizeEx = 0.032; };
+        class StatusText: RscText { idc = 60130; text = "No mission active"; x = 0.11; y = 0.78; w = 0.55; h = 0.03; sizeEx = 0.032; colorText[] = {0.7, 0.9, 0.7, 1}; };
+        class CloseBtn: RscButton { idc = 60140; text = "CLOSE"; x = 0.82; y = 0.90; w = 0.14; h = 0.045; sizeEx = 0.038; action = "closeDialog 0;"; };
+    };
+};
+
+// Manage Scenario dialog -- weather, time, factions (enemy, friendly, civilian)
+class RscDisplayScenario: RscDisplayEmpty {
+    idd = 60003;
+    movingEnable = 1;
+    enableSimulation = 1;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]); };";
+    class controlsBackground {
+        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.96; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
+        class Title: RscText { idc = -1; text = "MANAGE SCENARIO"; x = 0.02; y = 0.02; w = 0.96; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+    };
+    class controls {
+        // Environment row
+        class EnvLabel: RscText { idc = -1; text = "Environment:"; x = 0.04; y = 0.10; w = 0.12; h = 0.03; sizeEx = 0.032; };
+        class TimeLabel: RscText { idc = -1; text = "Time:"; x = 0.04; y = 0.14; w = 0.06; h = 0.025; sizeEx = 0.028; };
+        class TimeList: RscListBox { idc = 60301; x = 0.11; y = 0.13; w = 0.18; h = 0.12; rowHeight = 0.038; sizeEx = 0.032; };
+        class WeatherLabel: RscText { idc = -1; text = "Weather:"; x = 0.32; y = 0.14; w = 0.08; h = 0.025; sizeEx = 0.028; };
+        class WeatherList: RscListBox { idc = 60302; x = 0.41; y = 0.13; w = 0.18; h = 0.12; rowHeight = 0.038; sizeEx = 0.032; };
+        class LimitGearLabel: RscText { idc = -1; text = "Limit gear:"; x = 0.62; y = 0.14; w = 0.14; h = 0.025; sizeEx = 0.028; };
+        class LimitGearList: RscListBox { idc = 60315; x = 0.77; y = 0.13; w = 0.14; h = 0.12; rowHeight = 0.038; sizeEx = 0.032; };
+        // Enemy Patrols toggle row
+        class PatrolsLabel: RscText { idc = -1; text = "Enemy Patrols:"; x = 0.04; y = 0.27; w = 0.20; h = 0.025; sizeEx = 0.028; };
+        class PatrolsList: RscListBox { idc = 60316; x = 0.25; y = 0.27; w = 0.14; h = 0.08; rowHeight = 0.038; sizeEx = 0.032; };
+        // Factions row
+        class FactionLabel: RscText { idc = -1; text = "Factions (used for mission and ambient spawns):"; x = 0.04; y = 0.38; w = 0.55; h = 0.03; sizeEx = 0.032; };
+        class EnemyLabel: RscText { idc = -1; text = "Enemy:"; x = 0.04; y = 0.42; w = 0.08; h = 0.025; sizeEx = 0.028; };
+        class EnemyList: RscListBox { idc = 60310; x = 0.04; y = 0.45; w = 0.28; h = 0.42; rowHeight = 0.036; sizeEx = 0.03; };
+        class FriendlyLabel: RscText { idc = -1; text = "Friendly:"; x = 0.35; y = 0.42; w = 0.08; h = 0.025; sizeEx = 0.028; };
+        class FriendlyList: RscListBox { idc = 60311; x = 0.35; y = 0.45; w = 0.28; h = 0.42; rowHeight = 0.036; sizeEx = 0.03; };
+        class CivLabel: RscText { idc = -1; text = "Civilian:"; x = 0.66; y = 0.42; w = 0.08; h = 0.025; sizeEx = 0.028; };
+        class CivList: RscListBox { idc = 60312; x = 0.66; y = 0.45; w = 0.28; h = 0.42; rowHeight = 0.036; sizeEx = 0.03; };
+        // Buttons side by side
+        class ApplyBtn: RscButton { idc = 60320; text = "Apply and Close"; x = 0.04; y = 0.92; w = 0.22; h = 0.045; sizeEx = 0.035; action = "['apply', []] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class CloseBtn: RscButton { idc = 60321; text = "Discard and Close"; x = 0.28; y = 0.92; w = 0.22; h = 0.045; sizeEx = 0.035; action = "closeDialog 0;"; };
+    };
+};
+
+// Loadout -- top-level class for createDialog (CfgDisplay can fail with mod conflicts)
+// Layout: full width (99%), unit list 96% wide (tooltip shows loadout on hover)
+class RscDisplayLoadout: RscDisplayEmpty {
+    idd = 60200;
+    movingEnable = 1;
+    enableSimulation = 1;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]); };";
+    class controlsBackground {
+        class Background: RscText { idc = -1; x = 0.005; y = 0.02; w = 0.99; h = 0.96; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
+        class Title: RscText { idc = -1; text = "MANAGE MY LOADOUT"; x = 0.005; y = 0.02; w = 0.99; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+    };
+    class controls {
+        // Unit list + filters (full width)
+        class UnitListLabel: RscText { idc = -1; text = "Choose my loadout (same side):"; x = 0.02; y = 0.09; w = 0.96; h = 0.03; sizeEx = 0.032; };
+        class UnitList: RscListBox { idc = 60201; x = 0.02; y = 0.13; w = 0.96; h = 0.52; rowHeight = 0.038; sizeEx = 0.035; onLBSelChanged = "['unitSelChanged', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+        class FactionLabel: RscText { idc = -1; text = "Faction:"; x = 0.02; y = 0.66; w = 0.08; h = 0.03; sizeEx = 0.032; };
+        class FactionList: RscListBox { idc = 60210; x = 0.10; y = 0.69; w = 0.30; h = 0.15; rowHeight = 0.042; sizeEx = 0.038; onLBSelChanged = "['filterChanged', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+        class SearchLabel: RscText { idc = -1; text = "Search:"; x = 0.42; y = 0.66; w = 0.08; h = 0.03; sizeEx = 0.032; };
+        class SearchEdit: RscEdit { idc = 60211; x = 0.50; y = 0.69; w = 0.18; h = 0.04; onKeyUp = "['filterChanged', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+        class SaveBtn: RscButton { idc = 60204; text = "SAVE LOADOUT"; x = 0.02; y = 0.88; w = 0.24; h = 0.04; action = "['saveLoadout', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+        class ApplyBtn: RscButton { idc = 60202; text = "APPLY TO ME"; x = 0.28; y = 0.88; w = 0.22; h = 0.04; action = "['apply', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+        class CloseBtn: RscButton { idc = 60203; text = "CLOSE"; x = 0.52; y = 0.88; w = 0.20; h = 0.04; action = "closeDialog 0;"; };
+        class RestoreBtn: RscButton { idc = 60206; text = "RESTORE SAVED"; x = 0.74; y = 0.88; w = 0.24; h = 0.04; action = "['restoreLoadout', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+        class SavedStatusLabel: RscText { idc = 60205; text = ""; x = 0.02; y = 0.93; w = 0.96; h = 0.03; sizeEx = 0.028; };
+    };
+};
+
+// Jukebox dialog -- browse and play CfgMusic tracks, heard by all players
+class RscDisplayJukebox: RscDisplayEmpty {
+    idd = 60400;
+    movingEnable = 1;
+    enableSimulation = 1;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_jukeboxGui_fnc', {}]); };";
+    class controlsBackground {
+        class Background: RscText { idc = -1; x = 0.25; y = 0.15; w = 0.50; h = 0.70; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
+        class Title: RscText { idc = -1; text = "JUKEBOX"; x = 0.25; y = 0.15; w = 0.50; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+    };
+    class controls {
+        class SearchLabel: RscText { idc = -1; text = "Search:"; x = 0.27; y = 0.22; w = 0.08; h = 0.03; sizeEx = 0.032; };
+        class SearchEdit: RscEdit { idc = 60401; x = 0.35; y = 0.22; w = 0.38; h = 0.04; sizeEx = 0.032; onKeyUp = "['filter', []] call (missionNamespace getVariable ['FAC_jukeboxGui_fnc', {}]);"; };
+        class SongListLabel: RscText { idc = -1; text = "Tracks:"; x = 0.27; y = 0.28; w = 0.20; h = 0.03; sizeEx = 0.032; };
+        class SongList: RscListBox { idc = 60402; x = 0.27; y = 0.31; w = 0.46; h = 0.33; rowHeight = 0.038; sizeEx = 0.033; onLBSelChanged = "['updateButtons', []] call (missionNamespace getVariable ['FAC_jukeboxGui_fnc', {}]);"; };
+        class NowPlayingLabel: RscText { idc = -1; text = "Now playing:"; x = 0.27; y = 0.66; w = 0.13; h = 0.03; sizeEx = 0.030; };
+        class NowPlayingText: RscText { idc = 60403; text = "-- Nothing --"; x = 0.40; y = 0.66; w = 0.33; h = 0.03; sizeEx = 0.030; colorText[] = {0.5, 1.0, 0.5, 1}; };
+        class PlayBtn: RscButton { idc = 60404; text = "PLAY"; x = 0.27; y = 0.71; w = 0.46; h = 0.04; sizeEx = 0.035; action = "['play', []] call (missionNamespace getVariable ['FAC_jukeboxGui_fnc', {}]);"; };
+        class InfoLabel: RscText { idc = -1; text = "Tracks cannot be stopped once started."; x = 0.27; y = 0.77; w = 0.32; h = 0.04; sizeEx = 0.026; colorText[] = {0.6, 0.6, 0.6, 1}; };
+        class CloseBtn: RscButton { idc = 60406; text = "CLOSE"; x = 0.62; y = 0.77; w = 0.11; h = 0.04; sizeEx = 0.035; action = "closeDialog 0;"; };
+    };
+};
+
+// CfgDisplay fallback -- same layout as root RscDisplayLoadout
+class CfgDisplay {
+    class RscDisplayLoadout: RscDisplayEmpty {
+        idd = 60200;
+        movingEnable = 1;
+        enableSimulation = 1;
+        onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]); };";
+        class controlsBackground {
+            class Background: RscText { idc = -1; x = 0.005; y = 0.02; w = 0.99; h = 0.96; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
+            class Title: RscText { idc = -1; text = "MANAGE MY LOADOUT"; x = 0.005; y = 0.02; w = 0.99; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+        };
+        class controls {
+            class UnitListLabel: RscText { idc = -1; text = "Choose my loadout (same side):"; x = 0.02; y = 0.09; w = 0.96; h = 0.03; sizeEx = 0.032; };
+            class UnitList: RscListBox { idc = 60201; x = 0.02; y = 0.13; w = 0.96; h = 0.52; rowHeight = 0.038; sizeEx = 0.035; onLBSelChanged = "['unitSelChanged', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class FactionLabel: RscText { idc = -1; text = "Faction:"; x = 0.02; y = 0.66; w = 0.08; h = 0.03; sizeEx = 0.032; };
+            class FactionList: RscListBox { idc = 60210; x = 0.10; y = 0.69; w = 0.30; h = 0.15; rowHeight = 0.042; sizeEx = 0.038; onLBSelChanged = "['filterChanged', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class SearchLabel: RscText { idc = -1; text = "Search:"; x = 0.42; y = 0.66; w = 0.08; h = 0.03; sizeEx = 0.032; };
+            class SearchEdit: RscEdit { idc = 60211; x = 0.50; y = 0.69; w = 0.18; h = 0.04; onKeyUp = "['filterChanged', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class SaveBtn: RscButton { idc = 60204; text = "SAVE LOADOUT"; x = 0.02; y = 0.88; w = 0.24; h = 0.04; action = "['saveLoadout', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class ApplyBtn: RscButton { idc = 60202; text = "APPLY TO ME"; x = 0.28; y = 0.88; w = 0.22; h = 0.04; action = "['apply', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class CloseBtn: RscButton { idc = 60203; text = "CLOSE"; x = 0.52; y = 0.88; w = 0.20; h = 0.04; action = "closeDialog 0;"; };
+            class RestoreBtn: RscButton { idc = 60206; text = "RESTORE SAVED"; x = 0.74; y = 0.88; w = 0.24; h = 0.04; action = "['restoreLoadout', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class SavedStatusLabel: RscText { idc = 60205; text = ""; x = 0.02; y = 0.93; w = 0.96; h = 0.03; sizeEx = 0.028; };
+        };
+    };
+};
+class RscTitles {
+    class RscDisplayLoadout: RscDisplayEmpty {
+        idd = 60200;
+        movingEnable = 1;
+        enableSimulation = 1;
+        onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]); };";
+        class controlsBackground {
+            class Background: RscText { idc = -1; x = 0.005; y = 0.02; w = 0.99; h = 0.96; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
+            class Title: RscText { idc = -1; text = "MANAGE MY LOADOUT"; x = 0.005; y = 0.02; w = 0.99; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+        };
+        class controls {
+            class UnitListLabel: RscText { idc = -1; text = "Choose my loadout (same side):"; x = 0.02; y = 0.09; w = 0.96; h = 0.03; sizeEx = 0.032; };
+            class UnitList: RscListBox { idc = 60201; x = 0.02; y = 0.13; w = 0.96; h = 0.52; rowHeight = 0.038; sizeEx = 0.035; onLBSelChanged = "['unitSelChanged', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class FactionLabel: RscText { idc = -1; text = "Faction:"; x = 0.02; y = 0.66; w = 0.08; h = 0.03; sizeEx = 0.032; };
+            class FactionList: RscListBox { idc = 60210; x = 0.10; y = 0.69; w = 0.30; h = 0.15; rowHeight = 0.042; sizeEx = 0.038; onLBSelChanged = "['filterChanged', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class SearchLabel: RscText { idc = -1; text = "Search:"; x = 0.42; y = 0.66; w = 0.08; h = 0.03; sizeEx = 0.032; };
+            class SearchEdit: RscEdit { idc = 60211; x = 0.50; y = 0.69; w = 0.18; h = 0.04; onKeyUp = "['filterChanged', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class SaveBtn: RscButton { idc = 60204; text = "SAVE LOADOUT"; x = 0.02; y = 0.88; w = 0.24; h = 0.04; action = "['saveLoadout', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class ApplyBtn: RscButton { idc = 60202; text = "APPLY TO ME"; x = 0.28; y = 0.88; w = 0.22; h = 0.04; action = "['apply', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class CloseBtn: RscButton { idc = 60203; text = "CLOSE"; x = 0.52; y = 0.88; w = 0.20; h = 0.04; action = "closeDialog 0;"; };
+            class RestoreBtn: RscButton { idc = 60206; text = "RESTORE SAVED"; x = 0.74; y = 0.88; w = 0.24; h = 0.04; action = "['restoreLoadout', []] call (missionNamespace getVariable ['FAC_loadoutGui_fnc', {}]);"; };
+            class SavedStatusLabel: RscText { idc = 60205; text = ""; x = 0.02; y = 0.93; w = 0.96; h = 0.03; sizeEx = 0.028; };
+        };
+    };
+};
+
+// rsc scripts loaded via execVM in initServer.sqf (matches FinestHour/Tequila pattern)
+
+// Surrender Challenge sounds (OGG files in Sounds/ folder)
+class CfgSounds
+{
+    class FAC_surrenderAffirmative
+    {
+        name = "FAC_surrenderAffirmative";
+        sound[] = {"\Sounds\affirmative.ogg", 1, 1, 80};
+        titles[] = {};
+    };
+    class FAC_surrenderNegative
+    {
+        name = "FAC_surrenderNegative";
+        sound[] = {"\Sounds\negative.ogg", 1, 1, 80};
+        titles[] = {};
+    };
+    // Initial challenge shouts — player emits when pressing hotkey (random choice)
+    class FAC_apprehend001 { name = "FAC_apprehend001"; sound[] = {"\Sounds\fac_apprehend-001.ogg", 1, 1, 80}; titles[] = {}; };
+    class FAC_apprehend006 { name = "FAC_apprehend006"; sound[] = {"\Sounds\fac_apprehend-006.ogg", 1, 1, 80}; titles[] = {}; };
+    class FAC_apprehend011 { name = "FAC_apprehend011"; sound[] = {"\Sounds\fac_apprehend-011.ogg", 1, 1, 80}; titles[] = {}; };
+    class FAC_apprehend018 { name = "FAC_apprehend018"; sound[] = {"\Sounds\fac_apprehend-018.ogg", 1, 1, 80}; titles[] = {}; };
+    class FAC_apprehend024 { name = "FAC_apprehend024"; sound[] = {"\Sounds\fac_apprehend-024.ogg", 1, 1, 80}; titles[] = {}; };
+    class FAC_apprehend032 { name = "FAC_apprehend032"; sound[] = {"\Sounds\fac_apprehend-032.ogg", 1, 1, 80}; titles[] = {}; };
+    class FAC_apprehend043 { name = "FAC_apprehend043"; sound[] = {"\Sounds\fac_apprehend-043.ogg", 1, 1, 80}; titles[] = {}; };
+    class FAC_apprehend050 { name = "FAC_apprehend050"; sound[] = {"\Sounds\fac_apprehend-050.ogg", 1, 1, 80}; titles[] = {}; };
+    // Troop transport sounds (OGG files in Sounds\ folder)
+    class FAC_heliOps_embarkStart
+    {
+        name = "FAC_heliOps_embarkStart";
+        sound[] = {"\Sounds\heliops_embark_start.ogg", 1, 1, 80};
+        titles[] = {};
+    };
+    class FAC_heliOps_embarkDone
+    {
+        name = "FAC_heliOps_embarkDone";
+        sound[] = {"\Sounds\heliops_embark_done.ogg", 1, 1, 80};
+        titles[] = {};
+    };
+    class FAC_heliOps_disembarkStart
+    {
+        name = "FAC_heliOps_disembarkStart";
+        sound[] = {"\Sounds\heliops_disembark_start.ogg", 1, 1, 80};
+        titles[] = {};
+    };
+    class FAC_heliOps_disembarkDone
+    {
+        name = "FAC_heliOps_disembarkDone";
+        sound[] = {"\Sounds\heliops_disembark_done.ogg", 1, 1, 80};
+        titles[] = {};
+    };
+    // CTB Jukebox tracks -- wrappers so say3D can play and return a stoppable sound object
+    class Sig_80smusic_mix_1    { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\1980s\80s_mix_1.ogg",                     1.5, 1, 300}; titles[] = {}; };
+    class Sig_BF2_MEC           { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF2_MECTheme.ogg",                      1.5, 1, 300}; titles[] = {}; };
+    class Sig_BF2_CHI           { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF2_ChinaTheme.ogg",                    1.5, 1, 300}; titles[] = {}; };
+    class Sig_BF1942_Menu       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_MenuTheme.ogg",                  1.5, 1, 300}; titles[] = {}; };
+    class Sig_BF1942_Loading1   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_LoadingTheme.ogg",               1.5, 1, 300}; titles[] = {}; };
+    class Sig_BF1942_Loading2   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_Vehicle3.ogg",                   1.5, 1, 300}; titles[] = {}; };
+    class Sig_BFDC_Menu         { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_DesertCombatTheme.ogg",          1.5, 1, 300}; titles[] = {}; };
+    class Sig_BFDC_Loading      { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_DesertCombatLoading.ogg",        1.5, 1, 300}; titles[] = {}; };
+    class Sig_CNC_Tibdawn_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\c&c_mix.ogg",                          1.5, 1, 300}; titles[] = {}; };
+    class Sig_CNC_Gen_GLA_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\generals_gla_mix.ogg",                 1.5, 1, 300}; titles[] = {}; };
+    class Sig_CNC_Gen_USA_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\generals_USA_mix.ogg",                 1.5, 1, 300}; titles[] = {}; };
+    class Sig_CNC_Gen_CHI_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\generals_CHI_mix.ogg",                 1.5, 1, 300}; titles[] = {}; };
+    class Sig_BHD_Mix           { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\bhd_mix.ogg",                              1.5, 1, 300}; titles[] = {}; };
+    class Sig_Abba_Gimmie       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Abba_Gimmie.ogg",                          1.5, 1, 300}; titles[] = {}; };
+    class Sig_90sdance_Mix      { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\90s\90sdance_mix.ogg",                     1.5, 1, 300}; titles[] = {}; };
+    class Sig_OFPSeventh_mix    { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\ofp_seventh_mix.ogg",                      1.5, 1, 300}; titles[] = {}; };
+    class Sig_SovietMusic_mix_1 { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Soviet\soviet_mix_1.ogg",                  1.5, 1, 300}; titles[] = {}; };
+    class Sig_VietnamMusic_mix_1{ sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Vietnam\vietnam_mix_1.ogg",                1.5, 1, 300}; titles[] = {}; };
+};
+
+// Surrender Challenge: default key U (also bindable via Controls > Configure Addon Options)
+class CfgUserActions
+{
+    class FAC_SurrenderChallenge
+    {
+        displayName = "Surrender Challenge";
+        tooltip = "Challenge the unit you are looking at to surrender";
+        onActivate = "call FAC_surrenderChallenge_fnc_activate";
+    };
+};
+
+// HVT mission: identities so unit name matches briefing codename
+class CfgIdentities
+{
+    class heliOps_hvt_Viktor  { name = "Viktor";   face = "WhiteHead_02"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.0; };
+    class heliOps_hvt_Dmitri { name = "Dmitri";   face = "WhiteHead_03"; glasses = "None"; speaker = "Male02ENGB"; pitch = 1.0; };
+    class heliOps_hvt_Sergei { name = "Sergei";   face = "WhiteHead_04"; glasses = "None"; speaker = "Male03ENGB"; pitch = 1.0; };
+    class heliOps_hvt_Ivan   { name = "Ivan";     face = "WhiteHead_05"; glasses = "None"; speaker = "Male04ENGB"; pitch = 1.0; };
+    class heliOps_hvt_Pavel  { name = "Pavel";   face = "WhiteHead_06"; glasses = "None"; speaker = "Male05ENGB"; pitch = 1.0; };
+    class heliOps_hvt_Boris  { name = "Boris";   face = "WhiteHead_07"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.0; };
+    class heliOps_hvt_Volkov { name = "Volkov";  face = "WhiteHead_08"; glasses = "None"; speaker = "Male02ENGB"; pitch = 1.0; };
+    class heliOps_hvt_Kozlov { name = "Kozlov";  face = "WhiteHead_09"; glasses = "None"; speaker = "Male03ENGB"; pitch = 1.0; };
+    class heliOps_ratel_eagleeye { name = "Eagle Eye"; face = "WhiteHead_01"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.05; };
+};
+
+briefingName = "Face's Dynamic Environment";
+onLoadName = "Face's Dynamic Environment";
+author = "Face";
+overviewText = "FADE. BOARD: VEHICLES, MISSIONS, SCENARIO. LOADOUTBOX: KIT, ACE ARSENAL.";
+overviewPicture = "";
+loadScreen = "img\loading.jpg";

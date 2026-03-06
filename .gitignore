@@ -1,0 +1,10 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Arma / Eden (optional: uncomment if you don't want to track these)
+# *.bisign
+# *.biprivate
