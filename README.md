@@ -1,4 +1,4 @@
-# FADE — Face's Dynamic Environment
+# FADE (Face's Dynamic Environment)
 
 FADE is a sandbox gamemode for **Combat Team Bravo (CTB)** built to provide an environment for quick operations with minimal setup and **no human Zeus (game master)**. Missions and scenario options are driven by in-game boards and GUIs so players can launch and tailor sessions without external mission editing or a dedicated game master.
 
