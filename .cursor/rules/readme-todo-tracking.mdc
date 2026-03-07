@@ -1,0 +1,12 @@
+---
+description: Track upcoming features in README Todo section
+alwaysApply: true
+---
+
+# Track Upcoming Features in README Todo
+
+When discussing or agreeing on **upcoming features**, **new mission types**, or **significant changes** to this project, add them to the **Todo** section of **README.md** (project root).
+
+- Keep each item concise but enough to implement from later.
+- Use bullet sub-points for multi-part items (e.g. AO mission, AI JTAC).
+- This keeps a single place for planned work and avoids losing ideas across conversations.

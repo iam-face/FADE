@@ -8,6 +8,7 @@ This is a **helicopter piloting sandbox** for **ARMA 3**, designed for **multipl
 
 **Arma 3 Wiki:** https://armedassault.fandom.com/wiki/ArmA_3  
 **Bohemia Community Wiki:** https://community.bistudio.com/wiki/
+**LAMBS AI:** https://github.com/nk3nny/LambsDanger/wiki  
 
 Use the Wikis as the primary source for:
 
