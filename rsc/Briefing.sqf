@@ -11,6 +11,36 @@
 player createDiarySubject ["FAC_Notes", "Notes"];
 
 // -----------------------------------------------------------------------------
+// Note: RATEL - Radio Telephone Procedure (CTB standard)
+// -----------------------------------------------------------------------------
+player createDiaryRecord ["FAC_Notes", ["RATEL (Radio Procedure)", "
+<font color='#FFD700' size='14'>RADIO TELEPHONE PROCEDURE</font><br/><br/>
+All AI and player radio traffic in FADE follows CTB RATEL. Use this format so comms stay clear and consistent.<br/><br/>
+
+<font color='#87CEEB'>STANDARD FORMAT</font><br/>
+<font color='#90EE90'>Called station, this is [Your callsign]. [Message]. Over.</font> — When you expect a reply (e.g. request, question).<br/>
+<font color='#90EE90'>Called station, this is [Your callsign]. [Message]. Out.</font> — End of transmission; no reply expected.<br/><br/>
+
+<font color='#87CEEB'>EXAMPLES</font><br/>
+''RZ, this is Bravo 2-1. We're at Grid 123456, awaiting pickup. Over.''<br/>
+''All callsigns, this is Eagle Eye. Convoy tracking, 400 metres from end zone. Expedite intercept. Out.''<br/>
+''RZ, this is Bravo 2-1. All aboard. Ready for liftoff. Over.''<br/><br/>
+
+<font color='#87CEEB'>OVER vs OUT</font><br/>
+<font color='#90EE90'>Over</font> — I have finished speaking and am waiting for your reply.<br/>
+<font color='#90EE90'>Out</font> — This transmission is finished; no reply expected. Use when closing the conversation or sending a one-way update.
+"]];
+
+// -----------------------------------------------------------------------------
+// Note: Area of Operations and Artillery
+// -----------------------------------------------------------------------------
+player createDiaryRecord ["FAC_Notes", ["Area of Operations and Artillery", "
+<font color='#FFD700' size='14'>AO MISSION AND FIRES SUPPORT</font><br/><br/>
+The <font color='#90EE90'>Area of Operations</font> mission (Manage Missions) creates a 2 km x 2 km zone with three capture points. BLUFOR assault from one cardinal side; a JTAC unit is on station and will call in CAS using CTB 5-line style. Secure all three objectives to complete.<br/><br/>
+<font color='#87CEEB'>Player-directed artillery</font> (fire missions requested by players, with AI gun line and CTB-style acknowledgements) is planned; when implemented it will follow the Call for Fire (CFF) and artillery procedures in these Notes.
+"]];
+
+// -----------------------------------------------------------------------------
 // Note: Terminology and Brevity Codes (source: CTB Joint Fires doc)
 // -----------------------------------------------------------------------------
 player createDiaryRecord ["FAC_Notes", ["Terminology and Brevity Codes", "

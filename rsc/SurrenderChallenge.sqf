@@ -36,7 +36,7 @@
 // A cascade bonus (+0.15) applies if the primary surrendered.
 // =============================================================================
 
-params ["_player", "_targetUnit"];
+params ["_player", "_targetUnit", ["_playerDir", -1]];
 if (!isServer) exitWith {
     diag_log "[FAC SurrenderChallenge] ERROR: Script ran on non-server. Exiting.";
 };
@@ -103,6 +103,20 @@ if (_dist > 25) exitWith {
     ["TARGET OUT OF RANGE. MAX 25M."] remoteExec ["systemChat", _player];
     ["Rejected: distance " + (str (round _dist)) + "m > 25m"] call _dbg;
 };
+
+// 30° cone in front of player: target must be within ±15° of player's facing direction
+private _coneOk = true;
+if (_playerDir >= 0) then {
+    private _dirToTarget = _player getDir _targetUnit;
+    private _diff = abs (_dirToTarget - _playerDir);
+    if (_diff > 180) then { _diff = 360 - _diff };
+    if (_diff > 15) then {
+        ["TARGET NOT IN FRONT OF YOU. USE 30 DEGREE CONE, 25M."] remoteExec ["systemChat", _player];
+        ["Rejected: target outside 30° cone (diff " + (str (round _diff)) + "°)"] call _dbg;
+        _coneOk = false;
+    };
+};
+if (!_coneOk) exitWith {};
 
 ["Validation passed. Distance: " + (str (round _dist)) + "m"] call _dbg;
 
@@ -215,32 +229,9 @@ private _fnc_shockedAnim = {
 };
 
 // =============================================================================
-// Situational modifiers -- snapshot at challenge start, shared by primary + secondaries
+// Simplified decision: (1) refuse immediately, (2) consider -> refuse, (3) consider -> surrender
+// LAMBS AI: when lambs_danger is loaded, AI may still use LAMBS behaviours; we only set captive/surrendered state.
 // =============================================================================
-
-// Captive bonus: surrendered enemy comrades erode remaining units' will to fight.
-private _nearbyCaptives = {
-    alive _x
-    && (side _x == side _targetUnit)
-    && (_x distance _targetUnit < 25)
-    && (captive _x || { _isACE && { _x getVariable ["ace_captives_isSurrendering", false] } })
-} count allUnits;
-private _captiveBonus = (_nearbyCaptives * 0.05) min 0.20;
-
-// Players nearby (used for bonus and ratio).
-private _nearbyPlayers = { isPlayer _x && alive _x && (_x distance _targetUnit < 25) } count allUnits;
-
-// Ratio malus: uncaptured enemies outnumbering players makes refusal more likely.
-private _nearbyEnemies = {
-    alive _x && !captive _x && (side _x == side _targetUnit) && !isPlayer _x && (_x distance _targetUnit < 25)
-} count allUnits;
-private _ratioMalus = 0;
-if (_nearbyEnemies > _nearbyPlayers) then {
-    _ratioMalus = ((_nearbyEnemies - _nearbyPlayers) * 0.08) min 0.30;
-};
-
-[format ["Context: captives=%1 (+%2) | enemies=%3 players=%4 ratioMalus=-%5",
-    _nearbyCaptives, _captiveBonus, _nearbyEnemies, _nearbyPlayers, _ratioMalus]] call _dbg;
 
 // Mark primary active and freeze AI.
 _targetUnit setVariable ["surrenderChallenge_active", true, true];
@@ -262,18 +253,13 @@ if (_isCivilian) then {
     ["Civilian: 100% surrender, no wait"] call _dbg;
     _surrenders = true;
 } else {
-    // ------------------------------------------------------------------
-    // Immediate refuse: high-skill units dismiss the challenge outright.
-    // Fires before any animation or wait; secondaries are not affected.
-    // ------------------------------------------------------------------
+    // (1) Refuse immediately: skill-based chance; no animation.
     private _unitSkill = skill _targetUnit;
-    if (random 1 < (_unitSkill * 0.30)) then {
+    if (random 1 < (_unitSkill * 0.35)) then {
         [format ["IMMEDIATE REFUSE (skill %1%%)", round (_unitSkill * 100)]] call _dbg;
-        // _surrenders stays false; secondary list stays empty.
+        // _surrenders stays false; no secondaries.
     } else {
-        // ------------------------------------------------------------------
-        // Collect and freeze secondary targets within 5m.
-        // ------------------------------------------------------------------
+        // (2) Consider: freeze secondaries within 5m, primary shocked anim, wait.
         {
             private _u = _x;
             if (
@@ -295,45 +281,20 @@ if (_isCivilian) then {
                 _u switchMove ([_u] call _fnc_shockedAnim);
             };
         } forEach (nearestObjects [_targetUnit, ["Man"], 5]);
-
         [format ["%1 secondary(ies) within 5m frozen", count _secondaries]] call _dbg;
 
-        // Primary shocked animation and wait.
         _targetUnit switchMove ([_targetUnit] call _fnc_shockedAnim);
-        private _challengeDuration = 3 + (random 2);
+        private _challengeDuration = 3.5;
         [format ["CHALLENGE INITIATED. %1 SECONDS.", round _challengeDuration]] remoteExec ["systemChat", _player];
-
         sleep _challengeDuration;
 
-        // Re-read distance after wait (player may have moved).
         _dist = _player distance _targetUnit;
-
-        // Distance bonus (stepped).
-        private _distBonus = 0;
-        if (_dist < 5)                      then { _distBonus = 0.40 };
-        if (_dist >= 5  && _dist < 10)      then { _distBonus = 0.30 };
-        if (_dist >= 10 && _dist < 15)      then { _distBonus = 0.20 };
-        if (_dist >= 15 && _dist < 20)      then { _distBonus = 0.10 };
-
-        // Player bonus (capped at +0.30 for 4+ players).
-        private _playerBonus = (((_nearbyPlayers - 1) * 0.10) max 0) min 0.30;
-
-        // Angle bonus: flanking or behind the target is more intimidating.
-        private _relDir = _targetUnit getRelDir (getPosASL _player);
-        private _angleBonus = 0;
-        if (_relDir >= 135 && _relDir <= 225)                                          then { _angleBonus = 0.25 };
-        if ((_relDir >= 45 && _relDir < 135) || (_relDir > 225 && _relDir <= 315))    then { _angleBonus = 0.15 };
-
-        private _baseChance = 0.25;
-        private _surrenderChance = (_baseChance + _distBonus + _playerBonus + _angleBonus + _captiveBonus - _ratioMalus) min 0.95 max 0.05;
+        // (3) Consider -> surrender or refuse: single roll. Base 0.45, +0.15 if within 10m.
+        private _surrenderChance = 0.45;
+        if (_dist < 10) then { _surrenderChance = 0.60 };
         private _roll = random 1;
         _surrenders = _roll < _surrenderChance;
-
-        [format ["Chance: base=%1 dist=%2 players=%3 angle=%4 captives=%5 ratio=-%6 => %7%% roll=%8 => %9",
-            _baseChance, _distBonus, _playerBonus, _angleBonus, _captiveBonus, _ratioMalus,
-            round (_surrenderChance * 100), round (_roll * 100),
-            if (_surrenders) then {"SURRENDER"} else {"REFUSE"}
-        ]] call _dbg;
+        [format ["Consider roll: chance=%1%% roll=%2 => %3", round (_surrenderChance * 100), round (_roll * 100), if (_surrenders) then {"SURRENDER"} else {"REFUSE"}]] call _dbg;
     };
 };
 
@@ -373,34 +334,11 @@ if (count _secondaries > 0) then {
         if (!alive _unit) then {
             [format ["Secondary %1 dead during challenge, skipping", name _unit]] call _dbg;
         } else {
-            // Distance bonus for this secondary unit.
-            private _secDist = _player distance _unit;
-            private _secDistBonus = 0;
-            if (_secDist < 5)                           then { _secDistBonus = 0.40 };
-            if (_secDist >= 5  && _secDist < 10)        then { _secDistBonus = 0.30 };
-            if (_secDist >= 10 && _secDist < 15)        then { _secDistBonus = 0.20 };
-            if (_secDist >= 15 && _secDist < 20)        then { _secDistBonus = 0.10 };
-
-            // Angle bonus relative to this secondary unit.
-            private _secRelDir = _unit getRelDir (getPosASL _player);
-            private _secAngleBonus = 0;
-            if (_secRelDir >= 135 && _secRelDir <= 225)                                             then { _secAngleBonus = 0.25 };
-            if ((_secRelDir >= 45 && _secRelDir < 135) || (_secRelDir > 225 && _secRelDir <= 315)) then { _secAngleBonus = 0.15 };
-
-            private _secPlayerBonus = (((_nearbyPlayers - 1) * 0.10) max 0) min 0.30;
-
-            // Lower base (not directly challenged); cascade bonus if primary surrendered.
-            private _secBase = 0.15;
-            private _primaryCascade = if (_surrenders) then { 0.15 } else { 0 };
-            private _secChance = (_secBase + _secDistBonus + _secAngleBonus + _secPlayerBonus + _captiveBonus + _primaryCascade - _ratioMalus) min 0.90 max 0.05;
+            // Simplified: single roll 0.35 for secondaries.
+            private _secChance = 0.35;
             private _secRoll = random 1;
             private _secSurrenders = _secRoll < _secChance;
-
-            [format ["Secondary %1: base=%2 dist=%3 angle=%4 players=%5 captives=%6 cascade=%7 ratio=-%8 => %9%% => %10",
-                name _unit, _secBase, _secDistBonus, _secAngleBonus, _secPlayerBonus,
-                _captiveBonus, _primaryCascade, _ratioMalus,
-                round (_secChance * 100), if (_secSurrenders) then {"SURRENDER"} else {"REFUSE"}
-            ]] call _dbg;
+            [format ["Secondary %1: chance=35%% roll=%2 => %3", name _unit, round (_secRoll * 100), if (_secSurrenders) then {"SURRENDER"} else {"REFUSE"}]] call _dbg;
 
             if (_secSurrenders) then {
                 [_unit, ["FAC_surrenderAffirmative", 80, 1]] remoteExec ["say3D", 0];

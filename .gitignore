@@ -7,6 +7,7 @@ Thumbs.db
 
 # Local scripts (not shared)
 push-to-github.bat
+AGENTS.md
 
 # Arma / Eden (optional: uncomment if you don't want to track these)
 # *.bisign

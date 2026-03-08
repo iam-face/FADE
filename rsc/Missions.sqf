@@ -2,68 +2,68 @@
 // Missions.sqf -- Dynamic mission implementations (runs on server)
 // =============================================================================
 //
-// EXECUTION: Invoked via execVM from heliOps_startMission (server). Params from heliOps_missionParams.
+// EXECUTION: Invoked via execVM from FADE_startMission (server). Params from FADE_missionParams.
 // _missionType: "TroopInsert" | "TroopExtract" | "CAS" | "Cargo" | "HVT" | "Hostage" | "ClearArea" | "InterceptConvoy"
-// _destPos: position array [x,y,z] -- from heliOps_findMissionPos (map bounds, 700m+ from base)
+// _destPos: position array [x,y,z] -- from FADE_findMissionPos (map bounds, 700m+ from base)
 // _player: player who started the mission (for tasks, hints, cargo seat check). All remoteExec
 //   feedback (hint, systemChat) targets _player so only that client receives it.
 //
 // SCENARIO: Unit/vehicle lists come from missionNamespace (Scenario GUI Apply or initServer defaults).
-// All enemy spawns MUST use heliOps_enemyUnits (or local list built from missionNamespace + heliOps_scenarioEnemyFaction
+// All enemy spawns MUST use FADE_enemyUnits (or local list built from missionNamespace + FADE_scenarioEnemyFaction
 // fallback) so faction choices in the config GUI are respected. Do not use BIS_fnc_spawnCrew for vehicles — spawn
 // driver/gunner/commander from the scenario enemy unit list so crew matches the chosen faction.
 // All createVehicle/createGroup/BIS_fnc_spawnGroup run on server; markers and tasks are server-global.
 // =============================================================================
 
-// Params from heliOps_missionParams (set by heliOps_startMission before execVM)
-if (isNil "heliOps_missionParams" || { count heliOps_missionParams < 3 }) exitWith {};
-heliOps_missionParams params ["_missionType", "_destPos", ["_player", objNull]];
+// Params from FADE_missionParams (set by FADE_startMission before execVM)
+if (isNil "FADE_missionParams" || { count FADE_missionParams < 3 }) exitWith {};
+FADE_missionParams params ["_missionType", "_destPos", ["_player", objNull]];
 if (!isServer) exitWith {};
 
-// Validate mission type
-private _validTypes = ["TroopInsert", "TroopExtract", "CAS", "Cargo", "HVT", "Hostage", "ClearArea", "InterceptConvoy"];
+// Validate mission type (Global + Single types)
+private _validTypes = ["TroopInsert", "TroopExtract", "CAS", "Cargo", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "MineClearing", "FindClearIEDs", "Medical", "MedicalKAT", "MASCAS", "MASCASKAT"];
 if !(_missionType in _validTypes) exitWith {
-    if (!isNull _player) then { _player setVariable ["heliOps_myMission", "", true] };
-    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Unknown mission type.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+    if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
+    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Unknown mission type.</t>"] remoteExec ["FADE_showMissionHint", _player];
 };
 
 // Single source: scenario-applied unit lists from missionNamespace (set by Scenario GUI Apply or initServer)
-private _friendlyUnits = missionNamespace getVariable ["heliOps_friendlyUnits", []];
-private _enemyUnits = missionNamespace getVariable ["heliOps_enemyUnits", []];
+private _friendlyUnits = missionNamespace getVariable ["FADE_friendlyUnits", []];
+private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", []];
 if (_friendlyUnits isEqualTo []) then {
-    private _ff = missionNamespace getVariable ["heliOps_scenarioFriendlyFaction", "BLU_F"];
-    _friendlyUnits = [_ff, 1] call heliOps_getUnitsForFaction;
+    private _ff = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"];
+    _friendlyUnits = [_ff, 1] call FADE_getUnitsForFaction;
     if (_friendlyUnits isEqualTo []) then { _friendlyUnits = ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"] };
 };
 if (_enemyUnits isEqualTo []) then {
-    private _ef = missionNamespace getVariable ["heliOps_scenarioEnemyFaction", "OPF_F"];
-    _enemyUnits = [_ef, 0] call heliOps_getUnitsForFaction;
+    private _ef = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
+    _enemyUnits = [_ef, 0] call FADE_getUnitsForFaction;
     if (_enemyUnits isEqualTo []) then { _enemyUnits = ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"] };
 };
-_enemyUnits = [_enemyUnits] call (missionNamespace getVariable ["heliOps_filterEnemyUnitsArmed", { _this select 0 }]);
+_enemyUnits = [_enemyUnits] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
 if (count _friendlyUnits == 0) exitWith {
-    if (!isNull _player) then { _player setVariable ["heliOps_myMission", "", true] };
-    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No friendly units configured.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+    if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
+    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No friendly units configured.</t>"] remoteExec ["FADE_showMissionHint", _player];
 };
 
 // Mission-assigned hint is sent per mission type below (formatted, to _player only)
-private _taskId = "heliOps_" + _missionType + str (floor (time * 1000));
+private _taskId = "FADE_" + _missionType + str (floor (time * 1000));
 if (!isNull _player) then {
-    _player setVariable ["heliOps_myMission", _missionType, true];
-    _player setVariable ["heliOps_myMissionTaskId", _taskId, true];
+    _player setVariable ["FADE_myMission", _missionType, true];
+    _player setVariable ["FADE_myMissionTaskId", _taskId, true];
 };
-private _basePos = heliOps_basePos;
+private _basePos = FADE_basePos;
 
 // Refine position: LZ missions use small refinement; HVT/ClearArea/InterceptConvoy handle position themselves
 private _needsLZ = _missionType in ["TroopInsert", "TroopExtract", "Cargo"];
-if (_missionType != "HVT" && { _missionType != "Hostage" } && { _missionType != "ClearArea" } && { _missionType != "InterceptConvoy" }) then {
+if (_missionType != "HVT" && { _missionType != "Hostage" } && { _missionType != "ClearArea" } && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" }) then {
     private _refineMax = if (_needsLZ) then { 10 } else { 50 };
     private _refineObj = if (_needsLZ) then { 15 } else { 5 };
     _destPos = [_destPos, 0, _refineMax, _refineObj, 0, 0.5, 0, [], _destPos] call BIS_fnc_findSafePos;
 };
-if (count _destPos < 2 && { _missionType != "InterceptConvoy" }) exitWith {
-    if (!isNull _player) then { _player setVariable ["heliOps_myMission", "", true] };
-    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No valid area of operations found.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+if (count _destPos < 2 && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" }) exitWith {
+    if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
+    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No valid area of operations found.</t>"] remoteExec ["FADE_showMissionHint", _player];
 };
 
 // Unit count: use player's vehicle cargo seats if in a heli, else default 6
@@ -71,7 +71,7 @@ private _unitCount = 6;
 if (!isNull _player) then {
     private _veh = vehicle _player;
     if (_veh != _player && { _veh isKindOf "Helicopter" }) then {
-        _unitCount = ([_veh] call heliOps_getCargoSeats) max 1;
+        _unitCount = ([_veh] call FADE_getCargoSeats) max 1;
     };
 };
 private _unitClasses = (_friendlyUnits select [0, _unitCount min count _friendlyUnits]);
@@ -90,10 +90,20 @@ private _fnc_createMissionTask = {
     [_player, _taskId, [_desc, _title, ""], _pos, "ASSIGNED", 1, true, _taskType, true] call BIS_fnc_taskCreate;
 };
 
+// Apply scenario enemy AI skill and routing (flee) to an EAST group. Call after spawning enemy groups.
+FAC_applyEnemyScenarioToGroup = {
+    params ["_grp"];
+    if (isNull _grp || { side _grp != EAST }) exitWith {};
+    private _skill = missionNamespace getVariable ["FADE_enemySkill", 0.5];
+    private _routing = missionNamespace getVariable ["FADE_enemyRouting", 0];
+    { _x setSkill _skill } forEach units _grp;
+    _grp allowFleeing _routing;
+};
+
 // Attach an IR strobe to every living unit in _grp if it is night (19:30-04:30) and ACE3 is loaded.
-// Strobes are stored in heliOps_irStrobes group variable so cleanup can delete them.
+// Strobes are stored in FADE_irStrobes group variable so cleanup can delete them.
 // Called immediately after BIS_fnc_spawnGroup for any friendly group.
-heliOps_attachNightStrobes = {
+FADE_attachNightStrobes = {
     params ["_grp"];
     private _timeMin = (date select 3) * 60 + (date select 4);
     if !(_timeMin >= 1170 || { _timeMin <= 270 }) exitWith {};
@@ -109,35 +119,43 @@ heliOps_attachNightStrobes = {
             _strobes pushBack _s;
         };
     } forEach units _grp;
-    _grp setVariable ["heliOps_irStrobes", _strobes];
+    _grp setVariable ["FADE_irStrobes", _strobes];
+};
+
+// -----------------------------------------------------------------------------
+// AREA OF OPERATIONS -- 2 km zone, 3 capture points, BLUFOR vs OPFOR, JTAC
+// -----------------------------------------------------------------------------
+if (_missionType == "AreaOfOperations") exitWith {
+    FADE_aoParams = [_player, _destPos, _taskId, _basePos, _friendlyUnits, _enemyUnits];
+    execVM "rsc\AOMission.sqf";
 };
 
 // -----------------------------------------------------------------------------
 // 1. TROOP INSERT -- Spawn friendly AI at B_SP_*, create task to insert at M_LOC_*
 // -----------------------------------------------------------------------------
 if (_missionType == "TroopInsert") exitWith {
-    if (count heliOps_bSpPoints == 0) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No spawn points. Configure B_SP_1/2/3 in Eden.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+    if (count FADE_bSpPoints == 0) exitWith {
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No spawn points. Configure B_SP_1/2/3 in Eden.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
-    private _spawnTrigger = selectRandom heliOps_bSpPoints;
+    private _spawnTrigger = selectRandom FADE_bSpPoints;
     if (isNull _spawnTrigger) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No spawn points. Configure B_SP_1/2/3 in Eden.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No spawn points. Configure B_SP_1/2/3 in Eden.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
     private _spawnPos = position _spawnTrigger;
 
     private _group = [_spawnPos, WEST, _unitClasses] call BIS_fnc_spawnGroup;
-    [_group] call (missionNamespace getVariable ["heliOps_assignGroupCallsign", {}]);
-    [_group] call heliOps_attachNightStrobes;
+    [_group] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
+    [_group] call FADE_attachNightStrobes;
     _group setBehaviour "SAFE";
     _group setCombatMode "GREEN";
 
     [_player, _taskId, "Insert the squad at the marked LZ.", "Troop Insert", _destPos, "move"] call _fnc_createMissionTask;
 
     // Create marker for players
-    private _markerName = "heliOps_insert_" + _taskId;
-    _player setVariable ["heliOps_myMissionMarker", _markerName, true];
+    private _markerName = "FADE_insert_" + _taskId;
+    _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _marker = createMarker [_markerName, _destPos];
     _marker setMarkerType "mil_pickup";
     _marker setMarkerColor "ColorBLUFOR";
@@ -145,10 +163,11 @@ if (_missionType == "TroopInsert") exitWith {
 
     private _grid = mapGridPosition _destPos;
     private _brief = format ["TROOP INSERT%1%1PICKUP: Base (squad at B_SP)%1TARGET: LZ Grid %2%1%1Pick up squad at base. Fly to marked LZ. Land to disembark.%1%1Complete when squad has disembarked at LZ.", toString [10], _grid];
-    _player setVariable ["heliOps_myMissionBrief", _brief, true];
-    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Troop Insert</t><br/><t color='#B0B0B0'>LZ Grid: %1</t><br/><br/><t color='#C0C0C0'>RTB. Pick up squad at base. Proceed to LZ. Land to disembark.</t>", _grid]] remoteExec ["FAC_heliOps_showMissionHint", _player];
+    _player setVariable ["FADE_myMissionBrief", _brief, true];
+    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Troop Insert</t><br/><t color='#B0B0B0'>LZ Grid: %1</t><br/><br/><t color='#C0C0C0'>RTB. Pick up squad at base. Proceed to LZ. Land to disembark.</t>", _grid]] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "Troop Insert"] call FADE_notifyOthersMissionStarted;
 
-    heliOps_transportParams = [_missionType, _group, _player, _spawnPos, _destPos, _taskId, _markerName];
+    FADE_transportParams = [_missionType, _group, _player, _spawnPos, _destPos, _taskId, _markerName];
     execVM "rsc\TroopTransport.sqf";
 };
 
@@ -166,8 +185,8 @@ if (_missionType == "TroopExtract") exitWith {
     _wpPos = [_wpPos, 0, 15, 2, 0, 0.3, 0, [], _wpPos] call BIS_fnc_findSafePos;
     if (count _wpPos < 2) then { _wpPos = _destPos getPos [10, random 360] };
     private _group = [_wpPos, WEST, _pickupClasses] call BIS_fnc_spawnGroup;
-    [_group] call (missionNamespace getVariable ["heliOps_assignGroupCallsign", {}]);
-    [_group] call heliOps_attachNightStrobes;
+    [_group] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
+    [_group] call FADE_attachNightStrobes;
     _group setBehaviour "COMBAT";
     _group setFormation "DIAMOND";
     _group addWaypoint [_wpPos, 0];
@@ -194,16 +213,18 @@ if (_missionType == "TroopExtract") exitWith {
         private _grpUnits = (_shuffled select [0, _grpSize min count _shuffled]);
         if (count _grpUnits == 0) then { _grpUnits = [_enemyUnits select 0] };
         private _grp = [_grpPos, EAST, _grpUnits] call BIS_fnc_spawnGroup;
+        [_grp] call FAC_applyEnemyScenarioToGroup;
         _grp setBehaviour "AWARE";
         _grp setCombatMode "RED";
         _grp addWaypoint [_destPos, 0];
         _enemyGroups pushBack _grp;
     };
+    [_enemyGroups, _basePos] call FADE_registerEnemyRetreat;
 
     [_player, _taskId, "Extract the squad and return them to base.", "Troop Extract", _basePos, "move"] call _fnc_createMissionTask;
 
-    private _markerName = "heliOps_extract_" + _taskId;
-    _player setVariable ["heliOps_myMissionMarker", _markerName, true];
+    private _markerName = "FADE_extract_" + _taskId;
+    _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _marker = createMarker [_markerName, _destPos];
     _marker setMarkerType "mil_pickup";
     _marker setMarkerColor "ColorBLUFOR";
@@ -211,20 +232,21 @@ if (_missionType == "TroopExtract") exitWith {
 
     private _grid = mapGridPosition _destPos;
     private _brief = format ["TROOP EXTRACT%1%1PICKUP: Grid %2 (marked on map)%1TARGET: Base (RTB)%1PAX: %3 personnel for extraction%1%1Fly to pickup zone. Land to load squad. Return to base and land.%1%1Complete when squad has disembarked at base.", toString [10], _grid, _pickupCount];
-    _player setVariable ["heliOps_myMissionBrief", _brief, true];
-    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Troop Extract</t><br/><t color='#B0B0B0'>RZ Grid: %1</t><br/><t color='#FFCC00'>PAX: %2 personnel</t><br/><br/><t color='#C0C0C0'>Proceed to pickup zone. Land to load squad. RTB once loaded.</t>", _grid, _pickupCount]] remoteExec ["FAC_heliOps_showMissionHint", _player];
+    _player setVariable ["FADE_myMissionBrief", _brief, true];
+    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Troop Extract</t><br/><t color='#B0B0B0'>RZ Grid: %1</t><br/><t color='#FFCC00'>PAX: %2 personnel</t><br/><br/><t color='#C0C0C0'>Proceed to pickup zone. Land to load squad. RTB once loaded.</t>", _grid, _pickupCount]] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "Troop Extract"] call FADE_notifyOthersMissionStarted;
 
     // Pickup group sidetexts pax count so player knows what size aircraft to bring
     [_group, _pickupCount] spawn {
         params ["_grp", "_pax"];
         sleep 3;
         if (!isNull _grp && { count units _grp > 0 }) then {
-            private _callsign = _grp getVariable ["heliOps_callsign", "Bravo 1-1"];
-            (leader _grp) sideChat format ["All callsigns, this is %1. We have %2 pax for extraction. Request rotary pickup at marked RZ. Over.", _callsign, _pax];
+            private _callsign = _grp getVariable ["FADE_callsign", "Bravo 1-1"];
+            (leader _grp) sideChat format ["All callsigns, this is %1. We have %2 pax for extraction. Request rotary pickup. Over.", _callsign, _pax];
         };
     };
 
-    heliOps_transportParams = [_missionType, _group, _player, _destPos, _basePos, _taskId, _markerName, _enemyGroups];
+    FADE_transportParams = [_missionType, _group, _player, _destPos, _basePos, _taskId, _markerName, _enemyGroups];
     execVM "rsc\TroopTransport.sqf";
 };
 
@@ -234,8 +256,8 @@ if (_missionType == "TroopExtract") exitWith {
 // -----------------------------------------------------------------------------
 if (_missionType == "CAS") exitWith {
     if (count _enemyUnits == 0) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No enemy units configured.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No enemy units configured.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
 
     // Friendly position first (200-400m from objective center); enemies spawn min 750m from friendlies
@@ -258,24 +280,26 @@ if (_missionType == "CAS") exitWith {
         if (count _grpUnits == 0) then { _grpUnits = [_enemyUnits select 0] };
 
         private _grp = [_grpPos, EAST, _grpUnits] call BIS_fnc_spawnGroup;
+        [_grp] call FAC_applyEnemyScenarioToGroup;
         if (!isNull _grp && { count units _grp > 0 }) then {
             _grp setBehaviour "AWARE";
             _grp setCombatMode "RED";
             _enemyGroups pushBack _grp;
         };
     };
+    [_enemyGroups, _basePos] call FADE_registerEnemyRetreat;
     { _x addWaypoint [_friendlyPos, 0] } forEach _enemyGroups;
     private _casUnits = (_friendlyUnits select [0, 6 min count _friendlyUnits]);
     private _friendlyGroup = [_friendlyPos, WEST, _casUnits] call BIS_fnc_spawnGroup;
-    [_friendlyGroup] call (missionNamespace getVariable ["heliOps_assignGroupCallsign", {}]);
-    [_friendlyGroup] call heliOps_attachNightStrobes;
+    [_friendlyGroup] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
+    [_friendlyGroup] call FADE_attachNightStrobes;
     _friendlyGroup setBehaviour "COMBAT";
     _friendlyGroup setCombatMode "RED";
 
     [_player, _taskId, "Provide fire support to friendly forces at the objective. Mission fails if friendly forces are eliminated.", "CAS / Fire Support", _destPos, "attack"] call _fnc_createMissionTask;
 
-    private _markerName = "heliOps_cas_" + _taskId;
-    _player setVariable ["heliOps_myMissionMarker", _markerName, true];
+    private _markerName = "FADE_cas_" + _taskId;
+    _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _marker = createMarker [_markerName, _destPos];
     _marker setMarkerType "mil_objective";
     _marker setMarkerColor "ColorRed";
@@ -283,8 +307,9 @@ if (_missionType == "CAS") exitWith {
 
     private _grid = mapGridPosition _destPos;
     private _brief = format ["CAS / FIRE SUPPORT%1%1TARGET: AO Grid %2 (marked on map)%1%1Proceed to objective. Friendlies will radio their position when you are within 1 km -- green smoke by day, IR strobes at night (NVG required). Engage hostiles advancing on friendly forces.%1%1Complete when less than 20% of enemy remain. FAIL if all friendly forces are eliminated. No time limit.", toString [10], _grid];
-    _player setVariable ["heliOps_myMissionBrief", _brief, true];
-    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>CAS / Fire Support</t><br/><t color='#B0B0B0'>AO Grid: %1</t><br/><br/><t color='#C0C0C0'>Proceed to objective. Engage hostiles. Support friendly forces.</t>", _grid]] remoteExec ["FAC_heliOps_showMissionHint", _player];
+    _player setVariable ["FADE_myMissionBrief", _brief, true];
+    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>CAS / Fire Support</t><br/><t color='#B0B0B0'>AO Grid: %1</t><br/><br/><t color='#C0C0C0'>Proceed to objective. Engage hostiles. Support friendly forces.</t>", _grid]] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "CAS / Fire Support"] call FADE_notifyOthersMissionStarted;
 
     // Initial air support request from friendly leader at mission start
     [_friendlyGroup, _taskId, _destPos] spawn {
@@ -292,12 +317,12 @@ if (_missionType == "CAS") exitWith {
         sleep 5;
         if (isNull _grp || { count units _grp == 0 }) exitWith {};
         if ((_taskId call BIS_fnc_taskState) in ["SUCCEEDED","CANCELED","FAILED"]) exitWith {};
-        private _callsign = _grp getVariable ["heliOps_callsign", "Alpha 1-1"];
+        private _callsign = _grp getVariable ["FADE_callsign", "Alpha 1-1"];
         private _capable = (units _grp) select { alive _x && { !(_x getVariable ["ACE_isUnconscious", false]) } };
         if (count _capable == 0) exitWith {};
         private _speaker = _capable select 0;
         private _grid = mapGridPosition _objPos;
-        _speaker sideChat format ["All callsigns, this is %1. We are in contact. Requesting immediate close air support at Grid %2. Standby for 5-line. Over.", _callsign, _grid];
+        _speaker sideChat format ["All callsigns, this is %1. Requesting immediate close air support at Grid %2. Standby for 5-line. Over.", _callsign, _grid];
     };
 
     // 5-line CCA: sent independently after a delay, once task is still active.
@@ -310,7 +335,7 @@ if (_missionType == "CAS") exitWith {
         private _capable = (units _grp) select { alive _x && { !(_x getVariable ["ACE_isUnconscious", false]) } };
         if (count _capable == 0) exitWith {};
         private _speaker = _capable select 0;
-        private _callsign = _grp getVariable ["heliOps_callsign", "Alpha 1-1"];
+        private _callsign = _grp getVariable ["FADE_callsign", "Alpha 1-1"];
 
         // Find nearest living enemy for 5-line data
         private _nearestEnemy = objNull;
@@ -328,7 +353,7 @@ if (_missionType == "CAS") exitWith {
         private _remarks = "friendlies marked green smoke/IR strobes; CLEARED HOT when visual";
 
         _speaker sideChat format [
-            "%1 - 5-Line CCA. Line 1: IP own pos, hdg %2. Line 2: %3m to target. Line 3: elevation %4m MSL. Line 4: %5. Line 5: %6. ADVISE READY.",
+            "All callsigns, this is %1. 5-Line CCA. IP own pos, hdg %2. %3m to target. elevation %4m MSL. %5. %6. CLEARED HOT. Over.",
             _callsign, _hdg, _nearestDist, _targetElev, _targetDesc, _remarks
         ];
     };
@@ -343,7 +368,7 @@ if (_missionType == "CAS") exitWith {
             private _veh = vehicle _player;
             private _friendlyPos = getPosATL (leader _grp);
             if (_veh distance _friendlyPos < 1000) then {
-                private _callsign = _grp getVariable ["heliOps_callsign", "Alpha 1-1"];
+                private _callsign = _grp getVariable ["FADE_callsign", "Alpha 1-1"];
                 private _capable = (units _grp) select { alive _x && { !(_x getVariable ["ACE_isUnconscious", false]) } };
                 private _speaker = if (count _capable > 0) then { _capable select 0 } else { objNull };
                 private _timeMin = (date select 3) * 60 + (date select 4);
@@ -376,7 +401,7 @@ if (_missionType == "CAS") exitWith {
             } else { 0 };
             if (_friendlyAlive == 0) exitWith {
                 [_taskId, "FAILED"] call BIS_fnc_taskSetState;
-                ["<t size='1.2' color='#FF6666'>MISSION FAILED</t><br/><br/><t color='#E0E0E0'>Friendly forces have been eliminated.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+                ["<t size='1.2' color='#FF6666'>MISSION FAILED</t><br/><br/><t color='#E0E0E0'>Friendly forces have been eliminated.</t>"] remoteExec ["FADE_showMissionHint", _player];
                 true
             };
             private _aliveCount = 0;
@@ -386,22 +411,22 @@ if (_missionType == "CAS") exitWith {
                     (units _friendlyGroup) select { alive _x && { !(_x getVariable ["ACE_isUnconscious", false]) } }
                 } else { [] };
                 if (count _capable > 0) then {
-                    private _callsign = _friendlyGroup getVariable ["heliOps_callsign", "Alpha 1-1"];
-                    (_capable select 0) sideChat format ["RZ, This is %1. Hostiles suppressed. Nice work. Out.", _callsign];
+                    private _callsign = _friendlyGroup getVariable ["FADE_callsign", "Alpha 1-1"];
+                    (_capable select 0) sideChat format ["This is %1. Hostiles suppressed. Nice work. Out.", _callsign];
                 };
                 [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
                 true
             };
             false
         };
-        [_markerName] call heliOps_deleteMarkerSafe;
-        if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+        [_markerName] call FADE_deleteMarkerSafe;
+        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
         [_enemyGroups, _friendlyGroup] spawn {
             params ["_enemyGroups", "_friendlyGroup"];
             sleep 60;
             { if (!isNull _x) then { { deleteVehicle _x } forEach units _x; deleteGroup _x } } forEach _enemyGroups;
             if (!isNull _friendlyGroup) then {
-                { if (!isNull _x) then { detach _x; deleteVehicle _x } } forEach (_friendlyGroup getVariable ["heliOps_irStrobes", []]);
+                { if (!isNull _x) then { detach _x; deleteVehicle _x } } forEach (_friendlyGroup getVariable ["FADE_irStrobes", []]);
                 { deleteVehicle _x } forEach units _friendlyGroup;
                 deleteGroup _friendlyGroup;
             };
@@ -414,14 +439,14 @@ if (_missionType == "CAS") exitWith {
 //    player lands at camp → AI walks to vehicle → animation + sideChat → 5s → complete; 60s cleanup
 // -----------------------------------------------------------------------------
 if (_missionType == "Cargo") exitWith {
-    if (isNil "heliOps_cargoClasses" || { count heliOps_cargoClasses == 0 }) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No cargo classes configured.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+    if (isNil "FADE_cargoClasses" || { count FADE_cargoClasses == 0 }) exitWith {
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No cargo classes configured.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
-    private _cargoClass = selectRandom heliOps_cargoClasses;
+    private _cargoClass = selectRandom FADE_cargoClasses;
     if (isNil "_cargoClass" || { _cargoClass == "" }) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Invalid cargo class.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Invalid cargo class.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
     // Spawn cargo at CargoPoint_1 marker; findSafePos avoids clipping with vehicles
     private _cargoCenter = getMarkerPos "CargoPoint_1";
@@ -465,7 +490,7 @@ if (_missionType == "Cargo") exitWith {
     private _garrisonPos = [_destPos, 0, 8, 2, 0, 0.3, 0, [], _destPos] call BIS_fnc_findSafePos;
     if (count _garrisonPos < 2) then { _garrisonPos = _destPos };
     private _garrisonGroup = [_garrisonPos, WEST, [_receiverClass]] call BIS_fnc_spawnGroup;
-    [_garrisonGroup] call (missionNamespace getVariable ["heliOps_assignGroupCallsign", {}]);
+    [_garrisonGroup] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
     _garrisonGroup setBehaviour "SAFE";
     _garrisonGroup setCombatMode "GREEN";
     {
@@ -486,7 +511,7 @@ if (_missionType == "Cargo") exitWith {
         _psp = [_psp, 0, 15, 3, 0, 0.3, 0, [], _psp] call BIS_fnc_findSafePos;
         if (count _psp < 2) then { _psp = _destPos };
         private _pg_grp = [_psp, WEST, _patrolClasses] call BIS_fnc_spawnGroup;
-        [_pg_grp] call (missionNamespace getVariable ["heliOps_assignGroupCallsign", {}]);
+        [_pg_grp] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
         _pg_grp setBehaviour "SAFE";
         _pg_grp setCombatMode "GREEN";
         for "_w" from 0 to 3 do {
@@ -507,15 +532,15 @@ if (_missionType == "Cargo") exitWith {
 
     [_player, _taskId, "Deliver cargo to the camp. Land at the camp for the receiving party to unload.", "Cargo / Resupply", _destPos, "box"] call _fnc_createMissionTask;
 
-    private _markerName = "heliOps_cargo_" + _taskId;
-    _player setVariable ["heliOps_myMissionMarker", _markerName, true];
+    private _markerName = "FADE_cargo_" + _taskId;
+    _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _marker = createMarker [_markerName, _destPos];
     _marker setMarkerType "loc_bunker";
     _marker setMarkerColor "ColorYellow";
     _marker setMarkerText "Resupply Camp";
 
     // Cargo box pickup marker — only visible while this mission is active
-    private _cargoPickupMarkerName = "heliOps_cargoPickup_" + _taskId;
+    private _cargoPickupMarkerName = "FADE_cargoPickup_" + _taskId;
     private _cargoPickupMarker = createMarker [_cargoPickupMarkerName, _cargoPos];
     _cargoPickupMarker setMarkerType "mil_box";
     _cargoPickupMarker setMarkerColor "ColorYellow";
@@ -524,8 +549,9 @@ if (_missionType == "Cargo") exitWith {
     private _grid = mapGridPosition _destPos;
     private _cargoGrid = mapGridPosition _cargoPos;
     private _brief = format ["CARGO / RESUPPLY%1%1TARGET: Camp Grid %2 (marked on map)%1%1A cargo box is available at Grid %3 (marked) if you want to practice sling load; bringing it to camp is optional. To complete the mission, fly to the camp and land -- the receiving party will confirm unload.%1%1Complete by landing at camp.", toString [10], _grid, _cargoGrid];
-    _player setVariable ["heliOps_myMissionBrief", _brief, true];
-    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Cargo / Resupply</t><br/><t color='#B0B0B0'>Camp Grid: %1</t><br/><t color='#AAAAAA'>Cargo Box: Grid %2 (optional sling load)</t><br/><br/><t color='#C0C0C0'>Fly to camp and land to complete. Delivering the box is optional.</t>", _grid, _cargoGrid]] remoteExec ["FAC_heliOps_showMissionHint", _player];
+    _player setVariable ["FADE_myMissionBrief", _brief, true];
+    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Cargo / Resupply</t><br/><t color='#B0B0B0'>Camp Grid: %1</t><br/><t color='#AAAAAA'>Cargo Box: Grid %2 (optional sling load)</t><br/><br/><t color='#C0C0C0'>Fly to camp and land to complete. Delivering the box is optional.</t>", _grid, _cargoGrid]] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "Cargo / Resupply"] call FADE_notifyOthersMissionStarted;
 
     [_taskId, _cargo, _destPos, _markerName, 900, _player, _campObjects, _garrisonGroup, _cargoPatrolGroups, _cargoPickupMarkerName] spawn {
         params ["_taskId", "_cargo", "_destPos", "_markerName", "_timeout", "_player", "_campObjects", "_garrisonGroup", "_cargoPatrolGroups", "_cargoPickupMarkerName"];
@@ -534,7 +560,7 @@ if (_missionType == "Cargo") exitWith {
         private _unloadStartTime = 0;
         private _contactMsgSent = false;
         private _receivingUnit = objNull;
-        private _callsign = if (!isNull _garrisonGroup) then { _garrisonGroup getVariable ["heliOps_callsign", "Alpha 1-1"] } else { "Alpha 1-1" };
+        private _callsign = if (!isNull _garrisonGroup) then { _garrisonGroup getVariable ["FADE_callsign", "Alpha 1-1"] } else { "Alpha 1-1" };
         if (!isNull _garrisonGroup && { count units _garrisonGroup > 0 }) then { _receivingUnit = leader _garrisonGroup };
 
         private _waitDone = false;
@@ -549,7 +575,7 @@ if (_missionType == "Cargo") exitWith {
                 private _refPos = if (_veh == _player) then { _player } else { _veh };
                 private _nearCamp = _refPos distance _destPos < 50;
                 if (_nearCamp && !_contactMsgSent && !isNull _receivingUnit && { alive _receivingUnit }) then {
-                    _receivingUnit sideChat format ["RZ, This is %1. We have you in sight. Land when ready. Over.", _callsign];
+                    _receivingUnit sideChat format ["This is %1. We have you in sight. Land when ready. Over.", _callsign];
                     _contactMsgSent = true;
                 };
                 private _isHeli = _veh isKindOf "Helicopter" && _veh != _player;
@@ -560,7 +586,7 @@ if (_missionType == "Cargo") exitWith {
                     _unloadStartTime = time;
                     private _targetVeh = if (_veh == _player) then { objNull } else { _veh };
                     if (!isNull _targetVeh) then {
-                        _receivingUnit sideChat format ["RZ, This is %1. Moving to receive. Over.", _callsign];
+                        _receivingUnit sideChat format ["This is %1. Moving to receive. Over.", _callsign];
                         private _approachPos = _targetVeh getPos [8, getDir _targetVeh];
                         _approachPos = [_approachPos, 0, 2, 0, 0, 0.3, 0, [], _approachPos] call BIS_fnc_findSafePos;
                         if (_approachPos isEqualType [] && { count _approachPos >= 2 }) then {
@@ -570,11 +596,11 @@ if (_missionType == "Cargo") exitWith {
                             _receivingUnit doMove (getPos _targetVeh);
                         };
                     } else {
-                        _receivingUnit sideChat format ["RZ, This is %1. Confirm drop-off. Out.", _callsign];
+                        _receivingUnit sideChat format ["This is %1. Confirm drop-off. Out.", _callsign];
                         [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
-                        [_markerName] call heliOps_deleteMarkerSafe;
-                        [_cargoPickupMarkerName] call heliOps_deleteMarkerSafe;
-                        if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+                        [_markerName] call FADE_deleteMarkerSafe;
+                        [_cargoPickupMarkerName] call FADE_deleteMarkerSafe;
+                        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
                         [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups] spawn {
                             params ["_campObjects", "_garrisonGroup", "_cargo", "_pgGrps"];
                             sleep 60;
@@ -594,12 +620,12 @@ if (_missionType == "Cargo") exitWith {
                 if (!isNull _veh && { _receivingUnit distance _veh < 10 }) then {
                     doStop _receivingUnit;
                     _receivingUnit switchMove "AinvPknlMstpSnonWnonDnon_medic0";
-                    _receivingUnit sideChat format ["RZ, This is %1. Receiving. Offloading cargo. Wilco. Out.", _callsign];
+                    _receivingUnit sideChat format ["This is %1. Receiving. Offloading cargo, give me a few seconds. Out.", _callsign];
                     sleep 5;
                     [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
-                    [_markerName] call heliOps_deleteMarkerSafe;
-                    [_cargoPickupMarkerName] call heliOps_deleteMarkerSafe;
-                    if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+                    [_markerName] call FADE_deleteMarkerSafe;
+                    [_cargoPickupMarkerName] call FADE_deleteMarkerSafe;
+                    if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
                     [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups] spawn {
                         params ["_campObjects", "_garrisonGroup", "_cargo", "_pgGrps"];
                         sleep 60;
@@ -611,11 +637,11 @@ if (_missionType == "Cargo") exitWith {
                     _waitDone = true;
                 } else {
                     if (time - _unloadStartTime > 25) then {
-                        _receivingUnit sideChat format ["RZ, This is %1. Confirm drop-off. Out.", _callsign];
+                        _receivingUnit sideChat format ["This is %1. Confirm drop-off. Out.", _callsign];
                         [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
-                        [_markerName] call heliOps_deleteMarkerSafe;
-                        [_cargoPickupMarkerName] call heliOps_deleteMarkerSafe;
-                        if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+                        [_markerName] call FADE_deleteMarkerSafe;
+                        [_cargoPickupMarkerName] call FADE_deleteMarkerSafe;
+                        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
                         [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups] spawn {
                             params ["_campObjects", "_garrisonGroup", "_cargo", "_pgGrps"];
                             sleep 60;
@@ -635,9 +661,9 @@ if (_missionType == "Cargo") exitWith {
         if (!((_taskId call BIS_fnc_taskState) in ["SUCCEEDED","CANCELED","FAILED"])) then {
             [_taskId, "CANCELED"] call BIS_fnc_taskSetState;
         };
-        [_markerName] call heliOps_deleteMarkerSafe;
-        [_cargoPickupMarkerName] call heliOps_deleteMarkerSafe;
-        if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+        [_markerName] call FADE_deleteMarkerSafe;
+        [_cargoPickupMarkerName] call FADE_deleteMarkerSafe;
+        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
         if ((_taskId call BIS_fnc_taskState) != "SUCCEEDED") then {
             [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups] spawn {
                 params ["_campObjects", "_garrisonGroup", "_cargo", "_pgGrps"];
@@ -666,7 +692,7 @@ if (_missionType == "HVT") exitWith {
     while { _attempt < 15 } do {
         _attempt = _attempt + 1;
         if (_attempt > 1) then {
-            _destPos = [_minDistHVT] call heliOps_findMissionPosUrban;
+            _destPos = [_minDistHVT] call FADE_findMissionPosUrban;
             if (count _destPos >= 2) then { _destPos = [(_destPos select 0), (_destPos select 1), (_destPos param [2, 0])] };
         };
         if (count _destPos < 2) exitWith {};
@@ -679,14 +705,14 @@ if (_missionType == "HVT") exitWith {
     };
 
     if (isNull _targetBuilding) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No suitable building (10+ positions) in any urban area. Try again.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No suitable building (10+ positions) in any urban area. Try again.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
 
     private _bpos = _targetBuilding buildingPos -1;
     if (count _bpos < _hvtMinSlots) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Building has insufficient positions.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Building has insufficient positions.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
 
     private _officerClasses = _enemyUnits select { ("officer" in (toLower _x)) };
@@ -715,7 +741,7 @@ if (_missionType == "HVT") exitWith {
     removeAllWeapons _hvt;
     removeAllItems _hvt;
     removeHeadgear _hvt;
-    _hvt setIdentity ("heliOps_hvt_" + _hvtCodename);
+    _hvt setIdentity ("FADE_hvt_" + _hvtCodename);
     [_hvt, _hvtPos] spawn {
         params ["_u", "_p"];
         sleep 0.2;
@@ -745,6 +771,7 @@ if (_missionType == "HVT") exitWith {
         _u setUnitPos "MIDDLE";
         [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
     };
+    [_guardGroup] call FAC_applyEnemyScenarioToGroup;
 
     private _buildingCenterPatrol = getPosATL _targetBuilding;
     if (count _buildingCenterPatrol < 3) then { _buildingCenterPatrol = [(_buildingCenterPatrol select 0), (_buildingCenterPatrol select 1), 0] };
@@ -765,6 +792,7 @@ if (_missionType == "HVT") exitWith {
             private _patrolClasses = (_enemyUnits select [0, _patrolSize min count _enemyUnits]);
             for "_k" from (count _patrolClasses) to (_patrolSize - 1) do { _patrolClasses pushBack (_enemyUnits select 0) };
             private _grp = [_sp, EAST, _patrolClasses] call BIS_fnc_spawnGroup;
+            [_grp] call FAC_applyEnemyScenarioToGroup;
             _grp setBehaviour "SAFE";
             for "_w" from 0 to 3 do {
                 private _wpAngle = _w * 90;
@@ -806,6 +834,7 @@ if (_missionType == "HVT") exitWith {
                 _u setUnitPos "MIDDLE";
                 [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
             };
+            [_surroundGrp] call FAC_applyEnemyScenarioToGroup;
             _patrolGroups pushBack _surroundGrp;
         };
     } forEach _hvtSurroundBuildings;
@@ -821,8 +850,8 @@ if (_missionType == "HVT") exitWith {
     };
 
     [_player, _taskId, "Eliminate or capture the HVT. Return captive to base to complete.", "HVT", getPosATL _targetBuilding, "target"] call _fnc_createMissionTask;
-    private _markerName = "heliOps_hvt_" + _taskId;
-    _player setVariable ["heliOps_myMissionMarker", _markerName, true];
+    private _markerName = "FADE_hvt_" + _taskId;
+    _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _marker = createMarker [_markerName, getPosATL _targetBuilding];
     _marker setMarkerType "mil_objective";
     _marker setMarkerColor "ColorOPFOR";
@@ -830,10 +859,12 @@ if (_missionType == "HVT") exitWith {
 
     private _grid = mapGridPosition (getPosATL _targetBuilding);
     private _brief = format ["HVT%1%1TARGET: Grid %2 (urban building)%1HVT: %3 -- %4%1%1Locate and eliminate the HVT, or capture and return them to base. HVT is unarmed and cannot move. Building is guarded; external patrols in the area.%1%1Complete when HVT is killed or delivered to base as captive.", toString [10], _grid, _hvtCodename, _hvtTypeName];
-    _player setVariable ["heliOps_myMissionBrief", _brief, true];
-    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>HVT</t><br/><t color='#B0B0B0'>Grid: %1</t><br/><t color='#FFCC00'>HVT: %2 -- %3</t><br/><br/><t color='#C0C0C0'>Eliminate or capture and return to base.</t>", _grid, _hvtCodename, _hvtTypeName]] remoteExec ["FAC_heliOps_showMissionHint", _player];
+    _player setVariable ["FADE_myMissionBrief", _brief, true];
+    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>HVT</t><br/><t color='#B0B0B0'>Grid: %1</t><br/><t color='#FFCC00'>HVT: %2 -- %3</t><br/><br/><t color='#C0C0C0'>Eliminate or capture and return to base.</t>", _grid, _hvtCodename, _hvtTypeName]] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "HVT"] call FADE_notifyOthersMissionStarted;
 
     private _allGroups = [_hvtGroup, _guardGroup] + _patrolGroups;
+    [[_guardGroup] + _patrolGroups, _basePos] call FADE_registerEnemyRetreat;
 
     [_taskId, _hvt, _basePos, _baseDistForComplete, _markerName, _player, _allGroups, _hvtBarrel] spawn {
         params ["_taskId", "_hvt", "_basePos", "_baseDistForComplete", "_markerName", "_player", "_allGroups", "_hvtBarrel"];
@@ -878,15 +909,15 @@ if (_missionType == "HVT") exitWith {
             _done
         };
 
-        [_markerName] call heliOps_deleteMarkerSafe;
-        if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+        [_markerName] call FADE_deleteMarkerSafe;
+        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
         [_allGroups, _markerName, _player, _hvtBarrel, _taskId] spawn {
             params ["_groups", "_markerName", "_player", "_hvtBarrel", "_taskId"];
             sleep 60;
             { if (!isNull _x) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } } forEach _groups;
             if (!isNull _hvtBarrel) then { deleteVehicle _hvtBarrel };
-            [_markerName] call heliOps_deleteMarkerSafe;
-            if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+            [_markerName] call FADE_deleteMarkerSafe;
+            if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
         };
     };
 };
@@ -906,7 +937,7 @@ if (_missionType == "Hostage") exitWith {
     private _attempt = 0;
     while { _attempt < _maxAttempts } do {
         _attempt = _attempt + 1;
-        _destPos = [_minDistHostage] call heliOps_findMissionPosUrbanNearCenter;
+        _destPos = [_minDistHostage] call FADE_findMissionPosUrbanNearCenter;
         if (count _destPos >= 2) then {
             private _buildings = nearestObjects [_destPos, ["House", "Building"], _buildRadius];
             _suitableBuildings = _buildings select { count (_x buildingPos -1) >= _minSlotsPerBuilding };
@@ -914,12 +945,12 @@ if (_missionType == "Hostage") exitWith {
         };
     };
     if (count _suitableBuildings < _minSuitableBuildings) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No urban area with at least 2 suitable buildings (5+ positions each) near a civ zone. Check CIV_T_* triggers in towns and try again.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No urban area with at least 2 suitable buildings (5+ positions each) near a civ zone. Check CIV_T_* triggers in towns and try again.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
 
     private _hostageCount = 1 + floor random 3;
-    private _civClasses = missionNamespace getVariable ["heliOps_civUnitClasses", ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"]];
+    private _civClasses = missionNamespace getVariable ["FADE_civUnitClasses", ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"]];
     if (_civClasses isEqualTo []) then { _civClasses = ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"] };
 
     private _hostages = [];
@@ -977,12 +1008,13 @@ if (_missionType == "Hostage") exitWith {
             _u setUnitPos "MIDDLE";
             [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
         };
+        [_guardGroup] call FAC_applyEnemyScenarioToGroup;
         _guardGroups pushBack _guardGroup;
     };
 
     if (count _hostages == 0) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not place hostages.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not place hostages.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
 
     // Additional guards in surrounding buildings (200 m radius), 40% chance per building, 1–3 units per building
@@ -1009,6 +1041,7 @@ if (_missionType == "Hostage") exitWith {
                 _u setUnitPos "MIDDLE";
                 [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
             };
+            [_surroundGrp] call FAC_applyEnemyScenarioToGroup;
             _guardGroups pushBack _surroundGrp;
         };
     } forEach _surroundBuildings;
@@ -1033,6 +1066,7 @@ if (_missionType == "Hostage") exitWith {
                 private _patrolClasses = (_enemyUnits select [0, _patrolSize min count _enemyUnits]);
                 for "_k" from (count _patrolClasses) to (_patrolSize - 1) do { _patrolClasses pushBack (_enemyUnits select 0) };
                 private _grp = [_sp, EAST, _patrolClasses] call BIS_fnc_spawnGroup;
+                [_grp] call FAC_applyEnemyScenarioToGroup;
                 _grp setBehaviour "SAFE";
                 for "_w" from 0 to 3 do {
                     private _wpAngle = _w * 90;
@@ -1057,8 +1091,8 @@ if (_missionType == "Hostage") exitWith {
     if (count _missionCenter < 3) then { _missionCenter = [(_missionCenter select 0), (_missionCenter select 1), 0] };
 
     [_player, _taskId, "Rescue the hostages. Return all alive hostages to base (within 100 m). Mission fails if more than half die.", "Hostage", _missionCenter, "run"] call _fnc_createMissionTask;
-    private _markerName = "heliOps_hostage_" + _taskId;
-    _player setVariable ["heliOps_myMissionMarker", _markerName, true];
+    private _markerName = "FADE_hostage_" + _taskId;
+    _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _marker = createMarker [_markerName, _missionCenter];
     _marker setMarkerType "mil_objective";
     _marker setMarkerColor "ColorCIV";
@@ -1066,11 +1100,13 @@ if (_missionType == "Hostage") exitWith {
 
     private _grid = mapGridPosition _missionCenter;
     private _brief = format ["HOSTAGE%1%1TARGET: Grid %2 (urban building(s))%1HOSTAGES: %3 civilian(s)%1%1Rescue the hostages from the building(s). Each is guarded; patrols operate outside. Return all alive hostages to base (within 100 m). Mission fails if more than half the hostages die.%1%1Complete when every surviving hostage is at base.", toString [10], _grid, count _hostages];
-    _player setVariable ["heliOps_myMissionBrief", _brief, true];
-    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Hostage</t><br/><t color='#B0B0B0'>Grid: %1</t><br/><t color='#FFCC00'>%2 hostage(s)</t><br/><br/><t color='#C0C0C0'>Rescue and return all alive to base (within 100 m).</t>", _grid, count _hostages]] remoteExec ["FAC_heliOps_showMissionHint", _player];
+    _player setVariable ["FADE_myMissionBrief", _brief, true];
+    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Hostage</t><br/><t color='#B0B0B0'>Grid: %1</t><br/><t color='#FFCC00'>%2 hostage(s)</t><br/><br/><t color='#C0C0C0'>Rescue and return all alive to base (within 100 m).</t>", _grid, count _hostages]] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "Hostage"] call FADE_notifyOthersMissionStarted;
 
     private _initialHostageCount = count _hostages;
     private _allGroups = [_hostageGroup] + _guardGroups + _patrolGroups;
+    [_guardGroups + _patrolGroups, _basePos] call FADE_registerEnemyRetreat;
 
     [_taskId, _hostages, _basePos, _baseDistForComplete, _markerName, _player, _allGroups, _initialHostageCount] spawn {
         params ["_taskId", "_hostages", "_basePos", "_baseDistForComplete", "_markerName", "_player", "_allGroups", "_initialHostageCount"];
@@ -1083,7 +1119,7 @@ if (_missionType == "Hostage") exitWith {
             private _aliveCount = count _alive;
             if (!_done && _aliveCount < (ceil (_initialHostageCount / 2))) then {
                 [_taskId, "FAILED"] call BIS_fnc_taskSetState;
-                ["<t size='1.2' color='#FF6666'>MISSION FAILED</t><br/><br/><t color='#E0E0E0'>Too many hostages lost.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+                ["<t size='1.2' color='#FF6666'>MISSION FAILED</t><br/><br/><t color='#E0E0E0'>Too many hostages lost.</t>"] remoteExec ["FADE_showMissionHint", _player];
                 _done = true;
             };
             if (!_done && _aliveCount > 0) then {
@@ -1096,15 +1132,15 @@ if (_missionType == "Hostage") exitWith {
             _done
         };
 
-        [_markerName] call heliOps_deleteMarkerSafe;
-        if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+        [_markerName] call FADE_deleteMarkerSafe;
+        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
         [_allGroups, _markerName, _player, _hostages, _taskId] spawn {
             params ["_groups", "_markerName", "_player", "_hostages", "_taskId"];
             sleep 60;
             { if (!isNull _x) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } } forEach _groups;
             { if (!isNull _x) then { deleteVehicle _x } } forEach _hostages;
-            [_markerName] call heliOps_deleteMarkerSafe;
-            if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+            [_markerName] call FADE_deleteMarkerSafe;
+            if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
         };
     };
 };
@@ -1114,16 +1150,16 @@ if (_missionType == "Hostage") exitWith {
 // -----------------------------------------------------------------------------
 if (_missionType == "ClearArea") exitWith {
     // Single source: MUST use scenario-applied list so all spawned units match chosen faction (no BIS fallbacks)
-    private _enemyUnitsCA = missionNamespace getVariable ["heliOps_enemyUnits", []];
+    private _enemyUnitsCA = missionNamespace getVariable ["FADE_enemyUnits", []];
     if (_enemyUnitsCA isEqualTo []) then {
-        private _ef = missionNamespace getVariable ["heliOps_scenarioEnemyFaction", "OPF_F"];
-        _enemyUnitsCA = [_ef, 0] call heliOps_getUnitsForFaction;
+        private _ef = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
+        _enemyUnitsCA = [_ef, 0] call FADE_getUnitsForFaction;
         if (_enemyUnitsCA isEqualTo []) then { _enemyUnitsCA = ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"] };
     };
-    _enemyUnitsCA = [_enemyUnitsCA] call (missionNamespace getVariable ["heliOps_filterEnemyUnitsArmed", { _this select 0 }]);
+    _enemyUnitsCA = [_enemyUnitsCA] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsCA == 0) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No enemy units configured.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No enemy units configured.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
     // Use only classnames from our list (no createUnit with side default that could spawn CSAT)
     private _baseClassCA = _enemyUnitsCA select 0;
@@ -1131,7 +1167,7 @@ if (_missionType == "ClearArea") exitWith {
     private _center = _destPos;
     private _campObjects = [];
     if (_useTown) then {
-        private _civZones = missionNamespace getVariable ["heliOps_civTriggerNames", []];
+        private _civZones = missionNamespace getVariable ["FADE_civTriggerNames", []];
         if (count _civZones > 0) then {
             private _zoneName = selectRandom _civZones;
             private _trig = missionNamespace getVariable [_zoneName, objNull];
@@ -1199,6 +1235,7 @@ if (_missionType == "ClearArea") exitWith {
                 private _grp = createGroup EAST;
                 private _u = _grp createUnit [_cls, _p, [], 0, "NONE"];
                 if (!isNull _u) then {
+                    [_grp] call FAC_applyEnemyScenarioToGroup;
                     _u setPos _p;
                     _u setUnitPos "MIDDLE";
                     [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
@@ -1227,6 +1264,7 @@ if (_missionType == "ClearArea") exitWith {
                 private _grp = createGroup EAST;
                 private _u = _grp createUnit [_cls, _pos, [], 0, "NONE"];
                 if (!isNull _u) then {
+                    [_grp] call FAC_applyEnemyScenarioToGroup;
                     _u setPos _pos;
                     _u setUnitPos "MIDDLE";
                     [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
@@ -1254,6 +1292,7 @@ if (_missionType == "ClearArea") exitWith {
                 if (!isNull _u) then { _u setPos _sp };
             };
             if (count units _grp > 0) then {
+                [_grp] call FAC_applyEnemyScenarioToGroup;
                 _grp setBehaviour "SAFE";
                 for "_w" from 0 to 3 do {
                     private _a = _w * 90 + (random 30);
@@ -1269,10 +1308,10 @@ if (_missionType == "ClearArea") exitWith {
         };
     };
     private _areaVehicles = [];
-    private _enemyVehList = missionNamespace getVariable ["heliOps_enemyVehicles", []];
+    private _enemyVehList = missionNamespace getVariable ["FADE_enemyVehicles", []];
     if (_enemyVehList isEqualTo []) then {
-        private _ef = missionNamespace getVariable ["heliOps_scenarioEnemyFaction", "OPF_F"];
-        _enemyVehList = [_ef] call heliOps_getEnemyVehiclesForFaction;
+        private _ef = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
+        _enemyVehList = [_ef] call FADE_getEnemyVehiclesForFaction;
     };
     private _landVehClasses = _enemyVehList select { !(_x isKindOf "Air") && { !(_x isKindOf "Ship") } };
     if (count _landVehClasses > 0) then {
@@ -1301,6 +1340,7 @@ if (_missionType == "ClearArea") exitWith {
                         private _c = _vehGrp createUnit [selectRandom _enemyUnitsCA, _roadPos, [], 0, "NONE"];
                         if (!isNull _c) then { _c moveInCommander _veh };
                     };
+                    [_vehGrp] call FAC_applyEnemyScenarioToGroup;
                     _vehGrp setBehaviour "SAFE";
                     _vehGrp setSpeedMode "LIMITED";
                     private _wpAngle = random 360;
@@ -1318,16 +1358,17 @@ if (_missionType == "ClearArea") exitWith {
             };
         };
     };
+    [_allGroups, _basePos] call FADE_registerEnemyRetreat;
     private _initialCount = 0;
     { _initialCount = _initialCount + count units _x } forEach _allGroups;
     if (_initialCount == 0) then {
         { if (!isNull _x) then { deleteVehicle _x } } forEach _areaVehicles;
         { if (!isNull _x) then { deleteVehicle _x } } forEach _campObjects;
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not spawn enemies in area.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not spawn enemies in area.</t>"] remoteExec ["FADE_showMissionHint", _player];
     } else {
-        private _markerName = "heliOps_clear_" + _taskId;
-        _player setVariable ["heliOps_myMissionMarker", _markerName, true];
+        private _markerName = "FADE_clear_" + _taskId;
+        _player setVariable ["FADE_myMissionMarker", _markerName, true];
         private _marker = createMarker [_markerName, _center];
         _marker setMarkerType "mil_objective";
         _marker setMarkerColor "ColorOPFOR";
@@ -1335,8 +1376,9 @@ if (_missionType == "ClearArea") exitWith {
         private _grid = mapGridPosition _center;
         [_player, _taskId, "Destroy at least 80% of enemy forces in the area.", "Clear Area", _center, "attack"] call _fnc_createMissionTask;
         private _brief = format ["CLEAR AREA%1%1TARGET: Grid %2 (%3)%1%1Neutralize at least 80% of enemy forces.", toString [10], _grid, if (_useTown) then { "occupied town" } else { "enemy camp" }];
-        _player setVariable ["heliOps_myMissionBrief", _brief, true];
-        [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Clear Area</t><br/><t color='#B0B0B0'>Grid: %1 -- %2</t><br/><br/><t color='#C0C0C0'>Destroy 80%%+ of enemy forces.</t>", _grid, if (_useTown) then { "town" } else { "camp" }]] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        _player setVariable ["FADE_myMissionBrief", _brief, true];
+        [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Clear Area</t><br/><t color='#B0B0B0'>Grid: %1 -- %2</t><br/><br/><t color='#C0C0C0'>Destroy 80%%+ of enemy forces.</t>", _grid, if (_useTown) then { "town" } else { "camp" }]] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "Clear Area"] call FADE_notifyOthersMissionStarted;
         private _clearTimeout = 900;
         [_taskId, _allGroups, _initialCount, _markerName, _player, _campObjects, _areaVehicles, _clearTimeout] spawn {
             params ["_taskId", "_allGroups", "_initialCount", "_markerName", "_player", "_campObjects", "_areaVehicles", "_timeout"];
@@ -1357,16 +1399,16 @@ if (_missionType == "ClearArea") exitWith {
                 { _alive = _alive + ({ alive _x } count units _x) } forEach _allGroups;
                 if (_alive <= _initialCount * 0.2) then { [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState } else { [_taskId, "CANCELED"] call BIS_fnc_taskSetState };
             };
-            [_markerName] call heliOps_deleteMarkerSafe;
-            if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+            [_markerName] call FADE_deleteMarkerSafe;
+            if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
             [_allGroups, _campObjects, _areaVehicles, _markerName, _player, _taskId] spawn {
                 params ["_groups", "_campObjects", "_areaVehicles", "_markerName", "_player", "_taskId"];
                 sleep 60;
                 { if (!isNull _x) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } } forEach _groups;
                 { if (!isNull _x) then { deleteVehicle _x } } forEach _campObjects;
                 { if (!isNull _x) then { deleteVehicle _x } } forEach _areaVehicles;
-                [_markerName] call heliOps_deleteMarkerSafe;
-                if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+                [_markerName] call FADE_deleteMarkerSafe;
+                if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
             };
         };
     };
@@ -1376,21 +1418,21 @@ if (_missionType == "ClearArea") exitWith {
 // 7. INTERCEPT CONVOY -- Convoy 3-6 vehicles (road start → end, 2km+); destroy 100% before arrival
 // -----------------------------------------------------------------------------
 if (_missionType == "InterceptConvoy") exitWith {
-    private _convoyVehicles = missionNamespace getVariable ["heliOps_enemyVehicles", []];
+    private _convoyVehicles = missionNamespace getVariable ["FADE_enemyVehicles", []];
     if (_convoyVehicles isEqualTo []) then {
-        private _ef = missionNamespace getVariable ["heliOps_scenarioEnemyFaction", "OPF_F"];
-        _convoyVehicles = [_ef] call heliOps_getEnemyVehiclesForFaction;
+        private _ef = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
+        _convoyVehicles = [_ef] call FADE_getEnemyVehiclesForFaction;
     };
-    private _enemyUnitsConv = missionNamespace getVariable ["heliOps_enemyUnits", []];
+    private _enemyUnitsConv = missionNamespace getVariable ["FADE_enemyUnits", []];
     if (_enemyUnitsConv isEqualTo []) then {
-        private _ef = missionNamespace getVariable ["heliOps_scenarioEnemyFaction", "OPF_F"];
-        _enemyUnitsConv = [_ef, 0] call heliOps_getUnitsForFaction;
+        private _ef = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
+        _enemyUnitsConv = [_ef, 0] call FADE_getUnitsForFaction;
         if (_enemyUnitsConv isEqualTo []) then { _enemyUnitsConv = ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"] };
     };
-    _enemyUnitsConv = [_enemyUnitsConv] call (missionNamespace getVariable ["heliOps_filterEnemyUnitsArmed", { _this select 0 }]);
+    _enemyUnitsConv = [_enemyUnitsConv] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsConv == 0) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No enemy units configured for convoy crew.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No enemy units configured for convoy crew.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
     private _soft = [];
     private _armored = [];
@@ -1400,8 +1442,8 @@ if (_missionType == "InterceptConvoy") exitWith {
         };
     } forEach _convoyVehicles;
     if (count _soft == 0 && { count _armored == 0 }) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Enemy faction has no land vehicles. Choose a faction with cars/trucks or light armour.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Enemy faction has no land vehicles. Choose a faction with cars/trucks or light armour.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
     private _roadPoints = [];
     for "_i" from 1 to 25 do {
@@ -1409,8 +1451,8 @@ if (_missionType == "InterceptConvoy") exitWith {
         if (!isNull _obj) then { _roadPoints pushBack _obj };
     };
     if (count _roadPoints < 2) exitWith {
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Need at least 2 ROAD_SP_* points in Eden.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Need at least 2 ROAD_SP_* points in Eden.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
     private _startIdx = floor random count _roadPoints;
     private _endIdx = _startIdx;
@@ -1494,15 +1536,17 @@ if (_missionType == "InterceptConvoy") exitWith {
             };
         };
     };
+    [_convoyGroup] call FAC_applyEnemyScenarioToGroup;
+    { [_x] call FAC_applyEnemyScenarioToGroup } forEach _cargoGroups;
     if (count _convoyVehiclesSpawned == 0) exitWith {
         deleteGroup _convoyGroup;
         { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } forEach _cargoGroups;
-        [_player] call heliOps_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not spawn convoy vehicles.</t>"] remoteExec ["FAC_heliOps_showMissionHint", _player];
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not spawn convoy vehicles.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
-    _convoyGroup setVariable ["heliOps_convoyTaskId", _taskId, true];
-    _convoyGroup setVariable ["heliOps_convoyVehiclesList", _convoyVehiclesSpawned, true];
-    _convoyGroup setVariable ["heliOps_convoyCargoGroups", _cargoGroups, true];
+    _convoyGroup setVariable ["FADE_convoyTaskId", _taskId, true];
+    _convoyGroup setVariable ["FADE_convoyVehiclesList", _convoyVehiclesSpawned, true];
+    _convoyGroup setVariable ["FADE_convoyCargoGroups", _cargoGroups, true];
     _convoyGroup setFormation "COLUMN";
     _convoyGroup setBehaviour "SAFE";
     _convoyGroup setSpeedMode "LIMITED";
@@ -1511,19 +1555,20 @@ if (_missionType == "InterceptConvoy") exitWith {
     _wp setWaypointSpeed "LIMITED";
     _wp setWaypointStatements ["true", "
         private _g = group this;
-        private _task = _g getVariable ['heliOps_convoyTaskId', ''];
+        private _task = _g getVariable ['FADE_convoyTaskId', ''];
         if (_task != '' && { (_task call BIS_fnc_taskState) != 'SUCCEEDED' }) then { [_task, 'FAILED'] call BIS_fnc_taskSetState };
-        private _vList = _g getVariable ['heliOps_convoyVehiclesList', []];
+        private _vList = _g getVariable ['FADE_convoyVehiclesList', []];
         { if (!isNull _x) then { deleteVehicle _x } } forEach _vList;
-        private _cargoGrps = _g getVariable ['heliOps_convoyCargoGroups', []];
+        private _cargoGrps = _g getVariable ['FADE_convoyCargoGroups', []];
         { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } forEach _cargoGrps;
         { if (!isNull _x) then { deleteVehicle _x } } forEach units _g;
         deleteGroup _g;
     "];
-    private _markerNameStart = "heliOps_convoy_start_" + _taskId;
-    private _markerNameEnd = "heliOps_convoy_end_" + _taskId;
-    _player setVariable ["heliOps_myMissionMarker", _markerNameStart, true];
-    _player setVariable ["heliOps_myMissionMarkerEnd", _markerNameEnd, true];
+    [[_convoyGroup] + _cargoGroups, _basePos] call FADE_registerEnemyRetreat;
+    private _markerNameStart = "FADE_convoy_start_" + _taskId;
+    private _markerNameEnd = "FADE_convoy_end_" + _taskId;
+    _player setVariable ["FADE_myMissionMarker", _markerNameStart, true];
+    _player setVariable ["FADE_myMissionMarkerEnd", _markerNameEnd, true];
     private _markerStart = createMarker [_markerNameStart, _startPos];
     _markerStart setMarkerType "mil_arrow";
     _markerStart setMarkerColor "ColorOPFOR";
@@ -1532,12 +1577,13 @@ if (_missionType == "InterceptConvoy") exitWith {
     _markerEnd setMarkerType "mil_end";
     _markerEnd setMarkerColor "ColorOPFOR";
     _markerEnd setMarkerText "Convoy End";
-    [_player, _taskId, "Destroy all convoy vehicles before they reach the end zone.", "Intercept Convoy", _endPos, "destroy"] call _fnc_createMissionTask;
+    [_player, _taskId, "Stop the convoy: destroy or immobilise at least 60% of vehicles before they reach the end zone.", "Intercept Convoy", _endPos, "destroy"] call _fnc_createMissionTask;
     private _gridStart = mapGridPosition _startPos;
     private _gridEnd = mapGridPosition _endPos;
-    private _brief = format ["INTERCEPT CONVOY%1%1START: Grid %2%1END: Grid %3%1%1Destroy 100% of vehicles before they arrive.", toString [10], _gridStart, _gridEnd];
-    _player setVariable ["heliOps_myMissionBrief", _brief, true];
-    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Intercept Convoy</t><br/><t color='#B0B0B0'>Start: %1 -> End: %2</t><br/><br/><t color='#C0C0C0'>Destroy all vehicles before they reach end.</t>", _gridStart, _gridEnd]] remoteExec ["FAC_heliOps_showMissionHint", _player];
+    private _brief = format ["INTERCEPT CONVOY%1%1START: Grid %2%1END: Grid %3%1%1Stop the convoy: at least 60%% of vehicles destroyed or immobilised before they arrive.", toString [10], _gridStart, _gridEnd];
+    _player setVariable ["FADE_myMissionBrief", _brief, true];
+    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Intercept Convoy</t><br/><t color='#B0B0B0'>Start: %1 -> End: %2</t><br/><br/><t color='#C0C0C0'>Stop the convoy: at least 60%% of vehicles destroyed or immobilised.</t>", _gridStart, _gridEnd]] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "Intercept Convoy"] call FADE_notifyOthersMissionStarted;
     [_taskId, _convoyVehiclesSpawned, _convoyGroup, _cargoGroups, _markerNameStart, _markerNameEnd, _player, _endPos, _startPos] spawn {
         params ["_taskId", "_convoyVehiclesSpawned", "_convoyGroup", "_cargoGroups", "_markerNameStart", "_markerNameEnd", "_player", "_endPos", "_startPos"];
         private _warningSent = false;
@@ -1553,13 +1599,13 @@ if (_missionType == "InterceptConvoy") exitWith {
                     _warningSent = true;
                     private _observerGrp = createGroup WEST;
                     private _observer = _observerGrp createUnit ["B_Soldier_F", [0, 0, 0], [], 0, "NONE"];
-                    _observer setIdentity "heliOps_ratel_eagleeye";
+                    _observer setIdentity "FADE_ratel_eagleeye";
                     private _dist = round (_leadVeh distance _endPos);
                     private _msgs = [
-                        format ["Eagle Eye to all callsigns. Convoy is tracking, %1 metres from end zone. Expedite intercept. Out.", _dist],
-                        "All callsigns, Eagle Eye. Visual on convoy. Multiple vehicles, closing on objective. Intercept immediately. Out.",
-                        "Bonesaw, Eagle Eye. Convoy approaching boundary. You are cleared to engage. Over.",
-                        "Eagle Eye to all stations. Hostile convoy within range of final objective. All assets, engage now. Out."
+                        format ["All callsigns, this is Eagle Eye. Convoy is tracking, %1 metres from end zone. Expedite intercept. Out.", _dist],
+                        "All callsigns, this is Eagle Eye. Visual on convoy. Multiple vehicles, closing on objective. Intercept immediately. Out.",
+                        "All callsigns, this is Eagle Eye. Convoy approaching boundary. You are cleared to engage. Over.",
+                        "All callsigns, this is Eagle Eye. Hostile convoy within range of final objective. All assets, engage now. Out."
                     ];
                     _observer sideChat (selectRandom _msgs);
                     [_observer, _observerGrp] spawn {
@@ -1570,24 +1616,206 @@ if (_missionType == "InterceptConvoy") exitWith {
                     };
                 };
             };
-            private _alive = { (!isNull _x) && { alive _x } } count _convoyVehiclesSpawned;
-            if (_alive == 0) then {
+            // Success when 60%+ of convoy vehicles are inoperable (destroyed or immobile)
+            private _total = count _convoyVehiclesSpawned;
+            private _inoperable = 0;
+            {
+                if (isNull _x || { !alive _x } || { !canMove _x }) then { _inoperable = _inoperable + 1 };
+            } forEach _convoyVehiclesSpawned;
+            if (_total > 0 && { _inoperable >= (ceil (_total * 0.6)) }) then {
                 [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
                 true
             } else { false };
         };
-        [_markerNameStart] call heliOps_deleteMarkerSafe;
-        [_markerNameEnd] call heliOps_deleteMarkerSafe;
-        if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+        [_markerNameStart] call FADE_deleteMarkerSafe;
+        [_markerNameEnd] call FADE_deleteMarkerSafe;
+        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
         [_convoyGroup, _convoyVehiclesSpawned, _cargoGroups, _markerNameStart, _markerNameEnd, _player, _taskId] spawn {
             params ["_convoyGroup", "_convoyVehiclesSpawned", "_cargoGroups", "_markerNameStart", "_markerNameEnd", "_player", "_taskId"];
             sleep 60;
             if (!isNull _convoyGroup) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _convoyGroup; deleteGroup _convoyGroup };
             { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } forEach _cargoGroups;
             { if (!isNull _x) then { deleteVehicle _x } } forEach _convoyVehiclesSpawned;
-            [_markerNameStart] call heliOps_deleteMarkerSafe;
-            [_markerNameEnd] call heliOps_deleteMarkerSafe;
-            if (!isNull _player && { (_player getVariable ["heliOps_myMissionTaskId", ""]) == _taskId }) then { [_player] call heliOps_clearActiveMission };
+            [_markerNameStart] call FADE_deleteMarkerSafe;
+            [_markerNameEnd] call FADE_deleteMarkerSafe;
+            if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
+        };
+    };
+};
+
+// Mine Clearing, Find and Clear IEDs, Medical/MASCAS — see separate blocks below
+if (_missionType == "MineClearing") exitWith {
+    private _numMines = 5 + floor random 6;
+    private _mineClass = "APERSBoundingMine";
+    if (!isClass (configFile >> "CfgVehicles" >> _mineClass)) then { _mineClass = "APERSMine" };
+    private _mines = [];
+    for "_i" from 0 to (_numMines - 1) do {
+        private _pos = [_destPos, random 200, random 360] call BIS_fnc_relPos;
+        _pos = [_pos, 0, 15, 2, 0, 0.35, 0, [], _pos] call BIS_fnc_findSafePos;
+        if (_pos isEqualType [] && { count _pos >= 2 }) then {
+            if (count _pos < 3) then { _pos set [2, 0] };
+            private _m = createMine [_mineClass, _pos, [], 0];
+            _mines pushBack _m;
+        };
+    };
+    if (_mines isEqualTo []) then {
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not place mines.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    } else {
+        [_player, _taskId, "Clear all mines in the area.", "Mine Clearing", _destPos, "destroy"] call _fnc_createMissionTask;
+        private _markerName = "FADE_mines_" + _taskId;
+        _player setVariable ["FADE_myMissionMarker", _markerName, true];
+        private _mkr = createMarker [_markerName, _destPos];
+        _mkr setMarkerType "mil_warning";
+        _mkr setMarkerColor "ColorEAST";
+        _mkr setMarkerText "Mines";
+        private _grid = mapGridPosition _destPos;
+        _player setVariable ["FADE_myMissionBrief", format ["MINE CLEARING%1%1Grid: %2. Clear all mines.", toString [10], _grid], true];
+        [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Mine Clearing</t><br/><t color='#B0B0B0'>Grid: %1</t><br/><t color='#C0C0C0'>Clear all mines.</t>", _grid]] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "Mine Clearing"] call FADE_notifyOthersMissionStarted;
+        [_taskId, _mines, _markerName, _player] spawn {
+            params ["_taskId", "_mines", "_markerName", "_player"];
+            waitUntil { sleep 2; { !isNull _x } count _mines == 0 };
+            [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
+            ["<t size='1.2' color='#90EE90'>MINES CLEARED</t><br/><br/><t color='#E0E0E0'>All mines neutralised.</t>"] remoteExec ["FADE_showMissionHint", _player];
+            sleep 5;
+            [_markerName] call FADE_deleteMarkerSafe;
+            if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
+        };
+    };
+};
+
+if (_missionType == "FindClearIEDs") exitWith {
+    if (count _destPos < 2) exitWith {
+        [_player] call FADE_clearActiveMission;
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No road near civ zone.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    };
+    if (count _destPos < 3) then { _destPos = [(_destPos select 0), (_destPos select 1), 0] };
+    private _iedClass = "IEDLandBig_F";
+    if (!isClass (configFile >> "CfgVehicles" >> _iedClass)) then { _iedClass = "Land_IED_v1_F" };
+    private _ied = createVehicle [_iedClass, _destPos, [], 0, "NONE"];
+    _ied setPosATL _destPos;
+    _ied setDir (random 360);
+    [_player, _taskId, "Locate and disarm or destroy the IED.", "Find and Clear IEDs", _destPos, "destroy"] call _fnc_createMissionTask;
+    private _markerName = "FADE_ied_" + _taskId;
+    _player setVariable ["FADE_myMissionMarker", _markerName, true];
+    private _mkr = createMarker [_markerName, _destPos];
+    _mkr setMarkerType "mil_warning";
+    _mkr setMarkerColor "ColorEAST";
+    _mkr setMarkerText "IED";
+    private _grid = mapGridPosition _destPos;
+    _player setVariable ["FADE_myMissionBrief", format ["FIND AND CLEAR IED%1%1Grid: %2. Disarm or destroy. Vehicles within 10 m may trigger.", toString [10], _grid], true];
+    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Find and Clear IEDs</t><br/><t color='#B0B0B0'>Grid: %1</t><br/><t color='#C0C0C0'>Disarm or destroy the IED.</t>", _grid]] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "Find and Clear IEDs"] call FADE_notifyOthersMissionStarted;
+    [_taskId, _ied, _markerName, _player] spawn {
+        params ["_taskId", "_ied", "_markerName", "_player"];
+        while { !isNull _ied && { alive _ied } } do {
+            sleep 1;
+            if (random 1 < 0.002) then { _ied setDamage 1 };
+            private _vehs = _ied nearEntities [["LandVehicle", "Air"], 10];
+            if (!(_vehs isEqualTo [])) then { _ied setDamage 1 };
+        };
+        [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
+        ["<t size='1.2' color='#90EE90'>IED NEUTRALISED</t><br/><br/><t color='#E0E0E0'>Mission complete.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        sleep 5;
+        [_markerName] call FADE_deleteMarkerSafe;
+        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
+    };
+};
+
+if (_missionType in ["Medical", "MedicalKAT", "MASCAS", "MASCASKAT"]) exitWith {
+    private _useACE = isClass (configFile >> "CfgPatches" >> "ace_medical");
+    private _useKAT = isClass (configFile >> "CfgPatches" >> "kat_main");
+    private _isKAT = _missionType in ["MedicalKAT", "MASCASKAT"];
+    if ((_isKAT && { !_useKAT }) || { !_isKAT && { !_useACE } }) then {
+        [_player] call FADE_clearActiveMission;
+        [format ["<t size='1.2' color='#FF6666'>MEDICAL SYSTEM REQUIRED</t><br/><br/><t color='#E0E0E0'>%1 requires %2.</t>", _missionType, if (_isKAT) then { "KAT" } else { "ACE Medical" }]] remoteExec ["FADE_showMissionHint", _player];
+    } else {
+        private _medObj = missionNamespace getVariable ["MEDICAL_1", objNull];
+        if (isNull _medObj) then {
+            [_player] call FADE_clearActiveMission;
+            ["<t size='1.2' color='#FF6666'>MEDICAL_1 not found in Eden.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        } else {
+            _destPos = getPosATL _medObj;
+            _destPos = [_destPos, 0, 8, 2, 0, 0.3, 0, [], _destPos] call BIS_fnc_findSafePos;
+            if (count _destPos < 2) then { _destPos = getPosATL _medObj };
+            private _count = if (_missionType in ["MASCAS", "MASCASKAT"]) then { 3 + floor random 4 } else { 1 };
+            private _units = [];
+            private _bodyParts = ["Body", "LeftArm", "RightArm", "LeftLeg", "RightLeg"];
+            private _bodyPartsLower = ["body", "leftarm", "rightarm", "leftleg", "rightleg"];
+            for "_i" from 0 to (_count - 1) do {
+                private _u = (createGroup WEST) createUnit [(_friendlyUnits select 0), _destPos, [], 0, "NONE"];
+                _u setPosATL (_destPos getPos [2 + _i * 2, _i * 60]);
+                _u setDamage 0;
+                _u disableAI "MOVE";
+                _u setBehaviour "CARELESS";
+                _u setCaptive true;
+                if (_useACE) then {
+                    private _severity = random 1;
+                    private _partIdx = floor random (count _bodyParts);
+                    private _part = _bodyParts select _partIdx;
+                    private _partLower = _bodyPartsLower select _partIdx;
+                    if (_severity < 0.25) then {
+                        [_u, 0.2 + random 0.25, _part, "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
+                        [_u, _partLower, ["Laceration", 1, 0, 0.2]] call ace_medical_fnc_addWound;
+                    } else {
+                        if (_severity < 0.75) then {
+                            [_u, 0.35 + random 0.3, _part, "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
+                            [_u, _partLower, ["VelocityWound", 1, 2, 0.6]] call ace_medical_fnc_addWound;
+                            private _part2Idx = floor random (count _bodyParts);
+                            if (_part2Idx != _partIdx) then {
+                                private _p2 = _bodyParts select _part2Idx;
+                                private _p2Lower = _bodyPartsLower select _part2Idx;
+                                [_u, 0.25 + random 0.2, _p2, "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
+                                [_u, _p2Lower, ["Avulsion", 1, 1, 0.4]] call ace_medical_fnc_addWound;
+                            };
+                        } else {
+                            [_u, 0.4 + random 0.25, "Body", "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
+                            [_u, "body", ["VelocityWound", 1, 2, 0.7]] call ace_medical_fnc_addWound;
+                            [_u, 0.3 + random 0.2, _part, "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
+                            [_u, _partLower, ["Avulsion", 1, 2, 0.5]] call ace_medical_fnc_addWound;
+                        };
+                    };
+                    if (random 1 < 0.35) then {
+                        [_u, true, 30 + random 60, false] call ace_medical_fnc_setUnconscious;
+                    };
+                } else {
+                    _u setDamage (0.3 + random 0.4);
+                };
+                _units pushBack _u;
+            };
+            missionNamespace setVariable ["FADE_medUnits_" + _taskId, _units];
+            private _title = if (_count > 1) then { "MASCAS" } else { "Medical" };
+            [_player, _taskId, "Heal all casualties.", _title, _destPos, "heal"] call _fnc_createMissionTask;
+            _player setVariable ["FADE_myMissionMarker", "FADE_med_" + _taskId, true];
+            private _mkr = createMarker ["FADE_med_" + _taskId, _destPos];
+            _mkr setMarkerType "loc_Hospital";
+            _mkr setMarkerColor "ColorBLUFOR";
+            _mkr setMarkerText _title;
+            _player setVariable ["FADE_myMissionBrief", format ["%1 at MEDICAL_1. Heal all. Fail if >50%% die or unit dies.", _title], true];
+            [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>%1</t><br/><t color='#C0C0C0'>Heal all at MEDICAL_1.</t>", _title]] remoteExec ["FADE_showMissionHint", _player];
+            [_player, _title] call FADE_notifyOthersMissionStarted;
+            [_taskId, _units, _player, _count, _useACE] spawn {
+                params ["_taskId", "_units", "_player", "_count", "_useACE"];
+                private _fncHealed = if (_useACE) then {
+                    { alive _x && (_x call ace_medical_fnc_isInStableCondition) }
+                } else {
+                    { alive _x && (damage _x < 0.01) }
+                };
+                waitUntil { sleep 2; private _alive = _units select { alive _x }; private _healed = _units select _fncHealed; (count _healed >= count _units) || { (count _alive) < (ceil (count _units / 2)) } };
+                if ({ alive _x && (if (_useACE) then { _x call ace_medical_fnc_isInStableCondition } else { damage _x < 0.01 }) } count _units >= count _units) then {
+                    [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
+                    ["<t size='1.2' color='#90EE90'>ALL HEALED</t><br/><br/><t color='#E0E0E0'>Mission complete.</t>"] remoteExec ["FADE_showMissionHint", _player];
+                } else {
+                    [_taskId, "FAILED"] call BIS_fnc_taskSetState;
+                    ["<t size='1.2' color='#FF6666'>TOO MANY CASUALTIES</t><br/><br/><t color='#E0E0E0'>Mission failed.</t>"] remoteExec ["FADE_showMissionHint", _player];
+                };
+                { if (!isNull _x) then { deleteVehicle _x } } forEach _units;
+                missionNamespace setVariable ["FADE_medUnits_" + _taskId, nil];
+                sleep 5;
+                [("FADE_med_" + _taskId)] call FADE_deleteMarkerSafe;
+                if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
+            };
         };
     };
 };

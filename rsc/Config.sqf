@@ -1,29 +1,33 @@
 // =============================================================================
 // Config — Face's Dynamic Sandbox mission configuration
 // =============================================================================
-// heliOps_heliClasses is built dynamically from CfgVehicles (see initServer.sqf)
+// FADE_heliClasses is built dynamically from CfgVehicles (see initServer.sqf)
 // Scenario settings (weather, time, factions) are managed via Scenario GUI.
 // Unit arrays below are fallbacks when faction has no units (e.g. mod not loaded).
 
 // -----------------------------------------------------------------------------
 // Scenario defaults (Scenario GUI overrides these)
 // -----------------------------------------------------------------------------
-heliOps_scenarioTime = 12;
-heliOps_scenarioWeather = "Clear";
-heliOps_scenarioEnemyFaction = "OPF_F";
-heliOps_scenarioFriendlyFaction = "BLU_F";
-heliOps_scenarioCivFaction = "CIV_F";
-heliOps_limitGearToFriendlyFaction = false;  // When true, Loadout and Vehicle GUIs restrict to chosen Friendly faction
+FADE_scenarioTime = 12;
+FADE_scenarioWeather = "Clear";
+FADE_scenarioEnemyFaction = "OPF_F";
+FADE_scenarioFriendlyFaction = "BLU_F";
+FADE_scenarioCivFaction = "CIV_F";
+FADE_civiliansEnabled = true;  // When false, no ambient civilians (zones, road vehicles, civ aircraft)
+FADE_aoStrength = "Mid";       // AO mission strength: "Low", "Mid", "High" (used by AO mission type)
+FADE_limitGearToFriendlyFaction = false;  // When true, Loadout and Vehicle GUIs restrict to chosen Friendly faction
 
+// Loadout box Eden object names — all get Manage My Loadout, Save loadout, ACE Arsenal (if loaded)
+FADE_loadoutBoxNames = ["LOADOUTBOX", "LOADOUTBOX_2", "LOADOUTBOX_3"];
 // Pad names — Eden object variable names (expand as needed)
-heliOps_padNames = ["HP_1", "HP_2", "HP_3", "HP_4", "HP_5", "HP_6", "HP_7", "HP_8"];
+FADE_padNames = ["HP_1", "HP_2", "HP_3", "HP_4", "HP_5", "HP_6", "HP_7", "HP_8"];
 // Pads where planes cannot spawn (helicopters can use any pad)
-heliOps_planeForbiddenPads = ["HP_1", "HP_2"];
-// Helipad markers (map markers to update when aircraft spawn/despawn). Index = pad order in heliOps_helipadList. Empty = no marker.
-heliOps_helipadMarkers = ["HeliMark_1", "HeliMark_2", "HeliMark_3", "HeliMark_4", "HeliMark_5", "HeliMark_6", "HeliMark_7", ""];
+FADE_planeForbiddenPads = ["HP_1", "HP_2"];
+// Helipad markers (map markers to update when aircraft spawn/despawn). Index = pad order in FADE_helipadList. Empty = no marker.
+FADE_helipadMarkers = ["HeliMark_1", "HeliMark_2", "HeliMark_3", "HeliMark_4", "HeliMark_5", "HeliMark_6", "HeliMark_7", ""];
 
 // Friendly infantry (BLUFOR) — fallback when faction has no units
-heliOps_friendlyUnits = [
+FADE_friendlyUnits = [
     "B_Soldier_TL_F",
     "B_Soldier_F",
     "B_Soldier_F",
@@ -33,7 +37,7 @@ heliOps_friendlyUnits = [
 ];
 
 // Enemy infantry (OPFOR) — fallback when faction has no units
-heliOps_enemyUnits = [
+FADE_enemyUnits = [
     "O_Soldier_TL_F",
     "O_Soldier_F",
     "O_Soldier_F",
@@ -42,7 +46,7 @@ heliOps_enemyUnits = [
 ];
 
 // Cargo classes for resupply (sling-load compatible preferred)
-heliOps_cargoClasses = [
+FADE_cargoClasses = [
     "B_Slingload_01_Cargo_F",
     "B_Slingload_01_Ammo_F",
     "B_Slingload_01_Fuel_F",
@@ -53,7 +57,7 @@ heliOps_cargoClasses = [
 // Ambient civilians (CIV_T_* triggers, ROAD_SP_* road spawn points)
 // Fallbacks when faction has no units/vehicles
 // -----------------------------------------------------------------------------
-heliOps_civUnitClasses = [
+FADE_civUnitClasses = [
     "C_man_1",
     "C_man_1_1_F",
     "C_man_1_2_F",
@@ -65,7 +69,7 @@ heliOps_civUnitClasses = [
     "C_man_polo_5_F",
     "C_man_polo_6_F"
 ];
-heliOps_civRoadVehicleClasses = [
+FADE_civRoadVehicleClasses = [
     "C_Offroad_01_F",
     "C_Offroad_02_unarmed_F",
     "C_Hatchback_01_F",
@@ -73,26 +77,34 @@ heliOps_civRoadVehicleClasses = [
     "C_Van_01_transport_F",
     "C_Truck_02_covered_F"
 ];
-heliOps_civParkedVehicleClasses = [
+FADE_civParkedVehicleClasses = [
     "C_Hatchback_01_F",
     "C_Offroad_01_F",
     "C_SUV_01_F",
     "C_Van_01_transport_F"
 ];
-heliOps_civSpawnRadius = 1000;
-heliOps_civWanderRadius = 100;  // max distance walking civs move from spawn before looping back
-heliOps_civPlayerActivateDist = 1000;
-heliOps_civPlayerDeactivateDist = 1400;
-heliOps_civCountMin = 5;
-heliOps_civCountMax = 15;
-heliOps_civSpawnStaggerDelay = 1.5;  // seconds between spawn batches (lazy-load to reduce performance hit)
-heliOps_civSpawnBatchSize = 2;       // civs per batch
-heliOps_civParkedCountMin = 2;
-heliOps_civParkedCountMax = 5;
-heliOps_civCheckInterval = 45;
-heliOps_civMaxActiveZones = 4;  // max civ zones (and their patrol zones) active at once
-heliOps_roadVehicleMax = 5;
-heliOps_roadSpawnIntervalMin = 90;
-heliOps_roadSpawnIntervalMax = 180;
-heliOps_civDebug = false;  // systemChat for spawn/despawn/road vehicle actions
-heliOps_civDebugMarkers = false;  // when true, show map markers for active civ zones (Civ: zoneId)
+FADE_civSpawnRadius = 1000;
+FADE_civWanderRadius = 100;  // max distance walking civs move from spawn before looping back
+FADE_civPlayerActivateDist = 1000;
+FADE_civPlayerDeactivateDist = 1400;
+FADE_civCountMin = 5;
+FADE_civCountMax = 15;
+FADE_civSpawnStaggerDelay = 1.5;  // seconds between spawn batches (lazy-load to reduce performance hit)
+FADE_civSpawnBatchSize = 2;       // civs per batch
+FADE_civParkedCountMin = 2;
+FADE_civParkedCountMax = 5;
+FADE_civCheckInterval = 45;
+FADE_civMaxActiveZones = 4;  // max civ zones (and their patrol zones) active at once
+FADE_roadVehicleMax = 5;
+FADE_roadSpawnIntervalMin = 90;
+FADE_roadSpawnIntervalMax = 180;
+FADE_civDebug = false;  // systemChat for spawn/despawn/road vehicle actions
+FADE_civDebugMarkers = false;  // when true, show map markers for active civ zones (Civ: zoneId)
+
+// -----------------------------------------------------------------------------
+// CQB Training Shoothouse — Eden object names for drill positions (triggers/objects)
+// Place CQB_POS_1, CQB_POS_2, ... in Eden; direction of object = facing of spawned unit/target
+// -----------------------------------------------------------------------------
+FADE_cqbPosNames = ["CQB_POS_1","CQB_POS_2","CQB_POS_3","CQB_POS_4","CQB_POS_5","CQB_POS_6","CQB_POS_7","CQB_POS_8","CQB_POS_9","CQB_POS_10","CQB_POS_11","CQB_POS_12","CQB_POS_13","CQB_POS_14","CQB_POS_15","CQB_POS_16","CQB_POS_17","CQB_POS_18","CQB_POS_19","CQB_POS_20","CQB_POS_21","CQB_POS_22","CQB_POS_23","CQB_POS_24"];
+// Pop-up target class (vanilla); stays down when shot if noPop is set
+FADE_cqbTargetClass = "TargetP_Inf_F";

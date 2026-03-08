@@ -6,12 +6,12 @@
 // Params: [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, [_enemyGroups]]
 // =============================================================================
 
-if (isNil "heliOps_transportParams" || { count heliOps_transportParams < 7 }) exitWith {};
-heliOps_transportParams params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", ["_markerName", ""], ["_enemyGroups", []]];
+if (isNil "FADE_transportParams" || { count FADE_transportParams < 7 }) exitWith {};
+FADE_transportParams params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", ["_markerName", ""], ["_enemyGroups", []]];
 if (!isServer) exitWith {};
 
-if (_group getVariable ["heliOps_callsign", ""] == "") then { [_group] call (missionNamespace getVariable ["heliOps_assignGroupCallsign", {}]) };
-private _callsign = _group getVariable ["heliOps_callsign", "Alpha 1-1"];
+if (_group getVariable ["FADE_callsign", ""] == "") then { [_group] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]) };
+private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
 private _initialCount = count units _group;
 
 // Central cleanup: delete group, enemy groups, mission marker (safe delete), clear player mission state.
@@ -20,13 +20,13 @@ private _cleanup = {
     params ["_grp", "_marker", "_pl", ["_enemyGrps", []]];
     // Delete any IR strobes placed/attached during night marking (ACE3)
     if (!isNull _grp) then {
-        { if (!isNull _x) then { detach _x; deleteVehicle _x } } forEach (_grp getVariable ["heliOps_irStrobes", []]);
+        { if (!isNull _x) then { detach _x; deleteVehicle _x } } forEach (_grp getVariable ["FADE_irStrobes", []]);
         { deleteVehicle _x } forEach units _grp;
         deleteGroup _grp;
     };
     { if (!isNull _x) then { { deleteVehicle _x } forEach units _x; deleteGroup _x } } forEach _enemyGrps;
-    [_marker] call heliOps_deleteMarkerSafe;
-    [_pl] call heliOps_clearActiveMission;
+    [_marker] call FADE_deleteMarkerSafe;
+    [_pl] call FADE_clearActiveMission;
 };
 
 // TroopInsert: fail on any casualty. TroopExtract: fail if >50% of pickup team dead (alive < half rounded up).
@@ -49,14 +49,14 @@ if (!isNull _player && { !isNull _group } && { count units _group > 0 }) then {
     private _leader = leader _group;
     if (!isNull _leader && { alive _leader }) then {
         private _grid = mapGridPosition _pickupPos;
-        _leader sideChat format ["RZ, This is %1. We're at Grid %2, awaiting pickup. Over.", _callsign, _grid];
+        _leader sideChat format ["This is %1. We're at Grid %2, awaiting pickup. Over.", _callsign, _grid];
     };
 };
 
 // Phase 1: poll every 1s in fresh spawn -- no waitUntil/while, minimal stack
-heliOps_transport_phase1 = {
+FADE_transport_phase1 = {
     params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", "_markerName", "_pickupRadius", "_dropRadius", "_timeout", "_cleanup", "_startTime", "_smokeSpawned", "_initialCount", "_enemyGroups", "_checkCasualties"];
-    private _callsign = _group getVariable ["heliOps_callsign", "Alpha 1-1"];
+    private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
     sleep 1;
     if (isNull _player) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup] spawn { params ["_g","_m","_p","_e","_c"]; sleep 60; [_g,_m,_p,_e] call _c } };
     if (isNull _group || { count units _group == 0 }) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup] spawn { params ["_g","_m","_p","_e","_c"]; sleep 60; [_g,_m,_p,_e] call _c } };
@@ -82,9 +82,9 @@ heliOps_transport_phase1 = {
             // Strobes attached at spawn -- radio callsign and contact status only
             if (!isNull _speaker) then {
                 if (_inCombat) then {
-                    _speaker sideChat format ["RZ, This is %1. We're in contact at the pickup zone. IR strobes active on all units. Over!", _callsign];
+                    _speaker sideChat format ["This is %1. We're in contact at the pickup zone. IR strobes active on all units. Over!", _callsign];
                 } else {
-                    _speaker sideChat format ["RZ, This is %1. Awaiting pickup. IR strobes active on all units. Over.", _callsign];
+                    _speaker sideChat format ["This is %1. Awaiting pickup. IR strobes active on all units. Over.", _callsign];
                 };
             };
             ["Friendly units marked with IR strobes (NVG required)"] remoteExec ["systemChat", _player];
@@ -93,9 +93,9 @@ heliOps_transport_phase1 = {
             "SmokeShellGreen" createVehicle _pickupPos;
             if (!isNull _speaker) then {
                 if (_inCombat) then {
-                    _speaker sideChat format ["RZ, This is %1. Green smoke deployed. We're in contact at the pickup zone. Over!", _callsign];
+                    _speaker sideChat format ["This is %1. Green smoke deployed. We're in contact at the pickup zone. Over!", _callsign];
                 } else {
-                    _speaker sideChat format ["RZ, This is %1. Green smoke deployed. Marking position. No contact. Over.", _callsign];
+                    _speaker sideChat format ["This is %1. Green smoke deployed. Marking position. No contact. Over.", _callsign];
                 };
             };
         };
@@ -110,30 +110,30 @@ heliOps_transport_phase1 = {
         private _leader = leader _group;
         if (!isNull _leader && { alive _leader }) then {
             if (_cargoSeats == 0) then {
-                _leader sideChat format ["RZ, This is %1. Negative - you have no cargo seats. We cannot board. Over.", _callsign];
+                _leader sideChat format ["This is %1. Negative - you have no cargo seats. We cannot board. Over.", _callsign];
             } else {
                 if (_totalCount > _cargoSeats) then {
-                    _leader sideChat format ["RZ, This is %1. We have more personnel than you have seats - loading %2. Stand by. Over.", _callsign, _cargoSeats];
+                    _leader sideChat format ["This is %1. We have more personnel than you have seats - loading %2. Stand by. Over.", _callsign, _cargoSeats];
                 } else {
-                    _leader sideChat format ["RZ, This is %1. We're loading now. Stand by. Over.", _callsign];
+                    _leader sideChat format ["This is %1. We're loading now. Stand by. Over.", _callsign];
                 };
             };
         };
         if (count _unitsToBoard > 0) then {
-            ["FAC_heliOps_embarkStart"] remoteExec ["playSound", _player];
-            [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _veh, _unitsToBoard, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties] spawn heliOps_transport_phase2;
+            ["FADE_embarkStart"] remoteExec ["playSound", _player];
+            [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _veh, _unitsToBoard, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties] spawn FADE_transport_phase2;
         } else {
-            [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties] spawn heliOps_transport_phase1;
+            [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties] spawn FADE_transport_phase1;
         };
     } else {
-        [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties] spawn heliOps_transport_phase1;
+        [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties] spawn FADE_transport_phase1;
     };
 };
 
 // Phase 2: wait for troops boarded
-heliOps_transport_phase2 = {
+FADE_transport_phase2 = {
     params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", "_markerName", "_veh", "_unitsToBoard", "_dropRadius", "_timeout", "_cleanup", "_startTime", "_initialCount", "_enemyGroups", "_checkCasualties"];
-    private _callsign = _group getVariable ["heliOps_callsign", "Alpha 1-1"];
+    private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
     sleep 0.5;
     if (isNull _veh || !alive _veh) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup] spawn { params ["_g","_m","_p","_e","_c"]; sleep 60; [_g,_m,_p,_e] call _c } };
     if (time - _startTime > _timeout) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup] spawn { params ["_g","_m","_p","_e","_c"]; sleep 60; [_g,_m,_p,_e] call _c } };
@@ -147,23 +147,23 @@ heliOps_transport_phase2 = {
         private _totalSquad = count units _group;
         if (!isNull _leader && { alive _leader }) then {
             if (count _unitsToBoard < _totalSquad) then {
-                _leader sideChat format ["RZ, This is %1. Only %2 aboard - not enough seats for everyone. Proceeding to LZ. Over.", _callsign, count _unitsToBoard];
+                _leader sideChat format ["This is %1. Only %2 aboard - not enough seats for everyone. Proceeding to LZ. Over.", _callsign, count _unitsToBoard];
             } else {
-                _leader sideChat format ["RZ, This is %1. All aboard. Ready for liftoff. Over.", _callsign];
+                _leader sideChat format [This is %1. All aboard. Ready for liftoff. Over.", _callsign];
             };
-            _leader sideChat format ["RZ, This is %1. Proceed to LZ. Land to disembark. Over.", _callsign];
+            _leader sideChat format ["This is %1. Proceed to LZ. Over.", _callsign];
         };
-        ["FAC_heliOps_embarkDone"] remoteExec ["playSound", _player];
-        [_missionType, _group, _player, _dropPos, _taskId, _markerName, _veh, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties] spawn heliOps_transport_phase3;
+        ["FADE_embarkDone"] remoteExec ["playSound", _player];
+        [_missionType, _group, _player, _dropPos, _taskId, _markerName, _veh, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties] spawn FADE_transport_phase3;
     } else {
-        [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _veh, _unitsToBoard, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties] spawn heliOps_transport_phase2;
+        [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _veh, _unitsToBoard, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties] spawn FADE_transport_phase2;
     };
 };
 
 // Phase 3: wait for heli at drop zone
-heliOps_transport_phase3 = {
+FADE_transport_phase3 = {
     params ["_missionType", "_group", "_player", "_dropPos", "_taskId", "_markerName", "_veh", "_dropRadius", "_timeout", "_cleanup", "_startTime", "_initialCount", "_enemyGroups", "_checkCasualties"];
-    private _callsign = _group getVariable ["heliOps_callsign", "Alpha 1-1"];
+    private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
     sleep 1;
     if (isNull _player || isNull _veh || !alive _veh) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup] spawn { params ["_g","_m","_p","_e","_c"]; sleep 60; [_g,_m,_p,_e] call _c } };
     if ((_taskId call BIS_fnc_taskState) in ["CANCELED","FAILED"]) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup] spawn { params ["_g","_m","_p","_e","_c"]; sleep 60; [_g,_m,_p,_e] call _c } };
@@ -181,22 +181,22 @@ heliOps_transport_phase3 = {
         private _unitsInVeh = (units _group) select { vehicle _x == _veh };
         if (count _unitsInVeh > 0) then {
             private _leader = leader _group;
-            if (!isNull _leader && { alive _leader }) then { _leader sideChat format ["RZ, This is %1. Disembarking. Over.", _callsign] };
-            ["FAC_heliOps_disembarkStart"] remoteExec ["playSound", _player];
+            if (!isNull _leader && { alive _leader }) then { _leader sideChat format ["This is %1. Disembarking. Over.", _callsign] };
+            ["FADE_disembarkStart"] remoteExec ["playSound", _player];
             { _x moveOut _veh } forEach _unitsInVeh;
             (units _group) orderGetIn false;
-            [_missionType, _group, _player, _taskId, _markerName, _veh, _cleanup, _dropPos, time, _initialCount, _enemyGroups, _checkCasualties] spawn heliOps_transport_phase4;
+            [_missionType, _group, _player, _taskId, _markerName, _veh, _cleanup, _dropPos, time, _initialCount, _enemyGroups, _checkCasualties] spawn FADE_transport_phase4;
         } else {
             [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
             private _leader = leader _group;
-            if (!isNull _leader && { alive _leader }) then { _leader sideChat format ["RZ, This is %1. Mission complete. Over.", _callsign] };
-            if (_missionType == "TroopExtract" && { count heliOps_bSpPoints > 0 }) then {
+            if (!isNull _leader && { alive _leader }) then { _leader sideChat format ["This is %1. Mission complete. Over.", _callsign] };
+            if (_missionType == "TroopExtract" && { count FADE_bSpPoints > 0 }) then {
                 private _leader = leader _group;
-                private _nearest = [heliOps_bSpPoints, _leader] call BIS_fnc_nearestPosition;
+                private _nearest = [FADE_bSpPoints, _leader] call BIS_fnc_nearestPosition;
                 private _spawnPos = if (_nearest isEqualType []) then { _nearest } else { position _nearest };
                 if (count _spawnPos >= 2) then {
                     _group addWaypoint [_spawnPos, 0];
-                    [_group, _markerName, _player, _cleanup, _spawnPos, _enemyGroups] spawn heliOps_transport_phase4b;
+                    [_group, _markerName, _player, _cleanup, _spawnPos, _enemyGroups] spawn FADE_transport_phase4b;
                 } else {
                     [_group, _markerName, _player, _cleanup, _enemyGroups] spawn { params ["_group", "_markerName", "_player", "_cleanup", "_enemyGroups"]; sleep 60; [_group, _markerName, _player, _enemyGroups] call _cleanup };
                 };
@@ -207,14 +207,14 @@ heliOps_transport_phase3 = {
             };
         };
     } else {
-        [_missionType, _group, _player, _dropPos, _taskId, _markerName, _veh, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties] spawn heliOps_transport_phase3;
+        [_missionType, _group, _player, _dropPos, _taskId, _markerName, _veh, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties] spawn FADE_transport_phase3;
     };
 };
 
 // Phase 4: wait for troops exited (30s max)
-heliOps_transport_phase4 = {
+FADE_transport_phase4 = {
     params ["_missionType", "_group", "_player", "_taskId", "_markerName", "_veh", "_cleanup", "_dropPos", "_exitStart", "_initialCount", "_enemyGroups", "_checkCasualties"];
-    private _callsign = _group getVariable ["heliOps_callsign", "Alpha 1-1"];
+    private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
     sleep 0.5;
     if ([_missionType, _group, _initialCount] call _checkCasualties) exitWith {
         ["MISSION FAILED. EXCESSIVE CASUALTIES."] remoteExec ["systemChat", _player];
@@ -225,17 +225,17 @@ heliOps_transport_phase4 = {
     if (count _stillIn == 0) then {
         private _leader = leader _group;
         if (!isNull _leader && { alive _leader }) then {
-            _leader sideChat format ["RZ, This is %1. Last man! Over.", _callsign];
+            _leader sideChat format ["This is %1. Last man! Over.", _callsign];
         };
-        ["FAC_heliOps_disembarkDone"] remoteExec ["playSound", _player];
+        ["FADE_disembarkDone"] remoteExec ["playSound", _player];
         [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
-        if (_missionType == "TroopExtract" && { count heliOps_bSpPoints > 0 }) then {
+        if (_missionType == "TroopExtract" && { count FADE_bSpPoints > 0 }) then {
             private _leader = leader _group;
-            private _nearest = [heliOps_bSpPoints, _leader] call BIS_fnc_nearestPosition;
+            private _nearest = [FADE_bSpPoints, _leader] call BIS_fnc_nearestPosition;
             private _spawnPos = if (_nearest isEqualType []) then { _nearest } else { position _nearest };
             if (count _spawnPos >= 2) then {
                 _group addWaypoint [_spawnPos, 0];
-                [_group, _markerName, _player, _cleanup, _spawnPos, _enemyGroups] spawn heliOps_transport_phase4b;
+                [_group, _markerName, _player, _cleanup, _spawnPos, _enemyGroups] spawn FADE_transport_phase4b;
             } else {
                 [_group, _markerName, _player, _cleanup, _enemyGroups] spawn { params ["_group", "_markerName", "_player", "_cleanup", "_enemyGroups"]; sleep 60; [_group, _markerName, _player, _enemyGroups] call _cleanup };
             };
@@ -248,18 +248,18 @@ heliOps_transport_phase4 = {
         if (time - _exitStart > 30) then {
             [_group, _markerName, _player, _enemyGroups, _cleanup] spawn { params ["_g","_m","_p","_e","_c"]; sleep 60; [_g,_m,_p,_e] call _c };
         } else {
-            [_missionType, _group, _player, _taskId, _markerName, _veh, _cleanup, _dropPos, _exitStart, _initialCount, _enemyGroups, _checkCasualties] spawn heliOps_transport_phase4;
+            [_missionType, _group, _player, _taskId, _markerName, _veh, _cleanup, _dropPos, _exitStart, _initialCount, _enemyGroups, _checkCasualties] spawn FADE_transport_phase4;
         };
     };
 };
 
 // Phase 4b: TroopExtract -- troops walk to nearest B_SP_*, despawn on arrival (or 120s timeout)
-heliOps_transport_phase4b = {
+FADE_transport_phase4b = {
     params ["_group", "_markerName", "_player", "_cleanup", "_spawnPos", ["_enemyGroups", []]];
     private _arrivalDist = 5;
     private _timeout = 120;
     private _start = time;
-    scriptName "heliOps_transport_phase4b";
+    scriptName "FADE_transport_phase4b";
     while { !isNull _group && { count units _group > 0 } && { (leader _group) distance _spawnPos > _arrivalDist } && { time - _start < _timeout } } do {
         sleep 1;
     };
@@ -267,4 +267,4 @@ heliOps_transport_phase4b = {
 };
 
 // Start phase 1 (spawn = fresh scheduler entry, minimal stack)
-[_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties] spawn heliOps_transport_phase1;
+[_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties] spawn FADE_transport_phase1;

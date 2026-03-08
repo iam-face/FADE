@@ -1,13 +1,14 @@
 class Header {
-    gameType = "Coop";
+    gameType = "Sandbox";
     minPlayers = 1;
-    maxPlayers = 8;
+    maxPlayers = 32;
 };
 
-respawn = 2;           // BASE -- respawn at base marker
-respawnDelay = 10;
-respawnOnStart = -1;
-respawnTemplates[] = { "Base", "Spectator" };
+// Respawn: override mission.sqm to avoid respawn on mission start (no script calls forceRespawn).
+// 0 = none; set to 3 in Eden for base respawn on death if desired.
+respawn = 3;
+respawnTemplates[] = { "Spectator" };
+respawnOnStart = 0;
 
 // Face's Dynamic Sandbox GUI -- base controls (import can fail with some mod combinations)
 #include "rsc\BaseControls.hpp"
@@ -72,7 +73,7 @@ class RscDisplayMissions: RscDisplayEmpty {
     };
 };
 
-// Manage Scenario dialog -- weather, time, factions (enemy, friendly, civilian)
+// Manage Scenario dialog -- Environment, Enemy AI, Factions (Friendly, Enemy, Civilian), Civilians enabled
 class RscDisplayScenario: RscDisplayEmpty {
     idd = 60003;
     movingEnable = 1;
@@ -83,26 +84,39 @@ class RscDisplayScenario: RscDisplayEmpty {
         class Title: RscText { idc = -1; text = "MANAGE SCENARIO"; x = 0.02; y = 0.02; w = 0.96; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
     };
     class controls {
-        // Environment row
-        class EnvLabel: RscText { idc = -1; text = "Environment:"; x = 0.04; y = 0.10; w = 0.12; h = 0.03; sizeEx = 0.032; };
-        class TimeLabel: RscText { idc = -1; text = "Time:"; x = 0.04; y = 0.14; w = 0.06; h = 0.025; sizeEx = 0.028; };
-        class TimeList: RscListBox { idc = 60301; x = 0.11; y = 0.13; w = 0.18; h = 0.12; rowHeight = 0.038; sizeEx = 0.032; };
-        class WeatherLabel: RscText { idc = -1; text = "Weather:"; x = 0.32; y = 0.14; w = 0.08; h = 0.025; sizeEx = 0.028; };
-        class WeatherList: RscListBox { idc = 60302; x = 0.41; y = 0.13; w = 0.18; h = 0.12; rowHeight = 0.038; sizeEx = 0.032; };
-        class LimitGearLabel: RscText { idc = -1; text = "Limit gear:"; x = 0.62; y = 0.14; w = 0.14; h = 0.025; sizeEx = 0.028; };
-        class LimitGearList: RscListBox { idc = 60315; x = 0.77; y = 0.13; w = 0.14; h = 0.12; rowHeight = 0.038; sizeEx = 0.032; };
-        // Enemy Patrols toggle row
-        class PatrolsLabel: RscText { idc = -1; text = "Enemy Patrols:"; x = 0.04; y = 0.27; w = 0.20; h = 0.025; sizeEx = 0.028; };
-        class PatrolsList: RscListBox { idc = 60316; x = 0.25; y = 0.27; w = 0.14; h = 0.08; rowHeight = 0.038; sizeEx = 0.032; };
-        // Factions row
-        class FactionLabel: RscText { idc = -1; text = "Factions (used for mission and ambient spawns):"; x = 0.04; y = 0.38; w = 0.55; h = 0.03; sizeEx = 0.032; };
-        class EnemyLabel: RscText { idc = -1; text = "Enemy:"; x = 0.04; y = 0.42; w = 0.08; h = 0.025; sizeEx = 0.028; };
-        class EnemyList: RscListBox { idc = 60310; x = 0.04; y = 0.45; w = 0.28; h = 0.42; rowHeight = 0.036; sizeEx = 0.03; };
-        class FriendlyLabel: RscText { idc = -1; text = "Friendly:"; x = 0.35; y = 0.42; w = 0.08; h = 0.025; sizeEx = 0.028; };
-        class FriendlyList: RscListBox { idc = 60311; x = 0.35; y = 0.45; w = 0.28; h = 0.42; rowHeight = 0.036; sizeEx = 0.03; };
-        class CivLabel: RscText { idc = -1; text = "Civilian:"; x = 0.66; y = 0.42; w = 0.08; h = 0.025; sizeEx = 0.028; };
-        class CivList: RscListBox { idc = 60312; x = 0.66; y = 0.45; w = 0.28; h = 0.42; rowHeight = 0.036; sizeEx = 0.03; };
-        // Buttons side by side
+        // --- Environment (Time, Weather, Limit gear, Civilians enabled, AO: AI JTAC) ---
+        class EnvLabel: RscText { idc = -1; text = "Environment"; x = 0.04; y = 0.08; w = 0.20; h = 0.03; sizeEx = 0.032; colorText[] = {0.85, 0.9, 1, 1}; };
+        class TimeLabel: RscText { idc = -1; text = "Time:"; x = 0.04; y = 0.115; w = 0.06; h = 0.022; sizeEx = 0.026; };
+        class TimeList: RscListBox { idc = 60301; x = 0.04; y = 0.138; w = 0.14; h = 0.10; rowHeight = 0.034; sizeEx = 0.028; };
+        class WeatherLabel: RscText { idc = -1; text = "Weather:"; x = 0.20; y = 0.115; w = 0.08; h = 0.022; sizeEx = 0.026; };
+        class WeatherList: RscListBox { idc = 60302; x = 0.20; y = 0.138; w = 0.14; h = 0.10; rowHeight = 0.034; sizeEx = 0.028; };
+        class LimitGearLabel: RscText { idc = -1; text = "Limit gear:"; x = 0.36; y = 0.115; w = 0.10; h = 0.022; sizeEx = 0.026; };
+        class LimitGearList: RscListBox { idc = 60315; x = 0.36; y = 0.138; w = 0.10; h = 0.055; rowHeight = 0.032; sizeEx = 0.026; };
+        class CivEnabledLabel: RscText { idc = -1; text = "Civilians enabled:"; x = 0.48; y = 0.115; w = 0.14; h = 0.022; sizeEx = 0.026; };
+        class CivEnabledList: RscListBox { idc = 60322; x = 0.48; y = 0.138; w = 0.12; h = 0.055; rowHeight = 0.032; sizeEx = 0.026; };
+        class AoJtacLabel: RscText { idc = -1; text = "AO: AI JTAC:"; x = 0.62; y = 0.115; w = 0.12; h = 0.022; sizeEx = 0.026; };
+        class AoJtacList: RscListBox { idc = 60323; x = 0.62; y = 0.138; w = 0.12; h = 0.055; rowHeight = 0.032; sizeEx = 0.026; };
+        // --- Enemy AI (Patrols, Skill, Routing, AAA) ---
+        class EnemyAILabel: RscText { idc = -1; text = "Enemy AI"; x = 0.04; y = 0.255; w = 0.20; h = 0.03; sizeEx = 0.032; colorText[] = {0.85, 0.9, 1, 1}; };
+        class PatrolsLabel: RscText { idc = -1; text = "Patrols:"; x = 0.04; y = 0.29; w = 0.08; h = 0.022; sizeEx = 0.026; };
+        class PatrolsList: RscListBox { idc = 60316; x = 0.04; y = 0.312; w = 0.10; h = 0.065; rowHeight = 0.032; sizeEx = 0.026; };
+        class EnemySkillLabel: RscText { idc = -1; text = "AI skill:"; x = 0.16; y = 0.29; w = 0.08; h = 0.022; sizeEx = 0.026; };
+        class EnemySkillList: RscListBox { idc = 60317; x = 0.16; y = 0.312; w = 0.12; h = 0.065; rowHeight = 0.032; sizeEx = 0.026; };
+        class EnemyRoutingLabel: RscText { idc = -1; text = "Routing:"; x = 0.30; y = 0.29; w = 0.07; h = 0.022; sizeEx = 0.026; };
+        class EnemyRoutingList: RscListBox { idc = 60318; x = 0.30; y = 0.312; w = 0.10; h = 0.065; rowHeight = 0.032; sizeEx = 0.026; };
+        class EnemyAAALabel: RscText { idc = -1; text = "AAA:"; x = 0.42; y = 0.29; w = 0.06; h = 0.022; sizeEx = 0.026; };
+        class EnemyAAAList: RscListBox { idc = 60319; x = 0.42; y = 0.312; w = 0.12; h = 0.065; rowHeight = 0.032; sizeEx = 0.026; };
+        class AoStrengthLabel: RscText { idc = -1; text = "AO - Strength:"; x = 0.56; y = 0.29; w = 0.12; h = 0.022; sizeEx = 0.026; };
+        class AoStrengthList: RscListBox { idc = 60324; x = 0.56; y = 0.312; w = 0.12; h = 0.065; rowHeight = 0.032; sizeEx = 0.026; };
+        // --- Factions: Friendly, Enemy, Civilian — extended to use space below ---
+        class FactionLabel: RscText { idc = -1; text = "Factions (mission and ambient spawns):"; x = 0.04; y = 0.395; w = 0.55; h = 0.028; sizeEx = 0.030; };
+        class FriendlyLabel: RscText { idc = -1; text = "Friendly:"; x = 0.04; y = 0.425; w = 0.08; h = 0.022; sizeEx = 0.026; };
+        class FriendlyList: RscListBox { idc = 60311; x = 0.04; y = 0.448; w = 0.28; h = 0.44; rowHeight = 0.032; sizeEx = 0.028; };
+        class EnemyLabel: RscText { idc = -1; text = "Enemy:"; x = 0.35; y = 0.425; w = 0.06; h = 0.022; sizeEx = 0.026; };
+        class EnemyList: RscListBox { idc = 60310; x = 0.35; y = 0.448; w = 0.28; h = 0.44; rowHeight = 0.032; sizeEx = 0.028; };
+        class CivLabel: RscText { idc = -1; text = "Civilian:"; x = 0.66; y = 0.425; w = 0.08; h = 0.022; sizeEx = 0.026; };
+        class CivList: RscListBox { idc = 60312; x = 0.66; y = 0.448; w = 0.28; h = 0.44; rowHeight = 0.032; sizeEx = 0.028; };
+        // Buttons
         class ApplyBtn: RscButton { idc = 60320; text = "Apply and Close"; x = 0.04; y = 0.92; w = 0.22; h = 0.045; sizeEx = 0.035; action = "['apply', []] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
         class CloseBtn: RscButton { idc = 60321; text = "Discard and Close"; x = 0.28; y = 0.92; w = 0.22; h = 0.045; sizeEx = 0.035; action = "closeDialog 0;"; };
     };
@@ -155,6 +169,47 @@ class RscDisplayJukebox: RscDisplayEmpty {
         class PlayBtn: RscButton { idc = 60404; text = "PLAY"; x = 0.27; y = 0.71; w = 0.46; h = 0.04; sizeEx = 0.035; action = "['play', []] call (missionNamespace getVariable ['FAC_jukeboxGui_fnc', {}]);"; };
         class InfoLabel: RscText { idc = -1; text = "Tracks cannot be stopped once started."; x = 0.27; y = 0.77; w = 0.32; h = 0.04; sizeEx = 0.026; colorText[] = {0.6, 0.6, 0.6, 1}; };
         class CloseBtn: RscButton { idc = 60406; text = "CLOSE"; x = 0.62; y = 0.77; w = 0.11; h = 0.04; sizeEx = 0.035; action = "closeDialog 0;"; };
+    };
+};
+
+// CQB Training Shoothouse — configure and start/end drill (targets or real enemies, density, civilians)
+class RscDisplayCQB: RscDisplayEmpty {
+    idd = 60500;
+    movingEnable = 1;
+    enableSimulation = 1;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]); };";
+    class controlsBackground {
+        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.96; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
+        class Title: RscText { idc = -1; text = "CQB TRAINING SHOOTHOUSE"; x = 0.02; y = 0.02; w = 0.96; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+    };
+    class controls {
+        class EnemyTypeLabel: RscText { idc = -1; text = "Enemy type:"; x = 0.04; y = 0.10; w = 0.18; h = 0.03; sizeEx = 0.032; };
+        class EnemyTypeList: RscListBox { idc = 60501; x = 0.04; y = 0.14; w = 0.28; h = 0.08; rowHeight = 0.038; sizeEx = 0.032; };
+        class DensityLabel: RscText { idc = -1; text = "Density:"; x = 0.04; y = 0.26; w = 0.12; h = 0.03; sizeEx = 0.032; };
+        class DensityList: RscListBox { idc = 60502; x = 0.04; y = 0.30; w = 0.28; h = 0.10; rowHeight = 0.038; sizeEx = 0.032; };
+        class CiviliansLabel: RscText { idc = -1; text = "Civilians:"; x = 0.04; y = 0.44; w = 0.12; h = 0.03; sizeEx = 0.032; };
+        class CiviliansList: RscListBox { idc = 60503; x = 0.04; y = 0.48; w = 0.28; h = 0.08; rowHeight = 0.038; sizeEx = 0.032; };
+        class DrillBtn: RscButton { idc = 60504; text = "Start drill"; x = 0.04; y = 0.62; w = 0.28; h = 0.05; sizeEx = 0.038; action = "['drill', []] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class StatusText: RscText { idc = 60506; text = ""; x = 0.04; y = 0.72; w = 0.90; h = 0.04; sizeEx = 0.030; colorText[] = {0.7, 0.9, 0.7, 1}; };
+        class CloseBtn: RscButton { idc = 60505; text = "CLOSE"; x = 0.82; y = 0.90; w = 0.14; h = 0.045; sizeEx = 0.038; action = "closeDialog 0;"; };
+    };
+};
+
+// Teleport / Fast Travel — select destination and teleport (opened from teleportBoard_1..7)
+class RscDisplayTeleport: RscDisplayEmpty {
+    idd = 60600;
+    movingEnable = 1;
+    enableSimulation = 1;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]); };";
+    class controlsBackground {
+        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.96; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
+        class Title: RscText { idc = -1; text = "FAST TRAVEL"; x = 0.02; y = 0.02; w = 0.96; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+    };
+    class controls {
+        class DestLabel: RscText { idc = -1; text = "Select destination:"; x = 0.04; y = 0.10; w = 0.50; h = 0.03; sizeEx = 0.032; };
+        class DestList: RscListBox { idc = 60601; x = 0.04; y = 0.14; w = 0.50; h = 0.58; rowHeight = 0.042; sizeEx = 0.035; onLBDblClick = "['teleport', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
+        class TeleportBtn: RscButton { idc = 60602; text = "TELEPORT"; x = 0.04; y = 0.76; w = 0.24; h = 0.045; sizeEx = 0.038; action = "['teleport', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
+        class CloseBtn: RscButton { idc = 60603; text = "CLOSE"; x = 0.82; y = 0.90; w = 0.14; h = 0.045; sizeEx = 0.038; action = "closeDialog 0;"; };
     };
 };
 
@@ -237,28 +292,35 @@ class CfgSounds
     class FAC_apprehend043 { name = "FAC_apprehend043"; sound[] = {"\Sounds\fac_apprehend-043.ogg", 1, 1, 80}; titles[] = {}; };
     class FAC_apprehend050 { name = "FAC_apprehend050"; sound[] = {"\Sounds\fac_apprehend-050.ogg", 1, 1, 80}; titles[] = {}; };
     // Troop transport sounds (OGG files in Sounds\ folder)
-    class FAC_heliOps_embarkStart
+    class FADE_embarkStart
     {
-        name = "FAC_heliOps_embarkStart";
-        sound[] = {"\Sounds\heliops_embark_start.ogg", 1, 1, 80};
+        name = "FADE_embarkStart";
+        sound[] = {"\Sounds\FADE_embark_start.ogg", 1, 1, 80};
         titles[] = {};
     };
-    class FAC_heliOps_embarkDone
+    class FADE_embarkDone
     {
-        name = "FAC_heliOps_embarkDone";
-        sound[] = {"\Sounds\heliops_embark_done.ogg", 1, 1, 80};
+        name = "FADE_embarkDone";
+        sound[] = {"\Sounds\FADE_embark_done.ogg", 1, 1, 80};
         titles[] = {};
     };
-    class FAC_heliOps_disembarkStart
+    class FADE_disembarkStart
     {
-        name = "FAC_heliOps_disembarkStart";
-        sound[] = {"\Sounds\heliops_disembark_start.ogg", 1, 1, 80};
+        name = "FADE_disembarkStart";
+        sound[] = {"\Sounds\FADE_disembark_start.ogg", 1, 1, 80};
         titles[] = {};
     };
-    class FAC_heliOps_disembarkDone
+    class FADE_disembarkDone
     {
-        name = "FAC_heliOps_disembarkDone";
-        sound[] = {"\Sounds\heliops_disembark_done.ogg", 1, 1, 80};
+        name = "FADE_disembarkDone";
+        sound[] = {"\Sounds\FADE_disembark_done.ogg", 1, 1, 80};
+        titles[] = {};
+    };
+    // Locker room (optional: add Sounds\locker_slap.ogg for slap; else uses fallback)
+    class FAC_LockerSlap
+    {
+        name = "FAC_LockerSlap";
+        sound[] = {"\Sounds\locker_slap.ogg", 1, 1, 50};
         titles[] = {};
     };
     // CTB Jukebox tracks -- wrappers so say3D can play and return a stoppable sound object
@@ -296,20 +358,20 @@ class CfgUserActions
 // HVT mission: identities so unit name matches briefing codename
 class CfgIdentities
 {
-    class heliOps_hvt_Viktor  { name = "Viktor";   face = "WhiteHead_02"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.0; };
-    class heliOps_hvt_Dmitri { name = "Dmitri";   face = "WhiteHead_03"; glasses = "None"; speaker = "Male02ENGB"; pitch = 1.0; };
-    class heliOps_hvt_Sergei { name = "Sergei";   face = "WhiteHead_04"; glasses = "None"; speaker = "Male03ENGB"; pitch = 1.0; };
-    class heliOps_hvt_Ivan   { name = "Ivan";     face = "WhiteHead_05"; glasses = "None"; speaker = "Male04ENGB"; pitch = 1.0; };
-    class heliOps_hvt_Pavel  { name = "Pavel";   face = "WhiteHead_06"; glasses = "None"; speaker = "Male05ENGB"; pitch = 1.0; };
-    class heliOps_hvt_Boris  { name = "Boris";   face = "WhiteHead_07"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.0; };
-    class heliOps_hvt_Volkov { name = "Volkov";  face = "WhiteHead_08"; glasses = "None"; speaker = "Male02ENGB"; pitch = 1.0; };
-    class heliOps_hvt_Kozlov { name = "Kozlov";  face = "WhiteHead_09"; glasses = "None"; speaker = "Male03ENGB"; pitch = 1.0; };
-    class heliOps_ratel_eagleeye { name = "Eagle Eye"; face = "WhiteHead_01"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.05; };
+    class FADE_hvt_Viktor  { name = "Viktor";   face = "WhiteHead_02"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.0; };
+    class FADE_hvt_Dmitri { name = "Dmitri";   face = "WhiteHead_03"; glasses = "None"; speaker = "Male02ENGB"; pitch = 1.0; };
+    class FADE_hvt_Sergei { name = "Sergei";   face = "WhiteHead_04"; glasses = "None"; speaker = "Male03ENGB"; pitch = 1.0; };
+    class FADE_hvt_Ivan   { name = "Ivan";     face = "WhiteHead_05"; glasses = "None"; speaker = "Male04ENGB"; pitch = 1.0; };
+    class FADE_hvt_Pavel  { name = "Pavel";   face = "WhiteHead_06"; glasses = "None"; speaker = "Male05ENGB"; pitch = 1.0; };
+    class FADE_hvt_Boris  { name = "Boris";   face = "WhiteHead_07"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.0; };
+    class FADE_hvt_Volkov { name = "Volkov";  face = "WhiteHead_08"; glasses = "None"; speaker = "Male02ENGB"; pitch = 1.0; };
+    class FADE_hvt_Kozlov { name = "Kozlov";  face = "WhiteHead_09"; glasses = "None"; speaker = "Male03ENGB"; pitch = 1.0; };
+    class FADE_ratel_eagleeye { name = "Eagle Eye"; face = "WhiteHead_01"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.05; };
 };
 
-briefingName = "Face's Dynamic Environment";
-onLoadName = "Face's Dynamic Environment";
-author = "Face";
-overviewText = "FADE. BOARD: VEHICLES, MISSIONS, SCENARIO. LOADOUTBOX: KIT, ACE ARSENAL.";
+briefingName = "FADE";
+onLoadName = "FADE";
+author = "Combat Team Bravo";
+overviewText = "Dynamic Sandbox for combined arms operations.";
 overviewPicture = "";
 loadScreen = "img\loading.jpg";

@@ -3,23 +3,23 @@
 // =============================================================================
 // Runs on each client (spawned from initPlayerLocal). createVehicleLocal ensures lights
 // exist only on the local machine; no network sync. Waits for server-replicated
-// heliOps_helipads, heliOps_vehiclePoints, heliOps_loadoutBox before creating lights.
+// FADE_helipads, FADE_vehiclePoints, FADE_loadoutBox before creating lights.
 // =============================================================================
 
-waitUntil { !isNil "heliOps_helipads" && !isNil "heliOps_vehiclePoints" && !isNil "heliOps_loadoutBox" };
+waitUntil { !isNil "FADE_helipads" && !isNil "FADE_vehiclePoints" && !isNil "FADE_loadoutBox" };
 
 private _heightAbovePad = 25;
 
 // Collect all pad/vehicle spawn objects + LOADOUTBOX + SR_Light
 private _padObjects = [];
-if (!isNil "heliOps_helipads" && { heliOps_helipads isEqualType [] }) then {
-    _padObjects append (heliOps_helipads select { !isNull _x });
+if (!isNil "FADE_helipads" && { FADE_helipads isEqualType [] }) then {
+    _padObjects append (FADE_helipads select { !isNull _x });
 };
-if (!isNil "heliOps_vehiclePoints" && { heliOps_vehiclePoints isEqualType [] }) then {
-    _padObjects append (heliOps_vehiclePoints select { !isNull _x });
+if (!isNil "FADE_vehiclePoints" && { FADE_vehiclePoints isEqualType [] }) then {
+    _padObjects append (FADE_vehiclePoints select { !isNull _x });
 };
-if (!isNil "heliOps_loadoutBox" && { !isNull heliOps_loadoutBox }) then {
-    _padObjects pushBack heliOps_loadoutBox;
+if (!isNil "FADE_loadoutBox" && { !isNull FADE_loadoutBox }) then {
+    _padObjects pushBack FADE_loadoutBox;
 };
 private _srLight = missionNamespace getVariable ["SR_Light", objNull];
 if (!isNull _srLight) then {

@@ -2,8 +2,19 @@
 // LoadoutGui.sqf — Loadout selection dialog
 // =============================================================================
 // Allows players to change their loadout by selecting from all infantry units
-// of the same side. Supports filtering by faction.
+// of the same side. Supports filtering by faction. CTB presets appear at top when available.
 // =============================================================================
+
+// CTB typical loadout presets: [displayName, unitClass]. Same as selecting that unit; class must exist in CfgVehicles and match player side.
+FAC_ctbLoadoutPresets = [
+    ["Rifleman", "B_Soldier_F"],
+    ["Team Leader", "B_Soldier_TL_F"],
+    ["Medic", "B_medic_F"],
+    ["Auto Rifleman", "B_Soldier_AR_F"],
+    ["Grenadier", "B_Soldier_GL_F"],
+    ["Marksman", "B_soldier_M_F"],
+    ["Engineer", "B_engineer_F"]
+];
 
 // Map vehicleClass to readable type (for display prefix)
 FAC_loadoutGui_vehicleClassToType = [
@@ -189,12 +200,20 @@ FAC_loadoutGui_fnc = {
             // Defer heavy config scan so UI renders first
             [] spawn {
                 private _allUnits = [side player] call FAC_loadoutGui_getUnitsForSide;
-                if (missionNamespace getVariable ["heliOps_limitGearToFriendlyFaction", false]) then {
-                    private _allowed = missionNamespace getVariable ["heliOps_friendlyUnits", []];
+                if (missionNamespace getVariable ["FADE_limitGearToFriendlyFaction", false]) then {
+                    private _allowed = missionNamespace getVariable ["FADE_friendlyUnits", []];
                     if (count _allowed > 0) then {
                         _allUnits = _allUnits select { (_x select 0) in _allowed };
                     };
                 };
+                // Prepend CTB presets (same side) so they appear at top
+                private _sideNum = (side player) call BIS_fnc_sideID;
+                {
+                    _x params ["_dn", "_cls"];
+                    if (isClass (configFile >> "CfgVehicles" >> _cls) && { getNumber (configFile >> "CfgVehicles" >> _cls >> "side") == _sideNum }) then {
+                        _allUnits = [[_cls, _dn + " (CTB)", "", "CTB Preset", "Preset"]] + _allUnits;
+                    };
+                } forEach (missionNamespace getVariable ["FAC_ctbLoadoutPresets", []]);
                 missionNamespace setVariable ["FAC_loadoutGui_allUnits", _allUnits];
 
                 private _display = findDisplay 60200;

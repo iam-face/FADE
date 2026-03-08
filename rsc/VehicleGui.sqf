@@ -53,8 +53,8 @@ FAC_vehicleGui_fnc = {
 
     switch _action do {
         case "open": {
-            private _hasAircraft = !(isNil "heliOps_heliClasses") && { count heliOps_heliClasses > 0 };
-            private _hasLand = !(isNil "heliOps_landVehicleClasses") && { count heliOps_landVehicleClasses > 0 };
+            private _hasAircraft = !(isNil "FADE_heliClasses") && { count FADE_heliClasses > 0 };
+            private _hasLand = !(isNil "FADE_landVehicleClasses") && { count FADE_landVehicleClasses > 0 };
             if (!_hasAircraft && !_hasLand) then {
                 systemChat "VEHICLE CONFIG NOT READY.";
             } else {
@@ -85,7 +85,7 @@ FAC_vehicleGui_fnc = {
             if (isNull _display) exitWith {};
             private _catList = _display displayCtrl 60170;
             private _cat = _catList lbData (lbCurSel _catList);
-            private _classes = if (_cat == "aircraft") then { missionNamespace getVariable ["heliOps_heliClasses", []] } else { missionNamespace getVariable ["heliOps_landVehicleClasses", []] };
+            private _classes = if (_cat == "aircraft") then { missionNamespace getVariable ["FADE_heliClasses", []] } else { missionNamespace getVariable ["FADE_landVehicleClasses", []] };
 
             // Build full list: use CfgFactionClasses displayName (same as filter) for consistency
             private _fullList = [];
@@ -98,8 +98,8 @@ FAC_vehicleGui_fnc = {
                 if (_factionDn == "") then { _factionDn = _faction };
                 _fullList pushBack [_x, _name, _faction, _factionDn];
             } forEach _classes;
-            if (missionNamespace getVariable ["heliOps_limitGearToFriendlyFaction", false]) then {
-                private _allowed = missionNamespace getVariable ["heliOps_friendlyVehicleClasses", []];
+            if (missionNamespace getVariable ["FADE_limitGearToFriendlyFaction", false]) then {
+                private _allowed = missionNamespace getVariable ["FADE_friendlyVehicleClasses", []];
                 if (count _allowed > 0) then {
                     _fullList = _fullList select { (_x select 0) in _allowed };
                 };
@@ -183,10 +183,10 @@ FAC_vehicleGui_fnc = {
             if (_displayName == "") then { _displayName = _class };
 
             if (_cat == "aircraft") then {
-                [_class, player] remoteExec ["heliOps_spawnHeli", 2];
+                [_class, player] remoteExec ["FADE_spawnHeli", 2];
                 systemChat format ["SPAWNING %1...", _displayName];
             } else {
-                [_class, player] remoteExec ["heliOps_spawnLandVehicle", 2];
+                [_class, player] remoteExec ["FADE_spawnLandVehicle", 2];
                 systemChat format ["SPAWNING %1...", _displayName];
             };
             [] spawn { sleep 2; if (!isNull (findDisplay 60001)) then { ["refreshSpawned", []] call FAC_vehicleGui_fnc } };
@@ -200,13 +200,13 @@ FAC_vehicleGui_fnc = {
             if (_varName == "") exitWith {};
             private _obj = missionNamespace getVariable [_varName, objNull];
             if (isNull _obj) exitWith { systemChat "VEHICLE NO LONGER EXISTS." };
-            [_obj, player] remoteExec ["heliOps_despawnVehicle", 2];
+            [_obj, player] remoteExec ["FADE_despawnVehicle", 2];
             systemChat "DESPAWNING...";
             [] spawn { sleep 1; if (!isNull (findDisplay 60001)) then { ["refreshSpawned", []] call FAC_vehicleGui_fnc } };
         };
         case "refreshSpawned": {
             if (isNull _display) exitWith {};
-            [player] remoteExec ["heliOps_requestVehiclesAtBase", 2];
+            [player] remoteExec ["FADE_requestVehiclesAtBase", 2];
         };
         case "receiveSpawned": {
             _params params [["_vehicleData", []]];
@@ -216,10 +216,10 @@ FAC_vehicleGui_fnc = {
             };
             private _disp = findDisplay 60001;
             if (isNull _disp) exitWith {};
-            private _basePos = missionNamespace getVariable ["heliOps_basePos", [0,0,0]];
+            private _basePos = missionNamespace getVariable ["FADE_basePos", [0,0,0]];
             private _lb = _disp displayCtrl 60110;
             lbClear _lb;
-            { _x params ["_veh", "_padName"]; if (!isNull _veh && { alive _veh }) then { private _cls = typeOf _veh; private _name = getText (configFile >> "CfgVehicles" >> _cls >> "displayName"); if (_name == "") then { _name = _cls }; private _faction = getText (configFile >> "CfgVehicles" >> _cls >> "faction"); private _factionDn = getText (configFile >> "CfgFactionClasses" >> _faction >> "displayName"); if (_factionDn == "") then { _factionDn = _faction }; private _label = _factionDn + " > " + _name + " - " + _padName; private _varName = "heliOps_obj_" + (str _veh); missionNamespace setVariable [_varName, _veh]; private _idx = _lb lbAdd _label; _lb lbSetData [_idx, _varName]; _lb lbSetTooltip [_idx, format ["%1 at %2", _cls, _padName]] } } forEach _vehicleData;
+            { _x params ["_veh", "_padName"]; if (!isNull _veh && { alive _veh }) then { private _cls = typeOf _veh; private _name = getText (configFile >> "CfgVehicles" >> _cls >> "displayName"); if (_name == "") then { _name = _cls }; private _faction = getText (configFile >> "CfgVehicles" >> _cls >> "faction"); private _factionDn = getText (configFile >> "CfgFactionClasses" >> _faction >> "displayName"); if (_factionDn == "") then { _factionDn = _faction }; private _label = _factionDn + " > " + _name + " - " + _padName; private _varName = "FADE_obj_" + (str _veh); missionNamespace setVariable [_varName, _veh]; private _idx = _lb lbAdd _label; _lb lbSetData [_idx, _varName]; _lb lbSetTooltip [_idx, format ["%1 at %2", _cls, _padName]] } } forEach _vehicleData;
             ["updateButtons", []] call FAC_vehicleGui_fnc;
         };
         case "updateButtons": {
@@ -234,7 +234,7 @@ FAC_vehicleGui_fnc = {
     };
 };
 
-heliOps_receiveVehiclesAtBase = {
+FADE_receiveVehiclesAtBase = {
     params [["_vehicleData", []]];
     if (isNil "_vehicleData") then { _vehicleData = [] };
     if !(_vehicleData isEqualType []) then { _vehicleData = [] };

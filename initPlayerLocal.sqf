@@ -14,20 +14,23 @@
 // Debug: set true to show systemChat for every key interaction (cursorTarget, cursorObject, etc.)
 FAC_surrenderChallenge_debugKeys = false;
 
+// Debug: stub missing BIS campaign functions to log caller (set FADE_debugBIScp = false to disable)
+call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";
+
 // -----------------------------------------------------------------------------
 // Mission hints  - formatted hint shown only to the targeted player (called via remoteExec from server)
 // -----------------------------------------------------------------------------
-FAC_heliOps_showMissionHint = {
+FADE_showMissionHint = {
     if (count _this > 0) then { hint parseText (_this select 0) };
 };
 
 // -----------------------------------------------------------------------------
 // Scenario config sync  - server sends when Apply; client uses for Loadout/Vehicle GUIs
 // -----------------------------------------------------------------------------
-FAC_heliOps_syncScenarioConfig = {
+FADE_syncScenarioConfig = {
     params [["_friendlyFaction", "BLU_F"], ["_limitGear", false]];
-    missionNamespace setVariable ["heliOps_scenarioFriendlyFaction", _friendlyFaction];
-    missionNamespace setVariable ["heliOps_limitGearToFriendlyFaction", _limitGear];
+    missionNamespace setVariable ["FADE_scenarioFriendlyFaction", _friendlyFaction];
+    missionNamespace setVariable ["FADE_limitGearToFriendlyFaction", _limitGear];
 };
 
 // -----------------------------------------------------------------------------
@@ -100,8 +103,8 @@ FAC_surrenderChallenge_fnc_activate = {
     private _chosen = selectRandom _apprehendSounds;
     [player, [_chosen, 80, 1]] remoteExec ["say3D", 0];
 
-    // remoteExec to server (2). Server runs SurrenderChallenge.sqf which owns AI.
-    [player, _target] remoteExec ["FAC_surrenderChallenge_start", 2];
+    // remoteExec to server (2). Pass player dir so server can validate 30° cone.
+    [player, _target, getDir player] remoteExec ["FAC_surrenderChallenge_start", 2];
 
     (format ["[FAC] SENT: Challenge for %1 (dist %2m)", name _target, round (player distance _target)]) call _dbg;
     diag_log "[FAC SurrenderChallenge] Client: Challenge sent for " + (name _target);
@@ -113,18 +116,19 @@ call compile preprocessFileLineNumbers "rsc\VehicleGui.sqf";
 call compile preprocessFileLineNumbers "rsc\MissionsGui.sqf";
 call compile preprocessFileLineNumbers "rsc\ScenarioGui.sqf";
 call compile preprocessFileLineNumbers "rsc\JukeboxGui.sqf";
+call compile preprocessFileLineNumbers "rsc\CQBGui.sqf";
+call compile preprocessFileLineNumbers "rsc\TeleportGui.sqf";
 
-waitUntil { !isNil "heliOps_heliClasses" && !isNil "heliOps_boards" };
+waitUntil { !isNil "FADE_heliClasses" && !isNil "FADE_boards" && !isNil "FADE_loadoutBox" && !isNil "FADE_cqbBoard" };
 
 // Request scenario config from server (limit gear, friendly faction) for Loadout/Vehicle GUIs
-[player] remoteExec ["heliOps_sendScenarioConfigToClient", 2];
+[player] remoteExec ["FADE_sendScenarioConfigToClient", 2];
 
-// Add board actions: 2 options (Manage Loadout moved to LOADOUTBOX)
-{
-    private _board = _x;
-    if (isNull _board) then { continue };
-    removeAllActions _board;
-    _board addAction [
+// Vehicle board (vehBoard): Manage Vehicles only
+private _vehicleBoard = missionNamespace getVariable ["FADE_vehicleBoard", objNull];
+if (!isNull _vehicleBoard) then {
+    removeAllActions _vehicleBoard;
+    _vehicleBoard addAction [
         "<t color='#00FF00'>Manage Vehicles</t>",
         { [] spawn { sleep 0.2; ["open", []] call FAC_vehicleGui_fnc } },
         [],
@@ -135,7 +139,13 @@ waitUntil { !isNil "heliOps_heliClasses" && !isNil "heliOps_boards" };
         "",
         3
     ];
-    _board addAction [
+};
+
+// Missions/Config board (missionBoard): Manage Missions + Manage Scenario
+private _missionBoard = missionNamespace getVariable ["FADE_missionBoard", objNull];
+if (!isNull _missionBoard) then {
+    removeAllActions _missionBoard;
+    _missionBoard addAction [
         "<t color='#FFD700'>Manage Missions</t>",
         { [] spawn { sleep 0.2; ["open", []] call FAC_missionsGui_fnc } },
         [],
@@ -146,7 +156,7 @@ waitUntil { !isNil "heliOps_heliClasses" && !isNil "heliOps_boards" };
         "",
         3
     ];
-    _board addAction [
+    _missionBoard addAction [
         "<t color='#87CEEB'>Manage Scenario</t>",
         { [] spawn { sleep 0.2; ["open", []] call FAC_scenarioGui_fnc } },
         [],
@@ -157,21 +167,78 @@ waitUntil { !isNil "heliOps_heliClasses" && !isNil "heliOps_boards" };
         "",
         3
     ];
-} forEach heliOps_boards;
+};
+
+// CQB Training Shoothouse board (cqbBoard) — opens CQB GUI
+if (!isNull (missionNamespace getVariable ["FADE_cqbBoard", objNull])) then {
+    private _cqbBoard = missionNamespace getVariable "FADE_cqbBoard";
+    removeAllActions _cqbBoard;
+    _cqbBoard addAction [
+        "<t color='#FFA500'>CQB Training</t>",
+        { [] spawn { sleep 0.2; ["open", []] call FAC_cqbGui_fnc } },
+        [],
+        4,
+        false,
+        true,
+        "",
+        "",
+        3
+    ];
+};
+
+// Teleport boards (teleportBoard_1..7) — opens Fast Travel GUI
+{
+    private _board = missionNamespace getVariable [_x, objNull];
+    if (isNull _board) then { continue };
+    removeAllActions _board;
+    _board addAction [
+        "<t color='#00FFFF'>Fast Travel</t>",
+        { [] spawn { sleep 0.2; ["open", []] call FAC_teleportGui_fnc } },
+        [],
+        5,
+        false,
+        true,
+        "",
+        "",
+        3
+    ];
+} forEach ["teleportBoard_1", "teleportBoard_2", "teleportBoard_3", "teleportBoard_4", "teleportBoard_5", "teleportBoard_6", "teleportBoard_7"];
 
 // In-game briefing and diary (map screen: Briefing + Notes, incl. 9-Line JTAC)
 execVM "rsc\Briefing.sqf";
 
-// Add LOADOUTBOX actions: custom loadout GUI + ACE Arsenal (if loaded)
-{
-    if (!isNil _x && { !isNull (missionNamespace getVariable [_x, objNull]) }) then {
-        private _box = missionNamespace getVariable [_x, objNull];
+// Add loadout actions to all loadout boxes (Manage My Loadout, Save loadout, ACE Arsenal). Run after short delay so we run after ACE/other inits that may strip actions.
+[] spawn {
+    sleep 0.5;
+    private _boxes = missionNamespace getVariable ["FADE_loadoutBoxes", []];
+    if (_boxes isEqualTo [] && { !isNull (missionNamespace getVariable ["FADE_loadoutBox", objNull]) }) then {
+        _boxes = [missionNamespace getVariable "FADE_loadoutBox"];
+        if (!isNull (missionNamespace getVariable ["FADE_loadoutBox2", objNull])) then { _boxes pushBack (missionNamespace getVariable "FADE_loadoutBox2") };
+    };
+    {
+        private _box = _x;
+        if (isNull _box) then { continue };
         removeAllActions _box;
         _box addAction [
             "<t color='#00BFFF'>Manage My Loadout</t>",
             { [] spawn { sleep 0.2; ["open", []] call FAC_loadoutGui_fnc } },
             [],
             6,
+            false,
+            true,
+            "",
+            "",
+            3
+        ];
+        _box addAction [
+            "<t color='#98FB98'>Save my loadout</t>",
+            {
+                private _uid = getPlayerUID player;
+                missionNamespace setVariable ["FAC_savedLoadout_" + _uid, getUnitLoadout player];
+                systemChat "Loadout saved - will be restored on respawn.";
+            },
+            [],
+            5.5,
             false,
             true,
             "",
@@ -191,8 +258,8 @@ execVM "rsc\Briefing.sqf";
                 3
             ];
         };
-    };
-} forEach ["heliOps_loadoutBox", "heliOps_loadoutBox2"];
+    } forEach _boxes;
+};
 
 // Add Radio_1 jukebox action  - Radio_1 is an Eden-named object (missionNamespace)
 private _radio = missionNamespace getVariable ["Radio_1", objNull];
@@ -202,6 +269,25 @@ if (!isNull _radio) then {
         { [] spawn { sleep 0.2; ["open", []] call FAC_jukeboxGui_fnc } },
         [],
         5,
+        false,
+        true,
+        "",
+        "",
+        3
+    ];
+};
+
+// Locker room  - optional Eden object LOCKER_1; play sound on use (add Sounds\locker_slap.ogg or uses fallback)
+private _locker = missionNamespace getVariable ["LOCKER_1", objNull];
+if (!isNull _locker) then {
+    _locker addAction [
+        "<t color='#DDA0DD'>Locker room</t>",
+        {
+            playSound "FAC_LockerSlap";
+            systemChat "Locker room.";
+        },
+        [],
+        4,
         false,
         true,
         "",
@@ -243,6 +329,42 @@ hint parseText _welcomeText;
 
 // Invisible ambient lights 25m above each helipad and vehicle spawn
 [] spawn { execVM "rsc\LightTowers.sqf" };
+
+// Pilot pylon management: when player is driver of a vehicle with pylons, add action to open vehicle customization (pylon loadout)
+FAC_pylonActionId = -1;
+FAC_pylonActionVeh = objNull;
+player addEventHandler ["GetInMan", {
+    params ["_unit", "_role", "_veh", "_turret"];
+    if (_role != "driver") exitWith {};
+    if (!isNil "FAC_pylonActionVeh" && { FAC_pylonActionVeh isEqualTo _veh } && { FAC_pylonActionId >= 0 }) exitWith {};
+    if (!isNil "FAC_pylonActionId" && { FAC_pylonActionId >= 0 } && { !isNull FAC_pylonActionVeh }) then { FAC_pylonActionVeh removeAction FAC_pylonActionId; };
+    FAC_pylonActionVeh = objNull;
+    FAC_pylonActionId = -1;
+    if (count getAllPylonsInfo _veh > 0) then {
+        FAC_pylonActionId = _veh addAction [
+            "<t color='#87CEEB'>Manage pylons (vehicle loadout)</t>",
+            {
+                (vehicle (_this select 1)) action ["VehicleCustomization", vehicle (_this select 1)];
+            },
+            [],
+            0,
+            false,
+            true,
+            "",
+            "driver _target == _this",
+            4
+        ];
+        FAC_pylonActionVeh = _veh;
+    };
+}];
+player addEventHandler ["GetOutMan", {
+    params ["_unit", "_role", "_veh", "_turret"];
+    if (!isNil "FAC_pylonActionVeh" && { FAC_pylonActionVeh isEqualTo _veh } && { !isNil "FAC_pylonActionId" } && { FAC_pylonActionId >= 0 }) then {
+        _veh removeAction FAC_pylonActionId;
+        FAC_pylonActionId = -1;
+        FAC_pylonActionVeh = objNull;
+    };
+}];
 
 // -----------------------------------------------------------------------------
 // KeyDown on main display (46): U = Surrender Challenge, L = Missions GUI
