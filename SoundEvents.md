@@ -1,4 +1,4 @@
-﻿SOUND EVENTS -- HELI OPS
+SOUND EVENTS -- HELI OPS
 
 SPOKEN (voice from unit, in-person)
 
@@ -40,3 +40,6 @@ Scenario / loadout
 
 Surrender Challenge -- system feedback (not target speaking)
 - Processing, validation errors, initiated, surrendered, refused. Used: playSound. Intent: radio-style status to player.
+
+Locker room (optional object LOCKER_1)
+- CfgSounds: FAC_LockerSlap. Optional file: Sounds\locker_slap.ogg. Used: playSound when player uses Locker room action. Intent: locker slap / flavour sound.

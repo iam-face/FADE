@@ -1,9 +1,9 @@
 // =============================================================================
 // AmbientCivilians.sqf — Civ spawn/despawn (CIV_T_* triggers, ROAD_SP_* road vehicles)
 // =============================================================================
-// ONLY uses heliOps_scenarioCivFaction from Scenario GUI. No fallbacks.
+// ONLY uses FADE_scenarioCivFaction from Scenario GUI. No fallbacks.
 // If selected faction has no civilian units/vehicles: shows hint error, does not spawn.
-// Spawned units are marked BIS_cp_excluded / heliOps_ambientCiv so BIS Civilian Presence
+// Spawned units are marked BIS_cp_excluded / FADE_ambientCiv so BIS Civilian Presence
 // (or mods like CPE) skip them and don't call bis_fnc_cp_main (avoids undefined-variable RPT errors).
 // =============================================================================
 // v4 — GUI faction only, no defaults
@@ -16,24 +16,24 @@ diag_log "[AmbientCivilians] v4 loading (GUI faction only)";
 if (isNil "bis_fnc_cp_main") then { bis_fnc_cp_main = { nil }; };
 
 // Store config in missionNamespace
-missionNamespace setVariable ["heliOps_civCheckInterval", missionNamespace getVariable ["heliOps_civCheckInterval", 45]];
-missionNamespace setVariable ["heliOps_roadSpawnIntervalMin", missionNamespace getVariable ["heliOps_roadSpawnIntervalMin", 90]];
-missionNamespace setVariable ["heliOps_roadSpawnIntervalMax", missionNamespace getVariable ["heliOps_roadSpawnIntervalMax", 180]];
-missionNamespace setVariable ["heliOps_civPlayerActivateDist", missionNamespace getVariable ["heliOps_civPlayerActivateDist", 1000]];
-missionNamespace setVariable ["heliOps_civPlayerDeactivateDist", missionNamespace getVariable ["heliOps_civPlayerDeactivateDist", 1400]];
-missionNamespace setVariable ["heliOps_civSpawnRadius", missionNamespace getVariable ["heliOps_civSpawnRadius", 1000]];
-missionNamespace setVariable ["heliOps_civWanderRadius", missionNamespace getVariable ["heliOps_civWanderRadius", 100]];
-missionNamespace setVariable ["heliOps_civCountMin", missionNamespace getVariable ["heliOps_civCountMin", 5]];
-missionNamespace setVariable ["heliOps_civCountMax", missionNamespace getVariable ["heliOps_civCountMax", 15]];
-missionNamespace setVariable ["heliOps_civSpawnStaggerDelay", missionNamespace getVariable ["heliOps_civSpawnStaggerDelay", 1.5]];
-missionNamespace setVariable ["heliOps_civSpawnBatchSize", missionNamespace getVariable ["heliOps_civSpawnBatchSize", 2]];
-missionNamespace setVariable ["heliOps_roadVehicleMax", missionNamespace getVariable ["heliOps_roadVehicleMax", 10]];
-missionNamespace setVariable ["heliOps_civMaxActiveZones", missionNamespace getVariable ["heliOps_civMaxActiveZones", 4]];
-missionNamespace setVariable ["heliOps_civDebug", missionNamespace getVariable ["heliOps_civDebug", false]];
+missionNamespace setVariable ["FADE_civCheckInterval", missionNamespace getVariable ["FADE_civCheckInterval", 45]];
+missionNamespace setVariable ["FADE_roadSpawnIntervalMin", missionNamespace getVariable ["FADE_roadSpawnIntervalMin", 90]];
+missionNamespace setVariable ["FADE_roadSpawnIntervalMax", missionNamespace getVariable ["FADE_roadSpawnIntervalMax", 180]];
+missionNamespace setVariable ["FADE_civPlayerActivateDist", missionNamespace getVariable ["FADE_civPlayerActivateDist", 1000]];
+missionNamespace setVariable ["FADE_civPlayerDeactivateDist", missionNamespace getVariable ["FADE_civPlayerDeactivateDist", 1400]];
+missionNamespace setVariable ["FADE_civSpawnRadius", missionNamespace getVariable ["FADE_civSpawnRadius", 1000]];
+missionNamespace setVariable ["FADE_civWanderRadius", missionNamespace getVariable ["FADE_civWanderRadius", 100]];
+missionNamespace setVariable ["FADE_civCountMin", missionNamespace getVariable ["FADE_civCountMin", 5]];
+missionNamespace setVariable ["FADE_civCountMax", missionNamespace getVariable ["FADE_civCountMax", 15]];
+missionNamespace setVariable ["FADE_civSpawnStaggerDelay", missionNamespace getVariable ["FADE_civSpawnStaggerDelay", 1.5]];
+missionNamespace setVariable ["FADE_civSpawnBatchSize", missionNamespace getVariable ["FADE_civSpawnBatchSize", 2]];
+missionNamespace setVariable ["FADE_roadVehicleMax", missionNamespace getVariable ["FADE_roadVehicleMax", 10]];
+missionNamespace setVariable ["FADE_civMaxActiveZones", missionNamespace getVariable ["FADE_civMaxActiveZones", 4]];
+missionNamespace setVariable ["FADE_civDebug", missionNamespace getVariable ["FADE_civDebug", false]];
 
 // Filter to valid CfgVehicles classes: must exist, scope >= 2 (avoids "Cannot create non-ai vehicle" for player-only/private classes).
 // When _unitsOnly is true, only classes that inherit from Man are kept (avoids "abstract type Civilian_F" / wrong type).
-heliOps_civ_filterClasses = {
+FADE_civ_filterClasses = {
     params ["_classes", ["_unitsOnly", false]];
     if (isNil "_classes" || {!(_classes isEqualType [])}) exitWith { [] };
     private _out = [];
@@ -52,27 +52,27 @@ heliOps_civ_filterClasses = {
 // -----------------------------------------------------------------------------
 // Get civ classes ONLY from Scenario GUI faction — no fallbacks
 // -----------------------------------------------------------------------------
-heliOps_civ_getUnitClassesFromGui = {
-    private _faction = missionNamespace getVariable ["heliOps_scenarioCivFaction", "CIV_F"];
+FADE_civ_getUnitClassesFromGui = {
+    private _faction = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
     if (_faction == "") exitWith { [] };
-    if (isNil "heliOps_getUnitsForFaction") exitWith { [] };
-    private _raw = [_faction, 3] call heliOps_getUnitsForFaction;
-    [_raw, true] call heliOps_civ_filterClasses  // true = units only (Man), avoids abstract/faction-named classes
+    if (isNil "FADE_getUnitsForFaction") exitWith { [] };
+    private _raw = [_faction, 3] call FADE_getUnitsForFaction;
+    [_raw, true] call FADE_civ_filterClasses  // true = units only (Man), avoids abstract/faction-named classes
 };
 
-heliOps_civ_getVehicleClassesFromGui = {
-    private _faction = missionNamespace getVariable ["heliOps_scenarioCivFaction", "CIV_F"];
+FADE_civ_getVehicleClassesFromGui = {
+    private _faction = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
     if (_faction == "") exitWith { [] };
-    if (isNil "heliOps_getCivVehiclesForFaction") exitWith { [] };
-    private _raw = [_faction] call heliOps_getCivVehiclesForFaction;
-    [_raw, false] call heliOps_civ_filterClasses  // false = vehicles, not units
+    if (isNil "FADE_getCivVehiclesForFaction") exitWith { [] };
+    private _raw = [_faction] call FADE_getCivVehiclesForFaction;
+    [_raw, false] call FADE_civ_filterClasses  // false = vehicles, not units
 };
 
 // Show hint when no civs available (once per session to avoid spam)
-heliOps_civ_showNoCivsHint = {
-    if (missionNamespace getVariable ["heliOps_civNoCivsHintShown", false]) exitWith {};
-    missionNamespace setVariable ["heliOps_civNoCivsHintShown", true];
-    private _faction = missionNamespace getVariable ["heliOps_scenarioCivFaction", "CIV_F"];
+FADE_civ_showNoCivsHint = {
+    if (missionNamespace getVariable ["FADE_civNoCivsHintShown", false]) exitWith {};
+    missionNamespace setVariable ["FADE_civNoCivsHintShown", true];
+    private _faction = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
     private _factionDn = getText (configFile >> "CfgFactionClasses" >> _faction >> "displayName");
     if (_factionDn == "") then { _factionDn = _faction };
     private _msg = format [
@@ -80,14 +80,14 @@ heliOps_civ_showNoCivsHint = {
         "<t color='#E0E0E0'>Faction '%1' has no civilian units. Check mods are loaded or select a different faction in Scenario GUI.</t>",
         _factionDn
     ];
-    [_msg] remoteExec ["FAC_heliOps_showMissionHint", 0];
+    [_msg] remoteExec ["FADE_showMissionHint", 0];
     diag_log format ["[AmbientCivilians] No civ units for faction %1 — hint shown", _faction];
 };
 
-heliOps_civ_showNoCivVehiclesHint = {
-    if (missionNamespace getVariable ["heliOps_civNoCivVehHintShown", false]) exitWith {};
-    missionNamespace setVariable ["heliOps_civNoCivVehHintShown", true];
-    private _faction = missionNamespace getVariable ["heliOps_scenarioCivFaction", "CIV_F"];
+FADE_civ_showNoCivVehiclesHint = {
+    if (missionNamespace getVariable ["FADE_civNoCivVehHintShown", false]) exitWith {};
+    missionNamespace setVariable ["FADE_civNoCivVehHintShown", true];
+    private _faction = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
     private _factionDn = getText (configFile >> "CfgFactionClasses" >> _faction >> "displayName");
     if (_factionDn == "") then { _factionDn = _faction };
     private _msg = format [
@@ -95,7 +95,7 @@ heliOps_civ_showNoCivVehiclesHint = {
         "<t color='#E0E0E0'>Faction '%1' has no civilian vehicles. Road vehicles disabled.</t>",
         _factionDn
     ];
-    [_msg] remoteExec ["FAC_heliOps_showMissionHint", 0];
+    [_msg] remoteExec ["FADE_showMissionHint", 0];
     diag_log format ["[AmbientCivilians] No civ vehicles for faction %1 — hint shown", _faction];
 };
 
@@ -106,7 +106,7 @@ for "_i" from 1 to 25 do {
     private _trig = missionNamespace getVariable [_name, objNull];
     if (!isNull _trig) then { _civTriggerNames pushBack _name };
 };
-missionNamespace setVariable ["heliOps_civTriggerNames", _civTriggerNames];
+missionNamespace setVariable ["FADE_civTriggerNames", _civTriggerNames];
 
 // Collect ROAD_SP_* points
 private _roadPoints = [];
@@ -114,16 +114,16 @@ for "_i" from 1 to 25 do {
     private _obj = missionNamespace getVariable [format ["ROAD_SP_%1", _i], objNull];
     if (!isNull _obj) then { _roadPoints pushBack _obj };
 };
-missionNamespace setVariable ["heliOps_civRoadPoints", _roadPoints];
+missionNamespace setVariable ["FADE_civRoadPoints", _roadPoints];
 
-heliOps_civZoneState = createHashMap;
-heliOps_roadVehicles = [];
-heliOps_enemyPatrolZoneState = createHashMap;
+FADE_civZoneState = createHashMap;
+FADE_roadVehicles = [];
+FADE_enemyPatrolZoneState = createHashMap;
 
 // Despawn all patrol entities for a zone (groups, vehicle groups, vehicles, garrison groups, barrels)
-heliOps_enemyPatrol_despawnForZone = {
+FADE_enemyPatrol_despawnForZone = {
     params ["_zoneId"];
-    private _state = heliOps_enemyPatrolZoneState get _zoneId;
+    private _state = FADE_enemyPatrolZoneState get _zoneId;
     if (isNil "_state") exitWith {};
     private _groups = _state get "groups";
     if (isNil "_groups") then { _groups = [] };
@@ -143,23 +143,26 @@ heliOps_enemyPatrol_despawnForZone = {
     } forEach (_groups + _vehicleGroups + _garrisonGroups);
     { if (!isNull _x) then { deleteVehicle _x } } forEach _vehicles;
     { if (!isNull _x) then { deleteVehicle _x } } forEach _barrels;
-    heliOps_enemyPatrolZoneState deleteAt _zoneId;
+    FADE_enemyPatrolZoneState deleteAt _zoneId;
 };
 
 // Spawn enemy patrol: infantry groups, 1-3 road vehicles (car type) with cargo and cycle waypoints, 2-4 garrisoned buildings with burning barrel
-heliOps_enemyPatrol_spawnForZone = {
+FADE_enemyPatrol_spawnForZone = {
     params ["_center", "_zoneId"];
-    if (!(missionNamespace getVariable ["heliOps_scenarioPatrols", false])) exitWith {};
-    if (!(isNil { heliOps_enemyPatrolZoneState get _zoneId })) exitWith {};
+    if (!(missionNamespace getVariable ["FADE_scenarioPatrols", false])) exitWith {};
+    if (!(isNil { FADE_enemyPatrolZoneState get _zoneId })) exitWith {};
+    // Never spawn ambient patrol within 1 km of player base (BASE_1)
+    private _basePos = missionNamespace getVariable ["FADE_basePos", []];
+    if (count _basePos >= 2 && { (_center distance _basePos) < 1000 }) exitWith {};
     if (random 1 > 0.4) exitWith {};
-    private _enemyUnits = missionNamespace getVariable ["heliOps_enemyUnits", []];
+    private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", []];
     if (_enemyUnits isEqualTo []) exitWith {};
     private _patrolGroups = [];
     private _vehicleGroups = [];
     private _vehicles = [];
     private _garrisonGroups = [];
     private _barrels = [];
-    private _zoneRadius = missionNamespace getVariable ["heliOps_civSpawnRadius", 1000];
+    private _zoneRadius = missionNamespace getVariable ["FADE_civSpawnRadius", 1000];
     if (_zoneRadius > 900) then { _zoneRadius = 800 };
 
     // Infantry patrol groups (1-2 groups; 3-6 units each)
@@ -196,12 +199,12 @@ heliOps_enemyPatrol_spawnForZone = {
     };
 
     // 1-3 cars on road: spawn on road in zone, waypoint random in zone then cycle, fill cargo with enemy units
-    private _enemyVehList = missionNamespace getVariable ["heliOps_enemyVehicles", []];
+    private _enemyVehList = missionNamespace getVariable ["FADE_enemyVehicles", []];
     private _carClasses = [];
     { if ((_x isEqualType "") && { isClass (configFile >> "CfgVehicles" >> _x) }) then { if (_x isKindOf "Car") then { _carClasses pushBack _x } } } forEach _enemyVehList;
     if (_carClasses isEqualTo [] && { count _enemyVehList > 0 }) then { _carClasses = _enemyVehList };
     if (!(_carClasses isEqualTo []) && { count _enemyUnits > 0 }) then {
-        private _roadPositions = [_center, _zoneRadius, 15] call heliOps_civ_getRoadPositions;
+        private _roadPositions = [_center, _zoneRadius, 15] call FADE_civ_getRoadPositions;
         if (count _roadPositions >= 1) then {
             private _numVeh = (1 + floor random 3) min count _roadPositions;
             for "_v" from 0 to (_numVeh - 1) do {
@@ -218,7 +221,7 @@ heliOps_enemyPatrol_spawnForZone = {
                 if (isNull _driver) then { deleteVehicle _veh; deleteGroup _vehGrp; continue };
                 _driver assignAsDriver _veh;
                 _driver moveInDriver _veh;
-                private _cargoSeats = [_veh] call heliOps_getCargoSeats;
+                private _cargoSeats = [_veh] call FADE_getCargoSeats;
                 if (isNil "_cargoSeats") then { _cargoSeats = 0 };
                 _cargoSeats = (_cargoSeats min 6) max 0;
                 for "_c" from 0 to (_cargoSeats - 1) do {
@@ -228,7 +231,7 @@ heliOps_enemyPatrol_spawnForZone = {
                 };
                 _vehGrp setBehaviour "SAFE";
                 _vehGrp setSpeedMode "LIMITED";
-                private _wpPosA = [_center, _zoneRadius * 0.6] call heliOps_civ_findSpawnPos;
+                private _wpPosA = [_center, _zoneRadius * 0.6] call FADE_civ_findSpawnPos;
                 private _wp1 = _vehGrp addWaypoint [_wpPosA, 0];
                 _wp1 setWaypointType "MOVE";
                 _wp1 setWaypointSpeed "LIMITED";
@@ -285,14 +288,14 @@ heliOps_enemyPatrol_spawnForZone = {
         _state set ["vehicles", _vehicles];
         _state set ["garrisonGroups", _garrisonGroups];
         _state set ["barrels", _barrels];
-        heliOps_enemyPatrolZoneState set [_zoneId, _state];
-        [format ["PATROL ZONE %1: %2 group(s), %3 vehicle(s), %4 garrison(s)", _zoneId, count _patrolGroups, count _vehicles, count _garrisonGroups]] call heliOps_civ_debugChat;
+        FADE_enemyPatrolZoneState set [_zoneId, _state];
+        [format ["PATROL ZONE %1: %2 group(s), %3 vehicle(s), %4 garrison(s)", _zoneId, count _patrolGroups, count _vehicles, count _garrisonGroups]] call FADE_civ_debugChat;
     };
 };
 
-heliOps_civ_debugChat = {
+FADE_civ_debugChat = {
     params ["_msg"];
-    if (missionNamespace getVariable ["heliOps_civDebug", false]) then {
+    if (missionNamespace getVariable ["FADE_civDebug", false]) then {
         [format ["CIV: %1", _msg]] remoteExec ["systemChat", 0];
     };
 };
@@ -300,7 +303,7 @@ heliOps_civ_debugChat = {
 // -----------------------------------------------------------------------------
 // Helpers
 // -----------------------------------------------------------------------------
-heliOps_civ_getBuildingPositions = {
+FADE_civ_getBuildingPositions = {
     params ["_center", "_radius", ["_maxPos", 50], ["_maxPerBuilding", 2]];
     private _buildings = nearestObjects [_center, ["House", "Building"], _radius];
     private _positions = [];
@@ -321,7 +324,7 @@ heliOps_civ_getBuildingPositions = {
     _positions
 };
 
-heliOps_civ_getRoadPositions = {
+FADE_civ_getRoadPositions = {
     params ["_center", "_radius", ["_maxPos", 25]];
     private _roads = _center nearRoads _radius;
     private _positions = [];
@@ -333,7 +336,7 @@ heliOps_civ_getRoadPositions = {
     _positions
 };
 
-heliOps_civ_findSpawnPos = {
+FADE_civ_findSpawnPos = {
     params ["_center", "_radius"];
     for "_attempt" from 1 to 20 do {
         private _angle = random 360;
@@ -349,10 +352,10 @@ heliOps_civ_findSpawnPos = {
 // -----------------------------------------------------------------------------
 // Spawn one civilian (used by lazy-load)
 // -----------------------------------------------------------------------------
-heliOps_civ_spawnOne = {
+FADE_civ_spawnOne = {
     params ["_civClasses", "_center", "_spawnRadius", "_wanderRadius", "_firedNearHandler"];
     private _cls = _civClasses select (floor random (count _civClasses max 1));
-    private _spawnPos = [_center, _spawnRadius] call heliOps_civ_findSpawnPos;
+    private _spawnPos = [_center, _spawnRadius] call FADE_civ_findSpawnPos;
     if (count _spawnPos < 2) then { _spawnPos = _center };
 
     private _grp = createGroup civilian;
@@ -363,7 +366,7 @@ heliOps_civ_spawnOne = {
     } else {
         _unit setVariable ["BIS_cp_excluded", true];
         _grp setVariable ["BIS_cp_excluded", true];
-        _unit setVariable ["heliOps_ambientCiv", true];
+        _unit setVariable ["FADE_ambientCiv", true];
         removeHeadgear _unit;
         removeGoggles _unit;
         _unit setBehaviour "SAFE";
@@ -372,8 +375,8 @@ heliOps_civ_spawnOne = {
         _unit addEventHandler ["FiredNear", _firedNearHandler];
 
         private _wpRadius = ((_wanderRadius * 1.5) min 200) max 80;
-        private _localBuildings = [_spawnPos, _wpRadius, 25, 2] call heliOps_civ_getBuildingPositions;
-        private _localRoads = [_spawnPos, _wpRadius, 12] call heliOps_civ_getRoadPositions;
+        private _localBuildings = [_spawnPos, _wpRadius, 25, 2] call FADE_civ_getBuildingPositions;
+        private _localRoads = [_spawnPos, _wpRadius, 12] call FADE_civ_getRoadPositions;
         private _localWaypoints = _localBuildings + _localRoads;
         if (_localWaypoints isEqualTo []) then {
             for "_k" from 0 to 5 do {
@@ -399,24 +402,25 @@ heliOps_civ_spawnOne = {
 // -----------------------------------------------------------------------------
 // Spawn zone — lazy-load civs in batches to reduce performance hit
 // -----------------------------------------------------------------------------
-heliOps_civ_spawnZone = {
+FADE_civ_spawnZone = {
     params ["_trigger", "_zoneId"];
-    if (!(isNil { heliOps_civZoneState get _zoneId })) exitWith {};
+    if (!(missionNamespace getVariable ["FADE_civiliansEnabled", true])) exitWith {};
+    if (!(isNil { FADE_civZoneState get _zoneId })) exitWith {};
 
-    private _civClasses = call heliOps_civ_getUnitClassesFromGui;
-    private _faction = missionNamespace getVariable ["heliOps_scenarioCivFaction", "CIV_F"];
+    private _civClasses = call FADE_civ_getUnitClassesFromGui;
+    private _faction = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
     if (_civClasses isEqualTo []) exitWith {
-        call heliOps_civ_showNoCivsHint;
-        [format ["SPAWN BLOCKED: No civ units available for faction %1", _faction]] call heliOps_civ_debugChat;
+        call FADE_civ_showNoCivsHint;
+        [format ["SPAWN BLOCKED: No civ units available for faction %1", _faction]] call FADE_civ_debugChat;
     };
 
     private _center = getPosATL _trigger;
-    private _spawnRadius = missionNamespace getVariable ["heliOps_civSpawnRadius", 1000];
-    private _civMin = missionNamespace getVariable ["heliOps_civCountMin", 5];
-    private _civMax = missionNamespace getVariable ["heliOps_civCountMax", 15];
-    private _wanderRadius = missionNamespace getVariable ["heliOps_civWanderRadius", 100];
-    private _staggerDelay = missionNamespace getVariable ["heliOps_civSpawnStaggerDelay", 1.5];
-    private _batchSize = missionNamespace getVariable ["heliOps_civSpawnBatchSize", 2];
+    private _spawnRadius = missionNamespace getVariable ["FADE_civSpawnRadius", 1000];
+    private _civMin = missionNamespace getVariable ["FADE_civCountMin", 5];
+    private _civMax = missionNamespace getVariable ["FADE_civCountMax", 15];
+    private _wanderRadius = missionNamespace getVariable ["FADE_civWanderRadius", 100];
+    private _staggerDelay = missionNamespace getVariable ["FADE_civSpawnStaggerDelay", 1.5];
+    private _batchSize = missionNamespace getVariable ["FADE_civSpawnBatchSize", 2];
 
     private _targetCount = _civMin + floor random ((_civMax - _civMin + 1) max 1);
     private _firedNearHandler = {
@@ -430,10 +434,10 @@ heliOps_civ_spawnZone = {
     private _state = createHashMap;
     _state set ["groups", []];
     _state set ["despawning", false];
-    heliOps_civZoneState set [_zoneId, _state];
+    FADE_civZoneState set [_zoneId, _state];
 
-    if (missionNamespace getVariable ["heliOps_civDebugMarkers", false]) then {
-        private _mrkId = "heliOps_civActive_" + _zoneId;
+    if (missionNamespace getVariable ["FADE_civDebugMarkers", false]) then {
+        private _mrkId = "FADE_civActive_" + _zoneId;
         createMarker [_mrkId, _center];
         _mrkId setMarkerType "hd_flag";
         _mrkId setMarkerColor "ColorCivilian";
@@ -441,21 +445,23 @@ heliOps_civ_spawnZone = {
         _mrkId setMarkerSize [0.5, 0.5];
     };
 
-    [format ["ZONE %1 ACTIVE (lazy-load %2 civs) | faction: %3", _zoneId, _targetCount, _faction]] call heliOps_civ_debugChat;
+    [format ["ZONE %1 ACTIVE (lazy-load %2 civs) | faction: %3", _zoneId, _targetCount, _faction]] call FADE_civ_debugChat;
 
     // Spawn ambient enemy patrol if enabled (40% chance per zone)
-    [_center, _zoneId] call heliOps_enemyPatrol_spawnForZone;
+    [_center, _zoneId] call FADE_enemyPatrol_spawnForZone;
+    // MANPADS: 25% chance per zone, max 2, non-respawning (EnemyAAA.sqf)
+    if (!isNil "FADE_aaa_maybeSpawnManpadsInZone") then { [_zoneId, _center] call FADE_aaa_maybeSpawnManpadsInZone };
 
     [ _zoneId, _targetCount, _civClasses, _center, _spawnRadius, _wanderRadius, _firedNearHandler, _staggerDelay, _batchSize ] spawn {
         params ["_zoneId", "_targetCount", "_civClasses", "_center", "_spawnRadius", "_wanderRadius", "_firedNearHandler", "_staggerDelay", "_batchSize"];
         private _spawned = 0;
         while { _spawned < _targetCount } do {
-            private _state = heliOps_civZoneState get _zoneId;
+            private _state = FADE_civZoneState get _zoneId;
             if (isNil "_state" || { _state get "despawning" }) exitWith {};
 
             private _batch = (_targetCount - _spawned) min _batchSize;
             for "_b" from 0 to (_batch - 1) do {
-                private _grp = [_civClasses, _center, _spawnRadius, _wanderRadius, _firedNearHandler] call heliOps_civ_spawnOne;
+                private _grp = [_civClasses, _center, _spawnRadius, _wanderRadius, _firedNearHandler] call FADE_civ_spawnOne;
                 if (!isNull _grp) then {
                     (_state get "groups") pushBack _grp;
                 };
@@ -470,9 +476,9 @@ heliOps_civ_spawnZone = {
 // -----------------------------------------------------------------------------
 // Despawn zone
 // -----------------------------------------------------------------------------
-heliOps_civ_despawnZone = {
+FADE_civ_despawnZone = {
     params ["_zoneId"];
-    private _state = heliOps_civZoneState get _zoneId;
+    private _state = FADE_civZoneState get _zoneId;
     if (isNil "_state") exitWith {};
     _state set ["despawning", true];
     private _groups = _state get "groups";
@@ -482,40 +488,42 @@ heliOps_civ_despawnZone = {
             deleteGroup _x;
         };
     } forEach _groups;
-    heliOps_civZoneState deleteAt _zoneId;
-    [_zoneId] call heliOps_enemyPatrol_despawnForZone;
-    if (missionNamespace getVariable ["heliOps_civDebugMarkers", false]) then {
-        deleteMarker ("heliOps_civActive_" + _zoneId);
+    FADE_civZoneState deleteAt _zoneId;
+    [_zoneId] call FADE_enemyPatrol_despawnForZone;
+    if (!isNil "FADE_aaa_despawnManpadsInZone") then { [_zoneId] call FADE_aaa_despawnManpadsInZone };
+    if (missionNamespace getVariable ["FADE_civDebugMarkers", false]) then {
+        deleteMarker ("FADE_civActive_" + _zoneId);
     };
-    [format ["ZONE %1 DESPAWNED", _zoneId]] call heliOps_civ_debugChat;
+    [format ["ZONE %1 DESPAWNED", _zoneId]] call FADE_civ_debugChat;
 };
 
 // -----------------------------------------------------------------------------
 // Road vehicle spawn — ONLY GUI faction, no fallbacks
 // -----------------------------------------------------------------------------
-heliOps_civ_spawnRoadVehicle = {
-    private _roadVehClasses = call heliOps_civ_getVehicleClassesFromGui;
-    private _driverClasses = call heliOps_civ_getUnitClassesFromGui;
-    private _faction = missionNamespace getVariable ["heliOps_scenarioCivFaction", "CIV_F"];
+FADE_civ_spawnRoadVehicle = {
+    if (!(missionNamespace getVariable ["FADE_civiliansEnabled", true])) exitWith {};
+    private _roadVehClasses = call FADE_civ_getVehicleClassesFromGui;
+    private _driverClasses = call FADE_civ_getUnitClassesFromGui;
+    private _faction = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
 
     if (_roadVehClasses isEqualTo [] && { _driverClasses isEqualTo [] }) exitWith {
-        call heliOps_civ_showNoCivsHint;
-        call heliOps_civ_showNoCivVehiclesHint;
-        [format ["ROAD VEH BLOCKED: No civ units AND no civ vehicles for faction %1", _faction]] call heliOps_civ_debugChat;
+        call FADE_civ_showNoCivsHint;
+        call FADE_civ_showNoCivVehiclesHint;
+        [format ["ROAD VEH BLOCKED: No civ units AND no civ vehicles for faction %1", _faction]] call FADE_civ_debugChat;
     };
     if (_roadVehClasses isEqualTo []) exitWith {
-        call heliOps_civ_showNoCivVehiclesHint;
-        [format ["ROAD VEH BLOCKED: No civ vehicles available for faction %1", _faction]] call heliOps_civ_debugChat;
+        call FADE_civ_showNoCivVehiclesHint;
+        [format ["ROAD VEH BLOCKED: No civ vehicles available for faction %1", _faction]] call FADE_civ_debugChat;
     };
     if (_driverClasses isEqualTo []) exitWith {
-        call heliOps_civ_showNoCivsHint;
-        [format ["ROAD VEH BLOCKED: No civ units available for faction %1 (need drivers)", _faction]] call heliOps_civ_debugChat;
+        call FADE_civ_showNoCivsHint;
+        [format ["ROAD VEH BLOCKED: No civ units available for faction %1 (need drivers)", _faction]] call FADE_civ_debugChat;
     };
 
-    private _roadMax = missionNamespace getVariable ["heliOps_roadVehicleMax", 5];
-    if (count heliOps_roadVehicles >= _roadMax) exitWith {};
+    private _roadMax = missionNamespace getVariable ["FADE_roadVehicleMax", 5];
+    if (count FADE_roadVehicles >= _roadMax) exitWith {};
 
-    private _roadPoints = missionNamespace getVariable ["heliOps_civRoadPoints", []];
+    private _roadPoints = missionNamespace getVariable ["FADE_civRoadPoints", []];
     if (count _roadPoints < 2) exitWith {};
 
     private _startIdx = floor random count _roadPoints;
@@ -537,7 +545,7 @@ heliOps_civ_spawnRoadVehicle = {
         // Exclude from BIS Civilian Presence / CPE so they don't run bis_fnc_cp_main (undefined without Tac-Ops or causes RPT errors)
         _driver setVariable ["BIS_cp_excluded", true];
         _grp setVariable ["BIS_cp_excluded", true];
-        _driver setVariable ["heliOps_ambientCiv", true];
+        _driver setVariable ["FADE_ambientCiv", true];
         removeHeadgear _driver;
         removeGoggles _driver;
         _driver moveInDriver _veh;
@@ -546,24 +554,25 @@ heliOps_civ_spawnRoadVehicle = {
 
         private _wp = _grp addWaypoint [_endPos, 15];
         _wp setWaypointType "MOVE";
-        _wp setWaypointStatements ["true", "private _v = vehicle this; private _g = group this; heliOps_roadVehicles = heliOps_roadVehicles - [_v]; { deleteVehicle _x } forEach units _g; deleteGroup _g; deleteVehicle _v;"];
+        _wp setWaypointStatements ["true", "private _v = vehicle this; private _g = group this; FADE_roadVehicles = FADE_roadVehicles - [_v]; { deleteVehicle _x } forEach units _g; deleteGroup _g; deleteVehicle _v;"];
 
-        heliOps_roadVehicles pushBack _veh;
-        [format ["ROAD VEH SPAWNED (%1/%2) | faction: %3 | vehicle: %4 | driver: %5", count heliOps_roadVehicles, _roadMax, _faction, _cls, _driverCls]] call heliOps_civ_debugChat;
+        FADE_roadVehicles pushBack _veh;
+        [format ["ROAD VEH SPAWNED (%1/%2) | faction: %3 | vehicle: %4 | driver: %5", count FADE_roadVehicles, _roadMax, _faction, _cls, _driverCls]] call FADE_civ_debugChat;
     };
 };
 
 // -----------------------------------------------------------------------------
 // Main loop
 // -----------------------------------------------------------------------------
-heliOps_civ_checkZones = {
+FADE_civ_checkZones = {
+    if (!(missionNamespace getVariable ["FADE_civiliansEnabled", true])) exitWith {};
     private _players = [];
     { if (alive _x && { isPlayer _x }) then { _players pushBack _x } } forEach allPlayers;
     if (_players isEqualTo []) exitWith {};
 
-    private _activateDist = missionNamespace getVariable ["heliOps_civPlayerActivateDist", 800];
-    private _deactivateDist = missionNamespace getVariable ["heliOps_civPlayerDeactivateDist", 1200];
-    private _triggerNames = missionNamespace getVariable ["heliOps_civTriggerNames", []];
+    private _activateDist = missionNamespace getVariable ["FADE_civPlayerActivateDist", 800];
+    private _deactivateDist = missionNamespace getVariable ["FADE_civPlayerDeactivateDist", 1200];
+    private _triggerNames = missionNamespace getVariable ["FADE_civTriggerNames", []];
     private _numPlayers = count _players;
 
     for "_t" from 0 to (count _triggerNames - 1) do {
@@ -579,64 +588,64 @@ heliOps_civ_checkZones = {
                 if ((_pl distance _center) > _deactivateDist) then { _farCount = _farCount + 1 };
             };
             if (_nearCount > 0) then {
-                private _alreadyActive = !(isNil { heliOps_civZoneState get _name });
-                private _activeCount = count (keys heliOps_civZoneState);
-                if (_alreadyActive || { _activeCount < (missionNamespace getVariable ["heliOps_civMaxActiveZones", 4]) }) then {
-                    [_trigger, _name] call heliOps_civ_spawnZone;
+                private _alreadyActive = !(isNil { FADE_civZoneState get _name });
+                private _activeCount = count (keys FADE_civZoneState);
+                if (_alreadyActive || { _activeCount < (missionNamespace getVariable ["FADE_civMaxActiveZones", 4]) }) then {
+                    [_trigger, _name] call FADE_civ_spawnZone;
                 };
             };
-            if (_farCount == _numPlayers) then { [_name] call heliOps_civ_despawnZone };
+            if (_farCount == _numPlayers) then { [_name] call FADE_civ_despawnZone };
         };
     };
 
     private _validRoad = [];
-    for "_i" from 0 to (count heliOps_roadVehicles - 1) do {
-        private _v = heliOps_roadVehicles select _i;
+    for "_i" from 0 to (count FADE_roadVehicles - 1) do {
+        private _v = FADE_roadVehicles select _i;
         if (!isNull _v && { alive _v }) then { _validRoad pushBack _v };
     };
-    heliOps_roadVehicles = _validRoad;
+    FADE_roadVehicles = _validRoad;
 };
 
 // -----------------------------------------------------------------------------
 // Start — reset hint flags when scenario settings applied (so re-apply can show hint again)
 // -----------------------------------------------------------------------------
-heliOps_civ_resetHintFlags = {
-    missionNamespace setVariable ["heliOps_civNoCivsHintShown", false];
-    missionNamespace setVariable ["heliOps_civNoCivVehHintShown", false];
+FADE_civ_resetHintFlags = {
+    missionNamespace setVariable ["FADE_civNoCivsHintShown", false];
+    missionNamespace setVariable ["FADE_civNoCivVehHintShown", false];
 };
 
 // -----------------------------------------------------------------------------
 // Start
 // -----------------------------------------------------------------------------
 [] spawn {
-    private _interval = missionNamespace getVariable ["heliOps_civCheckInterval", 45];
+    private _interval = missionNamespace getVariable ["FADE_civCheckInterval", 45];
     while { true } do {
         sleep _interval;
-        call heliOps_civ_checkZones;
+        call FADE_civ_checkZones;
     };
 };
 
-private _zoneCount = count (missionNamespace getVariable ["heliOps_civTriggerNames", []]);
-private _civClasses = call heliOps_civ_getUnitClassesFromGui;
-private _civVehClasses = call heliOps_civ_getVehicleClassesFromGui;
-private _factionStart = missionNamespace getVariable ["heliOps_scenarioCivFaction", "CIV_F"];
+private _zoneCount = count (missionNamespace getVariable ["FADE_civTriggerNames", []]);
+private _civClasses = call FADE_civ_getUnitClassesFromGui;
+private _civVehClasses = call FADE_civ_getVehicleClassesFromGui;
+private _factionStart = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
 if (_zoneCount == 0) then {
-    ["NO CIV_T_* TRIGGERS. CONFIGURE CIV_T_1/2/3 IN EDEN."] call heliOps_civ_debugChat;
+    ["NO CIV_T_* TRIGGERS. CONFIGURE CIV_T_1/2/3 IN EDEN."] call FADE_civ_debugChat;
 } else {
     if (_civClasses isEqualTo [] && { _civVehClasses isEqualTo [] }) then {
-        call heliOps_civ_showNoCivsHint;
-        call heliOps_civ_showNoCivVehiclesHint;
-        [format ["CIV POP: No civ units AND no civ vehicles for faction %1 — zone/road spawns disabled", _factionStart]] call heliOps_civ_debugChat;
+        call FADE_civ_showNoCivsHint;
+        call FADE_civ_showNoCivVehiclesHint;
+        [format ["CIV POP: No civ units AND no civ vehicles for faction %1 — zone/road spawns disabled", _factionStart]] call FADE_civ_debugChat;
     } else {
         if (_civClasses isEqualTo []) then {
-            call heliOps_civ_showNoCivsHint;
-            [format ["CIV POP: No civ units for faction %1 — zone spawns disabled, road vehicles need drivers", _factionStart]] call heliOps_civ_debugChat;
+            call FADE_civ_showNoCivsHint;
+            [format ["CIV POP: No civ units for faction %1 — zone spawns disabled, road vehicles need drivers", _factionStart]] call FADE_civ_debugChat;
         } else {
             if (_civVehClasses isEqualTo []) then {
-                call heliOps_civ_showNoCivVehiclesHint;
-                [format ["CIV POP: %1 ZONES, %2 ROAD PTS, faction %3 — zone spawns OK, no civ vehicles (road spawns disabled)", _zoneCount, count (missionNamespace getVariable ["heliOps_civRoadPoints", []]), _factionStart]] call heliOps_civ_debugChat;
+                call FADE_civ_showNoCivVehiclesHint;
+                [format ["CIV POP: %1 ZONES, %2 ROAD PTS, faction %3 — zone spawns OK, no civ vehicles (road spawns disabled)", _zoneCount, count (missionNamespace getVariable ["FADE_civRoadPoints", []]), _factionStart]] call FADE_civ_debugChat;
             } else {
-                [format ["CIV POP: %1 ZONES, %2 ROAD PTS, faction %3 — %4 unit types, %5 vehicle types", _zoneCount, count (missionNamespace getVariable ["heliOps_civRoadPoints", []]), _factionStart, count _civClasses, count _civVehClasses]] call heliOps_civ_debugChat;
+                [format ["CIV POP: %1 ZONES, %2 ROAD PTS, faction %3 — %4 unit types, %5 vehicle types", _zoneCount, count (missionNamespace getVariable ["FADE_civRoadPoints", []]), _factionStart, count _civClasses, count _civVehClasses]] call FADE_civ_debugChat;
             };
         };
     };
@@ -644,10 +653,10 @@ if (_zoneCount == 0) then {
 
 [] spawn {
     sleep 60;
-    private _min = missionNamespace getVariable ["heliOps_roadSpawnIntervalMin", 90];
-    private _max = missionNamespace getVariable ["heliOps_roadSpawnIntervalMax", 180];
+    private _min = missionNamespace getVariable ["FADE_roadSpawnIntervalMin", 90];
+    private _max = missionNamespace getVariable ["FADE_roadSpawnIntervalMax", 180];
     while { true } do {
-        call heliOps_civ_spawnRoadVehicle;
+        call FADE_civ_spawnRoadVehicle;
         sleep (_min + random ((_max - _min) max 1));
     };
 };
@@ -663,8 +672,9 @@ if (_zoneCount == 0) then {
     private _margin = 500;
     while { true } do {
         sleep (540 + random 120);
-        private _faction = missionNamespace getVariable ["heliOps_scenarioCivFaction", "CIV_F"];
-        if (_faction == "" || { isNil "heliOps_getUnitsForFaction" }) then { continue };
+        if (!(missionNamespace getVariable ["FADE_civiliansEnabled", true])) then { continue };
+        private _faction = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
+        if (_faction == "" || { isNil "FADE_getUnitsForFaction" }) then { continue };
 
         // Collect civ air classes from CfgVehicles: scope >= 2, Air, civ side (3) or faction matches
         private _civAir = [];
@@ -675,7 +685,7 @@ if (_zoneCount == 0) then {
                 private _fac = getText (_cfg >> "faction");
                 if (_side == 3 || { _fac == _faction }) then { _civAir pushBack _x };
             };
-        } forEach (keys heliOps_civVehiclesByFaction);
+        } forEach (keys FADE_civVehiclesByFaction);
         // Fall back to scanning known civ aircraft if map empty
         if (_civAir isEqualTo []) then {
             {
@@ -695,19 +705,19 @@ if (_zoneCount == 0) then {
         if (!isNull _aircraft) then {
             _aircraft flyInHeight (180 + random 250);
             private _grp = createGroup civilian;
-            private _driverCls = call heliOps_civ_getUnitClassesFromGui;
+            private _driverCls = call FADE_civ_getUnitClassesFromGui;
             private _pilotCls = if (_driverCls isEqualTo []) then { "C_man_1" } else { selectRandom _driverCls };
             private _pilot = _grp createUnit [_pilotCls, _startEdge, [], 0, "NONE"];
             _pilot moveInDriver _aircraft;
             _pilot setVariable ["BIS_cp_excluded", true];
             _grp setVariable ["BIS_cp_excluded", true];
-            _pilot setVariable ["heliOps_ambientCiv", true];
+            _pilot setVariable ["FADE_ambientCiv", true];
             _aircraft setBehaviour "CARELESS";
             _aircraft setSpeedMode "FULL";
             private _wp = _grp addWaypoint [_endEdge, 0];
             _wp setWaypointType "MOVE";
             _wp setWaypointStatements ["true", "private _v = vehicle this; private _g = group this; { deleteVehicle _x } forEach units _g; deleteGroup _g; deleteVehicle _v;"];
-            [format ["AMBIENT AIRCRAFT: %1 spawned", _aircraftClass]] call heliOps_civ_debugChat;
+            [format ["AMBIENT AIRCRAFT: %1 spawned", _aircraftClass]] call FADE_civ_debugChat;
         };
     };
 };
