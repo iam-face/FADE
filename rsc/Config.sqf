@@ -26,6 +26,11 @@ FADE_planeForbiddenPads = ["HP_1", "HP_2"];
 // Helipad markers (map markers to update when aircraft spawn/despawn). Index = pad order in FADE_helipadList. Empty = no marker.
 FADE_helipadMarkers = ["HeliMark_1", "HeliMark_2", "HeliMark_3", "HeliMark_4", "HeliMark_5", "HeliMark_6", "HeliMark_7", ""];
 
+// Full repair / refuel / rearm while stationary within this radius of any HP_* or VEH_* pad (server: rsc\PadVehicleService.sqf)
+FADE_padServiceRadius = 22;
+FADE_padServiceInterval = 7;
+FADE_padServiceMaxSpeedKmh = 8;
+
 // Friendly infantry (BLUFOR) - fallback when faction has no units
 FADE_friendlyUnits = [
     "B_Soldier_TL_F",

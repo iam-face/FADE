@@ -607,6 +607,8 @@ if (!isNull _baseObj) then {
     };
 };
 
+[] execVM "rsc\PadVehicleService.sqf";
+
 // Map bounds for mission spawns (min/max X and Y)
 FADE_mapMin = 500;
 FADE_mapMax = 9500;

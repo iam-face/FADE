@@ -42,4 +42,6 @@ private _stubCpMain = {
 
 missionNamespace setVariable ["bis_fnc_cp_getQueueDelay", _stubGetQueueDelay];
 missionNamespace setVariable ["bis_fnc_cp_main", _stubCpMain];
+uiNamespace setVariable ["bis_fnc_cp_getQueueDelay", _stubGetQueueDelay];
+uiNamespace setVariable ["bis_fnc_cp_main", _stubCpMain];
 diag_log "[FADE BIS CP DEBUG] Stubs installed for bis_fnc_cp_getQueueDelay and bis_fnc_cp_main. Check RPT for '[FADE BIS CP DEBUG]' when the error would have occurred.";

@@ -60,12 +60,15 @@ private _staggerDisembark = {
     };
 };
 
-// TroopInsert: fail on any casualty. TroopExtract: fail if >50% of pickup team dead (alive < half rounded up).
+// TroopInsert: fail if strictly >50% killed before LZ; no % casualty fail after insert. TroopExtract: >50% anytime en route.
 private _checkCasualties = {
     params ["_missionType", "_group", "_initialCount"];
     if (isNull _group) exitWith { true };
     private _alive = { alive _x } count units _group;
-    if (_missionType == "TroopInsert") exitWith { _alive < (_initialCount - 1) }; // 1 casualty allowed
+    if (_missionType == "TroopInsert") exitWith {
+        if (_group getVariable ["FADE_insertReachedLZ", false]) exitWith { false };
+        _alive < (ceil (_initialCount / 2))
+    };
     if (_missionType == "TroopExtract") exitWith { _alive < (ceil (_initialCount / 2)) };
     false
 };
@@ -214,6 +217,7 @@ _phase3 = {
     if ((_veh distance _dropPos) < _dropRadius && { isTouchingGround _veh }) then {
         private _unitsInVeh = (units _group) select { vehicle _x == _veh };
         if (count _unitsInVeh > 0) then {
+            if (_missionType == "TroopInsert") then { _group setVariable ["FADE_insertReachedLZ", true] };
             private _leader = leader _group;
             if (!isNull _leader && { alive _leader }) then { _leader sideChat format ["This is %1. Disembarking. Over.", _callsign] };
             ["FADE_disembarkStart"] remoteExec ["playSound", _player];

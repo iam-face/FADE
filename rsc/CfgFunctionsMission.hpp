@@ -7,5 +7,9 @@ class CfgFunctions {
             preInit = 1;
             file = "rsc\fn_bisCpPreInit.sqf";
         };
+        class bisCpPostInit {
+            postInit = 1;
+            file = "rsc\fn_bisCpPostInit.sqf";
+        };
     };
 };
