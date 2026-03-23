@@ -1,5 +1,5 @@
 // =============================================================================
-// DebugBIScpStub.sqf — Find what calls missing BIS campaign functions
+// DebugBIScpStub.sqf - Find what calls missing BIS campaign functions
 // =============================================================================
 // Run from initServer.sqf and initPlayerLocal.sqf at mission start.
 // Installs stubs for bis_fnc_cp_getQueueDelay (and optionally bis_fnc_cp_main)
@@ -8,7 +8,10 @@
 // Once you've found the caller in RPT, you can remove this or set false.
 // =============================================================================
 
-if (missionNamespace getVariable ["FADE_debugBIScp", true] != true) exitWith {};
+// Default OFF: stubs replace BIS campaign functions with dummy returns; that breaks callers
+// that expect real numbers/structures (RPT: _threat > 0.1 with Type Array). Set true only
+// when deliberately tracing who calls bis_fnc_cp_*.
+if (missionNamespace getVariable ["FADE_debugBIScp", false] != true) exitWith {};
 
 private _stubGetQueueDelay = {
     diag_log "[FADE BIS CP DEBUG] ========== bis_fnc_cp_getQueueDelay CALLED ==========";

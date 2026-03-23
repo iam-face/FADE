@@ -2,7 +2,8 @@
 // Missions.sqf -- Dynamic mission implementations (runs on server)
 // =============================================================================
 //
-// EXECUTION: Invoked via execVM from FADE_startMission (server). Params from FADE_missionParams.
+// EXECUTION: Invoked via spawn+compile from FADE_startMission (server). Params from FADE_missionParams
+//   (set in the same spawn before compile - avoids cross-player races with execVM queue).
 // _missionType: "TroopInsert" | "TroopExtract" | "CAS" | "Cargo" | "HVT" | "Hostage" | "ClearArea" | "InterceptConvoy"
 // _destPos: position array [x,y,z] -- from FADE_findMissionPos (map bounds, 700m+ from base)
 // _player: player who started the mission (for tasks, hints, cargo seat check). All remoteExec
@@ -10,7 +11,7 @@
 //
 // SCENARIO: Unit/vehicle lists come from missionNamespace (Scenario GUI Apply or initServer defaults).
 // All enemy spawns MUST use FADE_enemyUnits (or local list built from missionNamespace + FADE_scenarioEnemyFaction
-// fallback) so faction choices in the config GUI are respected. Do not use BIS_fnc_spawnCrew for vehicles — spawn
+// fallback) so faction choices in the config GUI are respected. Do not use BIS_fnc_spawnCrew for vehicles - spawn
 // driver/gunner/commander from the scenario enemy unit list so crew matches the chosen faction.
 // All createVehicle/createGroup/BIS_fnc_spawnGroup run on server; markers and tasks are server-global.
 // =============================================================================
@@ -40,7 +41,9 @@ if (_enemyUnits isEqualTo []) then {
     _enemyUnits = [_ef, 0] call FADE_getUnitsForFaction;
     if (_enemyUnits isEqualTo []) then { _enemyUnits = ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"] };
 };
-_enemyUnits = [_enemyUnits] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
+private _filterArmed = missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }];
+_friendlyUnits = [_friendlyUnits] call _filterArmed;
+_enemyUnits = [_enemyUnits] call _filterArmed;
 if (count _friendlyUnits == 0) exitWith {
     if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
     ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No friendly units configured.</t>"] remoteExec ["FADE_showMissionHint", _player];
@@ -126,8 +129,11 @@ FADE_attachNightStrobes = {
 // AREA OF OPERATIONS -- 2 km zone, 3 capture points, BLUFOR vs OPFOR, JTAC
 // -----------------------------------------------------------------------------
 if (_missionType == "AreaOfOperations") exitWith {
-    FADE_aoParams = [_player, _destPos, _taskId, _basePos, _friendlyUnits, _enemyUnits];
-    execVM "rsc\AOMission.sqf";
+    [_player, _destPos, _taskId, _basePos, _friendlyUnits, _enemyUnits] spawn {
+        params ["_player", "_destPos", "_taskId", "_basePos", "_friendlyUnits", "_enemyUnits"];
+        FADE_aoParams = [_player, _destPos, _taskId, _basePos, _friendlyUnits, _enemyUnits];
+        call compile preprocessFileLineNumbers "rsc\AOMission.sqf";
+    };
 };
 
 // -----------------------------------------------------------------------------
@@ -167,13 +173,16 @@ if (_missionType == "TroopInsert") exitWith {
     [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Troop Insert</t><br/><t color='#B0B0B0'>LZ Grid: %1</t><br/><br/><t color='#C0C0C0'>RTB. Pick up squad at base. Proceed to LZ. Land to disembark.</t>", _grid]] remoteExec ["FADE_showMissionHint", _player];
     [_player, "Troop Insert"] call FADE_notifyOthersMissionStarted;
 
-    FADE_transportParams = [_missionType, _group, _player, _spawnPos, _destPos, _taskId, _markerName];
-    execVM "rsc\TroopTransport.sqf";
+    [_missionType, _group, _player, _spawnPos, _destPos, _taskId, _markerName] spawn {
+        params ["_missionType", "_group", "_player", "_spawnPos", "_destPos", "_taskId", "_markerName"];
+        FADE_transportParams = [_missionType, _group, _player, _spawnPos, _destPos, _taskId, _markerName];
+        call compile preprocessFileLineNumbers "rsc\TroopTransport.sqf";
+    };
 };
 
 // -----------------------------------------------------------------------------
 // 2. TROOP EXTRACT -- Spawn friendly AI at M_LOC_*, create task to extract to base
-// Spawn 1-5 enemy groups 500-2000m from pickup, moving to engage
+// 50% chance: 1-5 enemy groups 500-2000m from pickup, moving to engage; else quiet pickup (SAFE)
 // -----------------------------------------------------------------------------
 if (_missionType == "TroopExtract") exitWith {
     // Pickup group: 2-10 units regardless of player's vehicle
@@ -187,41 +196,47 @@ if (_missionType == "TroopExtract") exitWith {
     private _group = [_wpPos, WEST, _pickupClasses] call BIS_fnc_spawnGroup;
     [_group] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
     [_group] call FADE_attachNightStrobes;
-    _group setBehaviour "COMBAT";
-    _group setFormation "DIAMOND";
     _group addWaypoint [_wpPos, 0];
 
-    private _numEnemyGroups = 1 + floor random 5;
     private _enemyGroups = [];
-    private _minDistFromBase = 1000;
-    for "_g" from 0 to (_numEnemyGroups - 1) do {
-        private _grpPos = [];
-        for "_try" from 0 to 10 do {
-            private _angle = random 360;
-            private _dist = 500 + random 1500;
-            private _candidate = _destPos getPos [_dist, _angle];
-            _candidate = [_candidate, 0, 30, 3, 0, 0.4, 0, [], _candidate] call BIS_fnc_findSafePos;
-            if (count _candidate < 2) then { _candidate = _destPos getPos [_dist, _angle] };
-            if ((_candidate distance _basePos) >= _minDistFromBase) exitWith { _grpPos = _candidate };
+    if (random 1 < 0.5) then {
+        private _numEnemyGroups = 1 + floor random 5;
+        private _minDistFromBase = 1000;
+        for "_g" from 0 to (_numEnemyGroups - 1) do {
+            private _grpPos = [];
+            for "_try" from 0 to 10 do {
+                private _angle = random 360;
+                private _dist = 500 + random 1500;
+                private _candidate = _destPos getPos [_dist, _angle];
+                _candidate = [_candidate, 0, 30, 3, 0, 0.4, 0, [], _candidate] call BIS_fnc_findSafePos;
+                if (count _candidate < 2) then { _candidate = _destPos getPos [_dist, _angle] };
+                if ((_candidate distance _basePos) >= _minDistFromBase) exitWith { _grpPos = _candidate };
+            };
+            if (count _grpPos < 2) then {
+                private _dirAwayFromBase = _destPos getDir _basePos;
+                _grpPos = _destPos getPos [800, _dirAwayFromBase + 180];
+            };
+            private _grpSize = 3 + floor random 5;
+            private _shuffled = _enemyUnits call BIS_fnc_arrayShuffle;
+            private _grpUnits = (_shuffled select [0, _grpSize min count _shuffled]);
+            if (count _grpUnits == 0) then { _grpUnits = [_enemyUnits select 0] };
+            private _grp = [_grpPos, EAST, _grpUnits] call BIS_fnc_spawnGroup;
+            [_grp] call FAC_applyEnemyScenarioToGroup;
+            _grp setBehaviour "AWARE";
+            _grp setCombatMode "RED";
+            _grp addWaypoint [_destPos, 0];
+            _enemyGroups pushBack _grp;
         };
-        if (count _grpPos < 2) then {
-            private _dirAwayFromBase = _destPos getDir _basePos;
-            _grpPos = _destPos getPos [800, _dirAwayFromBase + 180];
-        };
-        private _grpSize = 3 + floor random 5;
-        private _shuffled = _enemyUnits call BIS_fnc_arrayShuffle;
-        private _grpUnits = (_shuffled select [0, _grpSize min count _shuffled]);
-        if (count _grpUnits == 0) then { _grpUnits = [_enemyUnits select 0] };
-        private _grp = [_grpPos, EAST, _grpUnits] call BIS_fnc_spawnGroup;
-        [_grp] call FAC_applyEnemyScenarioToGroup;
-        _grp setBehaviour "AWARE";
-        _grp setCombatMode "RED";
-        _grp addWaypoint [_destPos, 0];
-        _enemyGroups pushBack _grp;
+        [_enemyGroups, _basePos] call FADE_registerEnemyRetreat;
+        _group setBehaviour "COMBAT";
+        _group setFormation "DIAMOND";
+    } else {
+        _group setBehaviour "SAFE";
+        _group setCombatMode "GREEN";
+        _group setFormation "STAG COLUMN";
     };
-    [_enemyGroups, _basePos] call FADE_registerEnemyRetreat;
 
-    [_player, _taskId, "Extract the squad and return them to base.", "Troop Extract", _basePos, "move"] call _fnc_createMissionTask;
+    [_player, _taskId, "Extract the squad and return them to base.", "Troop Extract", _destPos, "move"] call _fnc_createMissionTask;
 
     private _markerName = "FADE_extract_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
@@ -236,18 +251,11 @@ if (_missionType == "TroopExtract") exitWith {
     [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Troop Extract</t><br/><t color='#B0B0B0'>RZ Grid: %1</t><br/><t color='#FFCC00'>PAX: %2 personnel</t><br/><br/><t color='#C0C0C0'>Proceed to pickup zone. Land to load squad. RTB once loaded.</t>", _grid, _pickupCount]] remoteExec ["FADE_showMissionHint", _player];
     [_player, "Troop Extract"] call FADE_notifyOthersMissionStarted;
 
-    // Pickup group sidetexts pax count so player knows what size aircraft to bring
-    [_group, _pickupCount] spawn {
-        params ["_grp", "_pax"];
-        sleep 3;
-        if (!isNull _grp && { count units _grp > 0 }) then {
-            private _callsign = _grp getVariable ["FADE_callsign", "Bravo 1-1"];
-            (leader _grp) sideChat format ["All callsigns, this is %1. We have %2 pax for extraction. Request rotary pickup. Over.", _callsign, _pax];
-        };
+    [_missionType, _group, _player, _destPos, _basePos, _taskId, _markerName, _enemyGroups] spawn {
+        params ["_missionType", "_group", "_player", "_destPos", "_basePos", "_taskId", "_markerName", "_enemyGroups"];
+        FADE_transportParams = [_missionType, _group, _player, _destPos, _basePos, _taskId, _markerName, _enemyGroups];
+        call compile preprocessFileLineNumbers "rsc\TroopTransport.sqf";
     };
-
-    FADE_transportParams = [_missionType, _group, _player, _destPos, _basePos, _taskId, _markerName, _enemyGroups];
-    execVM "rsc\TroopTransport.sqf";
 };
 
 // -----------------------------------------------------------------------------
@@ -539,7 +547,7 @@ if (_missionType == "Cargo") exitWith {
     _marker setMarkerColor "ColorYellow";
     _marker setMarkerText "Resupply Camp";
 
-    // Cargo box pickup marker — only visible while this mission is active
+    // Cargo box pickup marker - only visible while this mission is active
     private _cargoPickupMarkerName = "FADE_cargoPickup_" + _taskId;
     private _cargoPickupMarker = createMarker [_cargoPickupMarkerName, _cargoPos];
     _cargoPickupMarker setMarkerType "mil_box";
@@ -1166,6 +1174,8 @@ if (_missionType == "ClearArea") exitWith {
     private _useTown = random 1 > 0.5;
     private _center = _destPos;
     private _campObjects = [];
+    // Must exist before camp branch: stationary spawns push into _allGroups (was after town/camp block - undefined variable)
+    private _allGroups = [];
     if (_useTown) then {
         private _civZones = missionNamespace getVariable ["FADE_civTriggerNames", []];
         if (count _civZones > 0) then {
@@ -1246,7 +1256,6 @@ if (_missionType == "ClearArea") exitWith {
     };
     if (count _center >= 2 && { count _center < 3 }) then { _center = [(_center select 0), (_center select 1), 0] };
     private _areaRadius = if (_useTown) then { 280 } else { 120 };
-    private _allGroups = [];
     private _buildings = nearestObjects [_center, ["House", "Building"], _areaRadius];
     private _usedPositions = [];
     private _maxUnitsPerBuilding = 2;
@@ -1503,39 +1512,143 @@ if (_missionType == "InterceptConvoy") exitWith {
     };
     private _convoyGroup = createGroup EAST;
     private _convoyVehiclesSpawned = [];
+    private _convoySpawnEntries = [];
     private _cargoGroups = [];
+    private _convoyWp = [];
     private _dir = [_startPos, _endPos] call BIS_fnc_dirTo;
-    private _spacing = 25;
-    for "_v" from 0 to (count _vehicleClasses - 1) do {
-        private _vClass = _vehicleClasses select _v;
-        private _offset = _v * _spacing;
-        private _sp = [(_startPos select 0) - _offset * (sin _dir), (_startPos select 1) - _offset * (cos _dir), 0];
-        private _veh = createVehicle [_vClass, _sp, [], 0, "NONE"];
-        if (isNull _veh) then {} else {
-            _convoyVehiclesSpawned pushBack _veh;
-            if (count _enemyUnitsConv > 0) then {
-                private _driver = _convoyGroup createUnit [selectRandom _enemyUnitsConv, _sp, [], 0, "NONE"];
-                if (!isNull _driver) then { _driver moveInDriver _veh };
-                if (_veh emptyPositions "gunner" > 0) then {
-                    private _g = _convoyGroup createUnit [selectRandom _enemyUnitsConv, _sp, [], 0, "NONE"];
-                    if (!isNull _g) then { _g moveInGunner _veh };
-                };
-                if (_veh emptyPositions "commander" > 0) then {
-                    private _c = _convoyGroup createUnit [selectRandom _enemyUnitsConv, _sp, [], 0, "NONE"];
-                    if (!isNull _c) then { _c moveInCommander _veh };
-                };
+    private _findConvoySafeSpawn = {
+        params ["_desiredPos", ["_minVehGap", 12], ["_buildingGap", 10]];
+        if (count _desiredPos < 3) then { _desiredPos = [(_desiredPos select 0), (_desiredPos select 1), 0] };
+        private _fallback = _desiredPos;
+        private _best = [];
+        private _done = false;
+        for "_try" from 0 to 9 do {
+            if (_done) then { continue };
+            private _candidate = [_desiredPos, 0, 16, 6, 0, 0.3, 0, [], _fallback] call BIS_fnc_findSafePos;
+            if (count _candidate < 2) then { _candidate = _fallback };
+            if (count _candidate < 3) then { _candidate = [(_candidate select 0), (_candidate select 1), 0] };
+            private _tooCloseVeh = false;
+            {
+                if (!isNull _x && { alive _x } && { (_x distance2D _candidate) < _minVehGap }) exitWith { _tooCloseVeh = true };
+            } forEach _convoyVehiclesSpawned;
+            if (_tooCloseVeh) then { continue };
+            private _nearBuildings = nearestTerrainObjects [_candidate, ["HOUSE","BUILDING","WALL","FENCE"], _buildingGap, false, true];
+            if (count _nearBuildings > 0) then { continue };
+            _best = _candidate;
+            _done = true;
+        };
+        if (count _best < 2) then { _best = _fallback };
+        if (count _best < 3) then { _best = [(_best select 0), (_best select 1), 0] };
+        _best
+    };
+    private _spawnConvoyVehicle = {
+        params ["_vClass", "_spawnPos"];
+        if (count _spawnPos < 3) then { _spawnPos = [(_spawnPos select 0), (_spawnPos select 1), 0] };
+        private _veh = createVehicle [_vClass, _spawnPos, [], 0, "NONE"];
+        if (isNull _veh) exitWith { [objNull, grpNull] };
+        _veh setPosATL _spawnPos;
+        _veh setDir _dir;
+        // Small forward nudge helps newly spawned convoy vehicles break static friction/get unstuck.
+        private _nudge = 2;
+        _veh setVelocity [ (sin _dir) * _nudge, (cos _dir) * _nudge, 0 ];
+        private _cargoGrp = grpNull;
+        if (count _enemyUnitsConv > 0) then {
+            private _driver = _convoyGroup createUnit [selectRandom _enemyUnitsConv, _spawnPos, [], 0, "NONE"];
+            if (!isNull _driver) then { _driver moveInDriver _veh };
+            if (_veh emptyPositions "gunner" > 0) then {
+                private _g = _convoyGroup createUnit [selectRandom _enemyUnitsConv, _spawnPos, [], 0, "NONE"];
+                if (!isNull _g) then { _g moveInGunner _veh };
             };
-            private _cargoSeats = (_veh emptyPositions "cargo") max 0;
-            if (_cargoSeats > 0 && { count _enemyUnitsConv > 0 }) then {
-                private _cargoGrp = createGroup EAST;
-                for "_c" from 0 to (_cargoSeats - 1) do {
-                    private _u = _cargoGrp createUnit [selectRandom _enemyUnitsConv, _sp, [], 0, "NONE"];
-                    if (!isNull _u) then { _u moveInCargo _veh };
-                };
-                _cargoGroups pushBack _cargoGrp;
+            if (_veh emptyPositions "commander" > 0) then {
+                private _c = _convoyGroup createUnit [selectRandom _enemyUnitsConv, _spawnPos, [], 0, "NONE"];
+                if (!isNull _c) then { _c moveInCommander _veh };
+            };
+        };
+        private _cargoSeats = (_veh emptyPositions "cargo") max 0;
+        if (_cargoSeats > 0 && { count _enemyUnitsConv > 0 }) then {
+            _cargoGrp = createGroup EAST;
+            for "_c" from 0 to (_cargoSeats - 1) do {
+                private _u = _cargoGrp createUnit [selectRandom _enemyUnitsConv, _spawnPos, [], 0, "NONE"];
+                if (!isNull _u) then { _u moveInCargo _veh };
+            };
+        };
+        [_veh, _cargoGrp]
+    };
+
+    // Spawn lead vehicle first, then stagger followers to reduce spawn-gridlock.
+    if (count _vehicleClasses > 0) then {
+        private _leadSpawn = [_startPos, 14, 12] call _findConvoySafeSpawn;
+        private _leadResult = [(_vehicleClasses select 0), _leadSpawn] call _spawnConvoyVehicle;
+        private _leadVeh = _leadResult select 0;
+        if (!isNull _leadVeh) then {
+            _convoyVehiclesSpawned pushBack _leadVeh;
+            private _cg = _leadResult select 1;
+            if (!isNull _cg) then { _cargoGroups pushBack _cg };
+            _convoySpawnEntries pushBack [_leadVeh, (_vehicleClasses select 0), _leadSpawn, false, _cg];
+            // Give move orders immediately so lead starts driving while followers spawn.
+            _convoyGroup setFormation "COLUMN";
+            _convoyGroup setBehaviour "SAFE";
+            _convoyGroup setSpeedMode "NORMAL";
+            _convoyWp = _convoyGroup addWaypoint [_endPos, 20];
+            _convoyWp setWaypointType "MOVE";
+            _convoyWp setWaypointSpeed "NORMAL";
+        };
+
+        for "_v" from 1 to (count _vehicleClasses - 1) do {
+            sleep 10;
+            private _vClass = _vehicleClasses select _v;
+            private _anchorVeh = _convoyVehiclesSpawned param [(count _convoyVehiclesSpawned) - 1, objNull];
+            private _anchorPos = if (!isNull _anchorVeh) then { getPosATL _anchorVeh } else { _startPos };
+            private _desired = [
+                (_anchorPos select 0) - (sin _dir) * 10,
+                (_anchorPos select 1) - (cos _dir) * 10,
+                0
+            ];
+            private _safeBehind = [_desired, 12, 10] call _findConvoySafeSpawn;
+            private _res = [_vClass, _safeBehind] call _spawnConvoyVehicle;
+            private _veh = _res select 0;
+            if (!isNull _veh) then {
+                _convoyVehiclesSpawned pushBack _veh;
+                private _cg2 = _res select 1;
+                if (!isNull _cg2) then { _cargoGroups pushBack _cg2 };
+                _convoySpawnEntries pushBack [_veh, _vClass, _safeBehind, false, _cg2];
             };
         };
     };
+    // One-time recovery: respawn exploded or non-moving convoy vehicles once.
+    sleep 8;
+    for "_i" from 0 to (count _convoySpawnEntries - 1) do {
+        private _entry = _convoySpawnEntries select _i;
+        _entry params ["_veh", "_vClass", "_spawnPos", "_retried", "_cargoGrp"];
+        private _needsRespawn = isNull _veh || { !alive _veh } || { !canMove _veh } || { speed _veh < 1 };
+        if (_needsRespawn && { !_retried }) then {
+            if (!isNull _cargoGrp) then {
+                { if (!isNull _x) then { deleteVehicle _x } } forEach units _cargoGrp;
+                deleteGroup _cargoGrp;
+                _cargoGroups = _cargoGroups - [_cargoGrp];
+            };
+            if (!isNull _veh) then { deleteVehicle _veh };
+            private _retryPos = [_spawnPos, 12, 10] call _findConvoySafeSpawn;
+            private _retryRes = [_vClass, _retryPos] call _spawnConvoyVehicle;
+            private _retryVeh = _retryRes select 0;
+            private _retryCargo = _retryRes select 1;
+            if (!isNull _retryCargo) then { _cargoGroups pushBack _retryCargo };
+            if (!isNull _retryVeh) then {
+                _entry = [_retryVeh, _vClass, _retryPos, true, _retryCargo];
+                _convoySpawnEntries set [_i, _entry];
+            };
+        };
+    };
+    _convoyVehiclesSpawned = (_convoySpawnEntries apply { _x select 0 }) select { !isNull _x && { alive _x } };
+    // Cleanup: delete any convoy infantry that failed to board (prevents stragglers at spawn).
+    {
+        if (!isNull _x && { alive _x } && { vehicle _x == _x }) then { deleteVehicle _x };
+    } forEach units _convoyGroup;
+    {
+        {
+            if (!isNull _x && { alive _x } && { vehicle _x == _x }) then { deleteVehicle _x };
+        } forEach units _x;
+    } forEach _cargoGroups;
     [_convoyGroup] call FAC_applyEnemyScenarioToGroup;
     { [_x] call FAC_applyEnemyScenarioToGroup } forEach _cargoGroups;
     if (count _convoyVehiclesSpawned == 0) exitWith {
@@ -1547,13 +1660,18 @@ if (_missionType == "InterceptConvoy") exitWith {
     _convoyGroup setVariable ["FADE_convoyTaskId", _taskId, true];
     _convoyGroup setVariable ["FADE_convoyVehiclesList", _convoyVehiclesSpawned, true];
     _convoyGroup setVariable ["FADE_convoyCargoGroups", _cargoGroups, true];
-    _convoyGroup setFormation "COLUMN";
-    _convoyGroup setBehaviour "SAFE";
-    _convoyGroup setSpeedMode "LIMITED";
-    private _wp = _convoyGroup addWaypoint [_endPos, 20];
-    _wp setWaypointType "MOVE";
-    _wp setWaypointSpeed "LIMITED";
-    _wp setWaypointStatements ["true", "
+    if (count _convoyWp == 0) then {
+        _convoyGroup setFormation "COLUMN";
+        _convoyGroup setBehaviour "SAFE";
+        _convoyGroup setSpeedMode "NORMAL";
+        _convoyWp = _convoyGroup addWaypoint [_endPos, 20];
+        _convoyWp setWaypointType "MOVE";
+        _convoyWp setWaypointSpeed "NORMAL";
+    };
+    {
+        if (!isNull _x) then { _x setConvoySeparation 20 };
+    } forEach _convoyVehiclesSpawned;
+    _convoyWp setWaypointStatements ["true", "
         private _g = group this;
         private _task = _g getVariable ['FADE_convoyTaskId', ''];
         if (_task != '' && { (_task call BIS_fnc_taskState) != 'SUCCEEDED' }) then { [_task, 'FAILED'] call BIS_fnc_taskSetState };
@@ -1604,8 +1722,8 @@ if (_missionType == "InterceptConvoy") exitWith {
                     private _msgs = [
                         format ["All callsigns, this is Eagle Eye. Convoy is tracking, %1 metres from end zone. Expedite intercept. Out.", _dist],
                         "All callsigns, this is Eagle Eye. Visual on convoy. Multiple vehicles, closing on objective. Intercept immediately. Out.",
-                        "All callsigns, this is Eagle Eye. Convoy approaching boundary. You are cleared to engage. Over.",
-                        "All callsigns, this is Eagle Eye. Hostile convoy within range of final objective. All assets, engage now. Out."
+                        "All callsigns, this is Eagle Eye. Be advised - the convoy is nearing the edge of the AO. Over.",
+                        "All callsigns, this is Eagle Eye. Hostile convoy will be leaving the AO shortly. All assets, engage now. Out."
                     ];
                     _observer sideChat (selectRandom _msgs);
                     [_observer, _observerGrp] spawn {
@@ -1643,7 +1761,7 @@ if (_missionType == "InterceptConvoy") exitWith {
     };
 };
 
-// Mine Clearing, Find and Clear IEDs, Medical/MASCAS — see separate blocks below
+// Mine Clearing, Find and Clear IEDs, Medical/MASCAS - see separate blocks below
 if (_missionType == "MineClearing") exitWith {
     private _numMines = 5 + floor random 6;
     private _mineClass = "APERSBoundingMine";
@@ -1727,6 +1845,10 @@ if (_missionType in ["Medical", "MedicalKAT", "MASCAS", "MASCASKAT"]) exitWith {
     private _useACE = isClass (configFile >> "CfgPatches" >> "ace_medical");
     private _useKAT = isClass (configFile >> "CfgPatches" >> "kat_main");
     private _isKAT = _missionType in ["MedicalKAT", "MASCASKAT"];
+    private _aceHasAddDamage = !isNil "ace_medical_fnc_addDamageToUnit";
+    private _aceHasAddWound = !isNil "ace_medical_fnc_addWound";
+    private _aceHasSetUnconscious = !isNil "ace_medical_fnc_setUnconscious";
+    private _aceHasStableCheck = !isNil "ace_medical_fnc_isInStableCondition";
     if ((_isKAT && { !_useKAT }) || { !_isKAT && { !_useACE } }) then {
         [_player] call FADE_clearActiveMission;
         [format ["<t size='1.2' color='#FF6666'>MEDICAL SYSTEM REQUIRED</t><br/><br/><t color='#E0E0E0'>%1 requires %2.</t>", _missionType, if (_isKAT) then { "KAT" } else { "ACE Medical" }]] remoteExec ["FADE_showMissionHint", _player];
@@ -1745,7 +1867,10 @@ if (_missionType in ["Medical", "MedicalKAT", "MASCAS", "MASCASKAT"]) exitWith {
             private _bodyPartsLower = ["body", "leftarm", "rightarm", "leftleg", "rightleg"];
             for "_i" from 0 to (_count - 1) do {
                 private _u = (createGroup WEST) createUnit [(_friendlyUnits select 0), _destPos, [], 0, "NONE"];
-                _u setPosATL (_destPos getPos [2 + _i * 2, _i * 60]);
+                private _p = _destPos getPos [2 + _i * 2, _i * 60];
+                if (count _p < 3) then { _p set [2, 0] };
+                _p set [2, linearConversion [0, 1, random 1, 2, 10]];
+                _u setPosATL _p;
                 _u setDamage 0;
                 _u disableAI "MOVE";
                 _u setBehaviour "CARELESS";
@@ -1756,27 +1881,33 @@ if (_missionType in ["Medical", "MedicalKAT", "MASCAS", "MASCASKAT"]) exitWith {
                     private _part = _bodyParts select _partIdx;
                     private _partLower = _bodyPartsLower select _partIdx;
                     if (_severity < 0.25) then {
-                        [_u, 0.2 + random 0.25, _part, "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
-                        [_u, _partLower, ["Laceration", 1, 0, 0.2]] call ace_medical_fnc_addWound;
+                        if (_aceHasAddDamage) then { [_u, 0.2 + random 0.25, _part, "bullet", objNull] call ace_medical_fnc_addDamageToUnit } else { _u setDamage (0.2 + random 0.25) };
+                        if (_aceHasAddWound) then { [_u, _partLower, ["Laceration", 1, 0, 0.2]] call ace_medical_fnc_addWound };
                     } else {
                         if (_severity < 0.75) then {
-                            [_u, 0.35 + random 0.3, _part, "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
-                            [_u, _partLower, ["VelocityWound", 1, 2, 0.6]] call ace_medical_fnc_addWound;
+                            if (_aceHasAddDamage) then { [_u, 0.35 + random 0.3, _part, "bullet", objNull] call ace_medical_fnc_addDamageToUnit } else { _u setDamage (0.35 + random 0.3) };
+                            if (_aceHasAddWound) then { [_u, _partLower, ["VelocityWound", 1, 2, 0.6]] call ace_medical_fnc_addWound };
                             private _part2Idx = floor random (count _bodyParts);
                             if (_part2Idx != _partIdx) then {
                                 private _p2 = _bodyParts select _part2Idx;
                                 private _p2Lower = _bodyPartsLower select _part2Idx;
-                                [_u, 0.25 + random 0.2, _p2, "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
-                                [_u, _p2Lower, ["Avulsion", 1, 1, 0.4]] call ace_medical_fnc_addWound;
+                                if (_aceHasAddDamage) then { [_u, 0.25 + random 0.2, _p2, "bullet", objNull] call ace_medical_fnc_addDamageToUnit } else { _u setDamage ((damage _u) max (0.25 + random 0.2)) };
+                                if (_aceHasAddWound) then { [_u, _p2Lower, ["Avulsion", 1, 1, 0.4]] call ace_medical_fnc_addWound };
                             };
                         } else {
-                            [_u, 0.4 + random 0.25, "Body", "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
-                            [_u, "body", ["VelocityWound", 1, 2, 0.7]] call ace_medical_fnc_addWound;
-                            [_u, 0.3 + random 0.2, _part, "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
-                            [_u, _partLower, ["Avulsion", 1, 2, 0.5]] call ace_medical_fnc_addWound;
+                            if (_aceHasAddDamage) then {
+                                [_u, 0.4 + random 0.25, "Body", "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
+                                [_u, 0.3 + random 0.2, _part, "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
+                            } else {
+                                _u setDamage (0.6 + random 0.2);
+                            };
+                            if (_aceHasAddWound) then {
+                                [_u, "body", ["VelocityWound", 1, 2, 0.7]] call ace_medical_fnc_addWound;
+                                [_u, _partLower, ["Avulsion", 1, 2, 0.5]] call ace_medical_fnc_addWound;
+                            };
                         };
                     };
-                    if (random 1 < 0.35) then {
+                    if (_aceHasSetUnconscious && { random 1 < 0.35 }) then {
                         [_u, true, 30 + random 60, false] call ace_medical_fnc_setUnconscious;
                     };
                 } else {
@@ -1795,15 +1926,19 @@ if (_missionType in ["Medical", "MedicalKAT", "MASCAS", "MASCASKAT"]) exitWith {
             _player setVariable ["FADE_myMissionBrief", format ["%1 at MEDICAL_1. Heal all. Fail if >50%% die or unit dies.", _title], true];
             [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>%1</t><br/><t color='#C0C0C0'>Heal all at MEDICAL_1.</t>", _title]] remoteExec ["FADE_showMissionHint", _player];
             [_player, _title] call FADE_notifyOthersMissionStarted;
-            [_taskId, _units, _player, _count, _useACE] spawn {
-                params ["_taskId", "_units", "_player", "_count", "_useACE"];
+            [_taskId, _units, _player, _count, _useACE, _aceHasStableCheck] spawn {
+                params ["_taskId", "_units", "_player", "_count", "_useACE", "_aceHasStableCheck"];
                 private _fncHealed = if (_useACE) then {
-                    { alive _x && (_x call ace_medical_fnc_isInStableCondition) }
+                    if (_aceHasStableCheck) then {
+                        { alive _x && (_x call ace_medical_fnc_isInStableCondition) }
+                    } else {
+                        { alive _x && (damage _x < 0.01) }
+                    }
                 } else {
                     { alive _x && (damage _x < 0.01) }
                 };
                 waitUntil { sleep 2; private _alive = _units select { alive _x }; private _healed = _units select _fncHealed; (count _healed >= count _units) || { (count _alive) < (ceil (count _units / 2)) } };
-                if ({ alive _x && (if (_useACE) then { _x call ace_medical_fnc_isInStableCondition } else { damage _x < 0.01 }) } count _units >= count _units) then {
+                if ({ alive _x && (if (_useACE && { _aceHasStableCheck }) then { _x call ace_medical_fnc_isInStableCondition } else { damage _x < 0.01 }) } count _units >= count _units) then {
                     [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
                     ["<t size='1.2' color='#90EE90'>ALL HEALED</t><br/><br/><t color='#E0E0E0'>Mission complete.</t>"] remoteExec ["FADE_showMissionHint", _player];
                 } else {

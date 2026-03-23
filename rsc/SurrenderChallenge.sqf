@@ -1,7 +1,7 @@
 // =============================================================================
 // SurrenderChallenge.sqf -- Surrender challenge system (server-side logic)
 // =============================================================================
-// Runs on server. Params: [_player, _targetUnit]
+// Runs on server. Params: [_player, _targetUnit] - _targetUnit may be objNull for practice (timed sequence, no AI).
 // Validates conditions, runs challenge sequence, AI decides surrender or not.
 //
 // DEDICATED SERVER CONSIDERATIONS:
@@ -59,6 +59,15 @@ private _dbg = {
 };
 
 ["Started. Player: " + (name _player) + " | Target: " + (if (isNull _targetUnit) then {"null"} else {name _targetUnit})] call _dbg;
+
+// No enemy under cursor - same timing/audio cues as a real challenge, no AI outcome
+if (isNull _targetUnit) exitWith {
+    private _challengeDuration = 3.5;
+    [format ["CHALLENGE INITIATED. %1 SECONDS.", round _challengeDuration]] remoteExec ["systemChat", _player];
+    sleep _challengeDuration;
+    ["CHALLENGE COMPLETE - NO TARGET."] remoteExec ["systemChat", _player];
+    ["No-target practice complete"] call _dbg;
+};
 
 // -----------------------------------------------------------------------------
 // Validation guards
@@ -130,7 +139,8 @@ private _fnc_doSurrender = {
     // Drop primary weapon to the ground. WeaponHolder preserves weapon + attachments.
     private _primaryWeapon = primaryWeapon _unit;
     if (_primaryWeapon != "") then {
-        private _holder = createVehicle ["WeaponHolder", getPosATL _unit, [], 0, "NONE"];
+        // GroundWeaponHolder - "WeaponHolder" is abstract and fails RPT (scope private / non-ai vehicle).
+        private _holder = createVehicle ["GroundWeaponHolder", getPosATL _unit, [], 0, "NONE"];
         _holder addWeaponCargoGlobal [_primaryWeapon, 1];
         _unit removeWeapon _primaryWeapon;
     };
@@ -306,13 +316,13 @@ _targetUnit enableAI "TARGET";
 _targetUnit setVariable ["surrenderChallenge_active", false, true];
 
 if (_surrenders) then {
-    [_targetUnit, ["FAC_surrenderAffirmative", 80, 1]] remoteExec ["say3D", 0];
+    [_targetUnit, ["FAC_surrenderAffirmative", 500, 1, 2]] remoteExec ["say3D", 0];
     [_targetUnit, _isACE] call _fnc_doSurrender;
     [_targetUnit, _isACE] call _fnc_spawnEscapeMonitor;
     ["TARGET SURRENDERED."] remoteExec ["systemChat", _player];
     ["Outcome: SURRENDER"] call _dbg;
 } else {
-    [_targetUnit, ["FAC_surrenderNegative", 80, 1]] remoteExec ["say3D", 0];
+    [_targetUnit, ["FAC_surrenderNegative", 500, 1, 2]] remoteExec ["say3D", 0];
     [_targetUnit, _prevBehaviour, _prevCombatMode] call _fnc_doRefuse;
     ["TARGET REFUSED. ENGAGING."] remoteExec ["systemChat", _player];
     ["Outcome: REFUSE"] call _dbg;
@@ -341,7 +351,7 @@ if (count _secondaries > 0) then {
             [format ["Secondary %1: chance=35%% roll=%2 => %3", name _unit, round (_secRoll * 100), if (_secSurrenders) then {"SURRENDER"} else {"REFUSE"}]] call _dbg;
 
             if (_secSurrenders) then {
-                [_unit, ["FAC_surrenderAffirmative", 80, 1]] remoteExec ["say3D", 0];
+                [_unit, ["FAC_surrenderAffirmative", 500, 1, 2]] remoteExec ["say3D", 0];
                 [_unit, _isACE] call _fnc_doSurrender;
                 [_unit, _isACE] call _fnc_spawnEscapeMonitor;
                 _secSurrendered = _secSurrendered + 1;

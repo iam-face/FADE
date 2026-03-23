@@ -14,7 +14,10 @@
 // Debug: set true to show systemChat for every key interaction (cursorTarget, cursorObject, etc.)
 FAC_surrenderChallenge_debugKeys = false;
 
-// Debug: stub missing BIS campaign functions to log caller (set FADE_debugBIScp = false to disable)
+// Config (same as server) so FADE_* flags e.g. FADE_debugBIScp apply before optional BIS CP stubs
+call compile preprocessFileLineNumbers "rsc\Config.sqf";
+
+// Debug: optional BIS campaign function stubs - default off in Config (see rsc\DebugBIScpStub.sqf)
 call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";
 
 // -----------------------------------------------------------------------------
@@ -40,16 +43,23 @@ hint "LOADING AO...";
 
 // -----------------------------------------------------------------------------
 // Surrender Challenge  - activation function (runs on client when key pressed)
+// With no Man under cursor: still plays apprehend shout + server timed sequence (no AI).
 // -----------------------------------------------------------------------------
 FAC_surrenderChallenge_fnc_activate = {
     private _dbg = { if (missionNamespace getVariable ["FAC_surrenderChallenge_debugKeys", false]) then { systemChat _this } };
-
-    "U pressed  - Surrender Challenge" call _dbg;
 
     // Early exit if player is dead  - avoids null/invalid target issues
     if (!alive player) exitWith {
         "[FAC] Abort: Player dead." call _dbg;
     };
+
+    // Min 2s between uses (U key, inputAction fallback, CfgUserActions)
+    if (time - (missionNamespace getVariable ["FAC_surrenderChallenge_lastTrigger", 0]) < 2) exitWith {};
+    missionNamespace setVariable ["FAC_surrenderChallenge_lastTrigger", time];
+
+    "U pressed  - Surrender Challenge" call _dbg;
+
+    private _apprehendSounds = ["FAC_apprehend001", "FAC_apprehend006", "FAC_apprehend011", "FAC_apprehend018", "FAC_apprehend024", "FAC_apprehend032", "FAC_apprehend043", "FAC_apprehend050"];
 
     // cursorObject can return the weapon mesh when aiming at a soldier (known Arma quirk).
     // cursorTarget returns the unit but requires knowsAbout for enemies. Try both, then
@@ -81,9 +91,11 @@ FAC_surrenderChallenge_fnc_activate = {
     };
 
     if (isNull _target) exitWith {
-        systemChat "NO TARGET. ACQUIRE HOSTILE.";
-        "[FAC] Exit: No valid target." call _dbg;
-        diag_log "[FAC SurrenderChallenge] Client: No target (cursorObject/cursorTarget null)";
+        private _chosen = selectRandom _apprehendSounds;
+        [player, [_chosen, 500, 1, 2]] remoteExec ["say3D", 0];
+        [player, objNull, getDir player] remoteExec ["FAC_surrenderChallenge_start", 2];
+        "[FAC] Sent: no-target (practice) challenge" call _dbg;
+        diag_log "[FAC SurrenderChallenge] Client: No target - practice challenge";
     };
 
     // Must be infantry  - excludes vehicles, static weapons, animals
@@ -99,9 +111,8 @@ FAC_surrenderChallenge_fnc_activate = {
     };
 
     // Play challenge shout from player  - random fac_apprehend sound, 3D so target/nearby hear it
-    private _apprehendSounds = ["FAC_apprehend001", "FAC_apprehend006", "FAC_apprehend011", "FAC_apprehend018", "FAC_apprehend024", "FAC_apprehend032", "FAC_apprehend043", "FAC_apprehend050"];
     private _chosen = selectRandom _apprehendSounds;
-    [player, [_chosen, 80, 1]] remoteExec ["say3D", 0];
+    [player, [_chosen, 500, 1, 2]] remoteExec ["say3D", 0];
 
     // remoteExec to server (2). Pass player dir so server can validate 30° cone.
     [player, _target, getDir player] remoteExec ["FAC_surrenderChallenge_start", 2];
@@ -117,12 +128,43 @@ call compile preprocessFileLineNumbers "rsc\MissionsGui.sqf";
 call compile preprocessFileLineNumbers "rsc\ScenarioGui.sqf";
 call compile preprocessFileLineNumbers "rsc\JukeboxGui.sqf";
 call compile preprocessFileLineNumbers "rsc\CQBGui.sqf";
-call compile preprocessFileLineNumbers "rsc\TeleportGui.sqf";
+call compile preprocessFileLineNumbers "rsc\CqbLoudspeaker.sqf";
+call compile preprocessFile "rsc\TeleportGui.sqf";
 
 waitUntil { !isNil "FADE_heliClasses" && !isNil "FADE_boards" && !isNil "FADE_loadoutBox" && !isNil "FADE_cqbBoard" };
 
 // Request scenario config from server (limit gear, friendly faction) for Loadout/Vehicle GUIs
 [player] remoteExec ["FADE_sendScenarioConfigToClient", 2];
+
+// Always-available player action: open Missions GUI from anywhere.
+// Re-register on respawn because player actions are not persistent through death.
+FAC_registerMissionGuiAction = {
+    if (!isNil "FAC_openMissionGuiActionId" && { FAC_openMissionGuiActionId >= 0 }) then {
+        player removeAction FAC_openMissionGuiActionId;
+    };
+    FAC_openMissionGuiActionId = player addAction [
+        "<t color='#FFD700'>Open Mission GUI</t>",
+        {
+            if (isNull (findDisplay 60002)) then {
+                ["open", []] call FAC_missionsGui_fnc;
+            };
+        },
+        [],
+        6,
+        false,
+        true,
+        "",
+        "true",
+        3
+    ];
+};
+[] call FAC_registerMissionGuiAction;
+player addEventHandler ["Respawn", {
+    [] spawn {
+        sleep 0.2;
+        [] call FAC_registerMissionGuiAction;
+    };
+}];
 
 // Vehicle board (vehBoard): Manage Vehicles only
 private _vehicleBoard = missionNamespace getVariable ["FADE_vehicleBoard", objNull];
@@ -169,7 +211,7 @@ if (!isNull _missionBoard) then {
     ];
 };
 
-// CQB Training Shoothouse board (cqbBoard) — opens CQB GUI
+// CQB Training Shoothouse board (cqbBoard) - opens CQB GUI
 if (!isNull (missionNamespace getVariable ["FADE_cqbBoard", objNull])) then {
     private _cqbBoard = missionNamespace getVariable "FADE_cqbBoard";
     removeAllActions _cqbBoard;
@@ -186,15 +228,34 @@ if (!isNull (missionNamespace getVariable ["FADE_cqbBoard", objNull])) then {
     ];
 };
 
-// Teleport boards (teleportBoard_1..7) — opens Fast Travel GUI
+// Teleport boards (teleportBoard_1..7) - opens Fast Travel GUI.
+// Each board preselects its matching destination in the GUI.
+private _teleportBoardMap = [
+    ["teleportBoard_1", "BASE_1"],
+    ["teleportBoard_2", "MEDICAL_1"],
+    ["teleportBoard_3", "HP_4"],
+    ["teleportBoard_4", "firingRangeBoard"],
+    ["teleportBoard_5", "cqbBoard"],
+    ["teleportBoard_6", "VEH_2"],
+    ["teleportBoard_7", "teleportBoard_7"]
+];
 {
-    private _board = missionNamespace getVariable [_x, objNull];
+    _x params ["_boardName", "_defaultDest"];
+    private _board = missionNamespace getVariable [_boardName, objNull];
     if (isNull _board) then { continue };
     removeAllActions _board;
     _board addAction [
         "<t color='#00FFFF'>Fast Travel</t>",
-        { [] spawn { sleep 0.2; ["open", []] call FAC_teleportGui_fnc } },
-        [],
+        {
+            params ["_target", "_caller", "_actionId", "_args"];
+            _args params [["_defaultDest", ""]];
+            [_defaultDest] spawn {
+                params ["_defaultDest"];
+                sleep 0.2;
+                ["open", [_defaultDest]] call FAC_teleportGui_fnc
+            };
+        },
+        [_defaultDest],
         5,
         false,
         true,
@@ -202,7 +263,18 @@ if (!isNull (missionNamespace getVariable ["FADE_cqbBoard", objNull])) then {
         "",
         3
     ];
-} forEach ["teleportBoard_1", "teleportBoard_2", "teleportBoard_3", "teleportBoard_4", "teleportBoard_5", "teleportBoard_6", "teleportBoard_7"];
+    _board addAction [
+        "<t color='#88DDFF'>Teleport to Map Location</t>",
+        { execVM "rsc\TeleportMapPick.sqf" },
+        [],
+        4,
+        false,
+        true,
+        "",
+        "",
+        3
+    ];
+} forEach _teleportBoardMap;
 
 // In-game briefing and diary (map screen: Briefing + Notes, incl. 9-Line JTAC)
 execVM "rsc\Briefing.sqf";
@@ -296,33 +368,18 @@ if (!isNull _locker) then {
     ];
 };
 
-// Welcome hint  - replaces loading hint when config and actions are ready
+// Welcome hint  - replaces loading hint when config and actions are ready (keep short: briefing + GUIs hold detail)
 private _playerName = name player;
 private _welcomeText = format [
-    "<t size='1.3' color='#FFD700'>FACE'S DYNAMIC ENVIRONMENT</t><t size='0.85' color='#888888'> (FADE)</t><br/>" +
-    "<t size='0.9' color='#888888'>──────────────────────────────</t><br/>" +
-    "<t color='#E0E0E0'>Welcome, </t><t color='#FFCC00'>%1</t><t color='#E0E0E0'>!</t><br/><br/>" +
-
-    "<t size='1.05' color='#FFD700'>QUICK START</t><br/>" +
-    "<t color='#AAAAAA'>  1. </t><t color='#00FF00'>BOARD</t><t color='#C0C0C0'> -> Manage Vehicles -> spawn an aircraft</t><br/>" +
-    "<t color='#AAAAAA'>  2. </t><t color='#00FF00'>BOARD</t><t color='#C0C0C0'> -> Manage Missions -> select and start a mission</t><br/>" +
-    "<t color='#AAAAAA'>  3. </t><t color='#C0C0C0'>Fly to the marked objective and complete the task</t><br/><br/>" +
-
-    "<t size='1.05' color='#FFD700'>AT BASE</t><br/>" +
-    "<t color='#00FF00'>  BOARD</t><t color='#C0C0C0'>  - Vehicles , Missions , Scenario (time, weather, factions)</t><br/>" +
-    "<t color='#00BFFF'>  LOADOUT BOX</t><t color='#C0C0C0'>  - Customise kit , ACE Arsenal (if loaded)</t><br/>" +
-    "<t color='#FF69B4'>  RADIO</t><t color='#C0C0C0'>  - Jukebox</t><br/><br/>" +
-
-    "<t size='1.05' color='#FFD700'>KEYBINDS</t><br/>" +
-    "<t color='#FFCC00'>  CTRL+;</t><t color='#C0C0C0'>  - Manage Missions from anywhere</t><br/>" +
-    "<t color='#FFCC00'>  U</t><t color='#C0C0C0'>  - Surrender Challenge (aim at enemy, press)</t><br/>" +
-    "<t color='#FFCC00'>  M</t><t color='#C0C0C0'>  - Map, Briefing, CAS/JTAC notes &amp; procedures</t><br/><br/>" +
-
-    "<t size='1.05' color='#FFD700'>MISSION TYPES</t><br/>" +
-    "<t color='#C0C0C0'>  Troop Insert , Troop Extract , CAS , Cargo</t><br/>" +
-    "<t color='#C0C0C0'>  HVT , Hostage , Clear Area , Intercept Convoy</t><br/><br/>" +
-
-    "<t size='0.85' color='#666666'>Open the map (M) -> Scenario Brief for full overview and procedures.</t>",
+    "<t size='1.25' color='#FFD700'>[FADE] FACE'S DYNAMIC ENVIRONMENT</t><br/><br/>" +
+    "<t align='left'>" +
+    "<t color='#FFFFFF'>Welcome, </t><t color='#FFCC00'>%1</t><t color='#FFFFFF'>!</t><br/><br/>" +
+    "<t color='#00FF00'>Base Boards</t><t color='#FFFFFF'> have vehicles, missions, scenario, gear, teleportation.</t><br/>" +
+    "<t color='#FFCC00'>CTB Doctrine</t><t color='#FFFFFF'> callouts are located in your notes.</t><br/>" +
+    "<t color='#FFCC00'>Ctrl + ;</t><t color='#FFFFFF'> opens the Mission GUI from anywhere.</t><br/>" +
+    "<t color='#FFCC00'>U</t><t color='#FFFFFF'> is the hotkey for CQB Surrender mechanic (BETA)</t><br/><br/>" +
+    "<t color='#FFFFFF'>Remember: Do not take SDE's STANAGS.</t>" +
+    "</t>",
     _playerName
 ];
 hint parseText _welcomeText;
@@ -381,12 +438,9 @@ player addEventHandler ["GetOutMan", {
             };
             true
         };
-        // DIK_U = 0x16  - Surrender Challenge
+        // DIK_U = 0x16  - Surrender Challenge (2s cooldown inside FAC_surrenderChallenge_fnc_activate)
         if (_key == 0x16) then {
-            if (time - (missionNamespace getVariable ["FAC_surrenderChallenge_lastTrigger", 0]) > 1.5) then {
-                missionNamespace setVariable ["FAC_surrenderChallenge_lastTrigger", time];
-                [] spawn FAC_surrenderChallenge_fnc_activate;
-            };
+            call FAC_surrenderChallenge_fnc_activate;
         };
         false
     }];
@@ -398,14 +452,10 @@ player addEventHandler ["GetOutMan", {
 // FAC_SurrenderChallenge = CfgUserActions; User1 = generic user action.
 // -----------------------------------------------------------------------------
 [] spawn {
-    private _lastTrigger = 0;
     while { true } do {
         sleep 0.15;
         if (inputAction "FAC_SurrenderChallenge" > 0 || { inputAction "User1" > 0 }) then {
-            if (time - _lastTrigger > 1.5) then {
-                _lastTrigger = time;
-                [] spawn FAC_surrenderChallenge_fnc_activate;
-            };
+            call FAC_surrenderChallenge_fnc_activate;
         };
     };
 };

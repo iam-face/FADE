@@ -1,5 +1,5 @@
 // =============================================================================
-// CQBGui.sqf — CQB Training Shoothouse GUI (client)
+// CQBGui.sqf - CQB Training Shoothouse GUI (client)
 // =============================================================================
 // Opens from cqbBoard. Config: enemy type (targets / real enemies), density
 // (Low/Medium/High), civilians (FALSE/TRUE). Start drill / End drill toggles
@@ -51,6 +51,26 @@ FAC_cqbGui_fnc = {
             _civList lbSetData [1, "true"];
             _civList lbSetCurSel 0;
 
+            private _info = _display displayCtrl 60507;
+            private _n = missionNamespace getVariable ["FADE_cqbPosCount", -1];
+            private _nStr = if (_n >= 0) then { str _n } else { "-" };
+            private _nl = toString [10];
+            private _txt = format [
+                "Selection%1" +
+                "• Targets - pop-up range targets.%1" +
+                "• Real enemies - spawns OPFOR units.%1%1" +
+                "Density%1" +
+                "Chance each CQB position rolls a spawn, depending on your spawn density selection: Low 20%%, Medium 33%%, High 50%%.%1%1" +
+                "Civilians%1" +
+                "If TRUE, 15%% chance per spawn roll for a civilian instead of an enemy.%1%1" +
+                "End state%1" +
+                "With real enemies, drill will auto-complete when all are dead or surrendered. Anyone can end the drill via this GUI.%1%1" +
+                "Good luck.",
+                _nl,
+                _nStr
+            ];
+            _info ctrlSetText _txt;
+
             ["updateDrillButton", []] call FAC_cqbGui_fnc;
         };
         case "updateDrillButton": {
@@ -58,14 +78,11 @@ FAC_cqbGui_fnc = {
             if (isNull _display) exitWith {};
             private _active = missionNamespace getVariable ["FADE_cqbDrillActive", false];
             private _btn = _display displayCtrl 60504;
-            private _status = _display displayCtrl 60506;
             if (_active) then {
                 _btn ctrlSetText "End drill";
-                _status ctrlSetText "Drill active — use End drill to despawn all.";
             } else {
                 _btn ctrlSetText "Start drill";
-                _status ctrlSetText "Configure options and start drill to spawn at CQB positions.";
-            }
+            };
         };
         case "drill": {
             _display = findDisplay 60500;

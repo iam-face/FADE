@@ -1,5 +1,5 @@
 // =============================================================================
-// Config — Face's Dynamic Sandbox mission configuration
+// Config - Face's Dynamic Sandbox mission configuration
 // =============================================================================
 // FADE_heliClasses is built dynamically from CfgVehicles (see initServer.sqf)
 // Scenario settings (weather, time, factions) are managed via Scenario GUI.
@@ -17,16 +17,16 @@ FADE_civiliansEnabled = true;  // When false, no ambient civilians (zones, road 
 FADE_aoStrength = "Mid";       // AO mission strength: "Low", "Mid", "High" (used by AO mission type)
 FADE_limitGearToFriendlyFaction = false;  // When true, Loadout and Vehicle GUIs restrict to chosen Friendly faction
 
-// Loadout box Eden object names — all get Manage My Loadout, Save loadout, ACE Arsenal (if loaded)
+// Loadout box Eden object names - all get Manage My Loadout, Save loadout, ACE Arsenal (if loaded)
 FADE_loadoutBoxNames = ["LOADOUTBOX", "LOADOUTBOX_2", "LOADOUTBOX_3"];
-// Pad names — Eden object variable names (expand as needed)
+// Pad names - Eden object variable names (expand as needed)
 FADE_padNames = ["HP_1", "HP_2", "HP_3", "HP_4", "HP_5", "HP_6", "HP_7", "HP_8"];
 // Pads where planes cannot spawn (helicopters can use any pad)
 FADE_planeForbiddenPads = ["HP_1", "HP_2"];
 // Helipad markers (map markers to update when aircraft spawn/despawn). Index = pad order in FADE_helipadList. Empty = no marker.
 FADE_helipadMarkers = ["HeliMark_1", "HeliMark_2", "HeliMark_3", "HeliMark_4", "HeliMark_5", "HeliMark_6", "HeliMark_7", ""];
 
-// Friendly infantry (BLUFOR) — fallback when faction has no units
+// Friendly infantry (BLUFOR) - fallback when faction has no units
 FADE_friendlyUnits = [
     "B_Soldier_TL_F",
     "B_Soldier_F",
@@ -36,7 +36,7 @@ FADE_friendlyUnits = [
     "B_Soldier_F"
 ];
 
-// Enemy infantry (OPFOR) — fallback when faction has no units
+// Enemy infantry (OPFOR) - fallback when faction has no units
 FADE_enemyUnits = [
     "O_Soldier_TL_F",
     "O_Soldier_F",
@@ -100,11 +100,24 @@ FADE_roadSpawnIntervalMin = 90;
 FADE_roadSpawnIntervalMax = 180;
 FADE_civDebug = false;  // systemChat for spawn/despawn/road vehicle actions
 FADE_civDebugMarkers = false;  // when true, show map markers for active civ zones (Civ: zoneId)
+FADE_checkpointDebug = false;  // set true: systemChat for enemy checkpoints / roadblocks (spawn, despawn, patrols off)
+
+// Trace bis_fnc_cp_getQueueDelay / bis_fnc_cp_main callers (installs stubs in DebugBIScpStub.sqf). Leave false in normal play.
+FADE_debugBIScp = false;
+
+// BIS Civilian Presence (Tac-Ops): see rsc\fn_bisCpPreInit.sqf - do not stub getQueueDelay with { 0 } when main is real CODE.
+call compile preprocessFileLineNumbers "rsc\fn_bisCpPreInit.sqf";
 
 // -----------------------------------------------------------------------------
-// CQB Training Shoothouse — Eden object names for drill positions (triggers/objects)
+// CQB Training Shoothouse - Eden object names for drill positions (triggers/objects)
 // Place CQB_POS_1, CQB_POS_2, ... in Eden; direction of object = facing of spawned unit/target
+// (Built with a loop - avoid "N to M" ranges; they can fail to compile under call compile in some setups.)
 // -----------------------------------------------------------------------------
-FADE_cqbPosNames = ["CQB_POS_1","CQB_POS_2","CQB_POS_3","CQB_POS_4","CQB_POS_5","CQB_POS_6","CQB_POS_7","CQB_POS_8","CQB_POS_9","CQB_POS_10","CQB_POS_11","CQB_POS_12","CQB_POS_13","CQB_POS_14","CQB_POS_15","CQB_POS_16","CQB_POS_17","CQB_POS_18","CQB_POS_19","CQB_POS_20","CQB_POS_21","CQB_POS_22","CQB_POS_23","CQB_POS_24"];
+FADE_cqbPosNames = [];
+private _cqbI = 1;
+while { _cqbI <= 49 } do {
+    FADE_cqbPosNames pushBack format ["CQB_POS_%1", _cqbI];
+    _cqbI = _cqbI + 1;
+};
 // Pop-up target class (vanilla); stays down when shot if noPop is set
 FADE_cqbTargetClass = "TargetP_Inf_F";
