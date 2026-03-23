@@ -1,19 +1,18 @@
 // =============================================================================
-// AmbientCivilians.sqf — Civ spawn/despawn (CIV_T_* triggers, ROAD_SP_* road vehicles)
+// AmbientCivilians.sqf - Civ spawn/despawn (CIV_T_* triggers, ROAD_SP_* road vehicles)
 // =============================================================================
 // ONLY uses FADE_scenarioCivFaction from Scenario GUI. No fallbacks.
 // If selected faction has no civilian units/vehicles: shows hint error, does not spawn.
 // Spawned units are marked BIS_cp_excluded / FADE_ambientCiv so BIS Civilian Presence
 // (or mods like CPE) skip them and don't call bis_fnc_cp_main (avoids undefined-variable RPT errors).
 // =============================================================================
-// v4 — GUI faction only, no defaults
+// v4 - GUI faction only, no defaults
 // =============================================================================
 
 if (!isServer) exitWith {};
 diag_log "[AmbientCivilians] v4 loading (GUI faction only)";
 
-// If BIS Civilian Presence (Tac-Ops) isn't loaded, something may still call bis_fnc_cp_main on civs — stub it to avoid RPT errors
-if (isNil "bis_fnc_cp_main") then { bis_fnc_cp_main = { nil }; };
+// bis_fnc_cp_* stubs: see Config.sqf (loaded before this on server)
 
 // Store config in missionNamespace
 missionNamespace setVariable ["FADE_civCheckInterval", missionNamespace getVariable ["FADE_civCheckInterval", 45]];
@@ -50,7 +49,7 @@ FADE_civ_filterClasses = {
 };
 
 // -----------------------------------------------------------------------------
-// Get civ classes ONLY from Scenario GUI faction — no fallbacks
+// Get civ classes ONLY from Scenario GUI faction - no fallbacks
 // -----------------------------------------------------------------------------
 FADE_civ_getUnitClassesFromGui = {
     private _faction = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
@@ -81,7 +80,7 @@ FADE_civ_showNoCivsHint = {
         _factionDn
     ];
     [_msg] remoteExec ["FADE_showMissionHint", 0];
-    diag_log format ["[AmbientCivilians] No civ units for faction %1 — hint shown", _faction];
+    diag_log format ["[AmbientCivilians] No civ units for faction %1 - hint shown", _faction];
 };
 
 FADE_civ_showNoCivVehiclesHint = {
@@ -96,7 +95,7 @@ FADE_civ_showNoCivVehiclesHint = {
         _factionDn
     ];
     [_msg] remoteExec ["FADE_showMissionHint", 0];
-    diag_log format ["[AmbientCivilians] No civ vehicles for faction %1 — hint shown", _faction];
+    diag_log format ["[AmbientCivilians] No civ vehicles for faction %1 - hint shown", _faction];
 };
 
 // Collect CIV_T_* triggers
@@ -400,7 +399,7 @@ FADE_civ_spawnOne = {
 };
 
 // -----------------------------------------------------------------------------
-// Spawn zone — lazy-load civs in batches to reduce performance hit
+// Spawn zone - lazy-load civs in batches to reduce performance hit
 // -----------------------------------------------------------------------------
 FADE_civ_spawnZone = {
     params ["_trigger", "_zoneId"];
@@ -498,7 +497,7 @@ FADE_civ_despawnZone = {
 };
 
 // -----------------------------------------------------------------------------
-// Road vehicle spawn — ONLY GUI faction, no fallbacks
+// Road vehicle spawn - ONLY GUI faction, no fallbacks
 // -----------------------------------------------------------------------------
 FADE_civ_spawnRoadVehicle = {
     if (!(missionNamespace getVariable ["FADE_civiliansEnabled", true])) exitWith {};
@@ -607,7 +606,7 @@ FADE_civ_checkZones = {
 };
 
 // -----------------------------------------------------------------------------
-// Start — reset hint flags when scenario settings applied (so re-apply can show hint again)
+// Start - reset hint flags when scenario settings applied (so re-apply can show hint again)
 // -----------------------------------------------------------------------------
 FADE_civ_resetHintFlags = {
     missionNamespace setVariable ["FADE_civNoCivsHintShown", false];
@@ -635,17 +634,17 @@ if (_zoneCount == 0) then {
     if (_civClasses isEqualTo [] && { _civVehClasses isEqualTo [] }) then {
         call FADE_civ_showNoCivsHint;
         call FADE_civ_showNoCivVehiclesHint;
-        [format ["CIV POP: No civ units AND no civ vehicles for faction %1 — zone/road spawns disabled", _factionStart]] call FADE_civ_debugChat;
+        [format ["CIV POP: No civ units AND no civ vehicles for faction %1 - zone/road spawns disabled", _factionStart]] call FADE_civ_debugChat;
     } else {
         if (_civClasses isEqualTo []) then {
             call FADE_civ_showNoCivsHint;
-            [format ["CIV POP: No civ units for faction %1 — zone spawns disabled, road vehicles need drivers", _factionStart]] call FADE_civ_debugChat;
+            [format ["CIV POP: No civ units for faction %1 - zone spawns disabled, road vehicles need drivers", _factionStart]] call FADE_civ_debugChat;
         } else {
             if (_civVehClasses isEqualTo []) then {
                 call FADE_civ_showNoCivVehiclesHint;
-                [format ["CIV POP: %1 ZONES, %2 ROAD PTS, faction %3 — zone spawns OK, no civ vehicles (road spawns disabled)", _zoneCount, count (missionNamespace getVariable ["FADE_civRoadPoints", []]), _factionStart]] call FADE_civ_debugChat;
+                [format ["CIV POP: %1 ZONES, %2 ROAD PTS, faction %3 - zone spawns OK, no civ vehicles (road spawns disabled)", _zoneCount, count (missionNamespace getVariable ["FADE_civRoadPoints", []]), _factionStart]] call FADE_civ_debugChat;
             } else {
-                [format ["CIV POP: %1 ZONES, %2 ROAD PTS, faction %3 — %4 unit types, %5 vehicle types", _zoneCount, count (missionNamespace getVariable ["FADE_civRoadPoints", []]), _factionStart, count _civClasses, count _civVehClasses]] call FADE_civ_debugChat;
+                [format ["CIV POP: %1 ZONES, %2 ROAD PTS, faction %3 - %4 unit types, %5 vehicle types", _zoneCount, count (missionNamespace getVariable ["FADE_civRoadPoints", []]), _factionStart, count _civClasses, count _civVehClasses]] call FADE_civ_debugChat;
             };
         };
     };
@@ -662,7 +661,7 @@ if (_zoneCount == 0) then {
 };
 
 // -----------------------------------------------------------------------------
-// Ambient civilian aircraft — fly past every ~10 minutes
+// Ambient civilian aircraft - fly past every ~10 minutes
 // Spawns a civ aircraft at map edge, flies to the opposite edge, then despawns.
 // Only runs if the civ faction has aircraft (scope >= 2, isKindOf "Air").
 // -----------------------------------------------------------------------------

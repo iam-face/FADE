@@ -6,9 +6,7 @@
 //   Server stores nowPlaying state (publicVariable) and remoteExec
 //     ["FAC_jukebox_clientPlay", 0] to all clients (with JIP key).
 //   Each client runs FAC_jukebox_clientPlay:
-//     - deleteVehicle on any existing local sound object (stops previous track)
-//     - _radio say3D [_class, 300, 1] -> returns a #soundonvehicle object
-//     - stores that object in FAC_jukebox_soundObj for later stop
+//     - playSound3D at Radio_1: 2x CfgSFX volume, 500m max distance
 //   Stop: server broadcasts clientPlay with "" -> each client deleteVehicle
 // =============================================================================
 
@@ -73,6 +71,8 @@ FAC_jukebox_clientPlay = {
 
         private _data = [_song] call FAC_jukeboxGui_sfxFileData;
         _data params ["_file", "_vol", "_dist"];
+        _vol = _vol * 2;
+        _dist = 500;
         if (_file == "") exitWith { systemChat format ["JUKEBOX: No audio file for %1", _song]; };
 
         playSound3D [_file, _radio, false, getPosASL _radio, _vol, 1, _dist];

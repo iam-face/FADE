@@ -1,5 +1,5 @@
 // =============================================================================
-// initServer.sqf — Face's Dynamic Sandbox server init
+// initServer.sqf - Face's Dynamic Sandbox server init
 // =============================================================================
 //
 // DEDICATED SERVER / LOCality:
@@ -15,11 +15,11 @@
 
 if (!isServer) exitWith {};
 
-// Debug: stub missing BIS campaign functions to log caller (set FADE_debugBIScp = false to disable)
-call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";
-
-// Config — single source of truth (rsc\Config.sqf)
+// Config - single source of truth (rsc\Config.sqf); load before DebugBIScpStub so FADE_debugBIScp applies
 call compile preprocessFileLineNumbers "rsc\Config.sqf";
+
+// Debug: optional stub for missing BIS campaign functions (default off in Config - see rsc\DebugBIScpStub.sqf)
+call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";
 
 // -----------------------------------------------------------------------------
 // Scenario settings: single-pass CfgVehicles scan (load-time optimisation)
@@ -126,21 +126,35 @@ FADE_civ_filterByFactionAddon = {
     _out
 };
 
-// Filter enemy unit classnames to only those that spawn with at least one weapon (avoids unarmed units being confused with civilians).
-// HVT is excepted in mission code by stripping weapons after spawn. Returns original list if filter would leave it empty.
-FADE_filterEnemyUnitsArmed = {
+// Filter unit classnames to those that spawn with a primary weapon or sidearm.
+// We only accept CfgWeapons entries with type 1 (PrimaryWeapon) or 2 (Handgun).
+// Returns original list if filtering would empty the list, so missions still have spawn options.
+FADE_filterUnitsArmed = {
     params ["_classes"];
     if (_classes isEqualTo [] || { !(_classes isEqualType []) }) exitWith { _classes };
     private _out = [];
     {
         if (_x isEqualType "" && { isClass (configFile >> "CfgVehicles" >> _x) } && { _x isKindOf "Man" }) then {
             private _weapons = getArray (configFile >> "CfgVehicles" >> _x >> "weapons");
-            if (count _weapons > 0) then { _out pushBack _x };
+            private _hasPrimaryOrSidearm = false;
+            {
+                if (_x in ["Throw", "Put"]) then { continue };
+                if (isClass (configFile >> "CfgWeapons" >> _x)) then {
+                    private _wType = getNumber (configFile >> "CfgWeapons" >> _x >> "type");
+                    if (_wType in [1, 2]) exitWith { _hasPrimaryOrSidearm = true };
+                };
+            } forEach _weapons;
+            if (_hasPrimaryOrSidearm) then { _out pushBack _x };
         };
     } forEach _classes;
     if (_out isEqualTo []) then { _classes } else { _out };
 };
+// Backward-compatible alias used by existing mission scripts.
+FADE_filterEnemyUnitsArmed = FADE_filterUnitsArmed;
+FADE_filterFriendlyUnitsArmed = FADE_filterUnitsArmed;
+missionNamespace setVariable ["FADE_filterUnitsArmed", FADE_filterUnitsArmed];
 missionNamespace setVariable ["FADE_filterEnemyUnitsArmed", FADE_filterEnemyUnitsArmed];
+missionNamespace setVariable ["FADE_filterFriendlyUnitsArmed", FADE_filterFriendlyUnitsArmed];
 
 // Friendly group callsigns for RATEL-style sideChat (e.g. "Bravo 1-2")
 FADE_friendlyCallsignPhonetics = ["Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel"];
@@ -160,7 +174,7 @@ missionNamespace setVariable ["FADE_assignGroupCallsign", FADE_assignGroupCallsi
 
 // Returns array of unit classnames for given faction (Man only).
 // East/West/Independent: cache lookup (faction_side).
-// Civilian (side 3): CfgGroups + cache fallback, BOTH filtered by faction addon — avoids mod pollution.
+// Civilian (side 3): CfgGroups + cache fallback, BOTH filtered by faction addon - avoids mod pollution.
 FADE_getUnitsForFaction = {
     params ["_faction", ["_sideNum", -1]];
     if (_faction == "") exitWith { [] };
@@ -196,7 +210,7 @@ FADE_getUnitsForFaction = {
             private _key = _faction + "_3";
             private _cached = FADE_unitsByFactionSide getOrDefault [_key, []];
             if (_cached isEqualTo []) then {
-                // Mod faction may use CIV_F in CfgVehicles — scan all civ caches for same-addon units
+                // Mod faction may use CIV_F in CfgVehicles - scan all civ caches for same-addon units
                 { _cached = _cached + (FADE_unitsByFactionSide getOrDefault [_x, []]) } forEach (keys FADE_unitsByFactionSide select { count _x >= 2 && { _x select [count _x - 2, 2] == "_3" } });
             };
             _out = [_cached, _faction, true] call FADE_civ_filterByFactionAddon;
@@ -205,7 +219,7 @@ FADE_getUnitsForFaction = {
     } else {
         // For OPFOR/BLUFOR/INDFOR: try CfgGroups first (most reliable for modded factions),
         // then fall back to the CfgVehicles cache. Many modded units have a mismatched or empty
-        // `faction` property in CfgVehicles, causing the cache lookup to fail — but CfgGroups
+        // `faction` property in CfgVehicles, causing the cache lookup to fail - but CfgGroups
         // is explicitly authored per faction and is much more reliable.
         private _out = [];
 
@@ -242,7 +256,7 @@ FADE_getUnitsForFaction = {
             _out = FADE_unitsByFactionSide getOrDefault [_faction + "_" + str _sideNum, []];
         };
 
-        // 3) For enemy factions (side 0), also check side 2 (Resistance) — some mod OPFOR factions
+        // 3) For enemy factions (side 0), also check side 2 (Resistance) - some mod OPFOR factions
         //    configure their units as Independent in CfgVehicles but are presented as OPFOR in game
         if (_out isEqualTo [] && { _sideNum == 0 }) then {
             _out = FADE_unitsByFactionSide getOrDefault [_faction + "_2", []];
@@ -259,7 +273,7 @@ FADE_getEnemyVehiclesForFaction = {
     FADE_enemyVehiclesByFaction getOrDefault [_faction, []]
 };
 
-// Returns array of friendly (BLUFOR) vehicle classnames for faction; aircraft + land. Same logic as enemy — faction from config.
+// Returns array of friendly (BLUFOR) vehicle classnames for faction; aircraft + land. Same logic as enemy - faction from config.
 FADE_getFriendlyVehicleClasses = {
     params ["_faction"];
     if (_faction == "") exitWith { [] };
@@ -277,7 +291,7 @@ FADE_getFriendlyVehicleClasses = {
 };
 
 // Returns array of civilian vehicle classnames for faction.
-// CfgGroups first, then cache — BOTH filtered by faction addon.
+// CfgGroups first, then cache - BOTH filtered by faction addon.
 FADE_getCivVehiclesForFaction = {
     params ["_faction"];
     if (_faction == "") exitWith { [] };
@@ -315,7 +329,7 @@ FADE_getCivVehiclesForFaction = {
     keys _seen
 };
 
-// Apply scenario settings from GUI — SERVER-SIDE GLOBAL: all mission spawns use these unit/vehicle lists.
+// Apply scenario settings from GUI - SERVER-SIDE GLOBAL: all mission spawns use these unit/vehicle lists.
 // When a player clicks Apply, this runs on the server and overwrites missionNamespace; Missions.sqf (and other scripts) read from missionNamespace.
 FADE_applyScenarioSettings = {
     params ["_hour", "_weather", "_enemyFaction", "_friendlyFaction", "_civFaction", ["_limitGear", false], ["_player", objNull], ["_patrolsEnabled", false], ["_enemySkill", 0.5], ["_enemyRouting", 0], ["_enemyAAA", "None"], ["_civiliansEnabled", true], ["_aoJtacEnabled", true], ["_aoStrength", "Medium"]];
@@ -334,7 +348,7 @@ FADE_applyScenarioSettings = {
     missionNamespace setVariable ["FADE_aoJtacEnabled", _aoJtacEnabled];
     missionNamespace setVariable ["FADE_aoStrength", _aoStrength];
 
-    // Build unit/vehicle arrays from chosen factions — these are the single source for all mission spawns
+    // Build unit/vehicle arrays from chosen factions - these are the single source for all mission spawns
     private _enemyUnits = [_enemyFaction, 0] call FADE_getUnitsForFaction;
     private _friendlyUnits = [_friendlyFaction, 1] call FADE_getUnitsForFaction;
     private _civUnits = [_civFaction, 3] call FADE_getUnitsForFaction;
@@ -342,8 +356,9 @@ FADE_applyScenarioSettings = {
 
     if (_enemyUnits isEqualTo []) then { _enemyUnits = ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"] };
     if (_friendlyUnits isEqualTo []) then { _friendlyUnits = ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"] };
-    _enemyUnits = [_enemyUnits] call FADE_filterEnemyUnitsArmed;
-    // Civs: NO fallbacks — AmbientCivilians uses GUI faction only; if empty, shows hint
+    _enemyUnits = [_enemyUnits] call FADE_filterUnitsArmed;
+    _friendlyUnits = [_friendlyUnits] call FADE_filterUnitsArmed;
+    // Civs: NO fallbacks - AmbientCivilians uses GUI faction only; if empty, shows hint
 
     private _enemyVehicles = [_enemyFaction] call FADE_getEnemyVehiclesForFaction;
     private _friendlyVehicleClasses = [_friendlyFaction] call FADE_getFriendlyVehicleClasses;
@@ -431,7 +446,8 @@ if (_defEnemy isEqualTo []) then { _defEnemy = ["O_Soldier_TL_F", "O_Soldier_F",
 if (_defFriendly isEqualTo []) then { _defFriendly = ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"] };
 if (_defCiv isEqualTo []) then { _defCiv = ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"] };
 if (_defCivVeh isEqualTo []) then { _defCivVeh = ["C_Offroad_01_F", "C_Hatchback_01_F", "C_SUV_01_F", "C_Van_01_transport_F"] };
-_defEnemy = [_defEnemy] call FADE_filterEnemyUnitsArmed;
+_defEnemy = [_defEnemy] call FADE_filterUnitsArmed;
+_defFriendly = [_defFriendly] call FADE_filterUnitsArmed;
 private _defFriendlyVeh = [_friendlyF] call FADE_getFriendlyVehicleClasses;
 missionNamespace setVariable ["FADE_enemyUnits", _defEnemy];
 missionNamespace setVariable ["FADE_friendlyUnits", _defFriendly];
@@ -474,6 +490,8 @@ setDate [_date select 0, _date select 1, _date select 2, _initHour, _date select
 
 // Enemy AAA (Light/Medium/Heavy at high ground near civ zones; MANPADS in active civ zones)
 [] execVM "rsc\EnemyAAA.sqf";
+// Enemy checkpoints at checkPointPos_* (gated by Scenario Enemy Patrols ON/OFF)
+[] execVM "rsc\EnemyCheckpoints.sqf";
 
 // Helper: collect Eden objects by variable name
 FADE_collectEdenNames = {
@@ -492,11 +510,30 @@ FADE_helipads = FADE_helipadList apply { _x select 0 };  // objects only (for ba
 FADE_vehicleBoard = missionNamespace getVariable ["vehBoard", objNull];
 FADE_missionBoard = missionNamespace getVariable ["missionBoard", objNull];
 FADE_boards = [FADE_vehicleBoard, FADE_missionBoard] select { !isNull _x };
-// CQB Training Shoothouse — single board (cqbBoard) and position triggers (CQB_POS_*)
+// CQB Training Shoothouse - single board (cqbBoard) and position triggers (CQB_POS_*)
 FADE_cqbBoard = missionNamespace getVariable ["cqbBoard", objNull];
-FADE_cqbPositions = (missionNamespace getVariable ["FADE_cqbPosNames", ["CQB_POS_1","CQB_POS_2","CQB_POS_3"]]) apply { missionNamespace getVariable [_x, objNull] } select { !isNull _x };
+// CQB loudspeaker (Eden object name cqbLoudspeaker) - 3D SFX via remoteExec to clients (FAC_cqbLoudspeaker_clientPlay)
+FADE_cqbLoudspeakerBroadcast = {
+    params [["_mode", ""]];
+    if (!isServer) exitWith {};
+    if (_mode == "") exitWith {};
+    [_mode] remoteExec ["FAC_cqbLoudspeaker_clientPlay", 0];
+};
+
+FADE_cqbPositions = (missionNamespace getVariable ["FADE_cqbPosNames", call {
+    private _a = [];
+    private _i = 1;
+    while { _i <= 49 } do {
+        _a pushBack format ["CQB_POS_%1", _i];
+        _i = _i + 1;
+    };
+    _a
+}]) apply { missionNamespace getVariable [_x, objNull] } select { !isNull _x };
+missionNamespace setVariable ["FADE_cqbPosCount", count FADE_cqbPositions, true];
 FADE_cqbDrillActive = false;
 FADE_cqbSpawned = [];  // objects and groups to delete on end drill
+FADE_cqbEnemyGroups = [];
+FADE_cqbWatcherHandle = scriptNull;
 
 // Apply board textures (Eden names). Non-interactable: base, loadout, music, firing range, teleport.
 private _applyBoardTexture = {
@@ -554,7 +591,7 @@ FADE_padMarkerOriginalText = [];
     };
 } forEach FADE_helipadList;
 
-// Base position — from BASE_1 (centre of map), fallback to helipad or B_SP
+// Base position - from BASE_1 (centre of map), fallback to helipad or B_SP
 private _baseObj = missionNamespace getVariable ["BASE_1", objNull];
 if (!isNull _baseObj) then {
     FADE_basePos = getPosATL _baseObj;
@@ -757,7 +794,7 @@ missionNamespace setVariable ["FADE_findMissionPosIED", FADE_findMissionPosIED];
 
 // Find a valid mission position: near a civ zone (CIV_T_*), within 2.5km of zone center,
 // at least _minDistOverride (or FADE_minDistFromBase) from base, clear ground, not on water.
-// Params: [["_minDistOverride", -1]] — if > 0, use instead of FADE_minDistFromBase (e.g. 1000 for enemy missions)
+// Params: [["_minDistOverride", -1]] - if > 0, use instead of FADE_minDistFromBase (e.g. 1000 for enemy missions)
 FADE_findMissionPos = {
     params [["_minDistOverride", -1]];
     private _base = FADE_basePos;
@@ -798,7 +835,7 @@ FADE_findMissionPos = {
 };
 
 // Find a safe LZ for helicopter landing: no water, no buildings, no trees within radius
-// Params: [_center] — center position to search around
+// Params: [_center] - center position to search around
 // Returns: position array or [] if none found
 FADE_findSafeLZ = {
     params ["_center"];
@@ -825,7 +862,7 @@ FADE_findSafeLZ = {
 };
 
 // -----------------------------------------------------------------------------
-// CQB Training Shoothouse — start/end drill (server). Called via remoteExec from CQB GUI.
+// CQB Training Shoothouse - start/end drill (server). Called via remoteExec from CQB GUI.
 // Params: [player, enemyType ("targets"|"enemies"), density ("Low"|"Medium"|"High"), civilians (bool)]
 // Density: Low 20%, Medium 33%, High 50% per position. Civilians: 15% chance per spawn when true.
 // -----------------------------------------------------------------------------
@@ -845,7 +882,7 @@ FADE_cqbStartDrill = {
         default { 0.2 };  // Low
     };
     private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", ["O_Soldier_F"]];
-    _enemyUnits = [_enemyUnits] call FADE_filterEnemyUnitsArmed;
+    _enemyUnits = [_enemyUnits] call FADE_filterUnitsArmed;
     if (_enemyUnits isEqualTo []) then { _enemyUnits = ["O_Soldier_F"] };
     private _civUnits = missionNamespace getVariable ["FADE_civUnitClasses", ["C_man_1"]];
     if (_civUnits isEqualTo []) then { _civUnits = ["C_man_1"] };
@@ -853,6 +890,7 @@ FADE_cqbStartDrill = {
     if (!isClass (configFile >> "CfgVehicles" >> _targetClass)) then { _targetClass = "Target_F" };
     missionNamespace setVariable ["noPop", true];  // pop-up targets stay down when shot
     private _spawned = [];
+    private _enemyGroups = [];
     {
         if (random 1 >= _chance) then { continue };
         private _posObj = _x;
@@ -888,17 +926,52 @@ FADE_cqbStartDrill = {
                 _u disableAI "PATH";
                 _u setUnitPos "MIDDLE";
                 _spawned pushBack _grp;
+                _enemyGroups pushBack _grp;
             };
         };
     } forEach _positions;
     missionNamespace setVariable ["FADE_cqbSpawned", _spawned];
+    missionNamespace setVariable ["FADE_cqbEnemyGroups", _enemyGroups];
     missionNamespace setVariable ["FADE_cqbDrillActive", true];
     publicVariable "FADE_cqbDrillActive";
+    ["start"] call FADE_cqbLoudspeakerBroadcast;
+    // Auto-complete enemy drills when all enemy units are dead or surrendered/captive.
+    if (_enemyType == "enemies") then {
+        private _existingWatcher = missionNamespace getVariable ["FADE_cqbWatcherHandle", scriptNull];
+        if (!isNull _existingWatcher) then { terminate _existingWatcher };
+        private _watcher = [_player] spawn {
+            params ["_player"];
+            while { missionNamespace getVariable ["FADE_cqbDrillActive", false] } do {
+                sleep 1;
+                private _groups = missionNamespace getVariable ["FADE_cqbEnemyGroups", []];
+                private _remainingHostile = 0;
+                {
+                    if (isNull _x) then { continue };
+                    {
+                        if (!alive _x) then { continue };
+                        // Surrendered units count as neutralised for drill completion.
+                        private _isSurrendered = captive _x
+                            || { _x getVariable ["ACE_isSurrendered", false] }
+                            || { _x getVariable ["ace_captives_isSurrendering", false] };
+                        if (!_isSurrendered) then { _remainingHostile = _remainingHostile + 1 };
+                    } forEach units _x;
+                } forEach _groups;
+                if (_remainingHostile <= 0) exitWith {
+                    if (missionNamespace getVariable ["FADE_cqbDrillActive", false]) then {
+                        [_player] call FADE_cqbEndDrill;
+                        ["CQB drill complete: all enemy units neutralised (dead or surrendered)."] remoteExec ["systemChat", _player];
+                    };
+                };
+            };
+        };
+        missionNamespace setVariable ["FADE_cqbWatcherHandle", _watcher];
+    };
     [format ["CQB drill started. %1 spawns.", count _spawned]] remoteExec ["systemChat", _player];
 };
 FADE_cqbEndDrill = {
     params ["_player"];
     if (!isServer) exitWith {};
+    ["stop"] call FADE_cqbLoudspeakerBroadcast;
     private _spawned = missionNamespace getVariable ["FADE_cqbSpawned", []];
     {
         if (isNull _x) then { continue };
@@ -910,6 +983,10 @@ FADE_cqbEndDrill = {
         };
     } forEach _spawned;
     missionNamespace setVariable ["FADE_cqbSpawned", []];
+    missionNamespace setVariable ["FADE_cqbEnemyGroups", []];
+    private _watcher = missionNamespace getVariable ["FADE_cqbWatcherHandle", scriptNull];
+    if (!isNull _watcher) then { terminate _watcher };
+    missionNamespace setVariable ["FADE_cqbWatcherHandle", scriptNull];
     missionNamespace setVariable ["FADE_cqbDrillActive", false];
     publicVariable "FADE_cqbDrillActive";
     ["CQB drill ended."] remoteExec ["systemChat", _player];
@@ -963,7 +1040,7 @@ FADE_updateHelipadMarkers = {
     } forEach FADE_helipadList;
 };
 
-// Periodic pad marker update — detects when aircraft leave pads (e.g. take off)
+// Periodic pad marker update - detects when aircraft leave pads (e.g. take off)
 [] spawn {
     while { true } do {
         sleep 4;
@@ -1130,7 +1207,7 @@ FADE_getCargoSeats = {
 };
 
 // -----------------------------------------------------------------------------
-// Time & weather (server) — syncs to all clients in MP
+// Time & weather (server) - syncs to all clients in MP
 // -----------------------------------------------------------------------------
 FADE_setTime = {
     params ["_hour", "_player"];
@@ -1150,6 +1227,87 @@ FADE_setWeather = {
 };
 
 // -----------------------------------------------------------------------------
+// Optional player copilot helper (one AI per player, keyed by UID)
+// -----------------------------------------------------------------------------
+FADE_copilotByUid = createHashMap;
+
+FADE_getCopilotForPlayer = {
+    params ["_player"];
+    if (isNull _player) exitWith { objNull };
+    private _uid = getPlayerUID _player;
+    if (_uid == "") exitWith { objNull };
+    private _copilot = FADE_copilotByUid getOrDefault [_uid, objNull];
+    if (isNull _copilot || { !alive _copilot }) then {
+        FADE_copilotByUid deleteAt _uid;
+        _copilot = objNull;
+    };
+    _copilot
+};
+
+FADE_requestCopilotState = {
+    params ["_player"];
+    if (isNull _player) exitWith {};
+    private _cp = [_player] call FADE_getCopilotForPlayer;
+    [!isNull _cp] remoteExec ["FADE_receiveCopilotState", _player];
+};
+
+FADE_spawnCopilot = {
+    params ["_player"];
+    if (isNull _player) exitWith {};
+    private _existing = [_player] call FADE_getCopilotForPlayer;
+    if (!isNull _existing) exitWith {
+        ["You already have a copilot."] remoteExec ["systemChat", _player];
+        [true] remoteExec ["FADE_receiveCopilotState", _player];
+    };
+
+    private _spawnPos = +FADE_basePos;
+    if (count _spawnPos < 3) then { _spawnPos = [_spawnPos select 0, _spawnPos select 1, 0] };
+    _spawnPos = [_spawnPos, 8, 20, 2, 0, 0.3, 0, [], _spawnPos] call BIS_fnc_findSafePos;
+    if (count _spawnPos < 3) then { _spawnPos = [(_spawnPos select 0), (_spawnPos select 1), 0] };
+
+    private _grp = group _player;
+    if (isNull _grp) then { _grp = createGroup [side _player, true] };
+    private _unitClass = "B_Helipilot_F";
+    if (side _player == EAST) then { _unitClass = "O_helipilot_F" };
+    if (side _player == RESISTANCE) then { _unitClass = "I_helipilot_F" };
+    if (side _player == CIVILIAN) then { _unitClass = "C_man_1" };
+
+    private _cp = _grp createUnit [_unitClass, _spawnPos, [], 0, "NONE"];
+    if (isNull _cp) exitWith {
+        ["Could not spawn copilot at base."] remoteExec ["systemChat", _player];
+        [false] remoteExec ["FADE_receiveCopilotState", _player];
+    };
+
+    _cp setPosATL _spawnPos;
+    _cp setDir random 360;
+    _cp setSkill 0.6;
+    private _loadout = getUnitLoadout _player;
+    if (_loadout isEqualType [] && { count _loadout > 0 }) then { _cp setUnitLoadout _loadout };
+    _cp setVariable ["FADE_isPlayerCopilot", true, true];
+    _cp setVariable ["FADE_copilotOwnerUID", getPlayerUID _player, true];
+
+    FADE_copilotByUid set [getPlayerUID _player, _cp];
+
+    _cp sideChat "This is your copilot. Ready at base and awaiting tasking. Over.";
+    ["Copilot spawned at base and added to your group."] remoteExec ["systemChat", _player];
+    [true] remoteExec ["FADE_receiveCopilotState", _player];
+};
+
+FADE_removeCopilot = {
+    params ["_player"];
+    if (isNull _player) exitWith {};
+    private _cp = [_player] call FADE_getCopilotForPlayer;
+    if (isNull _cp) exitWith {
+        ["No active copilot to remove."] remoteExec ["systemChat", _player];
+        [false] remoteExec ["FADE_receiveCopilotState", _player];
+    };
+    deleteVehicle _cp;
+    FADE_copilotByUid deleteAt (getPlayerUID _player);
+    ["Copilot removed."] remoteExec ["systemChat", _player];
+    [false] remoteExec ["FADE_receiveCopilotState", _player];
+};
+
+// -----------------------------------------------------------------------------
 // Mission streams: Global (1 at a time, heavy) vs Single (up to 3, lighter). All locations >= 2 km apart.
 // -----------------------------------------------------------------------------
 FADE_globalMissionTypes = ["AreaOfOperations", "Hostage", "HVT", "ClearArea", "CAS", "InterceptConvoy"];
@@ -1162,6 +1320,16 @@ publicVariable "FADE_singleMissions";
 publicVariable "FADE_globalMissionTypes";
 publicVariable "FADE_singleMissionTypes";
 publicVariable "FADE_minDistBetweenMissions";
+
+// Mission owner check supports respawned player objects via UID fallback.
+FADE_isMissionEntryOwnedByPlayer = {
+    params ["_entry", "_player"];
+    if (isNull _player || { !(_entry isEqualType []) }) exitWith { false };
+    private _entryOwnerObj = _entry param [1, objNull];
+    private _entryOwnerUid = _entry param [3, ""];
+    private _playerUid = getPlayerUID _player;
+    (_entryOwnerObj == _player) || { _entryOwnerUid != "" && { _entryOwnerUid == _playerUid } }
+};
 
 // Notify all other players (systemChat) when a mission starts; requester gets detailed hint only
 FADE_notifyOthersMissionStarted = {
@@ -1192,6 +1360,7 @@ FADE_missionPosClear = {
 FADE_startMission = {
     params ["_missionType", "_player", ["_friendlyFaction", ""], ["_enemyFaction", ""], ["_civFaction", ""]];
     if (isNull _player) exitWith {};
+    private _playerUid = getPlayerUID _player;
     private _isGlobal = _missionType in (missionNamespace getVariable ["FADE_globalMissionTypes", []]);
     private _isSingle = _missionType in (missionNamespace getVariable ["FADE_singleMissionTypes", []]);
     if (!_isGlobal && { !_isSingle }) exitWith {
@@ -1200,7 +1369,7 @@ FADE_startMission = {
     // Player may only have one mission (global or one single)
     private _global = missionNamespace getVariable ["FADE_globalMission", []];
     private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
-    if ((count _global >= 1 && { _global select 1 == _player }) || { { _x select 1 == _player } count _singleList > 0 }) exitWith {
+    if ((count _global >= 1 && { [_global, _player] call FADE_isMissionEntryOwnedByPlayer }) || { { [_x, _player] call FADE_isMissionEntryOwnedByPlayer } count _singleList > 0 }) exitWith {
         ["<t size='1.2' color='#FFAA00'>MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>You already have a mission. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
     if (_isGlobal && { count _global >= 1 }) exitWith {
@@ -1263,18 +1432,23 @@ FADE_startMission = {
     };
 
     if (_isGlobal) then {
-        missionNamespace setVariable ["FADE_globalMission", [_missionType, _player, _destPos]];
+        missionNamespace setVariable ["FADE_globalMission", [_missionType, _player, _destPos, _playerUid]];
         missionNamespace setVariable ["FADE_currentMissionType", _missionType];
         missionNamespace setVariable ["FADE_currentMissionPlayer", _player];
         publicVariable "FADE_globalMission";
         publicVariable "FADE_currentMissionType";
     } else {
-        _singleList pushBack [_missionType, _player, _destPos];
+        _singleList pushBack [_missionType, _player, _destPos, _playerUid];
         missionNamespace setVariable ["FADE_singleMissions", _singleList];
         publicVariable "FADE_singleMissions";
     };
-    FADE_missionParams = [_missionType, _destPos, _player];
-    execVM "rsc\Missions.sqf";
+    // Spawn + compile (not execVM): avoids FADE_missionParams being overwritten by another
+    // player's FADE_startMission before this Missions.sqf run reads line 1.
+    [_missionType, _destPos, _player] spawn {
+        params ["_missionType", "_destPos", "_player"];
+        FADE_missionParams = [_missionType, _destPos, _player];
+        call compile preprocessFileLineNumbers "rsc\Missions.sqf";
+    };
 };
 
 publicVariable "FADE_spawnHeli";
@@ -1283,13 +1457,20 @@ publicVariable "FADE_spawnLandVehicle";
 publicVariable "FADE_requestVehiclesAtBase";
 publicVariable "FADE_setTime";
 publicVariable "FADE_setWeather";
+publicVariable "FADE_requestCopilotState";
+publicVariable "FADE_spawnCopilot";
+publicVariable "FADE_removeCopilot";
 publicVariable "FADE_startMission";
 publicVariable "FADE_abortMission";
 publicVariable "FADE_getCargoSeats";
 
-// Helper: clear active mission for a player (removes from Global or Single list)
+// Helper: clear active mission for a player (removes from Global or Single list).
+// Optional _taskIdGuard prevents stale mission threads from clearing a newer mission.
 FADE_clearActiveMission = {
-    params ["_player"];
+    params ["_player", ["_taskIdGuard", ""]];
+    if (isNull _player) exitWith {};
+    if (_taskIdGuard != "" && { (_player getVariable ["FADE_myMissionTaskId", ""]) != _taskIdGuard }) exitWith {};
+    private _playerUid = getPlayerUID _player;
     if (!isNull _player) then {
         _player setVariable ["FADE_myMission", "", true];
         _player setVariable ["FADE_myMissionTaskId", nil, true];
@@ -1298,7 +1479,7 @@ FADE_clearActiveMission = {
         _player setVariable ["FADE_myMissionBrief", nil, true];
     };
     private _global = missionNamespace getVariable ["FADE_globalMission", []];
-    if (count _global >= 2 && { _global select 1 == _player }) then {
+    if (count _global >= 2 && { [_global, _player] call FADE_isMissionEntryOwnedByPlayer }) then {
         missionNamespace setVariable ["FADE_globalMission", []];
         missionNamespace setVariable ["FADE_currentMissionType", ""];
         missionNamespace setVariable ["FADE_currentMissionPlayer", objNull];
@@ -1306,7 +1487,11 @@ FADE_clearActiveMission = {
         publicVariable "FADE_currentMissionType";
     } else {
         private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
-        _singleList = _singleList select { _x select 1 != _player };
+        _singleList = _singleList select {
+            private _ownerObj = _x param [1, objNull];
+            private _ownerUid = _x param [3, ""];
+            !((_ownerObj == _player) || { _ownerUid != "" && { _ownerUid == _playerUid } })
+        };
         missionNamespace setVariable ["FADE_singleMissions", _singleList];
         publicVariable "FADE_singleMissions";
     };
@@ -1320,7 +1505,7 @@ FADE_abortMission = {
     private _markerName = _player getVariable ["FADE_myMissionMarker", ""];
     private _markerNameEnd = _player getVariable ["FADE_myMissionMarkerEnd", ""];
     private _global = missionNamespace getVariable ["FADE_globalMission", []];
-    private _isGlobalOwner = count _global >= 2 && { _global select 1 == _player };
+    private _isGlobalOwner = count _global >= 2 && { [_global, _player] call FADE_isMissionEntryOwnedByPlayer };
     private _missionType = if (_isGlobalOwner) then { _global select 0 } else { _player getVariable ["FADE_myMission", ""] };
     if (_taskId != "") then { [_taskId, "CANCELED"] call BIS_fnc_taskSetState };
     [_markerName] call FADE_deleteMarkerSafe;
@@ -1352,7 +1537,7 @@ FAC_surrenderChallenge_debug = false;
 publicVariable "FAC_surrenderChallenge_debug";
 
 // -----------------------------------------------------------------------------
-// Surrender Challenge — server entry point
+// Surrender Challenge - server entry point
 // -----------------------------------------------------------------------------
 // Called via remoteExec from client. MUST be publicVariable so clients can
 // invoke it. On dedicated server: clients send [player, target]; server runs

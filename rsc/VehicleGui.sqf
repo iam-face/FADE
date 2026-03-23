@@ -1,5 +1,5 @@
 // =============================================================================
-// VehicleGui.sqf — Manage vehicles (aircraft + land vehicles)
+// VehicleGui.sqf - Manage vehicles (aircraft + land vehicles)
 // =============================================================================
 // Aircraft: spawn at helipads (existing logic). Land vehicles: spawn at VEH_1/VEH_2.
 // Name format: [Faction] > [Vehicle] (matches Loadout GUI). Shows vehicle stats on select.
@@ -18,7 +18,7 @@ FAC_vehicleGui_getFactionDisplayName = {
     (_faction splitString "_") joinString " "
 };
 
-// Build vehicle tooltip text (cargo seats, weapons) — like Loadout GUI lbSetTooltip
+// Build vehicle tooltip text (cargo seats, weapons) - like Loadout GUI lbSetTooltip
 FAC_vehicleGui_buildVehicleTooltip = {
     params ["_class"];
     if (isNil "_class" || { _class == "" }) exitWith { "" };
@@ -106,15 +106,20 @@ FAC_vehicleGui_fnc = {
             };
             missionNamespace setVariable ["FAC_vehicleGui_fullList", _fullList];
 
-            // Build faction filter (same display names as vehicle list)
+            // Build faction filter: unique class ids, ordered by CfgFactionClasses displayName (ascending)
             private _factionIds = [];
             { private _f = _x select 2; if (_f != "" && { !(_f in _factionIds) }) then { _factionIds pushBack _f } } forEach _fullList;
-            _factionIds sort true;
+            private _factionPairs = _factionIds apply {
+                private _dn = getText (configFile >> "CfgFactionClasses" >> _x >> "displayName");
+                if (_dn == "") then { _dn = _x };
+                [_dn, _x]
+            };
+            _factionPairs sort true;
             private _factionList = _display displayCtrl 60181;
             lbClear _factionList;
             private _idx = _factionList lbAdd "All factions";
             _factionList lbSetData [_idx, ""];
-            { private _dn = getText (configFile >> "CfgFactionClasses" >> _x >> "displayName"); if (_dn == "") then { _dn = _x }; private _i = _factionList lbAdd _dn; _factionList lbSetData [_i, _x] } forEach _factionIds;
+            { _x params ["_dn", "_id"]; private _i = _factionList lbAdd _dn; _factionList lbSetData [_i, _id] } forEach _factionPairs;
             if (lbSize _factionList > 0) then { _factionList lbSetCurSel 0 };
 
             private _searchEdit = _display displayCtrl 60180;
@@ -167,8 +172,11 @@ FAC_vehicleGui_fnc = {
             if (_idx < 0) exitWith {};
             private _class = _lb lbData _idx;
             private _pic = _display displayCtrl 60101;
-            private _texture = getText (configFile >> "CfgVehicles" >> _class >> "picture");
-            if (_texture == "") then { _texture = getText (configFile >> "CfgVehicles" >> _class >> "icon") };
+            // Prefer Zeus-style preview image first, then legacy picture/icon fallbacks.
+            private _cfgVeh = configFile >> "CfgVehicles" >> _class;
+            private _texture = getText (_cfgVeh >> "editorPreview");
+            if (_texture == "") then { _texture = getText (_cfgVeh >> "picture") };
+            if (_texture == "") then { _texture = getText (_cfgVeh >> "icon") };
             if (_texture != "") then { _pic ctrlSetText _texture } else { _pic ctrlSetText "" };
         };
         case "spawn": {

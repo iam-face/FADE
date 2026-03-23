@@ -1,32 +1,38 @@
 // =============================================================================
-// MissionsGui.sqf — Manage missions (select, start, status)
+// MissionsGui.sqf - Manage missions (select, start, status)
 // =============================================================================
 // Weather and time are managed via Scenario GUI (Manage Scenario).
 
-// [displayName, missionId, description, "Global"|"Single"] — store in missionNamespace only (no global) so dialog always has a list
+// [displayName, missionId, description, "Global"|"Single"] - stream is for logic; list shows [G]/[S]
 private _missionListRaw = [
-    ["Area of Operations", "AreaOfOperations", "2 km x 2 km AO. BLUFOR assault; capture 3 objectives. OPFOR defend. (Global)", "Global"],
-    ["CAS / Fire Support", "CAS", "Engage enemy forces and support friendlies at the objective. (Global)", "Global"],
-    ["Cargo / Resupply", "Cargo", "Cargo box at CargoPoint_1. Fly to camp and land to complete. (Single)", "Single"],
-    ["Clear Area", "ClearArea", "Enemy-occupied town or camp. Destroy at least 80% of enemy. (Global)", "Global"],
-    ["Find and Clear IEDs", "FindClearIEDs", "Locate and disarm an IED on a road near a civ zone. (Single)", "Single"],
-    ["Hostage", "Hostage", "Rescue hostages from urban buildings. Return all alive to base. (Global)", "Global"],
-    ["HVT", "HVT", "High value target in urban building. Eliminate or capture. (Global)", "Global"],
-    ["Intercept Convoy", "InterceptConvoy", "Destroy convoy before it reaches the end zone. (Global)", "Global"],
-    ["Mass Casualty (MASCAS)", "MASCAS", "3–6 BLUFOR with injuries at MEDICAL_1. Heal all. (Single, ACE)", "Single"],
-    ["Mass Casualty (MASCAS) KAT", "MASCASKAT", "3–6 BLUFOR with injuries at MEDICAL_1. Heal all. (Single, KAT)", "Single"],
-    ["Medical", "Medical", "One BLUFOR with injury, heal to complete. (Single, ACE)", "Single"],
-    ["Medical KAT", "MedicalKAT", "One BLUFOR with injury, heal to complete. (Single, KAT)", "Single"],
-    ["Mine Clearing", "MineClearing", "Clear 5–10 mines in a 200 m area. Complete when all disarmed. (Single)", "Single"],
-    ["Troop Extract", "TroopExtract", "Fly to pickup zone, land to load squad, return to base. (Single)", "Single"],
-    ["Troop Insert", "TroopInsert", "Pick up squad at base, fly to LZ, land to disembark. (Single)", "Single"]
+    ["Area of Operations", "AreaOfOperations", "2 km x 2 km AO. BLUFOR assault; capture 3 objectives. OPFOR defend. [G]", "Global"],
+    ["CAS / Fire Support", "CAS", "Engage enemy forces and support friendlies at the objective. [G]", "Global"],
+    ["Cargo / Resupply", "Cargo", "Cargo box at CargoPoint_1. Fly to camp and land to complete. [S]", "Single"],
+    ["Clear Area", "ClearArea", "Enemy-occupied town or camp. Destroy at least 80% of enemy. [G]", "Global"],
+    ["Find and Clear IEDs", "FindClearIEDs", "Locate and disarm an IED on a road near a civ zone. [S]", "Single"],
+    ["Hostage", "Hostage", "Rescue hostages from urban buildings. Return all alive to base. [G]", "Global"],
+    ["HVT", "HVT", "High value target in urban building. Eliminate or capture. [G]", "Global"],
+    ["Intercept Convoy", "InterceptConvoy", "Destroy convoy before it reaches the end zone. [G]", "Global"],
+    ["Mass Casualty (MASCAS)", "MASCAS", "3–6 BLUFOR with injuries at MEDICAL_1. Heal all. [S], ACE", "Single"],
+    ["Mass Casualty (MASCAS) KAT", "MASCASKAT", "3–6 BLUFOR with injuries at MEDICAL_1. Heal all. [S], KAT", "Single"],
+    ["Medical", "Medical", "One BLUFOR with injury, heal to complete. [S], ACE", "Single"],
+    ["Medical KAT", "MedicalKAT", "One BLUFOR with injury, heal to complete. [S], KAT", "Single"],
+    ["Mine Clearing", "MineClearing", "Clear 5–10 mines in a 200 m area. Complete when all disarmed. [S]", "Single"],
+    ["Troop Extract", "TroopExtract", "Fly to pickup zone, land to load squad, return to base. [S]", "Single"],
+    ["Troop Insert", "TroopInsert", "Pick up squad at base, fly to LZ, land to disembark. [S]", "Single"]
 ];
 private _sorted = [_missionListRaw, [], { _x select 0 }, "ASCEND"] call BIS_fnc_sortBy;
 if (isNil "_sorted" || { !(_sorted isEqualType []) }) then { _sorted = _missionListRaw };
 missionNamespace setVariable ["FAC_missionsGui_missionList", _sorted];
 
 // Default intro when no mission selected
-FAC_missionsGui_defaultDesc = "Select a mission from the list to view details. When you start a mission, this area will show pickup location, target area, objectives and completion criteria. Players can only spawn one mission themselves. 3 x Single missions are permitted at any time, 1 x Global mission is permitted at any time.";
+FAC_missionsGui_defaultDesc = "Select a mission from the list to view details. After you start one, this area shows pickup, objectives, and completion criteria from your task briefing.";
+
+FADE_receiveCopilotState = {
+    params [["_hasCopilot", false]];
+    missionNamespace setVariable ["FAC_missions_hasCopilot", _hasCopilot];
+    if (!isNull (findDisplay 60002)) then { ["updateButtons", []] call FAC_missionsGui_fnc };
+};
 
 FAC_missionsGui_fnc = {
     params ["_action", "_params"];
@@ -45,19 +51,50 @@ FAC_missionsGui_fnc = {
             uinamespace setVariable ["FAC_missionsGui_fnc", FAC_missionsGui_fnc];
             missionNamespace setVariable ["FAC_missions_abortPendingTime", -99];
 
-            // Mission list: displayName (Global) or (Single)
+            // Mission list: displayName + [G] or [S]
             private _mLb = _display displayCtrl 60120;
             lbClear _mLb;
             private _missionList = missionNamespace getVariable ["FAC_missionsGui_missionList", []];
-            { _x params [["_name", ""], ["_id", ""], ["_desc", ""], ["_stream", "Single"]]; private _idx = _mLb lbAdd (_name + " (" + _stream + ")"); _mLb lbSetData [_idx, _id] } forEach _missionList;
+            {
+                _x params [["_name", ""], ["_id", ""], ["_desc", ""], ["_stream", "Single"]];
+                private _tag = if (_stream == "Global") then {" [G]"} else {" [S]"};
+                private _idx = _mLb lbAdd (_name + _tag);
+                _mLb lbSetData [_idx, _id];
+            } forEach _missionList;
             _mLb lbSetCurSel -1;
 
             ["missionSelChanged", []] call FAC_missionsGui_fnc;
+            private _rulesCtrl = _display displayCtrl 60133;
+            if (!isNull _rulesCtrl) then {
+                private _nl = toString [10];
+                _rulesCtrl ctrlSetText (
+                    "Global missions [G] are large, shared scenarios for the whole mission. Only one may run at a time." + _nl +
+                    "Single missions [S] are smaller tasks in separate areas. Up to three may run at once, each started by a different player." + _nl +
+                    "You can only start one mission at a time yourself, [G] or [S] - type does not matter. Abort or finish before starting another."
+                );
+                _rulesCtrl ctrlEnable false;
+            };
             ["refreshStatus", []] call FAC_missionsGui_fnc;
             [] spawn { sleep 0.05; if (!isNull (findDisplay 60002)) then { ["refreshDescription", []] call FAC_missionsGui_fnc } };
             ["updateButtons", []] call FAC_missionsGui_fnc;
+            missionNamespace setVariable ["FAC_missions_hasCopilot", false];
+            [player] remoteExec ["FADE_requestCopilotState", 2];
             // Delayed refresh so abort button picks up replicated mission vars (e.g. after starting Clear Area and reopening GUI)
             [] spawn { sleep 0.25; if (!isNull (findDisplay 60002)) then { ["refreshStatus", []] call FAC_missionsGui_fnc } };
+        };
+        case "spawnCopilot": {
+            [player] remoteExec ["FADE_spawnCopilot", 2];
+            [] spawn {
+                sleep 0.6;
+                [player] remoteExec ["FADE_requestCopilotState", 2];
+            };
+        };
+        case "removeCopilot": {
+            [player] remoteExec ["FADE_removeCopilot", 2];
+            [] spawn {
+                sleep 0.4;
+                [player] remoteExec ["FADE_requestCopilotState", 2];
+            };
         };
         case "abortMission": {
             if (isNull _display) exitWith {};
@@ -97,28 +134,49 @@ FAC_missionsGui_fnc = {
         };
         case "refreshStatus": {
             if (isNull _display) exitWith {};
-            private _status = _display displayCtrl 60130;
             private _missionList = missionNamespace getVariable ["FAC_missionsGui_missionList", []];
             private _global = missionNamespace getVariable ["FADE_globalMission", []];
             private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
-            private _globalStr = if (count _global >= 2) then {
-                private _type = _global select 0;
-                private _owner = _global select 1;
-                private _typeName = _type;
-                { if ((_x select 1) == _type) exitWith { _typeName = _x select 0 } } forEach _missionList;
-                "Global: " + _typeName + " (" + (if (!isNull _owner) then { name _owner } else { "?" }) + ")"
-            } else { "Global: None" };
-            private _singleStr = if (_singleList isEqualTo []) then { "Single: None" } else {
-                private _parts = _singleList apply {
-                    _x params ["_t", "_o", "_p"];
-                    private _dn = _t;
-                    { if ((_x select 1) == _t) exitWith { _dn = _x select 0 } } forEach _missionList;
-                    _dn + " (" + (if (!isNull _o) then { name _o } else { "?" }) + ")"
-                };
-                "Single: " + (_parts joinString ", ")
+            private _displayName = {
+                params ["_typeId"];
+                private _dn = _typeId;
+                { if ((_x select 1) == _typeId) exitWith { _dn = _x select 0 } } forEach _missionList;
+                _dn
             };
-            _status ctrlSetText (_globalStr + " | " + _singleStr);
-            _status ctrlSetTextColor [0.85, 0.9, 0.85, 1];
+            private _ownerStr = {
+                params ["_o"];
+                if (!isNull _o) then { name _o } else { "?" }
+            };
+            private _nl = toString [10];
+            private _slotGlobal = _display displayCtrl 60130;
+            if (!isNull _slotGlobal) then {
+                if (count _global >= 2) then {
+                    private _type = _global select 0;
+                    private _owner = _global select 1;
+                    private _n = [_type] call _displayName;
+                    private _oStr = [_owner] call _ownerStr;
+                    _slotGlobal ctrlSetText (_n + _nl + "Started by: " + _oStr);
+                } else {
+                    _slotGlobal ctrlSetText ("No mission active." + _nl + "(Global slot is free.)");
+                };
+                _slotGlobal ctrlEnable false;
+            };
+            private _singleIdcs = [60134, 60135, 60136];
+            {
+                private _c = _display displayCtrl _x;
+                private _entry = _singleList param [_forEachIndex, []];
+                if (!isNull _c) then {
+                    if (count _entry >= 2) then {
+                        _entry params ["_t", "_o"];
+                        private _n = [_t] call _displayName;
+                        private _oStr = [_o] call _ownerStr;
+                        _c ctrlSetText (_n + _nl + "Started by: " + _oStr);
+                    } else {
+                        _c ctrlSetText ("No mission in this slot.");
+                    };
+                    _c ctrlEnable false;
+                };
+            } forEach _singleIdcs;
             ["refreshDescription", []] call FAC_missionsGui_fnc;
             ["updateButtons", []] call FAC_missionsGui_fnc;
         };
@@ -127,9 +185,20 @@ FAC_missionsGui_fnc = {
             private _missionLb = _display displayCtrl 60120;
             private _startBtn = _display displayCtrl 60121;
             private _abortBtn = _display displayCtrl 60122;
+            private _copilotSpawnBtn = _display displayCtrl 60141;
+            private _copilotRemoveBtn = _display displayCtrl 60142;
             private _global = missionNamespace getVariable ["FADE_globalMission", []];
             private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
-            private _playerHasMission = (count _global >= 2 && { _global select 1 == player }) || { { _x select 1 == player } count _singleList > 0 };
+            private _uid = getPlayerUID player;
+            private _playerHasMission = (
+                count _global >= 2 && {
+                    (_global select 1 == player) || { (_global param [3, ""]) == _uid }
+                }
+            ) || {
+                {
+                    ((_x param [1, objNull]) == player) || { (_x param [3, ""]) == _uid }
+                } count _singleList > 0
+            };
             private _idx = lbCurSel _missionLb;
             private _canStart = lbSize _missionLb > 0 && { _idx >= 0 } && { !_playerHasMission };
             if (_canStart && { _idx >= 0 }) then {
@@ -142,10 +211,15 @@ FAC_missionsGui_fnc = {
             };
             _startBtn ctrlEnable _canStart;
             _abortBtn ctrlEnable _playerHasMission;
+            private _hasCopilot = missionNamespace getVariable ["FAC_missions_hasCopilot", false];
+            if (!isNull _copilotSpawnBtn) then { _copilotSpawnBtn ctrlEnable (!_hasCopilot) };
+            if (!isNull _copilotRemoveBtn) then { _copilotRemoveBtn ctrlEnable _hasCopilot };
         };
         case "missionSelChanged": {
             ["refreshDescription", []] call FAC_missionsGui_fnc;
         };
+        // Description: shows *your* FADE_myMissionBrief while you have an active mission; otherwise the
+        // static blurb for the currently selected list row. It does not merge or rotate multiple active missions.
         case "refreshDescription": {
             if (isNull _display) exitWith {};
             private _descCtrl = _display displayCtrl 60131;

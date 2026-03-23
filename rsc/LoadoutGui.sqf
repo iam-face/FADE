@@ -1,5 +1,5 @@
 // =============================================================================
-// LoadoutGui.sqf — Loadout selection dialog
+// LoadoutGui.sqf - Loadout selection dialog
 // =============================================================================
 // Allows players to change their loadout by selecting from all infantry units
 // of the same side. Supports filtering by faction. CTB presets appear at top when available.
@@ -174,6 +174,42 @@ FAC_loadoutGui_getUnitPicture = {
     _pic
 };
 
+FAC_loadoutGui_tryAddRadio = {
+    params ["_class", "_label"];
+    if (!isClass (configFile >> "CfgWeapons" >> _class)) exitWith {
+        systemChat format ["%1 is not available (class missing): %2", _label, _class];
+    };
+    if (player canAdd _class) then {
+        player addItem _class;
+        systemChat format ["Added %1.", _label];
+    } else {
+        systemChat format ["Cannot add %1: no inventory space.", _label];
+    };
+};
+
+// Build a concrete loadout array from a unit class by spawning a hidden local template unit.
+// This avoids edge cases where setUnitLoadout with classname omits container contents.
+FAC_loadoutGui_getLoadoutFromClass = {
+    params ["_class"];
+    if (_class == "" || { !isClass (configFile >> "CfgVehicles" >> _class) }) exitWith { [] };
+
+    private _grp = createGroup [side player, true];
+    private _tmp = objNull;
+    private _loadout = [];
+
+    _tmp = _grp createUnit [_class, [0,0,0], [], 0, "CAN_COLLIDE"];
+    if (!isNull _tmp) then {
+        _tmp hideObject true;
+        _tmp allowDamage false;
+        _tmp enableSimulation false;
+        _loadout = getUnitLoadout _tmp;
+        deleteVehicle _tmp;
+    };
+    deleteGroup _grp;
+
+    _loadout
+};
+
 FAC_loadoutGui_fnc = {
     params ["_action", "_params"];
     private _display = findDisplay 60200;
@@ -219,17 +255,18 @@ FAC_loadoutGui_fnc = {
                 private _display = findDisplay 60200;
                 if (isNull _display) exitWith {};
 
-                // Build unique factions for filter
+                // Build unique factions for filter; sort A–Z by display name (not internal key)
                 private _factions = [];
                 { if ((_x select 2) != "" && { !((_x select 2) in _factions) }) then { _factions pushBack (_x select 2) } } forEach _allUnits;
-                _factions sort true;
+                private _factionRows = _factions apply { [[_x] call FAC_loadoutGui_getFactionDisplayName, _x] };
+                _factionRows sort true;
 
                 private _factionList = _display displayCtrl 60210;
                 lbClear _factionList;
                 private _idx = _factionList lbAdd "All factions";
                 _factionList lbSetData [_idx, ""];
                 _factionList lbSetCurSel 0;
-                { private _dn = [_x] call FAC_loadoutGui_getFactionDisplayName; _idx = _factionList lbAdd _dn; _factionList lbSetData [_idx, _x] } forEach _factions;
+                { _x params ["_dn", "_key"]; _idx = _factionList lbAdd _dn; _factionList lbSetData [_idx, _key] } forEach _factionRows;
 
                 ["filterChanged", []] call FAC_loadoutGui_fnc;
                 ["updateSaveStatus", []] call FAC_loadoutGui_fnc;
@@ -292,8 +329,15 @@ FAC_loadoutGui_fnc = {
             private _class = _unitLb lbData _idx;
             if (_class == "") exitWith {};
 
-            player setUnitLoadout _class;
-            systemChat format ["My loadout applied: %1", _unitLb lbText _idx];
+            private _resolvedLoadout = [_class] call FAC_loadoutGui_getLoadoutFromClass;
+            if (_resolvedLoadout isEqualType [] && { count _resolvedLoadout > 0 }) then {
+                player setUnitLoadout _resolvedLoadout;
+                systemChat format ["My loadout applied: %1", _unitLb lbText _idx];
+            } else {
+                // Fallback for unusual class configs where template unit creation failed.
+                player setUnitLoadout _class;
+                systemChat format ["My loadout applied (fallback): %1", _unitLb lbText _idx];
+            };
         };
 
         case "saveLoadout": {
@@ -312,6 +356,14 @@ FAC_loadoutGui_fnc = {
             };
             player setUnitLoadout _saved;
             systemChat "Saved loadout restored.";
+        };
+
+        case "addRadio343": {
+            ["ACRE_PRC343", "ACRE 343"] call FAC_loadoutGui_tryAddRadio;
+        };
+
+        case "addRadio152": {
+            ["ACRE_PRC152", "ACRE 152"] call FAC_loadoutGui_tryAddRadio;
         };
 
         case "updateSaveStatus": {

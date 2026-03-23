@@ -1,5 +1,5 @@
 // =============================================================================
-// AOMission.sqf — Area of Operations: 2 km x 2 km square zone, 3 capture points,
+// AOMission.sqf - Area of Operations: 2 km x 2 km square zone, 3 capture points,
 // BLUFOR vs OPFOR. AO center from CIV zone >= 2500m from base (never overlap base).
 // Runs on server. Params from FADE_aoParams: [_player, _destPos, _taskId, _basePos, _friendlyUnits, _enemyUnits]
 // =============================================================================
@@ -56,7 +56,7 @@ if ((_destPos distance _basePos) < _minDistFromBase) then {
     if (_fallback isEqualType [] && { count _fallback >= 2 }) then { _destPos = _fallback; if (count _destPos < 3) then { _destPos set [2, 0] } };
 };
 if ((_destPos distance _basePos) < _minDistFromBase) exitWith {
-    [_player] call FADE_clearActiveMission;
+    [_player, _taskId] call FADE_clearActiveMission;
     [format ["<t size='1.2' color='#FF6666'>AO ERROR</t><br/><br/><t color='#E0E0E0'>No area of operations found at least %1 m from base. Try again.</t>", _minDistFromBase]] remoteExec ["FADE_showMissionHint", _player];
 };
 
@@ -64,7 +64,7 @@ if ((_destPos distance _basePos) < _minDistFromBase) exitWith {
 private _zoneHalfWidth = 1000;   // half-size each axis = 2 km x 2 km square
 private _zoneHalfDepth = 1000;
 private _captureRadius = 50;
-private _attackDir = (floor random 4) * 90;  // Random cardinal: 0=E, 90=S, 180=W, 270=N — BLUFOR spawn on this edge, attack toward opposite
+private _attackDir = (floor random 4) * 90;  // Random cardinal: 0=E, 90=S, 180=W, 270=N - BLUFOR spawn on this edge, attack toward opposite
 
 // Task for all players
 private _others = allPlayers select { !isNull _x && { _x != _player } };
@@ -117,7 +117,7 @@ private _objSpecs = [
     _points pushBack _pos;
 } forEach _objSpecs;
 
-// Composition at OBJ 1 and OBJ 3 only (Cargo-style: [classname, dist, angle, dirOffset]). OBJ 2 is urban — no composition.
+// Composition at OBJ 1 and OBJ 3 only (Cargo-style: [classname, dist, angle, dirOffset]). OBJ 2 is urban - no composition.
 private _aoCompositionObjects = [];
 private _objComposition = [
     ["Land_TentA_F", 8, 0, 0],
@@ -193,7 +193,7 @@ private _bluEdgeCenter = [_destPos, _zoneHalfDepth + 100, _attackDir] call BIS_f
     private _objPos = _x;
     private _objIdx = _forEachIndex;
 
-    // Guard group(s) at OBJ — spread positions (40–110 m, double previous dispersion), ambient combat anim like HVT/Hostage/Clear Area
+    // Guard group(s) at OBJ - spread positions (40–110 m, double previous dispersion), ambient combat anim like HVT/Hostage/Clear Area
     private _numGuard = if (_aoStrength == "High") then { 2 } else { 1 };
     private _guardMin = if (_aoStrength == "Low") then { 3 } else { 6 };
     private _guardMax = if (_aoStrength == "Low") then { 6 } else { 10 };
@@ -218,7 +218,7 @@ private _bluEdgeCenter = [_destPos, _zoneHalfDepth + 100, _attackDir] call BIS_f
         _opforGroups pushBack _staticGrp;
     };
 
-    // Patrol groups — count and size by strength; spawn 250 m from OBJ, waypoints with 100 m per-group dispersion
+    // Patrol groups - count and size by strength; spawn 250 m from OBJ, waypoints with 100 m per-group dispersion
     private _numPatrol = switch (_aoStrength) do { case "Low": { 2 }; case "Medium": { 3 }; default { 4 }; };
     private _patrolMin = 4;
     private _patrolMax = 8;
@@ -362,7 +362,7 @@ for "_g" from 0 to (1 + floor random 2) do {
 private _aoAllGroups = _bluGroups + _opforGroups;
 missionNamespace setVariable ["FADE_aoEntities_" + _taskId, [_aoAllGroups, _aoCompositionObjects]];
 
-// JTAC unit (BLUFOR, faction from config GUI) — independent of assault BLUFOR; moves to high ground between objectives as each is captured. Respawns when wiped.
+// JTAC unit (BLUFOR, faction from config GUI) - independent of assault BLUFOR; moves to high ground between objectives as each is captured. Respawns when wiped.
 private _fnc_startJtacMovement = {
     params ["_jtacGrp", "_points", "_destPos", "_zoneHalfDepth", "_zoneHalfWidth", "_attackDir", "_captureRadius", "_taskId"];
     [_jtacGrp, _points, _destPos, _zoneHalfDepth, _zoneHalfWidth, _attackDir, _captureRadius, _taskId] spawn {
@@ -692,7 +692,7 @@ sleep 60;
 { if (!isNull _x) then { deleteVehicle _x } } forEach _aoCompositionObjects;
 missionNamespace setVariable ["FADE_aoMarkers_" + _taskId, nil];
 missionNamespace setVariable ["FADE_aoEntities_" + _taskId, nil];
-[_player] call FADE_clearActiveMission;
+[_player, _taskId] call FADE_clearActiveMission;
 missionNamespace setVariable ["FADE_currentMissionType", ""];
 missionNamespace setVariable ["FADE_currentMissionPlayer", objNull];
 publicVariable "FADE_currentMissionType";

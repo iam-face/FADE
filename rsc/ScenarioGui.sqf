@@ -1,5 +1,5 @@
 // =============================================================================
-// ScenarioGui.sqf — Scenario settings (weather, time, factions)
+// ScenarioGui.sqf - Scenario settings (weather, time, factions)
 // =============================================================================
 // Allows players to manage scenario-wide settings: weather, time of day,
 // enemy faction, friendly faction, civilian faction. Other scripts use these
@@ -94,7 +94,7 @@ FAC_scenarioGui_fnc = {
             } forEach FAC_scenarioGui_weatherPresets;
             if (lbSize _weatherList > 0) then { _weatherList lbSetCurSel _weatherSel };
 
-            // Friendly factions (BLUFOR = side 1) — first column
+            // Friendly factions (BLUFOR = side 1) - first column
             private _friendlyList = _display displayCtrl 60311;
             lbClear _friendlyList;
             private _friendlyFactions = [1] call FAC_scenarioGui_getFactionsForSide;
@@ -108,7 +108,7 @@ FAC_scenarioGui_fnc = {
             } forEach _friendlyFactions;
             if (lbSize _friendlyList > 0) then { _friendlyList lbSetCurSel _friendlySel };
 
-            // Enemy factions (OPFOR = side 0) — second column
+            // Enemy factions (OPFOR = side 0) - second column
             private _enemyList = _display displayCtrl 60310;
             lbClear _enemyList;
             private _enemyFactions = [0] call FAC_scenarioGui_getFactionsForSide;
@@ -122,7 +122,7 @@ FAC_scenarioGui_fnc = {
             } forEach _enemyFactions;
             if (lbSize _enemyList > 0) then { _enemyList lbSetCurSel _enemySel };
 
-            // Civilian factions (side 3) — third column
+            // Civilian factions (side 3) - third column
             private _civList = _display displayCtrl 60312;
             lbClear _civList;
             private _civFactions = [3] call FAC_scenarioGui_getFactionsForSide;

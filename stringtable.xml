@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project name="FAC_HeliOps">
+    <!-- Mods (e.g. Sig_factions_data / RHS) sometimes reference RHS strings that are missing from their addon; mission provides a fallback. -->
+    <Package name="FAC_HeliOps">
+        <Container name="rhs_fallback">
+            <Key ID="STR_RHS_FAC_VDV_45">
+                <Original>VDV</Original>
+                <English>VDV</English>
+            </Key>
+        </Container>
+    </Package>
+</Project>

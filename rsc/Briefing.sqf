@@ -8,18 +8,19 @@
 // -----------------------------------------------------------------------------
 // Diary subject: Notes (for reference material)
 // -----------------------------------------------------------------------------
-player createDiarySubject ["FAC_Notes", "Notes"];
+player createDiarySubject ["FAC_Notes", "CTB Notes"];
+private _facNotes = [];
 
 // -----------------------------------------------------------------------------
 // Note: RATEL - Radio Telephone Procedure (CTB standard)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["RATEL (Radio Procedure)", "
+_facNotes pushBack ["RATEL (Radio Procedure)", "
 <font color='#FFD700' size='14'>RADIO TELEPHONE PROCEDURE</font><br/><br/>
 All AI and player radio traffic in FADE follows CTB RATEL. Use this format so comms stay clear and consistent.<br/><br/>
 
 <font color='#87CEEB'>STANDARD FORMAT</font><br/>
-<font color='#90EE90'>Called station, this is [Your callsign]. [Message]. Over.</font> — When you expect a reply (e.g. request, question).<br/>
-<font color='#90EE90'>Called station, this is [Your callsign]. [Message]. Out.</font> — End of transmission; no reply expected.<br/><br/>
+<font color='#90EE90'>Called station, this is [Your callsign]. [Message]. Over.</font> - When you expect a reply (e.g. request, question).<br/>
+<font color='#90EE90'>Called station, this is [Your callsign]. [Message]. Out.</font> - End of transmission; no reply expected.<br/><br/>
 
 <font color='#87CEEB'>EXAMPLES</font><br/>
 ''RZ, this is Bravo 2-1. We're at Grid 123456, awaiting pickup. Over.''<br/>
@@ -27,23 +28,23 @@ All AI and player radio traffic in FADE follows CTB RATEL. Use this format so co
 ''RZ, this is Bravo 2-1. All aboard. Ready for liftoff. Over.''<br/><br/>
 
 <font color='#87CEEB'>OVER vs OUT</font><br/>
-<font color='#90EE90'>Over</font> — I have finished speaking and am waiting for your reply.<br/>
-<font color='#90EE90'>Out</font> — This transmission is finished; no reply expected. Use when closing the conversation or sending a one-way update.
-"]];
+<font color='#90EE90'>Over</font> - I have finished speaking and am waiting for your reply.<br/>
+<font color='#90EE90'>Out</font> - This transmission is finished; no reply expected. Use when closing the conversation or sending a one-way update.
+"];
 
 // -----------------------------------------------------------------------------
 // Note: Area of Operations and Artillery
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["Area of Operations and Artillery", "
+_facNotes pushBack ["Area of Operations and Artillery", "
 <font color='#FFD700' size='14'>AO MISSION AND FIRES SUPPORT</font><br/><br/>
 The <font color='#90EE90'>Area of Operations</font> mission (Manage Missions) creates a 2 km x 2 km zone with three capture points. BLUFOR assault from one cardinal side; a JTAC unit is on station and will call in CAS using CTB 5-line style. Secure all three objectives to complete.<br/><br/>
 <font color='#87CEEB'>Player-directed artillery</font> (fire missions requested by players, with AI gun line and CTB-style acknowledgements) is planned; when implemented it will follow the Call for Fire (CFF) and artillery procedures in these Notes.
-"]];
+"];
 
 // -----------------------------------------------------------------------------
 // Note: Terminology and Brevity Codes (source: CTB Joint Fires doc)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["Terminology and Brevity Codes", "
+_facNotes pushBack ["Terminology and Brevity Codes", "
 <font color='#FFD700' size='14'>GLOSSARY AND PROCEDURE TERMS</font><br/><br/>
 Standard acronyms and commands for JFO/JTAC, GPO and pilot coordination. Source: Joint Fires Observer / JTAC reference.<br/><br/>
 
@@ -65,12 +66,12 @@ Dedicated frequency for JFO/JTAC and indirect/air assets only. All other callsig
 
 <font color='#87CEEB'>OTHER</font><br/>
 MSR  - Main supply route. ASR  - Alternative supply route. LASE/LASING  - Using weapon-mounted laser or Laser Target Designator to mark. REST  - Gun line may stand down briefly. CANCEL REST  - Gun line return to readiness. CONTINUOUS FIRE  - All pieces fire on current target until check fire or ammunition expended. BDA  - Battle damage assessment. Splash  - Ordnance impact (call ''Splash'' or ''Splash in 5'' for time to impact).
-"]];
+"];
 
 // -----------------------------------------------------------------------------
 // Note: Control Measures (source: CTB Joint Fires doc)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["Control Measures", "
+_facNotes pushBack ["Control Measures", "
 <font color='#FFD700' size='14'>CONTROL MEASURES FOR JOINT FIRES</font><br/><br/>
 Measures used to deconflict and control fires; coordinate with mission leadership and ground forces. Source: Joint Fires Observer / JTAC reference.<br/><br/>
 
@@ -94,12 +95,12 @@ Designates an area of particular reference. In joint fires context, NAIs give a 
 
 <font color='#87CEEB'>RESTRICTIVE MEASURES</font><br/>
 No-fire area (NFA), restrictive fire area (RFA), weapons control status. Danger close: declare when friendlies are within minimum safe distance; adjust or reduce charge per SOP. Abort criteria: conditions under which attack is aborted (e.g. friendlies in sector, loss of mark).
-"]];
+"];
 
 // -----------------------------------------------------------------------------
 // Note: Joint Fires Roles (source: CTB Joint Fires doc)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["Joint Fires Roles", "
+_facNotes pushBack ["Joint Fires Roles", "
 <font color='#FFD700' size='14'>JOINT FIRES ROLES  - JFO, JTAC AND GPO</font><br/><br/>
 Source: Joint Fires Observer / JTAC reference.<br/><br/>
 
@@ -114,12 +115,12 @@ Runs the gun line (mortars/artillery). Communicates with deployed JFO/JTAC via f
 
 <font color='#87CEEB'>REQUESTING FIRES (NON-JFO/JTAC)</font><br/>
 In general, section commanders request supporting fires via the platoon commander, who forwards to JFO/JTAC. This keeps the fires net clear for JFO/JTAC during complex situations. Section commanders pass enemy information to the platoon commander; suggest fire missions through the chain. Providing an 8-figure grid (or preplanned TRPs) speeds the request.
-"]];
+"];
 
 // -----------------------------------------------------------------------------
 // Note: Call for Fire / Artillery (source: CTB Joint Fires doc)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["Call for Fire (CFF) / Artillery", "
+_facNotes pushBack ["Call for Fire (CFF) / Artillery", "
 <font color='#FFD700' size='14'>INDIRECT FIRES  - CALL FOR FIRE</font><br/><br/>
 Indirect fires: mortars, artillery, MLRS/HIMARS. CFF passes clear, accurate instructions to the gun line. <font color='#90EE90'>Every message must be read back word for word</font> by GPO/mortar SL to avoid errors (e.g. wrong grid). Source: Joint Fires Observer / JTAC reference.<br/><br/>
 
@@ -157,12 +158,12 @@ Mortars (sub 100 mm, e.g. 82 mm): Auspost. Howitzers (105-155 mm): Fedex. MLRS/g
 
 <font color='#87CEEB'>SILENT MARKING</font><br/>
 Anyone in the AO can silent mark: scan for enemy/friendly/civilian; mark items of interest on map with 8-figure grid and description. Report significant finds to manoeuvre commander. Data can be passed to fires units for pre-planned solutions. Use ''GROUP'' for map marks to avoid cluttering shared map; seek permission to mark for all friendlies.
-"]];
+"];
 
 // -----------------------------------------------------------------------------
 // Note: CCA/CAS 5-Line Call for Fire (source: CTB Joint Fires doc)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["CCA/CAS 5-Line Call for Fire", "
+_facNotes pushBack ["CCA/CAS 5-Line Call for Fire", "
 <font color='#FFD700' size='14'>SIMPLIFIED 5-LINE FOR CCA AND CAS</font><br/><br/>
 Condensed from standard 9-line for CCA (rotary, close combat attack, within ~5 km) and CAS (fixed-wing). After the initial call is acknowledged, callsigns may be shortened. Source: Joint Fires Observer / JTAC reference.<br/><br/>
 
@@ -183,12 +184,12 @@ Danger close; At my command; restrictions (e.g. ''Can be engaged by HMG from SE,
 
 <font color='#FFD700'>CCA vs CAS</font><br/>
 CCA  - Rotary-wing within proximity of friendlies; quick manoeuvre; any armed rotary can be used; often in pairs (Air Weapons Team). CAS  - Fixed-wing; larger punch, longer set-up; lasing speeds coordination but talk-on is often used; fixed-wing also typically in pairs when available.
-"]];
+"];
 
 // -----------------------------------------------------------------------------
 // Note: Marking (Friendly and Enemy) (source: CTB Joint Fires doc)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["Marking (Friendly and Enemy)", "
+_facNotes pushBack ["Marking (Friendly and Enemy)", "
 <font color='#FFD700' size='14'>MARKING FRIENDLY AND ENEMY LOCATIONS</font><br/><br/>
 Source: Joint Fires Observer / JTAC reference. Brief supporting callsigns on smoke/mark colours at mission start; state any changes as soon as practical.<br/><br/>
 
@@ -200,12 +201,12 @@ Tracer (state colour); smoke  - thrown, 40 mm, 60 mm, 81 mm, 105 mm, 155 mm  - i
 
 <font color='#87CEEB'>TARGET TALK-ON</font><br/>
 Used when mark or lase is not available. Go <font color='#90EE90'>large to small</font>: use terrain, infrastructure, structures or vehicles near the target, then narrow with increasing detail so the pilot builds a picture. Ask the pilot for a <font color='#90EE90'>mini talk-on</font>  - they describe something near the target so you confirm everyone is looking at the same spot. If the pilot acquires the target early, confirm by asking them to describe something adjacent; if it matches, proceed to engagement without finishing the full talk-on.
-"]];
+"];
 
 // -----------------------------------------------------------------------------
 // Note: Air Support Coordination (source: CTB Joint Fires doc)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["Air Support Coordination", "
+_facNotes pushBack ["Air Support Coordination", "
 <font color='#FFD700' size='14'>AIR SUPPORT  - RADIO CHECK, CHECK-IN, SIT UPDATE</font><br/><br/>
 Source: Joint Fires Observer / JTAC reference. Ground: be patient until aircraft are on station and call. Air: wait until ~3-4 km from AO before radio check.<br/><br/>
 
@@ -223,12 +224,12 @@ After check-in. JFO/JTAC gives: callsign and location of friendlies; friendly ve
 
 <font color='#87CEEB'>SHOW OF FORCE</font><br/>
 Request a show of force over a point to confirm pilot has correct approach and target, or to distract/scare the enemy. Specify direction and height. Also used in EW when jamming is suspected (see Electronic Warfare note).
-"]];
+"];
 
 // -----------------------------------------------------------------------------
 // Note: LZs, EZs and Supply Drops (source: CTB Joint Fires doc)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["LZs, EZs and Supply Drops", "
+_facNotes pushBack ["LZs, EZs and Supply Drops", "
 <font color='#FFD700' size='14'>LANDING ZONES, EXFIL ZONES AND SUPPLY DROPS</font><br/><br/>
 Organise in advance where possible with the pilots who will conduct the task. JFO/JTAC can only request; pilot decides go/no-go after weighing risks. If pilot deems area too risky they can suggest an alternative. Source: Joint Fires Observer / JTAC reference.<br/><br/>
 
@@ -241,12 +242,12 @@ LZ/EZ should have clear approach and egress for the airframe and, if possible, n
 - <font color='#90EE90'>Locate</font>  - Suitable LZ: cover, clear approach/egress, space for the airframe.<br/>
 - <font color='#90EE90'>Communicate</font>  - Situation and LZ to air; threats (enemy and environmental); pilot approves or declines.<br/>
 - <font color='#90EE90'>Organise</font>  - Plan so ground and air have the best chance of success; minimise delay (aircraft are vulnerable on the ground).
-"]];
+"];
 
 // -----------------------------------------------------------------------------
 // Note: Emergency Fire Mission (source: CTB Joint Fires doc)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["Emergency Fire Mission (EFM)", "
+_facNotes pushBack ["Emergency Fire Mission (EFM)", "
 <font color='#FFD700' size='14'>EMERGENCY FIRE MISSION  - WHEN JFO/JTAC IS UNAVAILABLE</font><br/><br/>
 For dire circumstances only. Normally only JFO/JTAC organises assets, triages targets and calls fires. If JFO/JTAC is killed and a section urgently needs coordinated joint fires, use the following. Source: Joint Fires Observer / JTAC reference.<br/><br/>
 
@@ -264,12 +265,12 @@ Include: rough enemy size (section, platoon, etc.); vehicles; cover; rough footp
 
 <font color='#87CEEB'>EXAMPLE (DESTRUCTION)</font><br/>
 1-0: ''FedEx this is 1-0, Emergency Fire Mission Destruction, over.'' FedEx: ''1-0 this is FedEx, Emergency Fire Mission send, over.'' 1-0: ''FedEx this is 1-0, GR 1234 5678, section in the open 50x50.'' FedEx: ''1-0 this is FedEx, GR 1234 5678 section in the open 50x50, preparing EFM standby for Shot, over.'' FedEx: ''1-0 this is FedEx Shot time of flight 25 over.'' 1-0: ''FedEx this is 1-0 roger Shot time of flight 25 over.'' Later: 1-0: ''FedEx this is 1-0 End of mission target neutralised/suppressed/withdraw [direction].''
-"]];
+"];
 
 // -----------------------------------------------------------------------------
 // Note: Electronic Warfare (source: CTB Joint Fires doc)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["Electronic Warfare (Jamming)", "
+_facNotes pushBack ["Electronic Warfare (Jamming)", "
 <font color='#FFD700' size='14'>OPERATING WHEN RADIOS ARE JAMMED</font><br/><br/>
 Enemy EW can jam radio. You may not be briefed in advance. Key point: <font color='#90EE90'>EW is range-limited</font>. You on the ground may be jammed and unable to receive, but you can still <font color='#90EE90'>transmit</font>; assets outside the jamming bubble can still receive your messages. Source: Joint Fires Observer / JTAC reference.<br/><br/>
 
@@ -278,12 +279,12 @@ Enemy EW can jam radio. You may not be briefed in advance. Key point: <font colo
 2. Send a further transmission with a <font color='#90EE90'>situation update</font> that you believe you are being jammed.<br/>
 3. If safe: ask the pilot to conduct a <font color='#90EE90'>show of force</font> or deploy flares over a position. That confirms they can hear you and that you are not receiving their replies.<br/>
 4. Continue normal engagement procedures with the asset; they will not be able to speak to you. As JFO/JTAC you must know friendly and enemy positions precisely before engaging.
-"]];
+"];
 
 // -----------------------------------------------------------------------------
 // Note: 9-Line JTAC Call-in (full NATO standard; see also CCA/CAS 5-Line)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Notes", ["9-Line JTAC Call-in", "
+_facNotes pushBack ["9-Line JTAC Call-in", "
 <font color='#FFD700' size='14'>STANDARD 9-LINE CAS FORMAT (NATO)</font><br/><br/>
 Full format for JTAC and pilot coordination. Many scenarios use a simplified 5-line (see <font color='#FFD700'>CCA/CAS 5-Line Call for Fire</font>). Transmit in order; read back as required. Aligned with Joint Fires Observer / JTAC reference.<br/><br/>
 
@@ -335,7 +336,58 @@ Full format for JTAC and pilot coordination. Many scenarios use a simplified 5-l
 <font color='#FFD700'>PROCEDURE</font><br/>
 JTAC: Transmit clearly; confirm or repeat lines on request; update if situation changes.<br/>
 Pilot: Read back as required; call ''In'', ''Off'', ''Splash'' and egress; request re-attack or BDA as needed.
-"]];
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Rotary Piloting 101
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Rotary Piloting 101", "
+<font color='#FFD700' size='14'>ROTARY PILOTING 101</font><br/><br/>
+
+This sandbox supports multiple training strands -<font color='#90EE90'>piloting</font>, joint fires, infantry and combined arms. This section focuses on <font color='#90EE90'>rotary-wing</font> standards. Use it when your training focus is aircrew; for joint fires and CAS procedures, see the <font color='#FFD700'>CTB Notes</font> tab.<br/><br/>
+
+Rotary-wing assets are high-value enablers that carry significant responsibility. Misuse or poor discipline in the pilot role can compromise mission flow, endanger personnel and undermine the intent of the operation. The role is highly sought after; the standards and responsibilities that come with it are non-negotiable.<br/><br/>
+
+A rotary pilot must be <font color='#90EE90'>disciplined, skilled and competent</font>. Taking the role seriously means consistent dedication and commitment: substantial out-of-mission practice so that in-mission performance is safe, predictable and aligned with ground elements. The following areas require demonstrated competency.<br/><br/>
+
+<font color='#87CEEB'>FUNDAMENTAL FLIGHT</font><br/>
+- Basic flight  - Stable hover, translational lift, autorotation awareness, and confident handling in all phases (take-off, cruise, approach, landing).<br/>
+- Evasive and defensive flight  - Terrain masking, nap-of-the-earth (NOE) where appropriate, and manoeuvring to reduce exposure to threats without compromising the mission.<br/>
+- Role-appropriate flight  - Logistical flight (smooth, predictable, passenger- and cargo-focused) versus air support flight (attack profiles, run-in and egress, weapon employment).<br/><br/>
+
+<font color='#87CEEB'>THREATS AND AIRFRAME LIMITATIONS</font><br/>
+- Enemy threats  - Small arms, AAA, MANPADS and other ADA; know effective ranges and countermeasures; respect threat rings and exclusion criteria.<br/>
+- Environmental threats  - Weather (visibility, wind, precipitation), terrain (obstacles, wires, confined LZs), and day/night limitations of your airframe and crew.<br/>
+- Know your aircraft  - Performance envelope, payload limits, single-engine or system failures where applicable, and when to abort or turn back.<br/><br/>
+
+<font color='#87CEEB'>PRE-MISSION PLANNING</font><br/>
+Coordinate with mission leadership (flight coordinator, platoon lead or lead pilot) as required:<br/>
+- Flight paths  - Routes in and out of the AO; avoid known threats and restricted areas.<br/>
+- Exclusion zones  - No-fly or restricted areas; altitude limits; weapons-free vs weapons-tight.<br/>
+- Infil and exfil points  - Primary and alternate LZs; timing and sequencing with ground forces.<br/>
+- Weapon loadouts  - Restrictions (e.g. no ordnance near friendlies); correct ordnance for the task; safe separation and egress.<br/><br/>
+
+<font color='#87CEEB'>NAVIGATION</font><br/>
+- Situational awareness  - Position relative to objective, friendlies and threats; fuel and time; when to request updated tasking or RTB.<br/>
+- Map reading  - Grid references, terrain association, and ability to brief and follow routes without sole reliance on GPS or automation.<br/><br/>
+
+<font color='#87CEEB'>COMMUNICATIONS</font><br/>
+- Flight coordination  - Clear, concise comms with mission leadership and lead pilot; acknowledge tasking and report status (inbound, on station, RTB).<br/>
+- Crew communications  - Coordination with crew (e.g. door gunners, crew chief) for threat call-outs and cabin/load management.<br/>
+- Passenger communications  - Brief passengers on timings, LZ behaviour and emergency procedures where relevant.<br/><br/>
+
+<font color='#87CEEB'>MISSION FLOW AND INTENT</font><br/>
+Respect the mission flow and the intent of the operation. Understand your own abilities and the capability of your airframe; exercise restraint so that employment of rotary assets supports a positive and coherent experience for ground forces and other players. Do not exceed briefed limits or take unnecessary risk that could compromise the mission.
+"];
+
+// Sort by display name (case-insensitive). Diary shows newest first, so create in reverse.
+private _sortedFacNotes = _facNotes apply { [toLower (_x select 0), _x] };
+_sortedFacNotes sort true;
+_sortedFacNotes = _sortedFacNotes apply { _x select 1 };
+reverse _sortedFacNotes;
+{
+    player createDiaryRecord ["FAC_Notes", _x];
+} forEach _sortedFacNotes;
 
 // -----------------------------------------------------------------------------
 // Diary subject: Scenario Brief (distinct from vanilla "Briefing" in map menu)
@@ -371,48 +423,6 @@ Report to the loadout station for kit selection (Manage Loadout). If ACE3 is loa
 
 <font color='#87CEEB'>RESPAWN</font><br/>
 Personnel respawn at the FOB. Use the map to open this Scenario Brief and the Notes tab for joint fires and CAS reference.
-"]];
-
-// -----------------------------------------------------------------------------
-// Scenario Brief: Rotary Piloting 101
-// -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Briefing", ["Rotary Piloting 101", "
-<font color='#FFD700' size='14'>ROTARY PILOTING 101</font><br/><br/>
-
-This sandbox supports multiple training strands -<font color='#90EE90'>piloting</font>, joint fires, infantry and combined arms. This section focuses on <font color='#90EE90'>rotary-wing</font> standards. Use it when your training focus is aircrew; for joint fires and CAS procedures, see the <font color='#FFD700'>Notes</font> tab.<br/><br/>
-
-Rotary-wing assets are high-value enablers that carry significant responsibility. Misuse or poor discipline in the pilot role can compromise mission flow, endanger personnel and undermine the intent of the operation. The role is highly sought after; the standards and responsibilities that come with it are non-negotiable.<br/><br/>
-
-A rotary pilot must be <font color='#90EE90'>disciplined, skilled and competent</font>. Taking the role seriously means consistent dedication and commitment: substantial out-of-mission practice so that in-mission performance is safe, predictable and aligned with ground elements. The following areas require demonstrated competency.<br/><br/>
-
-<font color='#87CEEB'>FUNDAMENTAL FLIGHT</font><br/>
-- Basic flight  - Stable hover, translational lift, autorotation awareness, and confident handling in all phases (take-off, cruise, approach, landing).<br/>
-- Evasive and defensive flight  - Terrain masking, nap-of-the-earth (NOE) where appropriate, and manoeuvring to reduce exposure to threats without compromising the mission.<br/>
-- Role-appropriate flight  - Logistical flight (smooth, predictable, passenger- and cargo-focused) versus air support flight (attack profiles, run-in and egress, weapon employment).<br/><br/>
-
-<font color='#87CEEB'>THREATS AND AIRFRAME LIMITATIONS</font><br/>
-- Enemy threats  - Small arms, AAA, MANPADS and other ADA; know effective ranges and countermeasures; respect threat rings and exclusion criteria.<br/>
-- Environmental threats  - Weather (visibility, wind, precipitation), terrain (obstacles, wires, confined LZs), and day/night limitations of your airframe and crew.<br/>
-- Know your aircraft  - Performance envelope, payload limits, single-engine or system failures where applicable, and when to abort or turn back.<br/><br/>
-
-<font color='#87CEEB'>PRE-MISSION PLANNING</font><br/>
-Coordinate with mission leadership (flight coordinator, platoon lead or lead pilot) as required:<br/>
-- Flight paths  - Routes in and out of the AO; avoid known threats and restricted areas.<br/>
-- Exclusion zones  - No-fly or restricted areas; altitude limits; weapons-free vs weapons-tight.<br/>
-- Infil and exfil points  - Primary and alternate LZs; timing and sequencing with ground forces.<br/>
-- Weapon loadouts  - Restrictions (e.g. no ordnance near friendlies); correct ordnance for the task; safe separation and egress.<br/><br/>
-
-<font color='#87CEEB'>NAVIGATION</font><br/>
-- Situational awareness  - Position relative to objective, friendlies and threats; fuel and time; when to request updated tasking or RTB.<br/>
-- Map reading  - Grid references, terrain association, and ability to brief and follow routes without sole reliance on GPS or automation.<br/><br/>
-
-<font color='#87CEEB'>COMMUNICATIONS</font><br/>
-- Flight coordination  - Clear, concise comms with mission leadership and lead pilot; acknowledge tasking and report status (inbound, on station, RTB).<br/>
-- Crew communications  - Coordination with crew (e.g. door gunners, crew chief) for threat call-outs and cabin/load management.<br/>
-- Passenger communications  - Brief passengers on timings, LZ behaviour and emergency procedures where relevant.<br/><br/>
-
-<font color='#87CEEB'>MISSION FLOW AND INTENT</font><br/>
-Respect the mission flow and the intent of the operation. Understand your own abilities and the capability of your airframe; exercise restraint so that employment of rotary assets supports a positive and coherent experience for ground forces and other players. Do not exceed briefed limits or take unnecessary risk that could compromise the mission.
 "]];
 
 // -----------------------------------------------------------------------------

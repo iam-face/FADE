@@ -1,5 +1,5 @@
 // =============================================================================
-// EnemyAAA.sqf — AAA spawning governed by Scenario GUI "Enemy AAA" level
+// EnemyAAA.sqf - AAA spawning governed by Scenario GUI "Enemy AAA" level
 // =============================================================================
 // Server-only. Level "None": no spawns. Light/Medium/Heavy: up to 5 AA units at
 // high ground near random civ zones (within 5 km, highest point, safe pos).
