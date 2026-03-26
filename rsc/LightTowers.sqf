@@ -6,7 +6,10 @@
 // FADE_helipads, FADE_vehiclePoints, FADE_loadoutBox before creating lights.
 // =============================================================================
 
-waitUntil { !isNil "FADE_helipads" && !isNil "FADE_vehiclePoints" && !isNil "FADE_loadoutBox" };
+waitUntil {
+    sleep 0.05;
+    !isNil "FADE_helipads" && !isNil "FADE_vehiclePoints" && !isNil "FADE_loadoutBox"
+};
 
 private _heightAbovePad = 25;
 

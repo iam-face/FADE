@@ -126,3 +126,20 @@ while { _cqbI <= 49 } do {
 };
 // Pop-up target class (vanilla); stays down when shot if noPop is set
 FADE_cqbTargetClass = "TargetP_Inf_F";
+
+// -----------------------------------------------------------------------------
+// CTB Locker Room ambient (client: rsc\LockerRoomAmbient.sqf)
+// Player say3D -- 250 m audible radius; timers repeat while in zone / near lockers
+// Eden game logic: variable name posLockerRoom = room center. Within radius = in locker room.
+// posLocker_0 .. posLocker_<FADE_lockerPosVarMax> = locker proximity points (scan collects non-null).
+// If none found, LockerRoomAmbient falls back to vanilla Metal_Locker_F within proximity distance.
+// -----------------------------------------------------------------------------
+FADE_lockerRoomCenterVar = "posLockerRoom";
+FADE_lockerRoomRadius = 20;
+FADE_lockerNearLockerDist = 5;
+FADE_lockerPosVarMax = 64;
+// Roll timing: time + min + random rand → default 3–6s (both hostage and slap)
+FADE_lockerSoundDelayMin = 3;
+FADE_lockerSoundDelayRand = 3;
+// 1 = always play on each roll (hostage and slap are independent timers)
+FADE_lockerHostageChance = 1;

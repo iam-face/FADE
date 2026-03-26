@@ -10,6 +10,9 @@ respawn = 3;
 respawnTemplates[] = { "Spectator" };
 respawnOnStart = 0;
 
+// Unlocks ESC menu: Splendid Camera + Spectator (same debug-console block; default MP hides them)
+enableDebugConsole = 2;
+
 // bis_fnc_cp_* stubs before Eden CP/CPE modules (see rsc\fn_bisCpPreInit.sqf)
 #include "rsc\CfgFunctionsMission.hpp"
 
@@ -369,13 +372,70 @@ class CfgSounds
         sound[] = {"\Sounds\FADE_disembark_done.ogg", 1, 1, 80};
         titles[] = {};
     };
-    // Locker room (optional: add Sounds\locker_slap.ogg for slap; else uses fallback)
-    class FAC_LockerSlap
-    {
-        name = "FAC_LockerSlap";
-        sound[] = {"\Sounds\locker_slap.ogg", 1, 1, 50};
-        titles[] = {};
-    };
+    // CTB Locker Room (rsc\LockerRoomAmbient.sqf) -- CfgSounds maxDistance 250 m; say3D also passes 250
+    // OGG filenames need not match class names; sound[] path is authoritative.
+    class FAC_hostage_interrupt_1 { name = "FAC_hostage_interrupt_1"; sound[] = {"\Sounds\hostage_interrupt_1.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_interrupt_2 { name = "FAC_hostage_interrupt_2"; sound[] = {"\Sounds\hostage_interrupt_2.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_interrupt_3 { name = "FAC_hostage_interrupt_3"; sound[] = {"\Sounds\hostage_interrupt_3.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_interrupt_4 { name = "FAC_hostage_interrupt_4"; sound[] = {"\Sounds\hostage_interrupt_4.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_interrupt_5 { name = "FAC_hostage_interrupt_5"; sound[] = {"\Sounds\hostage_interrupt_5.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_interrupt_6 { name = "FAC_hostage_interrupt_6"; sound[] = {"\Sounds\hostage_interrupt_6.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_interrupt_7 { name = "FAC_hostage_interrupt_7"; sound[] = {"\Sounds\hostage_interrupt_7.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_1 { name = "FAC_hostage_pain_1"; sound[] = {"\Sounds\hostage_pain_1.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_2 { name = "FAC_hostage_pain_2"; sound[] = {"\Sounds\hostage_pain_2.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_3 { name = "FAC_hostage_pain_3"; sound[] = {"\Sounds\hostage_pain_3.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_4 { name = "FAC_hostage_pain_4"; sound[] = {"\Sounds\hostage_pain_4.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_5 { name = "FAC_hostage_pain_5"; sound[] = {"\Sounds\hostage_pain_5.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_6 { name = "FAC_hostage_pain_6"; sound[] = {"\Sounds\hostage_pain_6.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_7 { name = "FAC_hostage_pain_7"; sound[] = {"\Sounds\hostage_pain_7.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_8 { name = "FAC_hostage_pain_8"; sound[] = {"\Sounds\hostage_pain_8.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_9 { name = "FAC_hostage_pain_9"; sound[] = {"\Sounds\hostage_pain_9.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_10 { name = "FAC_hostage_pain_10"; sound[] = {"\Sounds\hostage_pain_10.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_11 { name = "FAC_hostage_pain_11"; sound[] = {"\Sounds\hostage_pain_11.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_12 { name = "FAC_hostage_pain_12"; sound[] = {"\Sounds\hostage_pain_12.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pain_13 { name = "FAC_hostage_pain_13"; sound[] = {"\Sounds\hostage_pain_13.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_1 { name = "FAC_hostage_pickup_1"; sound[] = {"\Sounds\hostage_pickup_1.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_2 { name = "FAC_hostage_pickup_2"; sound[] = {"\Sounds\hostage_pickup_2.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_3 { name = "FAC_hostage_pickup_3"; sound[] = {"\Sounds\hostage_pickup_3.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_4 { name = "FAC_hostage_pickup_4"; sound[] = {"\Sounds\hostage_pickup_4.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_5 { name = "FAC_hostage_pickup_5"; sound[] = {"\Sounds\hostage_pickup_5.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_6 { name = "FAC_hostage_pickup_6"; sound[] = {"\Sounds\hostage_pickup_6.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_7 { name = "FAC_hostage_pickup_7"; sound[] = {"\Sounds\hostage_pickup_7.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_8 { name = "FAC_hostage_pickup_8"; sound[] = {"\Sounds\hostage_pickup_8.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_9 { name = "FAC_hostage_pickup_9"; sound[] = {"\Sounds\hostage_pickup_9.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_10 { name = "FAC_hostage_pickup_10"; sound[] = {"\Sounds\hostage_pickup_10.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_11 { name = "FAC_hostage_pickup_11"; sound[] = {"\Sounds\hostage_pickup_11.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_12 { name = "FAC_hostage_pickup_12"; sound[] = {"\Sounds\hostage_pickup_12.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_pickup_13 { name = "FAC_hostage_pickup_13"; sound[] = {"\Sounds\hostage_pickup_13.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_rescued_1 { name = "FAC_hostage_rescued_1"; sound[] = {"\Sounds\hostage_rescued_1.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_rescued_2 { name = "FAC_hostage_rescued_2"; sound[] = {"\Sounds\hostage_rescued_2.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_rescued_3 { name = "FAC_hostage_rescued_3"; sound[] = {"\Sounds\hostage_rescued_3.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_rescued_4 { name = "FAC_hostage_rescued_4"; sound[] = {"\Sounds\hostage_rescued_4.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_rescued_5 { name = "FAC_hostage_rescued_5"; sound[] = {"\Sounds\hostage_rescued_5.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_1 { name = "FAC_hostage_struggle_1"; sound[] = {"\Sounds\hostage_struggle_1.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_2 { name = "FAC_hostage_struggle_2"; sound[] = {"\Sounds\hostage_struggle_2.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_3 { name = "FAC_hostage_struggle_3"; sound[] = {"\Sounds\hostage_struggle_3.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_4 { name = "FAC_hostage_struggle_4"; sound[] = {"\Sounds\hostage_struggle_4.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_5 { name = "FAC_hostage_struggle_5"; sound[] = {"\Sounds\hostage_struggle_5.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_6 { name = "FAC_hostage_struggle_6"; sound[] = {"\Sounds\hostage_struggle_6.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_7 { name = "FAC_hostage_struggle_7"; sound[] = {"\Sounds\hostage_struggle_7.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_8 { name = "FAC_hostage_struggle_8"; sound[] = {"\Sounds\hostage_struggle_8.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_9 { name = "FAC_hostage_struggle_9"; sound[] = {"\Sounds\hostage_struggle_9.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_10 { name = "FAC_hostage_struggle_10"; sound[] = {"\Sounds\hostage_struggle_10.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_11 { name = "FAC_hostage_struggle_11"; sound[] = {"\Sounds\hostage_struggle_11.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_12 { name = "FAC_hostage_struggle_12"; sound[] = {"\Sounds\hostage_struggle_12.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_13 { name = "FAC_hostage_struggle_13"; sound[] = {"\Sounds\hostage_struggle_13.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_14 { name = "FAC_hostage_struggle_14"; sound[] = {"\Sounds\hostage_struggle_14.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_struggle_15 { name = "FAC_hostage_struggle_15"; sound[] = {"\Sounds\hostage_struggle_15.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_sig_lockerslap_001 { name = "FAC_sig_lockerslap_001"; sound[] = {"\Sounds\sig_lockerslap-001.ogg", 1, 1, 250}; titles[] = {}; };
+    class FAC_sig_lockerslap_002 { name = "FAC_sig_lockerslap_002"; sound[] = {"\Sounds\sig_lockerslap-002.ogg", 1, 1, 250}; titles[] = {}; };
+    class FAC_sig_lockerslap_003 { name = "FAC_sig_lockerslap_003"; sound[] = {"\Sounds\sig_lockerslap-003.ogg", 1, 1, 250}; titles[] = {}; };
+    class FAC_sig_lockerslap_004 { name = "FAC_sig_lockerslap_004"; sound[] = {"\Sounds\sig_lockerslap-004.ogg", 1, 1, 250}; titles[] = {}; };
+    class FAC_sig_lockerslap_005 { name = "FAC_sig_lockerslap_005"; sound[] = {"\Sounds\sig_lockerslap-005.ogg", 1, 1, 250}; titles[] = {}; };
+    class FAC_sig_lockerslap_006 { name = "FAC_sig_lockerslap_006"; sound[] = {"\Sounds\sig_lockerslap-006.ogg", 1, 1, 250}; titles[] = {}; };
+    class FAC_sig_lockerslap_007 { name = "FAC_sig_lockerslap_007"; sound[] = {"\Sounds\sig_lockerslap-007.ogg", 1, 1, 250}; titles[] = {}; };
+    class FAC_sig_lockerslap_008 { name = "FAC_sig_lockerslap_008"; sound[] = {"\Sounds\sig_lockerslap-008.ogg", 1, 1, 250}; titles[] = {}; };
+    class FAC_sig_lockerslap_009 { name = "FAC_sig_lockerslap_009"; sound[] = {"\Sounds\sig_lockerslap-009.ogg", 1, 1, 250}; titles[] = {}; };
     // CQB killhouse loudspeaker (Eden object cqbLoudspeaker; 3D origin +5 m above object in script)
     // Audio file from Sig_CTB_MSL_SFX_Amb (must be loaded on server/clients)
     class FAC_cqbLoudspeakerHorn

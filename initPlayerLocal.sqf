@@ -131,7 +131,10 @@ call compile preprocessFileLineNumbers "rsc\CQBGui.sqf";
 call compile preprocessFileLineNumbers "rsc\CqbLoudspeaker.sqf";
 call compile preprocessFile "rsc\TeleportGui.sqf";
 
-waitUntil { !isNil "FADE_heliClasses" && !isNil "FADE_boards" && !isNil "FADE_loadoutBox" && !isNil "FADE_cqbBoard" };
+waitUntil {
+    sleep 0.05;
+    !isNil "FADE_heliClasses" && !isNil "FADE_boards" && !isNil "FADE_loadoutBox" && !isNil "FADE_cqbBoard"
+};
 
 // Request scenario config from server (limit gear, friendly faction) for Loadout/Vehicle GUIs
 [player] remoteExec ["FADE_sendScenarioConfigToClient", 2];
@@ -349,24 +352,8 @@ if (!isNull _radio) then {
     ];
 };
 
-// Locker room  - optional Eden object LOCKER_1; play sound on use (add Sounds\locker_slap.ogg or uses fallback)
-private _locker = missionNamespace getVariable ["LOCKER_1", objNull];
-if (!isNull _locker) then {
-    _locker addAction [
-        "<t color='#DDA0DD'>Locker room</t>",
-        {
-            playSound "FAC_LockerSlap";
-            systemChat "Locker room.";
-        },
-        [],
-        4,
-        false,
-        true,
-        "",
-        "",
-        3
-    ];
-};
+// CTB Locker Room -- hostage VO + locker slaps (game logic posLockerRoom + posLocker_*); see rsc\Config.sqf
+[] execVM "rsc\LockerRoomAmbient.sqf";
 
 // Welcome hint  - replaces loading hint when config and actions are ready (keep short: briefing + GUIs hold detail)
 private _playerName = name player;

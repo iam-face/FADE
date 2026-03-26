@@ -9,7 +9,9 @@ This is a **helicopter piloting sandbox** for **ARMA 3**, designed for **multipl
 **Arma 3 Wiki:** https://armedassault.fandom.com/wiki/ArmA_3  
 **Bohemia Community Wiki:** https://community.bistudio.com/wiki/
 **LAMBS AI:** https://github.com/nk3nny/LambsDanger/wiki  
-**KAT Medical:** https://github.com/KAT-Advanced-Medical/KAM
+**KAT Medical:** https://github.com/KAT-Advanced-Medical/KAM  
+**SCRIPT_INDEX.md** (repository root) — Inventory of **every mission `.sqf` file**, server vs client execution, how each file is loaded, multiplayer/dedicated-server notes, and the main `remoteExec` / `publicVariable` surface. Use alongside this document for scripting and architecture work.  
+**FORMAL_SCRIPT_VERIFICATION.md** (repository root) — Formal **per-file verification matrix** (dedicated MP / server authority); update when scripts change.
 
 Use the Wikis as the primary source for:
 
@@ -26,6 +28,8 @@ Use the Wikis as the primary source for:
 - **RPT FILE** -- You have access to the Arma RPT file for debugging, it is located in the Arma 3 folder within the workspace.
 
 ## Mission Structure
+
+For a **complete list of scripts** and how they connect in MP, see **SCRIPT_INDEX.md** in the repository root.
 
 - **initServer.sqf** -- Server-side init: CfgVehicles scan, faction/unit caches, helper functions, vehicle spawn/despawn, mission start/abort, weather, Surrender Challenge, Jukebox server side.
 - **initPlayerLocal.sqf** -- Client-side init: load GUI scripts, add board/loadoutbox/radio actions, Surrender Challenge key binding, welcome hint, LightTowers.
@@ -319,7 +323,7 @@ These appear in the Arma 3 RPT (report) when running the mission with certain mo
 
 ## Guidelines for AI Assistance
 
-1. **Always read this file (AGENTS.md)** at the start of work on this project.
+1. **Always read this file (AGENTS.md)** at the start of work on this project. For script inventory and execution/network scope, read **SCRIPT_INDEX.md**; for verification status and the formal checklist, read **FORMAL_SCRIPT_VERIFICATION.md** when changing or adding `.sqf` files.
 2. **Prefer existing patterns:** Before writing new code, look at the **Implemented Patterns & Callouts** section above and the referenced scripts (VehicleGui, MissionsGui, Missions.sqf, initServer, initPlayerLocal, etc.). Reuse or mirror working patterns for text formatting, GUIs, spawning, and server/client flow. The purpose is to ensure go-forward edits leverage existing best practices and avoid regressions.
 3. **Always use the Arma 3 Wiki** as the **source of truth** for scripting, syntax, commands, and game systems.
 4. **When unsure** about syntax or ARMA 3-specific behavior -- **check the Arma 3 Wiki** before answering.
