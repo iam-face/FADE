@@ -20,7 +20,8 @@ FAC_scenarioGui_weatherPresets = [
     ["Overcast", "Overcast"],
     ["Foggy", "Foggy"],
     ["Rain", "Rain"],
-    ["Storm", "Storm"]
+    ["Storm", "Storm"],
+    ["Face Mission", "FaceMission"]
 ];
 
 // Get faction display name (reuse LoadoutGui if available)

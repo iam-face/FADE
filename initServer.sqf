@@ -474,6 +474,7 @@ FADE_applyWeatherPreset = {
         case "Foggy": { 0 setOvercast 0.3; 0 setRain 0; 0 setFog [0.5, 0.01, 0]; forceWeatherChange; };
         case "Rain": { 0 setOvercast 0.8; 0 setRain 0.5; 0 setFog [0.1, 0.01, 0]; forceWeatherChange; };
         case "Storm": { 0 setOvercast 1; 0 setRain 1; 0 setFog [0.2, 0.01, 0]; forceWeatherChange; };
+        case "FaceMission": { 0 setOvercast 1; 0 setRain 1; 0 setFog [0.5, 0.01, 0]; forceWeatherChange; };
         default {};
     };
 };
@@ -534,6 +535,9 @@ FADE_cqbDrillActive = false;
 FADE_cqbSpawned = [];  // objects and groups to delete on end drill
 FADE_cqbEnemyGroups = [];
 FADE_cqbWatcherHandle = scriptNull;
+FADE_cqbStarterKilledEh = [];  // [unit, eventHandlerId] while drill active
+FADE_cqbStarterUnit = objNull;
+FADE_cqbStarterUid = "";
 
 // Apply board textures (Eden names). Non-interactable: base, loadout, music, firing range, teleport.
 private _applyBoardTexture = {
@@ -936,6 +940,15 @@ FADE_cqbStartDrill = {
     missionNamespace setVariable ["FADE_cqbEnemyGroups", _enemyGroups];
     missionNamespace setVariable ["FADE_cqbDrillActive", true];
     publicVariable "FADE_cqbDrillActive";
+    missionNamespace setVariable ["FADE_cqbStarterUnit", _player];
+    missionNamespace setVariable ["FADE_cqbStarterUid", getPlayerUID _player];
+    private _starterKh = _player addEventHandler ["Killed", {
+        if (!(missionNamespace getVariable ["FADE_cqbDrillActive", false])) exitWith {};
+        private _victim = _this select 0;
+        if (_victim != missionNamespace getVariable ["FADE_cqbStarterUnit", objNull]) exitWith {};
+        [_victim, "CQB drill ended: trainee down.", true] call FADE_cqbEndDrill;
+    }];
+    missionNamespace setVariable ["FADE_cqbStarterKilledEh", [_player, _starterKh]];
     ["start"] call FADE_cqbLoudspeakerBroadcast;
     // Auto-complete enemy drills when all enemy units are dead or surrendered/captive.
     if (_enemyType == "enemies") then {
@@ -971,8 +984,17 @@ FADE_cqbStartDrill = {
     [format ["CQB drill started. %1 spawns.", count _spawned]] remoteExec ["systemChat", _player];
 };
 FADE_cqbEndDrill = {
-    params ["_player"];
+    params ["_player", ["_msg", "CQB drill ended."], ["_broadcastAll", false]];
     if (!isServer) exitWith {};
+    if (!(missionNamespace getVariable ["FADE_cqbDrillActive", false])) exitWith {};
+    private _khPair = missionNamespace getVariable ["FADE_cqbStarterKilledEh", []];
+    if (count _khPair >= 2) then {
+        _khPair params ["_u", "_eh"];
+        if (!isNull _u && {_eh >= 0}) then { _u removeEventHandler ["Killed", _eh] };
+    };
+    missionNamespace setVariable ["FADE_cqbStarterKilledEh", []];
+    missionNamespace setVariable ["FADE_cqbStarterUnit", objNull];
+    missionNamespace setVariable ["FADE_cqbStarterUid", ""];
     ["stop"] call FADE_cqbLoudspeakerBroadcast;
     private _spawned = missionNamespace getVariable ["FADE_cqbSpawned", []];
     {
@@ -991,7 +1013,11 @@ FADE_cqbEndDrill = {
     missionNamespace setVariable ["FADE_cqbWatcherHandle", scriptNull];
     missionNamespace setVariable ["FADE_cqbDrillActive", false];
     publicVariable "FADE_cqbDrillActive";
-    ["CQB drill ended."] remoteExec ["systemChat", _player];
+    if (_broadcastAll || {isNull _player}) then {
+        [_msg] remoteExec ["systemChat", 0];
+    } else {
+        [_msg] remoteExec ["systemChat", _player];
+    };
 };
 
 publicVariable "FADE_heliClasses";
@@ -1007,6 +1033,15 @@ publicVariable "FADE_cqbBoard";
 publicVariable "FADE_cqbDrillActive";
 publicVariable "FADE_cqbStartDrill";
 publicVariable "FADE_cqbEndDrill";
+
+addMissionEventHandler ["HandleDisconnect", {
+    params ["_id", "_uid", "_name", "_jip", "_owner", "_idstr"];
+    if (!(missionNamespace getVariable ["FADE_cqbDrillActive", false])) exitWith {};
+    private _suid = missionNamespace getVariable ["FADE_cqbStarterUid", ""];
+    if (_suid == "" || {_uid != _suid}) exitWith {};
+    [objNull, "CQB drill ended: trainee disconnected.", true] call FADE_cqbEndDrill;
+}];
+
 publicVariable "FADE_loadoutBoxes";
 publicVariable "FADE_loadoutBox";
 publicVariable "FADE_loadoutBox2";
@@ -1221,7 +1256,7 @@ FADE_setTime = {
 
 FADE_setWeather = {
     params ["_preset", "_player"];
-    if !(_preset in ["Clear", "Overcast", "Foggy", "Rain", "Storm"]) exitWith {
+    if !(_preset in ["Clear", "Overcast", "Foggy", "Rain", "Storm", "FaceMission"]) exitWith {
         ["UNKNOWN WEATHER PRESET."] remoteExec ["systemChat", _player];
     };
     [_preset] call FADE_applyWeatherPreset;
