@@ -83,7 +83,7 @@ for "_i" from (count _unitClasses) to (_unitCount - 1) do {
     _unitClasses pushBack _baseClass;
 };
 
-// Task: BI task framework only — one create, owner = starter, ASSIGNED (P4: do not also create
+// Task: BI task framework only - one create, owner = starter, ASSIGNED (P4: do not also create
 // for other players / whole side; the old pattern CREATED for _others + ASSIGNED for _player
 // gave everyone the task). No remoteExec / client helpers (some builds reject code in remoteExec).
 private _fnc_createMissionTask = {
