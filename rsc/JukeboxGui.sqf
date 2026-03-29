@@ -5,7 +5,7 @@
 // Each source has at most one track; different sources may play simultaneously.
 // Client Play -> server validates emitter + CfgVehicles, updates FAC_jukebox_activeSources,
 //   remoteExec FAC_jukebox_clientPlay [song, sourceKey] to all clients.
-// Per client: queued drain (spawn) serializes jobs. Playback uses createSoundSource + attachTo only — Stop = deleteVehicle (reliable). Not on dedicated server (hasInterface).
+// Per client: queued drain (spawn) serializes jobs. Playback uses createSoundSource + attachTo only - Stop = deleteVehicle (reliable). Not on dedicated server (hasInterface).
 // Local object ref on emitter "FAC_jukeboxActiveSnd" + FAC_jukebox_clientAudioList for cleanup.
 // =============================================================================
 
@@ -112,7 +112,7 @@ FAC_jukebox_fnc_stopPs3d = {
 };
 
 // Loudness is defined in description.ext CfgSounds `Sig_*` → sound[] { path, volume, pitch, distance } (createSoundSource reads config).
-// When you change those numbers, update these constants too (grep anchor / docs only — not applied at runtime by createSoundSource).
+// When you change those numbers, update these constants too (grep anchor / docs only - not applied at runtime by createSoundSource).
 FAC_jukebox_soundVolumeMission = 3;
 FAC_jukebox_soundDistanceMission = 250;
 

@@ -11,8 +11,7 @@ This is a **helicopter piloting sandbox** for **ARMA 3**, designed for **multipl
 **Eden custom textures (per-object default sizes):** https://community.bistudio.com/wiki/Eden_Editor:_Custom_Entity_Textures
 **LAMBS AI:** https://github.com/nk3nny/LambsDanger/wiki  
 **KAT Medical:** https://github.com/KAT-Advanced-Medical/KAM  
-**SCRIPT_INDEX.md** (repository root) — Inventory of **every mission `.sqf` file**, server vs client execution, how each file is loaded, multiplayer/dedicated-server notes, and the main `remoteExec` / `publicVariable` surface. Use alongside this document for scripting and architecture work.  
-**FORMAL_SCRIPT_VERIFICATION.md** (repository root) — Formal **per-file verification matrix** (dedicated MP / server authority); update when scripts change.
+**SCRIPT_INDEX.md** (repository root) - **Scripts reference:** inventory of **every mission `.sqf` file**, server vs client execution, how each file is loaded, multiplayer/dedicated-server notes, the main `remoteExec` / `publicVariable` surface, and the formal **per-file verification matrix** (dedicated MP / server authority). Update it when scripts change. Use alongside this document for scripting and architecture work.
 
 Use the Wikis as the primary source for:
 
@@ -102,7 +101,7 @@ When adding or changing major features or joint fires procedures, update Briefin
   - **whiteboardAdmin** -- Non-interactable **Land_MapBoard_01_Wall_F**; texture `img\whiteboardAdmin.jpg` (`_applyBoardTextureMapWall` in initServer).
   - **bannerSDE** -- Non-interactable; texture `img\bannerSDE.jpg`.
   - **sdeArt_1** -- Non-interactable; texture `img\letsgo.jpg`.
-  - **loadoutboard_1**, **loadoutboard_3**, **loadoutboard_4** -- Non-interactable **Land_MapBoard_01_Wall_F**; texture `img\whiteboardLoadouts.jpg` (Eden names lowercase `board` to match **mission.sqm**). initServer resolves each board via `missionNamespace` **or** `vehicleVarName` scan on `allMissionObjects "Land_MapBoard_01_Wall_F"`, applies slot **0**, then **re-applies at 0.5 s and 2.5 s** (spawn) so textures win over late Eden init. If they stay blank while **whiteboardAdmin** shows art, confirm **`img\whiteboardLoadouts.jpg`** exists in the mission folder and uses a valid resolution (wiki default for this class is **2048×2048** for the map face — match aspect like **whiteboardAdmin.jpg**).
+  - **loadoutboard_1**, **loadoutboard_3**, **loadoutboard_4** -- Non-interactable **Land_MapBoard_01_Wall_F**; texture `img\whiteboardLoadouts.jpg` (Eden names lowercase `board` to match **mission.sqm**). initServer resolves each board via `missionNamespace` **or** `vehicleVarName` scan on `allMissionObjects "Land_MapBoard_01_Wall_F"`, applies slot **0**, then **re-applies at 0.5 s and 2.5 s** (spawn) so textures win over late Eden init. If they stay blank while **whiteboardAdmin** shows art, confirm **`img\whiteboardLoadouts.jpg`** exists in the mission folder and uses a valid resolution (wiki default for this class is **2048×2048** for the map face - match aspect like **whiteboardAdmin.jpg**).
   - **loadoutBoard_2** -- Non-interactable sign; texture `img\loadouts.jpg`.
   - **musicBoard** -- Non-interactable, next to jukebox; texture `img\music.jpg`.
   - **firingRangeBoard**, **signFire_1** -- Non-interactable firing range signs; texture `img\signLiveFire.jpg`.
@@ -116,7 +115,7 @@ When adding or changing major features or joint fires procedures, update Briefin
 
 **Workflow:** (1) Note the **CfgVehicles** classname of the billboard/sign/object in Eden (e.g. **Land_Billboard_F** for large billboards). (2) Find that classname in the wiki’s tables and read **Default Texture Size** (and which slot is **Texture #0**, **#1**, … if multiple). (3) Author replacement images at the **same aspect ratio** as the documented default; prefer **power-of-two** width and height where possible (engine texture guidance; see also [setObjectTexture](https://community.bistudio.com/wiki/setObjectTexture)). (4) Verify in-game after applying the texture.
 
-**Mission.sqm ∩ wiki (custom-texture entities):** The following **classnames** appear in **mission.sqm** and are listed on [Eden Editor: Custom Entity Textures](https://community.bistudio.com/wiki/Eden_Editor:_Custom_Entity_Textures). **Eden display name** and **default texture sizes** are taken from that page (re-check if Bohemia updates the table). Where the default is procedural, **Default Texture Size** is **N/A** in the wiki—there is no raster dimension to match; use Eden preview or config paths on the wiki row.
+**Mission.sqm ∩ wiki (custom-texture entities):** The following **classnames** appear in **mission.sqm** and are listed on [Eden Editor: Custom Entity Textures](https://community.bistudio.com/wiki/Eden_Editor:_Custom_Entity_Textures). **Eden display name** and **default texture sizes** are taken from that page (re-check if Bohemia updates the table). Where the default is procedural, **Default Texture Size** is **N/A** in the wiki-there is no raster dimension to match; use Eden preview or config paths on the wiki row.
 
 | Eden display name | Classname | Default texture size(s) (wiki) |
 | --- | --- | --- |
@@ -135,7 +134,7 @@ When adding or changing major features or joint fires procedures, update Briefin
 | Rugged Communications Terminal (Large) | `RuggedTerminal_02_communications_F` | Texture #0: **1024×1024**; Texture #1–#2: **N/A**; Texture #3–#7: **2048×2048** |
 | Sign (Sponsor) | `SignAd_Sponsor_F` | Texture #0: **1024×512** |
 
-**Also in mission.sqm but not on that wiki list** (no official per-slot default sizes there): e.g. `Land_LandMark_F`, `ContainmentArea_01_sand_F`, `Land_SignM_WarningMilAreaSmall_english_F`, `Sig_Flag_CTB`, `TargetP_*`, `PLP_spotlight_screen`, and most modded / DLC props—use object config, Eden preview, or trial in-game.
+**Also in mission.sqm but not on that wiki list** (no official per-slot default sizes there): e.g. `Land_LandMark_F`, `ContainmentArea_01_sand_F`, `Land_SignM_WarningMilAreaSmall_english_F`, `Sig_Flag_CTB`, `TargetP_*`, `PLP_spotlight_screen`, and most modded / DLC props-use object config, Eden preview, or trial in-game.
 
 - **CQB_POS_*** -- Optional. Eden triggers or objects defining CQB drill positions (e.g. `CQB_POS_1`, `CQB_POS_2`, …). Listed in `FADE_cqbPosNames` (Config.sqf). Spawned units/targets adopt each position's `getDir`. Used only when a drill is started from the CQB GUI. Density: Low 20%, Medium 33%, High 50% per position; civilians 15% per spawn when enabled. Targets use `noPop` so they do not pop back up when shot; real enemies use `disableAI "PATH"` and scenario enemy/civ factions.
 - **LOADOUTBOX** / **LOADOUTBOX_2** / **LOADOUTBOX_3** (and any in **FADE_loadoutBoxNames**, Config.sqf) -- Loadout boxes. Each gets **Manage My Loadout** (custom GUI), **Save my loadout**, **Open ACE Arsenal** (if ACE3 loaded). All are ACE arsenal-init'd on the server when ACE is present. Add more Eden names to `FADE_loadoutBoxNames` to give new boxes the same actions.
@@ -239,11 +238,11 @@ Classnames needed for dynamic mission scripting. Fill in as mods/factions are co
 
 ### Surrender Challenge (player-facing disabled)
 
-- **Production default:** `FAC_surrenderChallenge_playerEnabled = false` in **initServer.sqf** (publicVariable). **Client** `FAC_surrenderChallenge_fnc_activate` and **server** `FAC_surrenderChallenge_start` exit immediately when this flag is false — no hotkey, no CfgUserActions, no U-key or inputAction polling. **rsc/SurrenderChallenge.sqf** and CfgSounds entries remain for future re-enable.
+- **Production default:** `FAC_surrenderChallenge_playerEnabled = false` in **initServer.sqf** (publicVariable). **Client** `FAC_surrenderChallenge_fnc_activate` and **server** `FAC_surrenderChallenge_start` exit immediately when this flag is false - no hotkey, no CfgUserActions, no U-key or inputAction polling. **rsc/SurrenderChallenge.sqf** and CfgSounds entries remain for future re-enable.
 - **To re-enable for players:** set `FAC_surrenderChallenge_playerEnabled = true`, restore **CfgUserActions** `FAC_SurrenderChallenge` in **description.ext**, re-add **DIK_U** handling and the `inputAction` polling loop in **initPlayerLocal.sqf** (see git history), and restore welcome-hint line if desired.
-- **When enabled — client flow:** `FAC_surrenderChallenge_fnc_activate` resolves target from `cursorTarget` / `cursorObject` (`attachedTo` + `nearestObjects`), plays `FAC_apprehend*` via `say3D`, then `[player, _target, getDir player] remoteExec ["FAC_surrenderChallenge_start", 2]`.
-- **When enabled — server flow:** `FAC_surrenderChallenge_start` runs `SurrenderChallenge.sqf` (validation, roll, ACE `ace_captives_fnc_setSurrendered` or fallback animation).
-- **Debug:** `FAC_surrenderChallenge_debug` (initServer) and `FAC_surrenderChallenge_debugKeys` (initPlayerLocal) — default `false`.
+- **When enabled - client flow:** `FAC_surrenderChallenge_fnc_activate` resolves target from `cursorTarget` / `cursorObject` (`attachedTo` + `nearestObjects`), plays `FAC_apprehend*` via `say3D`, then `[player, _target, getDir player] remoteExec ["FAC_surrenderChallenge_start", 2]`.
+- **When enabled - server flow:** `FAC_surrenderChallenge_start` runs `SurrenderChallenge.sqf` (validation, roll, ACE `ace_captives_fnc_setSurrendered` or fallback animation).
+- **Debug:** `FAC_surrenderChallenge_debug` (initServer) and `FAC_surrenderChallenge_debugKeys` (initPlayerLocal) - default `false`.
 
 ### Enemy Retreat (50% threshold)
 
@@ -362,7 +361,7 @@ These appear in the Arma 3 RPT (report) when running the mission with certain mo
 
 ## Guidelines for AI Assistance
 
-1. **Always read this file (AGENTS.md)** at the start of work on this project. For script inventory and execution/network scope, read **SCRIPT_INDEX.md**; for verification status and the formal checklist, read **FORMAL_SCRIPT_VERIFICATION.md** when changing or adding `.sqf` files.
+1. **Always read this file (AGENTS.md)** at the start of work on this project. For script inventory, execution/network scope, and the formal verification checklist, read **SCRIPT_INDEX.md** when changing or adding `.sqf` files.
 2. **Prefer existing patterns:** Before writing new code, look at the **Implemented Patterns & Callouts** section above and the referenced scripts (VehicleGui, MissionsGui, Missions.sqf, initServer, initPlayerLocal, etc.). Reuse or mirror working patterns for text formatting, GUIs, spawning, and server/client flow. The purpose is to ensure go-forward edits leverage existing best practices and avoid regressions.
 3. **Always use the Arma 3 Wiki** as the **source of truth** for scripting, syntax, commands, and game systems.
 4. **When unsure** about syntax or ARMA 3-specific behavior -- **check the Arma 3 Wiki** before answering.

@@ -347,7 +347,7 @@ execVM "rsc\Briefing.sqf";
     };
 } forEach ["Radio_1", "Radio_2", "Radio_3", "Radio_4"];
 
-// SDE's bar: Nesk_1 (Eden name) — drink interaction (local player only; lethal)
+// SDE's bar: Nesk_1 (Eden name) - drink interaction (local player only; lethal)
 private _nesk = missionNamespace getVariable ["Nesk_1", objNull];
 if (!isNull _nesk) then {
     removeAllActions _nesk;
