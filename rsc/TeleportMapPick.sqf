@@ -1,7 +1,7 @@
 // Map-click teleport (10 s window). Same pattern as PMC Editing Wiki "ArmA 3 Debug Teleport":
 // https://pmc.editing.wiki/doku.php?id=arma3:scripting:debug-teleport
 //   onMapSingleClick "player setPos _pos; onMapSingleClick ''; true;";
-// Run from execVM — not from call compile preprocessFile TeleportGui.sqf — so _pos is not rejected.
+// Run from execVM - not from call compile preprocessFile TeleportGui.sqf - so _pos is not rejected.
 
 if (missionNamespace getVariable ["FAC_teleport_mapPickActive", false]) exitWith {
     systemChat "Map teleport already active.";

@@ -1,4 +1,4 @@
-# Script index — FAC Heli Ops (Sefrou-Ramal)
+# Script index - FAC Heli Ops (Sefrou-Ramal)
 
 This document is the **inventory and layout map** for all mission scripts: what runs where, how pieces connect, and how that aligns with **multiplayer dedicated servers**. For gameplay features and editor object names, see **AGENTS.md** (which links here for discoverability).
 
@@ -23,10 +23,10 @@ This document is the **inventory and layout map** for all mission scripts: what 
 **Execution order (typical MP):**
 
 1. `description.ext` loads includes (`CfgFunctionsMission.hpp`, `BaseControls.hpp`).
-2. `init.sqf` — runs on **all machines**; calls `fn_bisCpPreInit` (stubs for missing BIS campaign functions).
-3. `CfgFunctions` **preInit** / **postInit** — same stub maintenance (`fn_bisCpPreInit`, `fn_bisCpPostInit`).
-4. **`initServer.sqf`** — server only (`if (!isServer) exitWith {}`); config scan, `publicVariable` sync, long-running server loops, `remoteExec`-callable handlers.
-5. **`initPlayerLocal.sqf`** — each **client** with a player (not dedicated server); GUIs, actions, hints, surrender/jukebox client side.
+2. `init.sqf` - runs on **all machines**; calls `fn_bisCpPreInit` (stubs for missing BIS campaign functions).
+3. `CfgFunctions` **preInit** / **postInit** - same stub maintenance (`fn_bisCpPreInit`, `fn_bisCpPostInit`).
+4. **`initServer.sqf`** - server only (`if (!isServer) exitWith {}`); config scan, `publicVariable` sync, long-running server loops, `remoteExec`-callable handlers.
+5. **`initPlayerLocal.sqf`** - each **client** with a player (not dedicated server); GUIs, actions, hints, jukebox client side (`FAC_surrenderChallenge_fnc_activate` present but gated off).
 
 ---
 
@@ -38,9 +38,9 @@ This document is the **inventory and layout map** for all mission scripts: what 
 
 - **Server-only** mission logic uses `if (!isServer) exitWith {}` (`Missions.sqf`, `TroopTransport.sqf`, `AOMission.sqf`, `AmbientCivilians.sqf`, `EnemyAAA.sqf`, `EnemyCheckpoints.sqf`, `PadVehicleService.sqf`, `SurrenderChallenge.sqf`).
 - **Client-only** effects use `hasInterface` where needed (`JukeboxGui.sqf` playback, `LockerRoomAmbient.sqf`, `CqbLoudspeaker.sqf`) so headless clients do not run UI/audio paths incorrectly.
-- **Server functions invoked from clients** are **`publicVariable`'d** after definition in `initServer.sqf` (e.g. `FADE_startMission`, `FADE_spawnHeli`, `FAC_surrenderChallenge_start`, `FAC_jukebox_serverPlay`).
+- **Server functions invoked from clients** are **`publicVariable`'d** after definition in `initServer.sqf` (e.g. `FADE_startMission`, `FADE_spawnHeli`, `FADE_serviceVehicle`, `FAC_surrenderChallenge_start`, `FAC_jukebox_serverPlay`).
 - **JIP:** Mission data clients need (`FADE_heliClasses`, board object refs, slot state, etc.) is **`publicVariable`'d** from the server; scenario apply also syncs via `remoteExec` + `publicVariable` where needed.
-- **Client handler functions** targeted by `remoteExec` (`FADE_showMissionHint`, `FADE_receiveVehiclesAtBase`, `FADE_receiveCopilotState`, `FAC_jukebox_clientPlay`) are **defined in `initPlayerLocal` / GUI compiles** so each client has them before use; jukebox uses **`remoteExec` JIP queue** (`"FAC_jukebox_JIP"`) for late joiners.
+- **Client handler functions** targeted by `remoteExec` (`FADE_showMissionHint`, `FADE_receiveVehiclesAtBase`, `FADE_receiveCopilotState`, `FAC_jukebox_clientPlay`) are **defined in `initPlayerLocal` / GUI compiles** so each client has them before use; jukebox **JIP** replays active sources from **`FAC_jukebox_activeSources`** (spawn in `initPlayerLocal` after `JukeboxGui` compile).
 
 **Residual risks (operational, not code bugs):**
 
@@ -52,10 +52,10 @@ This document is the **inventory and layout map** for all mission scripts: what 
 ## Network surface (quick reference)
 
 **From clients to server (`remoteExec [..., 2]`):**  
-`FADE_applyScenarioSettings`, `FADE_sendScenarioConfigToClient` (also server-called), vehicle spawn/despawn/list, time/weather, copilot, `FADE_startMission`, `FADE_abortMission`, `FAC_surrenderChallenge_start`, `FAC_jukebox_serverPlay`, CQB drill start/end.
+`FADE_applyScenarioSettings`, `FADE_sendScenarioConfigToClient` (also server-called), vehicle spawn/despawn/service/list, time/weather, copilot, `FADE_startMission`, `FADE_abortMission`, `FAC_surrenderChallenge_start`, `FAC_jukebox_serverPlay`, CQB drill start/end.
 
 **From server to clients:**  
-`FADE_showMissionHint`, `FADE_syncScenarioConfig`, `systemChat`, `playSound`, `say3D`, `FAC_jukebox_clientPlay`, `FAC_cqbLoudspeaker_clientPlay`, `FADE_receiveVehiclesAtBase`, `FADE_receiveCopilotState`, and mission-specific feedback — see `initServer.sqf`, `Missions.sqf`, `TroopTransport.sqf`, `AmbientCivilians.sqf`.
+`FADE_showMissionHint`, `FADE_syncScenarioConfig`, `systemChat`, `playSound`, `say3D`, `FAC_jukebox_clientPlay`, `FAC_cqbLoudspeaker_clientPlay`, `FADE_receiveVehiclesAtBase`, `FADE_receiveCopilotState`, and mission-specific feedback - see `initServer.sqf`, `Missions.sqf`, `TroopTransport.sqf`, `AmbientCivilians.sqf`.
 
 **`publicVariable`:**  
 See the block in `initServer.sqf` (scenario helpers, mission slot globals, board lists, `FAC_surrenderChallenge_start`, `FAC_jukebox_serverPlay`, etc.).
@@ -64,34 +64,34 @@ See the block in `initServer.sqf` (scenario helpers, mission slot globals, board
 
 ## Script inventory
 
-Columns: **Role** — primary purpose. **Context** — S = server only, C = client only (incl. UI), B = both / runs everywhere when executed. **Loaded from** — how execution starts.
+Columns: **Role** - primary purpose. **Context** - S = server only, C = client only (incl. UI), B = both / runs everywhere when executed. **Loaded from** - how execution starts.
 
 | File | Role | Context | Loaded from |
 |------|------|---------|-------------|
-| `initServer.sqf` | Server init: CfgVehicles scan, faction caches, helipad/vehicle/board lists, scenario defaults, mission start/abort/spawn/copilot/jukebox/surrender handlers, ambient `execVM`, `publicVariable` of globals and server RPC names. | S | Engine (server) |
-| `initPlayerLocal.sqf` | Client init: `FADE_showMissionHint`, surrender activation, GUI `compile`, `waitUntil` server vars, board/loadout/jukebox actions, briefing, locker ambient `execVM`, light towers, pylon action, keybinds. | C | Engine (each client) |
+| `initServer.sqf` | Server init: CfgVehicles scan, faction caches, helipad/vehicle/board lists, scenario defaults, mission start/abort/spawn/copilot/jukebox, `FAC_surrenderChallenge_start` (gated by `FAC_surrenderChallenge_playerEnabled`), mission tasks via `BIS_fnc_taskCreate` for starter only (`ASSIGNED`, not side-wide), `FADE_counterAttackStart` / cargo-seat filter + RHS/vanilla truck fallbacks + 1–3 QRF waves (HVT/Hostage/Clear Area), ambient `execVM`, `publicVariable` of globals and server RPC names. | S | Engine (server) |
+| `initPlayerLocal.sqf` | Client init: `FADE_showMissionHint`, GUI `compile`, `waitUntil` server vars, board/loadout/jukebox actions, briefing, locker ambient `execVM`, light towers, pylon action, Ctrl+;/Ctrl+' keybinds. | C | Engine (each client) |
 | `init.sqf` | Early `fn_bisCpPreInit` call so stubs exist before other inits. | B | Engine (all) |
 | `onPlayerRespawn.sqf` | Restores mission UI vars and saved loadout on respawn (client). | C | `description.ext` / engine |
 | `cba_settings.sqf` | CBA mission settings (e.g. ACE hearing). | B | CBA |
 | `rsc/Config.sqf` | Scenario defaults, pad names, faction fallbacks, debug flags; loaded on server and client. | B | `initServer` / `initPlayerLocal` |
-| `rsc/CfgFunctionsMission.hpp` | Declares preInit/postInit SQF files. | — | `description.ext` |
+| `rsc/CfgFunctionsMission.hpp` | Declares preInit/postInit SQF files. | - | `description.ext` |
 | `rsc/fn_bisCpPreInit.sqf` | Reapplies BIS CP stubs each frame when debug off; avoids campaign function errors. | B | CfgFunctions + `init.sqf` |
 | `rsc/fn_bisCpPostInit.sqf` | Post-init stub reapply. | B | CfgFunctions postInit |
 | `rsc/fn_bisCpStubApply.sqf` | Installs noop `bis_fnc_cp_main` / `bis_fnc_cp_getQueueDelay` in mission and ui namespaces. | B | Called from pre/post init |
 | `rsc/DebugBIScpStub.sqf` | Optional logging stubs when `FADE_debugBIScp` is true (diagnostics). | B | `initServer` / `initPlayerLocal` |
-| `rsc/Missions.sqf` | All dynamic mission implementations; `if (!isServer) exitWith {}`; `call compile` from `FADE_startMission`; includes AO and TroopTransport compiles. | S | `initServer` → `FADE_startMission` |
+| `rsc/Missions.sqf` | All dynamic mission implementations; `if (!isServer) exitWith {}`; `call compile` from `FADE_startMission`; starter-only mission tasks via `BIS_fnc_taskCreate` (`ASSIGNED` for `_player`); includes AO and TroopTransport compiles; HVT/Hostage/Clear Area call `FADE_counterAttackStart`. | S | `initServer` → `FADE_startMission` |
 | `rsc/TroopTransport.sqf` | Troop Insert/Extract AI phases; server-only. | S | `Missions.sqf` |
 | `rsc/AOMission.sqf` | Area of Operations mission; server-only. | S | `Missions.sqf` |
 | `rsc/AmbientCivilians.sqf` | Civilian zones and road traffic; server loop; hints via `remoteExec`. | S | `initServer` `execVM` |
 | `rsc/EnemyAAA.sqf` | Scenario AAA spawns near civ zones; server-only. | S | `initServer` `execVM` |
 | `rsc/EnemyCheckpoints.sqf` | Checkpoint spawns near players when patrols enabled; server-only. | S | `initServer` `execVM` |
 | `rsc/PadVehicleService.sqf` | Repair/refuel/rearm on pads; server poll loop. | S | `initServer` `execVM` |
-| `rsc/SurrenderChallenge.sqf` | Surrender challenge logic; server-only; `execVM` from `FAC_surrenderChallenge_start`. | S | `initServer` |
-| `rsc/VehicleGui.sqf` | Manage Vehicles dialog; `remoteExec` spawn/despawn/list to server; defines `FADE_receiveVehiclesAtBase`. | C | `initPlayerLocal` `compile` |
+| `rsc/SurrenderChallenge.sqf` | Surrender challenge logic; server-only; `execVM` from `FAC_surrenderChallenge_start` when player flag enabled. | S | `initServer` |
+| `rsc/VehicleGui.sqf` | Manage Vehicles dialog; `remoteExec` spawn/despawn/`FADE_serviceVehicle`/list to server; defines `FADE_receiveVehiclesAtBase`. | C | `initPlayerLocal` `compile` |
 | `rsc/MissionsGui.sqf` | Manage Missions dialog; start/abort/copilot `remoteExec`; defines `FADE_receiveCopilotState`. | C | `initPlayerLocal` `compile` |
 | `rsc/ScenarioGui.sqf` | Manage Scenario dialog; Apply → `FADE_applyScenarioSettings` on server. | C | `initPlayerLocal` `compile` |
 | `rsc/LoadoutGui.sqf` | Loadout selection GUI; local/unit config only. | C | `initPlayerLocal` `compile` |
-| `rsc/JukeboxGui.sqf` | Jukebox UI; `FAC_jukebox_clientPlay` + `remoteExec` to `FAC_jukebox_serverPlay`. | C | `initPlayerLocal` `compile` |
+| `rsc/JukeboxGui.sqf` | Jukebox UI; `FAC_jukebox_clientPlay` + `remoteExec` to `FAC_jukebox_serverPlay`. Loudness: **CfgSounds** `Sig_*` in `description.ext` (createSoundSource); mirror `FAC_jukebox_soundVolumeMission` / `FAC_jukebox_soundDistanceMission` in this file. | C | `initPlayerLocal` `compile` |
 | `rsc/CQBGui.sqf` | CQB drill GUI; start/end `remoteExec` to server. | C | `initPlayerLocal` `compile` |
 | `rsc/CqbLoudspeaker.sqf` | Client `FAC_cqbLoudspeaker_clientPlay` for 3D horn (called from server). | C | `initPlayerLocal` `compile` |
 | `rsc/TeleportGui.sqf` | Fast travel UI; client `setPosATL`. | C | `initPlayerLocal` `preprocessFile` |
@@ -104,17 +104,17 @@ Columns: **Role** — primary purpose. **Context** — S = server only, C = clie
 
 ## How pieces fit together
 
-1. **Scenario state** — Applied on the **server** (`FADE_applyScenarioSettings`); lists and flags live in `missionNamespace` and are replicated with `publicVariable` / `setVariable ... true` as needed. Clients refresh local GUI state via `FADE_syncScenarioConfig` and initial `FADE_sendScenarioConfigToClient`.
+1. **Scenario state** - Applied on the **server** (`FADE_applyScenarioSettings`); lists and flags live in `missionNamespace` and are replicated with `publicVariable` / `setVariable ... true` as needed. Clients refresh local GUI state via `FADE_syncScenarioConfig` and initial `FADE_sendScenarioConfigToClient`.
 
-2. **Vehicles** — Client GUI sends class + player to **server**; server creates/deletes vehicles and sends **systemChat** / list updates back to the requesting client.
+2. **Vehicles** - Client GUI sends class + player to **server**; server creates/deletes vehicles and sends **systemChat** / list updates back to the requesting client.
 
-3. **Missions** — Client sends mission type + player; **server** validates slots, sets `FADE_missionParams`, `call compile`s `Missions.sqf` (not `execVM` for the main file, to avoid param races). Sub-scripts (`TroopTransport`, `AOMission`) are server `compile`d from within `Missions.sqf`.
+3. **Missions** - Client sends mission type + player; **server** validates slots, sets `FADE_missionParams`, `call compile`s `Missions.sqf` (not `execVM` for the main file, to avoid param races). Sub-scripts (`TroopTransport`, `AOMission`) are server `compile`d from within `Missions.sqf`.
 
-4. **Feedback** — Structured hints use `remoteExec ["FADE_showMissionHint", _player]` (or `0` for all clients in a few ambient cases). **Sound** for transport uses `remoteExec ["playSound", _player]` from server (`TroopTransport.sqf`).
+4. **Feedback** - Structured hints use `remoteExec ["FADE_showMissionHint", _player]` (or `0` for all clients in a few ambient cases). **Sound** for transport uses `remoteExec ["playSound", _player]` from server (`TroopTransport.sqf`).
 
-5. **Audio broadcast** — Jukebox server updates `FAC_jukebox_nowPlaying` and **`remoteExec`s** `FAC_jukebox_clientPlay` to every client with JIP key. Locker/surrender use **`say3D`** with `remoteExec` to `0` where 3D audio should be heard by everyone.
+5. **Audio broadcast** - Jukebox server maintains **`FAC_jukebox_activeSources`** (`[[sourceKey, song], ...]`, public) and **`remoteExec`s** `FAC_jukebox_clientPlay` with **`[song, sourceKey]`** to every client (per-source audio; multiple radios at once). JIP clients replay from that array. Locker (and optional surrender audio when enabled) use **`say3D`** with `remoteExec` to `0` where 3D audio should be heard by everyone.
 
-6. **BIS campaign function gaps** — `fn_bisCpStubApply` + preInit/postInit/`EachFrame` guard reduce RPT errors from mods expecting `bis_fnc_cp_*` (see **AGENTS.md**).
+6. **BIS campaign function gaps** - `fn_bisCpStubApply` + preInit/postInit/`EachFrame` guard reduce RPT errors from mods expecting `bis_fnc_cp_*` (see **AGENTS.md**).
 
 ---
 

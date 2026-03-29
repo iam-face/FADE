@@ -9,6 +9,7 @@
 // - remoteExec [..., 2] sends to server (2 = server machine ID). The server
 //   must have FAC_surrenderChallenge_start publicVariable'd and the function
 //   defined. JIP players get publicVariable on connect.
+// - Surrender Challenge: player path disabled (see FAC_surrenderChallenge_playerEnabled on server).
 // =============================================================================
 
 // Debug: set true to show systemChat for every key interaction (cursorTarget, cursorObject, etc.)
@@ -42,10 +43,12 @@ FADE_syncScenarioConfig = {
 hint "LOADING AO...";
 
 // -----------------------------------------------------------------------------
-// Surrender Challenge  - activation function (runs on client when key pressed)
+// Surrender Challenge  - client activation (unused while FAC_surrenderChallenge_playerEnabled is false)
 // With no Man under cursor: still plays apprehend shout + server timed sequence (no AI).
 // -----------------------------------------------------------------------------
 FAC_surrenderChallenge_fnc_activate = {
+    if (!(missionNamespace getVariable ["FAC_surrenderChallenge_playerEnabled", false])) exitWith {};
+
     private _dbg = { if (missionNamespace getVariable ["FAC_surrenderChallenge_debugKeys", false]) then { systemChat _this } };
 
     // Early exit if player is dead  - avoids null/invalid target issues
@@ -53,7 +56,7 @@ FAC_surrenderChallenge_fnc_activate = {
         "[FAC] Abort: Player dead." call _dbg;
     };
 
-    // Min 2s between uses (U key, inputAction fallback, CfgUserActions)
+    // Min 2s between uses when player path is enabled (legacy: U key / inputAction / CfgUserActions)
     if (time - (missionNamespace getVariable ["FAC_surrenderChallenge_lastTrigger", 0]) < 2) exitWith {};
     missionNamespace setVariable ["FAC_surrenderChallenge_lastTrigger", time];
 
@@ -127,6 +130,19 @@ call compile preprocessFileLineNumbers "rsc\VehicleGui.sqf";
 call compile preprocessFileLineNumbers "rsc\MissionsGui.sqf";
 call compile preprocessFileLineNumbers "rsc\ScenarioGui.sqf";
 call compile preprocessFileLineNumbers "rsc\JukeboxGui.sqf";
+missionNamespace setVariable ["FAC_jukeboxGui_fnc", FAC_jukeboxGui_fnc];
+missionNamespace setVariable ["FAC_jukebox_clientPlay", FAC_jukebox_clientPlay];
+missionNamespace setVariable ["FAC_jukebox_serverDbgChat", FAC_jukebox_serverDbgChat];
+
+// JIP: replay all active jukebox sources (server maintains FAC_jukebox_activeSources)
+[] spawn {
+    uiSleep 0.75;
+    private _st = missionNamespace getVariable ["FAC_jukebox_activeSources", []];
+    {
+        _x params ["_k", "_s"];
+        if (_s != "") then { [_s, _k] call FAC_jukebox_clientPlay };
+    } forEach _st;
+};
 call compile preprocessFileLineNumbers "rsc\CQBGui.sqf";
 call compile preprocessFileLineNumbers "rsc\CqbLoudspeaker.sqf";
 call compile preprocessFile "rsc\TeleportGui.sqf";
@@ -138,36 +154,6 @@ waitUntil {
 
 // Request scenario config from server (limit gear, friendly faction) for Loadout/Vehicle GUIs
 [player] remoteExec ["FADE_sendScenarioConfigToClient", 2];
-
-// Always-available player action: open Missions GUI from anywhere.
-// Re-register on respawn because player actions are not persistent through death.
-FAC_registerMissionGuiAction = {
-    if (!isNil "FAC_openMissionGuiActionId" && { FAC_openMissionGuiActionId >= 0 }) then {
-        player removeAction FAC_openMissionGuiActionId;
-    };
-    FAC_openMissionGuiActionId = player addAction [
-        "<t color='#FFD700'>Open Mission GUI</t>",
-        {
-            if (isNull (findDisplay 60002)) then {
-                ["open", []] call FAC_missionsGui_fnc;
-            };
-        },
-        [],
-        6,
-        false,
-        true,
-        "",
-        "true",
-        3
-    ];
-};
-[] call FAC_registerMissionGuiAction;
-player addEventHandler ["Respawn", {
-    [] spawn {
-        sleep 0.2;
-        [] call FAC_registerMissionGuiAction;
-    };
-}];
 
 // Vehicle board (vehBoard): Manage Vehicles only
 private _vehicleBoard = missionNamespace getVariable ["FADE_vehicleBoard", objNull];
@@ -231,7 +217,7 @@ if (!isNull (missionNamespace getVariable ["FADE_cqbBoard", objNull])) then {
     ];
 };
 
-// Teleport boards (teleportBoard_1..7) - opens Fast Travel GUI.
+// Teleport boards (teleportBoard_1..8) - opens Fast Travel GUI.
 // Each board preselects its matching destination in the GUI.
 private _teleportBoardMap = [
     ["teleportBoard_1", "BASE_1"],
@@ -240,7 +226,8 @@ private _teleportBoardMap = [
     ["teleportBoard_4", "firingRangeBoard"],
     ["teleportBoard_5", "cqbBoard"],
     ["teleportBoard_6", "VEH_2"],
-    ["teleportBoard_7", "teleportBoard_7"]
+    ["teleportBoard_7", "teleportBoard_7"],
+    ["teleportBoard_8", "teleportBoard_8"]
 ];
 {
     _x params ["_boardName", "_defaultDest"];
@@ -336,12 +323,53 @@ execVM "rsc\Briefing.sqf";
     } forEach _boxes;
 };
 
-// Add Radio_1 jukebox action  - Radio_1 is an Eden-named object (missionNamespace)
-private _radio = missionNamespace getVariable ["Radio_1", objNull];
-if (!isNull _radio) then {
-    _radio addAction [
-        "<t color='#FF69B4'>Jukebox</t>",
-        { [] spawn { sleep 0.2; ["open", []] call FAC_jukeboxGui_fnc } },
+// Jukebox: Radio_1..Radio_4 (Eden names); each source gets its own playback slot
+{
+    private _eden = _x;
+    private _key = format ["radio:%1", _eden];
+    private _radio = missionNamespace getVariable [_eden, objNull];
+    if (!isNull _radio) then {
+        _radio addAction [
+            "<t color='#FF69B4'>Jukebox</t>",
+            {
+                params ["_target", "_caller", "_actionId", "_args"];
+                missionNamespace setVariable ["FAC_jukebox_guiSource", _args select 0];
+                [] spawn { sleep 0.2; ["open", []] call FAC_jukeboxGui_fnc };
+            },
+            [_key],
+            5,
+            false,
+            true,
+            "",
+            "",
+            3
+        ];
+    };
+} forEach ["Radio_1", "Radio_2", "Radio_3", "Radio_4"];
+
+// SDE's bar: Nesk_1 (Eden name) — drink interaction (local player only; lethal)
+private _nesk = missionNamespace getVariable ["Nesk_1", objNull];
+if (!isNull _nesk) then {
+    removeAllActions _nesk;
+    _nesk addAction [
+        "Drink the Neskwhiskey",
+        {
+            params ["_target", "_caller", "_actionId", "_args"];
+            if (missionNamespace getVariable ["FAC_neskWhiskeyInProgress", false]) exitWith {};
+            missionNamespace setVariable ["FAC_neskWhiskeyInProgress", true];
+            [_caller] spawn {
+                params ["_unit"];
+                if (isNull _unit || {!alive _unit} || {!local _unit}) exitWith {
+                    missionNamespace setVariable ["FAC_neskWhiskeyInProgress", false];
+                };
+                _unit switchMove "Acts_Stunned_Unconscious";
+                sleep 7;
+                if (alive _unit && {local _unit}) then {
+                    _unit setDamage 1;
+                };
+                missionNamespace setVariable ["FAC_neskWhiskeyInProgress", false];
+            };
+        },
         [],
         5,
         false,
@@ -364,7 +392,7 @@ private _welcomeText = format [
     "<t color='#00FF00'>Base Boards</t><t color='#FFFFFF'> have vehicles, missions, scenario, gear, teleportation.</t><br/>" +
     "<t color='#FFCC00'>CTB Doctrine</t><t color='#FFFFFF'> callouts are located in your notes.</t><br/>" +
     "<t color='#FFCC00'>Ctrl + ;</t><t color='#FFFFFF'> opens the Mission GUI from anywhere.</t><br/>" +
-    "<t color='#FFCC00'>U</t><t color='#FFFFFF'> is the hotkey for CQB Surrender mechanic (BETA)</t><br/><br/>" +
+    "<t color='#FFCC00'>Ctrl + '</t><t color='#FFFFFF'> opens the Jukebox (music from your character).</t><br/><br/>" +
     "<t color='#FFFFFF'>Remember: Do not take SDE's STANAGS.</t>" +
     "</t>",
     _playerName
@@ -411,7 +439,7 @@ player addEventHandler ["GetOutMan", {
 }];
 
 // -----------------------------------------------------------------------------
-// KeyDown on main display (46): U = Surrender Challenge, L = Missions GUI
+// KeyDown on main display (46): Ctrl+; = Missions GUI, Ctrl+' = Jukebox
 // displayAddEventHandler runs on the client; findDisplay 46 is the game HUD.
 // -----------------------------------------------------------------------------
 [] spawn {
@@ -425,24 +453,14 @@ player addEventHandler ["GetOutMan", {
             };
             true
         };
-        // DIK_U = 0x16  - Surrender Challenge (2s cooldown inside FAC_surrenderChallenge_fnc_activate)
-        if (_key == 0x16) then {
-            call FAC_surrenderChallenge_fnc_activate;
+        // CTRL+' (DIK_APOSTROPHE = 0x28) - Jukebox (sound from player)
+        if (_key == 0x28 && { _ctrl }) exitWith {
+            if (isNull (findDisplay 60400)) then {
+                missionNamespace setVariable ["FAC_jukebox_guiSource", format ["player:%1", getPlayerUID player]];
+                [] spawn { sleep 0.05; ["open", []] call FAC_jukeboxGui_fnc };
+            };
+            true
         };
         false
     }];
-};
-
-// -----------------------------------------------------------------------------
-// Surrender Challenge: inputAction fallback  - for custom-bound keys
-// inputAction returns > 0 when key is held. Poll every 0.15s.
-// FAC_SurrenderChallenge = CfgUserActions; User1 = generic user action.
-// -----------------------------------------------------------------------------
-[] spawn {
-    while { true } do {
-        sleep 0.15;
-        if (inputAction "FAC_SurrenderChallenge" > 0 || { inputAction "User1" > 0 }) then {
-            call FAC_surrenderChallenge_fnc_activate;
-        };
-    };
 };

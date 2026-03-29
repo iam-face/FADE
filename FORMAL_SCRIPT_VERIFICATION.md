@@ -1,4 +1,4 @@
-# Formal script verification — dedicated multiplayer / dedicated server
+# Formal script verification - dedicated multiplayer / dedicated server
 
 **Mission:** FAC Heli Ops (Sefrou-Ramal)  
 **Scope:** All `.sqf` files in the mission repository  
@@ -29,14 +29,14 @@ This document is the **formal record** that each listed file was reviewed for th
 
 ## Verification matrix (all 30 files)
 
-**Legend — Checks:** **G** = execution guard / entry path OK · **UI** = client UI/audio safe (or N/A) · **NET** = networking consistent · **Result** = PASS / PASS\*  
+**Legend - Checks:** **G** = execution guard / entry path OK · **UI** = client UI/audio safe (or N/A) · **NET** = networking consistent · **Result** = PASS / PASS\*  
 
 \*PASS\* = passes by design (config/stub; no MP risk).
 
 | # | File | ~Lines | Ctx | Checks | Result | Evidence / notes |
 |---|------|--------|-----|--------|--------|------------------|
-| 1 | `initServer.sqf` | 1477 | S | G, NET | PASS | `if (!isServer) exitWith {}` L16; spawns, PV, `remoteExec` to clients; comments only re “hint”. |
-| 2 | `initPlayerLocal.sqf` | 409 | C | G, UI, NET | PASS | Client-only; `FADE_showMissionHint`; `remoteExec` to server `2`; boards/actions/GUI. |
+| 1 | `initServer.sqf` | 2169 | S | G, NET | PASS | `if (!isServer) exitWith {}` L16; `FAC_surrenderChallenge_playerEnabled` gates surrender RPC; spawns, PV (`FADE_serviceVehicle` + vehicle RPCs), compiles `Missions.sqf`; `remoteExec` to clients; comments only re “hint”. |
+| 2 | `initPlayerLocal.sqf` | 433 | C | G, UI, NET | PASS | Client-only; `FADE_showMissionHint`; `FAC_surrenderChallenge_fnc_activate` gated; `remoteExec` to server `2`; boards/actions/GUI. |
 | 3 | `init.sqf` | 3 | B | G | PASS\* | Calls `fn_bisCpPreInit` only. |
 | 4 | `onPlayerRespawn.sqf` | 21 | C | G, UI | PASS | Client respawn; `player`/`setUnitLoadout` local. |
 | 5 | `cba_settings.sqf` | 4 | B | G | PASS\* | CBA `force` assignments only. |
@@ -45,7 +45,7 @@ This document is the **formal record** that each listed file was reviewed for th
 | 8 | `rsc/fn_bisCpPostInit.sqf` | 2 | B | G | PASS\* | Reapplies stub. |
 | 9 | `rsc/fn_bisCpStubApply.sqf` | 12 | B | G | PASS\* | Sets mission/uiNamespace stubs. |
 | 10 | `rsc/DebugBIScpStub.sqf` | 43 | B | G | PASS\* | Exits if `FADE_debugBIScp` false; diag_log only. |
-| 11 | `rsc/Missions.sqf` | ~1860 | S | G, NET | PASS | L22 `if (!isServer) exitWith {}`; no `hint` statement; feedback via `remoteExec` to `_player` or `systemChat` via server; `_player` param. |
+| 11 | `rsc/Missions.sqf` | ~1967 | S | G, NET | PASS | L22 `if (!isServer) exitWith {}`; no `hint` statement; feedback via `remoteExec` to `_player` or `systemChat` via server; `_player` param; starter-only `BIS_fnc_taskCreate` (`ASSIGNED`). |
 | 12 | `rsc/TroopTransport.sqf` | 293 | S | G, NET | PASS | L13 `if (!isServer) exitWith {}`; `playSound`/`systemChat` via `remoteExec` to `_player`. |
 | 13 | `rsc/AOMission.sqf` | 665 | S | G, NET | PASS | L6 `if (!isServer) exitWith {}`; compiled only from server `Missions.sqf`. |
 | 14 | `rsc/AmbientCivilians.sqf` | 665 | S | G, NET | PASS | L12 `if (!isServer) exitWith {}`; “hint” via `remoteExec ["FADE_showMissionHint", 0]` (server→clients). |
@@ -53,16 +53,16 @@ This document is the **formal record** that each listed file was reviewed for th
 | 16 | `rsc/EnemyCheckpoints.sqf` | 222 | S | G, NET | PASS | L12 `if (!isServer) exitWith {}`; debug `systemChat` remoteExec to 0. |
 | 17 | `rsc/PadVehicleService.sqf` | 42 | S | G | PASS | L6 `if (!isServer) exitWith {}`. |
 | 18 | `rsc/SurrenderChallenge.sqf` | 325 | S | G, NET | PASS | L40 `if (!isServer) exitWith {}`; `remoteExec` to `_player` for feedback. |
-| 19 | `rsc/VehicleGui.sqf` | 236 | C | UI, NET | PASS | Client GUI; `remoteExec` to server for spawn/despawn/list. |
+| 19 | `rsc/VehicleGui.sqf` | 265 | C | UI, NET | PASS | Client GUI; `remoteExec` to server for spawn/despawn/`FADE_serviceVehicle`/list. |
 | 20 | `rsc/MissionsGui.sqf` | 243 | C | UI, NET | PASS | Client GUI; mission/copilot `remoteExec` to `2`. |
 | 21 | `rsc/ScenarioGui.sqf` | 256 | C | UI, NET | PASS | Apply → `FADE_applyScenarioSettings` on server. |
 | 22 | `rsc/LoadoutGui.sqf` | 343 | C | UI | PASS | Local loadout; `player` only in GUI context. |
-| 23 | `rsc/JukeboxGui.sqf` | 159 | C | UI, NET | PASS | `FAC_jukebox_clientPlay` uses `hasInterface` L62; server `remoteExec` for play. |
+| 23 | `rsc/JukeboxGui.sqf` | 398 | C | UI, NET | PASS | `FAC_jukebox_clientPlay` uses `hasInterface`; server `remoteExec` for play. Loudness: CfgSounds `Sig_*` + mirror `FAC_jukebox_soundVolumeMission` / `FAC_jukebox_soundDistanceMission`. |
 | 24 | `rsc/CQBGui.sqf` | 100 | C | UI, NET | PASS | CQB `remoteExec` to server. |
 | 25 | `rsc/CqbLoudspeaker.sqf` | 35 | C | UI | PASS | `FAC_cqbLoudspeaker_clientPlay`: `hasInterface` L13. |
 | 26 | `rsc/TeleportGui.sqf` | 215 | C | UI | PASS | Client `setPosATL` / dialogs. |
 | 27 | `rsc/TeleportMapPick.sqf` | 34 | C | UI | PASS | Client `execVM`; map/hint local. |
-| 28 | `rsc/Briefing.sqf` | 347 | C | UI | PASS | `player createDiaryRecord` — client init only. |
+| 28 | `rsc/Briefing.sqf` | 347 | C | UI | PASS | `player createDiaryRecord` - client init only. |
 | 29 | `rsc/LightTowers.sqf` | 40 | C | UI | PASS | `createVehicleLocal`; client `execVM`. |
 | 30 | `rsc/LockerRoomAmbient.sqf` | 94 | C | UI, NET | PASS | `hasInterface` L4; `say3D` via `remoteExec` to 0. |
 
@@ -92,6 +92,6 @@ This document is the **formal record** that each listed file was reviewed for th
 
 ## References
 
-- **SCRIPT_INDEX.md** — File inventory and load order.  
-- **AGENTS.md** — Gameplay, editor names, patterns.  
-- **Bohemia Wiki — Multiplayer scripting:** https://community.bistudio.com/wiki/Multiplayer_Scripting  
+- **SCRIPT_INDEX.md** - File inventory and load order.  
+- **AGENTS.md** - Gameplay, editor names, patterns.  
+- **Bohemia Wiki - Multiplayer scripting:** https://community.bistudio.com/wiki/Multiplayer_Scripting  

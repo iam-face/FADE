@@ -1,5 +1,5 @@
 // =============================================================================
-// Pad vehicle service — full repair, refuel, rearm at all spawn pads (server)
+// Pad vehicle service - full repair, refuel, rearm at all spawn pads (server)
 // Applies to helipads (FADE_helipadList) and land vehicle points (FADE_vehiclePoints).
 // Aircraft must be on the ground; all types must be nearly stationary.
 // =============================================================================

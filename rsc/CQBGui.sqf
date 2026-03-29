@@ -64,7 +64,7 @@ FAC_cqbGui_fnc = {
                 "Civilians%1" +
                 "If TRUE, 15%% chance per spawn roll for a civilian instead of an enemy.%1%1" +
                 "End state%1" +
-                "With real enemies, drill will auto-complete when all are dead or surrendered. Anyone can end the drill via this GUI.%1%1" +
+                "With real enemies, drill will auto-complete when all hostiles are eliminated or captive. Anyone can end the drill via this GUI.%1%1" +
                 "Good luck.",
                 _nl,
                 _nStr

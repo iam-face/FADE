@@ -17,6 +17,10 @@ if (!isServer) exitWith {};
 
 // Config - single source of truth (rsc\Config.sqf); load before DebugBIScpStub so FADE_debugBIScp applies
 call compile preprocessFileLineNumbers "rsc\Config.sqf";
+missionNamespace setVariable ["FADE_counterAttackFirstDelayMin", FADE_counterAttackFirstDelayMin];
+missionNamespace setVariable ["FADE_counterAttackFirstDelayMax", FADE_counterAttackFirstDelayMax];
+missionNamespace setVariable ["FADE_counterAttackMinDistFromBase", FADE_counterAttackMinDistFromBase];
+missionNamespace setVariable ["FADE_counterAttackCargoStaggerSec", FADE_counterAttackCargoStaggerSec];
 
 // Debug: optional stub for missing BIS campaign functions (default off in Config - see rsc\DebugBIScpStub.sqf)
 call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";
@@ -480,7 +484,7 @@ FADE_applyWeatherPreset = {
 };
 
 // Apply initial time and weather from Config (server; syncs to clients)
-private _initHour = missionNamespace getVariable ["FADE_scenarioTime", 12];
+private _initHour = missionNamespace getVariable ["FADE_scenarioTime", 18];
 private _initWeather = missionNamespace getVariable ["FADE_scenarioWeather", "Clear"];
 private _date = date;
 setDate [_date select 0, _date select 1, _date select 2, _initHour, _date select 4];
@@ -544,31 +548,89 @@ private _applyBoardTexture = {
     params ["_obj", "_path"];
     if (!isNull _obj && { count (getObjectTextures _obj) > 0 }) then { _obj setObjectTextureGlobal [0, _path] };
 };
+// Land_MapBoard_01_Wall_F: getObjectTextures is often [] until a texture is set, so the guard above never runs.
+private _applyBoardTextureMapWall = {
+    params ["_obj", "_path"];
+    if (isNull _obj) exitWith {};
+    _obj setObjectTextureGlobal [0, _path];
+};
+// Resolve Eden object name: missionNamespace first, then scan map boards (covers edge cases where name is not in namespace yet).
+private _fnc_resolveLandMapBoardWall = {
+    params ["_edenName"];
+    private _o = missionNamespace getVariable [_edenName, objNull];
+    if (!isNull _o) exitWith { _o };
+    private _scan = allMissionObjects "Land_MapBoard_01_Wall_F";
+    private _i = _scan findIf { vehicleVarName _x == _edenName };
+    if (_i >= 0) then { _o = _scan select _i };
+    _o
+};
+private _applyBoardTextureMapWallByEdenName = {
+    params ["_edenName", "_path"];
+    private _o = [_edenName] call _fnc_resolveLandMapBoardWall;
+    if (isNull _o) exitWith {};
+    _o setObjectTextureGlobal [0, _path];
+};
 // Vehicle and Missions/Config boards (interactive)
-[missionNamespace getVariable ["vehBoard", objNull], "img\vehicles.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["missionBoard", objNull], "img\missionsconfig.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["vehBoard", objNull], "img\vehicles2.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["missionBoard", objNull], "img\laptopScenario.jpg"] call _applyBoardTexture;
 // CQB (interactive)
-[missionNamespace getVariable ["cqbBoard", objNull], "img\cqb.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["cqbBoard", objNull], "img\laptopCQB.jpg"] call _applyBoardTexture;
 // Base billboards (non-interactable). Add img\base.jpg and uncomment to set texture.
 [missionNamespace getVariable ["baseBoard_1", objNull], "img\baseBoards.jpg"] call _applyBoardTexture;
 [missionNamespace getVariable ["baseBoard_2", objNull], "img\baseBoards.jpg"] call _applyBoardTexture;
 [missionNamespace getVariable ["baseBoard_3", objNull], "img\baseBoards.jpg"] call _applyBoardTexture;
-// Loadout boards above loadout boxes (non-interactable)
-[missionNamespace getVariable ["loadoutBoard_1", objNull], "img\loadouts.jpg"] call _applyBoardTexture;
+// HQ / canvases / admin / banner (non-interactable; Eden object names)
+[missionNamespace getVariable ["hqMainBoard", objNull], "img\hqMainBoard2.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["canvas_1", objNull], "img\flagCTB.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["canvas_2", objNull], "img\flagAustralia.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["canvas_3", objNull], "img\flagCTB.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["canvas_4", objNull], "img\missionsconfig.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["whiteboardAdmin", objNull], "img\whiteboardAdmin.jpg"] call _applyBoardTextureMapWall;
+[missionNamespace getVariable ["bannerSDE", objNull], "img\bannerSDE.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["sdeArt_1", objNull], "img\letsgo.jpg"] call _applyBoardTexture;
+// Loadout boards above loadout boxes (non-interactable). Names: loadoutboard_1/3/4 in mission.sqm (case-sensitive).
+private _loadoutMapTex = "img\whiteboardLoadouts.jpg";
+{ [_x, _loadoutMapTex] call _applyBoardTextureMapWallByEdenName } forEach ["loadoutboard_1", "loadoutboard_3", "loadoutboard_4"];
 [missionNamespace getVariable ["loadoutBoard_2", objNull], "img\loadouts.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["loadoutBoard_3", objNull], "img\loadouts.jpg"] call _applyBoardTexture;
+// Re-apply after init: Eden/custom attributes can run after initServer; inline resolver (spawn cannot see outer private fnc).
+[] spawn {
+    private _names = ["loadoutboard_1", "loadoutboard_3", "loadoutboard_4"];
+    private _p = "img\whiteboardLoadouts.jpg";
+    private _apply = {
+        params ["_names", "_path"];
+        {
+            private _en = _x;
+            private _o = missionNamespace getVariable [_en, objNull];
+            if (isNull _o) then {
+                private _scan = allMissionObjects "Land_MapBoard_01_Wall_F";
+                private _i = _scan findIf { vehicleVarName _x == _en };
+                if (_i >= 0) then { _o = _scan select _i };
+            };
+            if (!isNull _o) then { _o setObjectTextureGlobal [0, _path]; };
+        } forEach _names;
+    };
+    sleep 0.5;
+    [_names, _p] call _apply;
+    sleep 2;
+    [_names, _p] call _apply;
+};
 // Music board next to jukebox (non-interactable)
 [missionNamespace getVariable ["musicBoard", objNull], "img\music.jpg"] call _applyBoardTexture;
+// Jukebox radio props (non-interactable texture; actions on Radio_* in initPlayerLocal)
+[missionNamespace getVariable ["Radio_1", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["Radio_2", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["Radio_3", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["Radio_4", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
 // Firing range sign (non-interactable)
-[missionNamespace getVariable ["firingRangeBoard", objNull], "img\firingRange.jpg"] call _applyBoardTexture;
-// Teleport boards (Fast Travel GUI)
-[missionNamespace getVariable ["teleportBoard_1", objNull], "img\teleporter.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["teleportBoard_2", objNull], "img\teleporter.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["teleportBoard_3", objNull], "img\teleporter.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["teleportBoard_4", objNull], "img\teleporter.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["teleportBoard_5", objNull], "img\teleporter.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["teleportBoard_6", objNull], "img\teleporter.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["teleportBoard_7", objNull], "img\teleporter.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["firingRangeBoard", objNull], "img\signLiveFire.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["signFire_1", objNull], "img\signLiveFire.jpg"] call _applyBoardTexture;
+// Teleport boards (Fast Travel GUI) - same signage texture on all boards
+{
+    [missionNamespace getVariable [_x, objNull], "img\teleporter.jpg"] call _applyBoardTexture;
+} forEach [
+    "teleportBoard_1", "teleportBoard_2", "teleportBoard_3", "teleportBoard_4",
+    "teleportBoard_5", "teleportBoard_6", "teleportBoard_7", "teleportBoard_8"
+];
 // All loadout boxes (from Config FADE_loadoutBoxNames); each gets loadout actions + ACE init
 FADE_loadoutBoxes = (missionNamespace getVariable ["FADE_loadoutBoxNames", ["LOADOUTBOX", "LOADOUTBOX_2"]]) apply { missionNamespace getVariable [_x, objNull] } select { !isNull _x };
 FADE_loadoutBox = FADE_loadoutBoxes param [0, objNull];
@@ -707,6 +769,345 @@ FADE_registerEnemyRetreat = {
         [_groups, _basePos] call FADE_doEnemyRetreat;
     };
 };
+
+// -----------------------------------------------------------------------------
+// Counter-attack helpers - cargo capacity (cached per classname), RHS/vanilla fallbacks
+// -----------------------------------------------------------------------------
+// Returns emptyPositions "cargo" for a classname; caches in missionNamespace (spawn test once per class).
+FADE_counterAttack_cargoSeatsForClass = {
+    params ["_class"];
+    private _key = "FADE_counterAttack_cargo_" + _class;
+    private _cached = missionNamespace getVariable [_key, -1];
+    if (_cached >= 0) exitWith { _cached };
+    if (!(isClass (configFile >> "CfgVehicles" >> _class))) exitWith {
+        missionNamespace setVariable [_key, 0];
+        0
+    };
+    private _testPos = [FADE_basePos, 1500, 5000, 15, 0, 0.4, 0, [], FADE_basePos] call BIS_fnc_findSafePos;
+    if (count _testPos < 2) then { _testPos = [FADE_basePos select 0, FADE_basePos select 1, 0] };
+    private _v = createVehicle [_class, _testPos, [], 0, "NONE"];
+    if (isNull _v) exitWith {
+        missionNamespace setVariable [_key, 0];
+        0
+    };
+    private _n = _v emptyPositions "cargo";
+    deleteVehicle _v;
+    missionNamespace setVariable [_key, _n];
+    _n
+};
+
+// Filter classnames to those with at least _minCargo cargo seats (uses cache above).
+FADE_counterAttack_filterClassesByMinCargo = {
+    params ["_classes", "_minCargo"];
+    private _out = [];
+    {
+        if (([_x] call FADE_counterAttack_cargoSeatsForClass) >= _minCargo) then {
+            _out pushBack _x;
+        };
+    } forEach _classes;
+    _out
+};
+
+// -----------------------------------------------------------------------------
+// Counter-attack / QRF (Hostage, HVT, Clear Area) - reusable server spawn loop.
+// Stages truck-mounted infantry from the second-nearest CIV_T_* zone (by distance
+// to the objective); falls back to offset from nearest zone if only one trigger exists.
+// Params: [_taskId, _objectivePos, _basePos, _enemyUnits, _allGroups, _detectionRadius]
+//   _allGroups - reference array; new enemy groups are pushBack'd for mission cleanup.
+//   _detectionRadius - optional; <= 0 uses missionNamespace FADE_counterAttackDetectionRadius (default 450).
+// Timing defaults (optional missionNamespace): FADE_counterAttackFirstDelayMin/Max (120–360s),
+//   FADE_counterAttackBetweenMin/Max (540–660s), FADE_counterAttackTruckCount (3).
+// Vehicle filter: FADE_counterAttackMinCargoSeats (default 4). Fallback trucks if faction has none:
+//   FADE_counterAttackRhsFallbacks (RHS GAZ/ZIL/Kamaz/Ural-style), then FADE_counterAttackVanillaFallbacks.
+// Poll interval: FADE_counterAttackPollInterval (default 10s) for zone/task checks (not per-frame).
+// Wave cap: 1–3 waves per mission instance (chosen at random when the counter-attack thread starts).
+// Not registered with FADE_registerEnemyRetreat (QRF keeps pressure); cleaned with mission groups.
+// -----------------------------------------------------------------------------
+FADE_counterAttackStart = {
+    params [
+        "_taskId",
+        "_objectivePos",
+        "_basePos",
+        "_enemyUnits",
+        "_allGroups",
+        ["_detectionRadius", -1]
+    ];
+    if (!isServer) exitWith {};
+    if (count _objectivePos < 2 || { count _enemyUnits == 0 }) exitWith {};
+    if (_detectionRadius <= 0) then {
+        _detectionRadius = missionNamespace getVariable ["FADE_counterAttackDetectionRadius", 450];
+    };
+    private _firstMin = missionNamespace getVariable ["FADE_counterAttackFirstDelayMin", 120];
+    private _firstMax = missionNamespace getVariable ["FADE_counterAttackFirstDelayMax", 360];
+    private _betMin = missionNamespace getVariable ["FADE_counterAttackBetweenMin", 540];
+    private _betMax = missionNamespace getVariable ["FADE_counterAttackBetweenMax", 660];
+    private _numTrucks = (missionNamespace getVariable ["FADE_counterAttackTruckCount", 3]) max 1;
+    private _pollInterval = (missionNamespace getVariable ["FADE_counterAttackPollInterval", 10]) max 1;
+    if (isNil "FAC_applyEnemyScenarioToGroup") exitWith {};
+    private _applyGrp = FAC_applyEnemyScenarioToGroup;
+
+    [_taskId, _objectivePos, _basePos, _enemyUnits, _allGroups, _detectionRadius, _firstMin, _firstMax, _betMin, _betMax, _numTrucks, _applyGrp, _pollInterval] spawn {
+        params [
+            "_taskId", "_objectivePos", "_basePos", "_enemyUnits", "_allGroups", "_detectionRadius",
+            "_firstMin", "_firstMax", "_betMin", "_betMax", "_numTrucks", "_applyGrp", "_pollInterval"
+        ];
+        private _taskDone = { (_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"] };
+        private _playersInZone = {
+            private _ok = false;
+            {
+                if (isPlayer _x && { alive _x } && { (_x distance2D _objectivePos) < _detectionRadius }) exitWith { _ok = true };
+            } forEach allPlayers;
+            _ok
+        };
+        private _detectionLogged = false;
+        // Wait for first contact in zone or mission end (slow poll - not per-frame)
+        waitUntil {
+            sleep _pollInterval;
+            if (call _taskDone) exitWith { true };
+            private _in = call _playersInZone;
+            if (_in && { !_detectionLogged }) then {
+                _detectionLogged = true;
+            };
+            _in
+        };
+        if (call _taskDone) exitWith {};
+        private _maxWaves = 1 + floor random 3;
+        private _firstDelaySec = _firstMin + random (_firstMax - _firstMin);
+        sleep _firstDelaySec;
+
+        private _waveFn = {
+            params ["_objectivePos", "_enemyUnits", "_allGroups", "_numTrucks", "_applyGrp", "_pollInterval"];
+            private _pairs = [];
+            {
+                private _trig = missionNamespace getVariable [_x, objNull];
+                if (!isNull _trig) then {
+                    private _zc = getPosATL _trig;
+                    if (count _zc >= 2) then {
+                        _pairs pushBack [_zc distance2D _objectivePos, _zc];
+                    };
+                };
+            } forEach (missionNamespace getVariable ["FADE_civTriggerNames", []]);
+            if (count _pairs == 0) exitWith {};
+            _pairs = [_pairs, [], { _x select 0 }, "ASCEND"] call BIS_fnc_sortBy;
+            private _minBase = missionNamespace getVariable ["FADE_counterAttackMinDistFromBase", 1000];
+            private _baseQ = FADE_basePos;
+            private _roadPos = [];
+            private _staging = [];
+            private _stagingResolved = false;
+            private _stCandidates = [];
+            if (count _pairs >= 2) then { _stCandidates pushBack [1, (_pairs select 1) select 1] };
+            if (count _pairs >= 3) then { _stCandidates pushBack [2, (_pairs select 2) select 1] };
+            _stCandidates pushBack [0, (_pairs select 0) select 1];
+            if (count _pairs >= 4) then { _stCandidates pushBack [3, (_pairs select 3) select 1] };
+            private _nearOnly = (_pairs select 0) select 1;
+            _stCandidates pushBack [-1, _nearOnly getPos [600 min ((_nearOnly distance2D _objectivePos) + 400), (_nearOnly getDir _objectivePos) + 180]];
+            private _si = 0;
+            while { _si < count _stCandidates && { !_stagingResolved } } do {
+                private _st = (_stCandidates select _si) select 1;
+                _staging = _st;
+                if (count _staging < 3) then { _staging = [(_staging select 0), (_staging select 1), 0] };
+                private _roads = _staging nearRoads 450;
+                private _okRoads = _roads select { (getPosATL _x) distance2D _baseQ > _minBase };
+                if (count _okRoads > 0) then {
+                    _roadPos = getPosATL (selectRandom _okRoads);
+                    _stagingResolved = true;
+                } else {
+                    private _cand = [_staging, 0, 400, 12, 0, 0.35, 0, [], _staging] call BIS_fnc_findSafePos;
+                    if (count _cand >= 2 && { _cand distance2D _baseQ > _minBase }) then {
+                        _roadPos = [(_cand select 0), (_cand select 1), (_cand param [2, 0])];
+                        _stagingResolved = true;
+                    };
+                };
+                _si = _si + 1;
+            };
+            if (!_stagingResolved) then {
+                private _dirFromBase = _baseQ getDir _objectivePos;
+                private _fallbackPos = _baseQ getPos [(_minBase + 50), _dirFromBase];
+                private _r2 = _fallbackPos nearRoads 250;
+                _r2 = _r2 select { (getPosATL _x) distance2D _baseQ > _minBase };
+                if (count _r2 > 0) then {
+                    _roadPos = getPosATL (selectRandom _r2);
+                    _staging = _fallbackPos;
+                    _stagingResolved = true;
+                };
+            };
+            if (!_stagingResolved) exitWith {};
+            if (count _roadPos < 3) then { _roadPos = [(_roadPos select 0), (_roadPos select 1), 0] };
+            private _dir = [_roadPos, _objectivePos] call BIS_fnc_dirTo;
+
+            private _vehClasses = missionNamespace getVariable ["FADE_enemyVehicles", []];
+            if (_vehClasses isEqualTo []) then {
+                private _ef = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
+                _vehClasses = [_ef] call FADE_getEnemyVehiclesForFaction;
+            };
+            private _soft = [];
+            {
+                if (!(_x isKindOf "Air") && { !(_x isKindOf "Ship") } && { !(_x isKindOf "StaticWeapon") }) then {
+                    if (!(_x isKindOf "Tank") && { !(_x isKindOf "Wheeled_APC_F") }) then { _soft pushBack _x };
+                };
+            } forEach _vehClasses;
+            private _minCargo = missionNamespace getVariable ["FADE_counterAttackMinCargoSeats", 4];
+            private _vehPick = [];
+            private _softOk = [_soft, _minCargo] call FADE_counterAttack_filterClassesByMinCargo;
+            if (count _softOk > 0) then {
+                _vehPick = _softOk;
+            } else {
+                private _landAll = _vehClasses select {
+                    !(_x isKindOf "Air") && { !(_x isKindOf "Ship") } && { !(_x isKindOf "StaticWeapon") }
+                };
+                _vehPick = [_landAll, _minCargo] call FADE_counterAttack_filterClassesByMinCargo;
+            };
+            if (count _vehPick == 0) then {
+                private _rhsFb = missionNamespace getVariable ["FADE_counterAttackRhsFallbacks", [
+                    "rhs_gaz66_msv",
+                    "rhs_zil131_msv",
+                    "rhs_kamaz5350_msv",
+                    "rhs_kamaz5350_open_msv",
+                    "RHS_Ural_Civ_01",
+                    "rhsgref_cdf_ural_open"
+                ]];
+                _vehPick = [_rhsFb, _minCargo] call FADE_counterAttack_filterClassesByMinCargo;
+            };
+            if (count _vehPick == 0) then {
+                private _vanFb = missionNamespace getVariable ["FADE_counterAttackVanillaFallbacks", [
+                    "O_Truck_03_transport_F",
+                    "O_Truck_02_transport_F",
+                    "I_Truck_02_transport_F",
+                    "B_Truck_01_transport_F"
+                ]];
+                _vehPick = [_vanFb, _minCargo] call FADE_counterAttack_filterClassesByMinCargo;
+            };
+            if (count _vehPick == 0) exitWith {
+                private _sz = 4 + floor random 4;
+                private _cls = (_enemyUnits select [0, _sz min count _enemyUnits]);
+                for "_k" from (count _cls) to (_sz - 1) do { _cls pushBack (_enemyUnits select 0) };
+                private _grp = [_roadPos, EAST, _cls] call BIS_fnc_spawnGroup;
+                if (!isNull _grp && { count units _grp > 0 }) then {
+                    [_grp] call _applyGrp;
+                    _grp setBehaviour "COMBAT";
+                    _grp setCombatMode "RED";
+                    private _wp = _grp addWaypoint [_objectivePos, 0];
+                    _wp setWaypointType "SAD";
+                    _allGroups pushBack _grp;
+                };
+            };
+
+            private _cargoStagger = missionNamespace getVariable ["FADE_counterAttackCargoStaggerSec", 0.35];
+            private _spawnedVehs = [];
+            private _findGap = {
+                params ["_desired", "_vehs", "_fallback"];
+                private _best = [];
+                for "_try" from 0 to 8 do {
+                    private _cand = [_desired, 0, 18, 8, 0, 0.35, 0, [], _fallback] call BIS_fnc_findSafePos;
+                    if (count _cand < 2) then { _cand = _fallback };
+                    if (count _cand < 3) then { _cand = [(_cand select 0), (_cand select 1), 0] };
+                    private _bad = false;
+                    { if (!isNull _x && { alive _x } && { (_x distance2D _cand) < 14 }) exitWith { _bad = true } } forEach _vehs;
+                    if (!_bad) exitWith { _best = _cand };
+                };
+                if (count _best < 2) then { _best = _fallback };
+                _best
+            };
+            for "_vi" from 0 to (_numTrucks - 1) do {
+                if (_vi > 0) then { sleep 8 };
+                private _vClass = selectRandom _vehPick;
+                private _anchor = if (count _spawnedVehs > 0) then {
+                    getPosATL (_spawnedVehs select ((count _spawnedVehs) - 1))
+                } else {
+                    _roadPos
+                };
+                private _desired = if (_vi == 0) then {
+                    _roadPos
+                } else {
+                    [
+                        (_anchor select 0) - (sin _dir) * 12,
+                        (_anchor select 1) - (cos _dir) * 12,
+                        0
+                    ]
+                };
+                if (count _desired < 3) then { _desired = [(_desired select 0), (_desired select 1), 0] };
+                private _spawnPos = [_desired, _spawnedVehs, _roadPos] call _findGap;
+                if (_spawnPos distance2D _baseQ <= _minBase) then {
+                    _spawnPos = [_roadPos, 0, 35, 10, 0, 0.35, 0, [], _roadPos] call BIS_fnc_findSafePos;
+                    if (count _spawnPos < 2 || { _spawnPos distance2D _baseQ <= _minBase }) then { continue };
+                };
+                private _vehGrp = createGroup EAST;
+                private _veh = createVehicle [_vClass, _spawnPos, [], 0, "NONE"];
+                if (isNull _veh) then { deleteGroup _vehGrp; continue };
+                _veh setPosATL _spawnPos;
+                _veh setDir _dir;
+                _veh setVelocity [(sin _dir) * 2, (cos _dir) * 2, 0];
+                _veh engineOn true;
+                _spawnedVehs pushBack _veh;
+                private _driver = _vehGrp createUnit [selectRandom _enemyUnits, _spawnPos, [], 0, "NONE"];
+                if (!isNull _driver) then {
+                    _driver moveInDriver _veh;
+                    _vehGrp selectLeader _driver;
+                };
+                if (_veh emptyPositions "gunner" > 0) then {
+                    private _g = _vehGrp createUnit [selectRandom _enemyUnits, _spawnPos, [], 0, "NONE"];
+                    if (!isNull _g) then { _g moveInGunner _veh };
+                };
+                [_vehGrp] call _applyGrp;
+                _vehGrp setBehaviour "AWARE";
+                _vehGrp setCombatMode "RED";
+                _vehGrp setSpeedMode "NORMAL";
+                private _wpM = _vehGrp addWaypoint [_objectivePos, 25];
+                _wpM setWaypointType "MOVE";
+                _wpM setWaypointSpeed "NORMAL";
+                private _wpS = _vehGrp addWaypoint [_objectivePos, 0];
+                _wpS setWaypointType "SAD";
+                _allGroups pushBack _vehGrp;
+                [_veh, _vehGrp, _enemyUnits, _applyGrp, _objectivePos, _pollInterval, _allGroups, _cargoStagger] spawn {
+                    params ["_veh", "_vehGrp", "_enemyUnits", "_applyGrp", "_objectivePos", "_pollInterval", "_allGroups", "_cargoStagger"];
+                    private _seats = (_veh emptyPositions "cargo") max 0;
+                    if (_seats <= 0) exitWith {};
+                    private _cargoGrp = createGroup EAST;
+                    for "_c" from 0 to (_seats - 1) do {
+                        sleep _cargoStagger;
+                        private _u = _cargoGrp createUnit [selectRandom _enemyUnits, getPosATL _veh, [], 0, "NONE"];
+                        if (!isNull _u) then { _u moveInCargo _veh };
+                    };
+                    [_cargoGrp] call _applyGrp;
+                    _allGroups pushBack _cargoGrp;
+                    waitUntil {
+                        sleep _pollInterval;
+                        !alive _veh || { isNull _veh } || { (_veh distance2D _objectivePos) < 130 }
+                    };
+                    if (!alive _veh || { isNull _veh }) exitWith {};
+                    if (!isNull _cargoGrp && { count units _cargoGrp > 0 }) then {
+                        {
+                            unassignVehicle _x;
+                            _x action ["GetOut", _veh];
+                        } forEach units _cargoGrp;
+                        sleep 4;
+                        _cargoGrp setBehaviour "COMBAT";
+                        _cargoGrp setCombatMode "RED";
+                        private _wp = _cargoGrp addWaypoint [_objectivePos, 0];
+                        _wp setWaypointType "SAD";
+                    };
+                };
+            };
+        };
+
+        private _waveNum = 0;
+        while { _waveNum < _maxWaves && { !(call _taskDone) } } do {
+            _waveNum = _waveNum + 1;
+            [_objectivePos, _enemyUnits, _allGroups, _numTrucks, _applyGrp, _pollInterval] call _waveFn;
+            if (call _taskDone) exitWith {};
+            if (_waveNum >= _maxWaves) exitWith {};
+            private _bw = _betMin + random (_betMax - _betMin);
+            sleep _bw;
+            if (call _taskDone) exitWith {};
+            waitUntil {
+                sleep _pollInterval;
+                call _taskDone || { call _playersInZone }
+            };
+            if (call _taskDone) exitWith {};
+        };
+    };
+};
+missionNamespace setVariable ["FADE_counterAttackStart", FADE_counterAttackStart];
 
 // Find mission position in urban areas only (civ zones). Returns [] if no civ zones.
 // Params: [["_minDistOverride", -1]]
@@ -974,7 +1375,7 @@ FADE_cqbStartDrill = {
                 if (_remainingHostile <= 0) exitWith {
                     if (missionNamespace getVariable ["FADE_cqbDrillActive", false]) then {
                         [_player] call FADE_cqbEndDrill;
-                        ["CQB drill complete: all enemy units neutralised (dead or surrendered)."] remoteExec ["systemChat", _player];
+                        ["CQB drill complete: all enemy units neutralised (dead or captive)."] remoteExec ["systemChat", _player];
                     };
                 };
             };
@@ -1154,6 +1555,35 @@ FADE_despawnVehicle = {
     { if (isPlayer _x) then { moveOut _x } else { _veh deleteVehicleCrew _x } } forEach _crew;
     deleteVehicle _veh;
     ["VEHICLE DESPAWNED."] remoteExec ["systemChat", _player];
+    if (_veh isKindOf "Air") then { call FADE_updateHelipadMarkers };
+};
+
+// -----------------------------------------------------------------------------
+// Full repair / refuel / rearm for a vehicle at base (server). Vehicle GUI.
+// Same effect order as rsc\PadVehicleService.sqf; distance rule matches despawn.
+// -----------------------------------------------------------------------------
+FADE_serviceVehicle = {
+    params ["_veh", "_player"];
+    if (isNull _veh) exitWith { ["INVALID VEHICLE."] remoteExec ["systemChat", _player] };
+    if (!alive _veh) exitWith { ["VEHICLE DESTROYED."] remoteExec ["systemChat", _player] };
+    if (
+        _veh isKindOf "Man"
+        || { _veh isKindOf "StaticWeapon" }
+        || { _veh isKindOf "ParachuteBase" }
+    ) exitWith {
+        ["SELECT AN AIRCRAFT OR LAND VEHICLE."] remoteExec ["systemChat", _player];
+    };
+    if (!(_veh isKindOf "Air" || _veh isKindOf "LandVehicle")) exitWith {
+        ["SELECT AN AIRCRAFT OR LAND VEHICLE."] remoteExec ["systemChat", _player];
+    };
+    private _dist = (getPosATL _veh) distance FADE_basePos;
+    if (_dist > 1000) exitWith {
+        ["VEHICLE MUST BE WITHIN 1000M OF BASE TO SERVICE."] remoteExec ["systemChat", _player];
+    };
+    _veh setFuel 1;
+    _veh setDamage 0;
+    _veh setVehicleAmmo 1;
+    ["VEHICLE REPAIRED, REFUELLED, AND REARMED."] remoteExec ["systemChat", _player];
     if (_veh isKindOf "Air") then { call FADE_updateHelipadMarkers };
 };
 
@@ -1372,7 +1802,7 @@ FADE_isMissionEntryOwnedByPlayer = {
 FADE_notifyOthersMissionStarted = {
     params ["_player", "_missionDisplayName"];
     private _others = allPlayers select { !isNull _x && { _x != _player } };
-    { [format ["%1 spawned %2 - see your task list for details.", name _player, _missionDisplayName]] remoteExec ["systemChat", _x] } forEach _others;
+    { [format ["%1 started %2 (mission task is for them only).", name _player, _missionDisplayName]] remoteExec ["systemChat", _x] } forEach _others;
 };
 
 // Returns true if _pos is at least FADE_minDistBetweenMissions from global and all single mission positions
@@ -1490,6 +1920,7 @@ FADE_startMission = {
 
 publicVariable "FADE_spawnHeli";
 publicVariable "FADE_despawnVehicle";
+publicVariable "FADE_serviceVehicle";
 publicVariable "FADE_spawnLandVehicle";
 publicVariable "FADE_requestVehiclesAtBase";
 publicVariable "FADE_setTime";
@@ -1569,6 +2000,10 @@ FADE_abortMission = {
     ["<t size='1.2' color='#B0B0B0'>MISSION ABORTED</t><br/><br/><t color='#E0E0E0'>Mission cancelled.</t>"] remoteExec ["FADE_showMissionHint", _player];
 };
 
+// Surrender Challenge: false = no player hotkey/GUI; server ignores remoteExec (rsc/SurrenderChallenge.sqf unchanged).
+FAC_surrenderChallenge_playerEnabled = false;
+publicVariable "FAC_surrenderChallenge_playerEnabled";
+
 // Surrender Challenge debug: set true to show verbose server messages in chat (diag_log always in RPT)
 FAC_surrenderChallenge_debug = false;
 publicVariable "FAC_surrenderChallenge_debug";
@@ -1583,6 +2018,7 @@ publicVariable "FAC_surrenderChallenge_debug";
 // Windows mission folders; Arma accepts both.
 // -----------------------------------------------------------------------------
 FAC_surrenderChallenge_start = {
+    if (!(missionNamespace getVariable ["FAC_surrenderChallenge_playerEnabled", false])) exitWith {};
     params ["_player", "_targetUnit", ["_playerDir", -1]];
     if (_playerDir < 0) then { _playerDir = getDir _player };
     diag_log format ["[FAC SurrenderChallenge] Server received request from %1 for target %2", name _player, if (isNull _targetUnit) then {"null"} else {name _targetUnit}];
@@ -1591,24 +2027,100 @@ FAC_surrenderChallenge_start = {
 publicVariable "FAC_surrenderChallenge_start";
 
 // -----------------------------------------------------------------------------
-// Jukebox -- server-side sound source management
+// Jukebox -- per-source playback: Radio_1..4 (Eden) and player:<UID> (hotkey).
+// Clients spawn 3D audio on the resolved emitter; FAC_jukebox_activeSources = [[key,song],...] (public).
+// remoteExec: [_song, _sourceKey, _requester] remoteExec ["FAC_jukebox_serverPlay", 2]
+// Stop:        ["", _sourceKey, _requester] remoteExec ["FAC_jukebox_serverPlay", 2]
+// Debug: FAC_jukebox_debug - systemChat to requester + diag_log on server. true = verbose chat (dev only).
 // -----------------------------------------------------------------------------
-// Mirrors Tequila's serverMode pattern:
-//   Hosted (listen server): serverMode = 0  -> say3D runs on ALL machines
-//                           (host is also a client with audio context)
-//   Dedicated:              serverMode = -2 -> say3D runs on dedicated server
-//                           (server owns the locality of the Radio_1 object)
-// Called via remoteExec from any client: [_class] remoteExec ["FAC_jukebox_serverPlay", 2]
-// Stop:                                  [""]      remoteExec ["FAC_jukebox_serverPlay", 2]
-// -----------------------------------------------------------------------------
+FAC_jukebox_debug = false;
+publicVariable "FAC_jukebox_debug";
+
+missionNamespace setVariable ["FAC_jukebox_activeSources", [], true];
+
+FAC_jukebox_serverDbg = {
+    params ["_msg", ["_to", objNull]];
+    if (!isServer) exitWith {};
+    diag_log format ["[FAC Jukebox] %1", _msg];
+    if (!(missionNamespace getVariable ["FAC_jukebox_debug", false])) exitWith {};
+    if (isNull _to) exitWith {};
+    [_msg] remoteExec ["FAC_jukebox_serverDbgChat", _to];
+};
+
+// Resolve emitter: radio:Radio_1 -> missionNamespace object; player:<uid> -> unit
+FAC_jukebox_fnc_resolveSourceObject = {
+    params ["_sourceKey"];
+    if (_sourceKey find "radio:" == 0) exitWith {
+        private _eden = _sourceKey select [6];
+        missionNamespace getVariable [_eden, objNull]
+    };
+    if (_sourceKey find "player:" == 0) exitWith {
+        private _uid = _sourceKey select [7];
+        private _p = objNull;
+        { if (isPlayer _x && { getPlayerUID _x == _uid }) exitWith { _p = _x }; } forEach allPlayers;
+        _p
+    };
+    objNull
+};
+
+FAC_jukebox_fnc_setActiveSourceSong = {
+    params ["_key", "_song"];
+    private _arr = missionNamespace getVariable ["FAC_jukebox_activeSources", []];
+    private _filt = _arr select { (_x select 0) != _key };
+    if (_song != "") then {
+        _filt pushBack [_key, _song];
+    };
+    missionNamespace setVariable ["FAC_jukebox_activeSources", _filt, true];
+};
+
+addMissionEventHandler ["HandleDisconnect", {
+    params ["_unit", "_id", "_uid", "_name"];
+    private _key = format ["player:%1", _uid];
+    private _arr = missionNamespace getVariable ["FAC_jukebox_activeSources", []];
+    private _hit = _arr select { (_x select 0) == _key };
+    if (_hit isEqualTo []) exitWith {};
+    [_key, ""] call FAC_jukebox_fnc_setActiveSourceSong;
+    ["", _key] remoteExec ["FAC_jukebox_clientPlay", 0];
+}];
+
 FAC_jukebox_serverPlay = {
     if (!isServer) exitWith {};
-    params [["_song", ""]];
+    params [["_song", ""], ["_sourceKey", ""], ["_requester", objNull]];
 
-    // Store global now-playing state
-    missionNamespace setVariable ["FAC_jukebox_nowPlaying", _song, true];
+    if (_sourceKey == "") exitWith {
+        diag_log "FAC_jukebox_serverPlay: empty _sourceKey";
+    };
 
-    // Each client plays its own local playSound3D from Radio_1 position
-    [_song] remoteExec ["FAC_jukebox_clientPlay", 0, "FAC_jukebox_JIP"];
+    if (_song == "") exitWith {
+        if (_sourceKey find "player:" == 0 && { isNull _requester || { getPlayerUID _requester != (_sourceKey select [7]) } }) exitWith {
+            diag_log "FAC_jukebox_serverPlay: stop denied (player source must match requester)";
+        };
+        [format ["Stopped source %1 (from %2)", _sourceKey, if (isNull _requester) then {"?"} else { name _requester }], _requester] call FAC_jukebox_serverDbg;
+        [_sourceKey, ""] call FAC_jukebox_fnc_setActiveSourceSong;
+        ["", _sourceKey] remoteExec ["FAC_jukebox_clientPlay", 0];
+    };
+
+    if (_sourceKey find "player:" == 0 && { isNull _requester || { getPlayerUID _requester != (_sourceKey select [7]) } }) exitWith {
+        diag_log "FAC_jukebox_serverPlay: player source UID mismatch";
+        ["FAIL: jukebox player source mismatch.", _requester] call FAC_jukebox_serverDbg;
+    };
+
+    private _emitter = [_sourceKey] call FAC_jukebox_fnc_resolveSourceObject;
+    if (isNull _emitter) exitWith {
+        diag_log format ["FAC_jukebox_serverPlay: no emitter for %1", _sourceKey];
+        [format ["FAIL: jukebox source not available (%1).", _sourceKey], _requester] call FAC_jukebox_serverDbg;
+    };
+
+    private _vehClass = format ["FAC_Jukebox_%1", _song];
+    private _vehCfg = missionConfigFile >> "CfgVehicles" >> _vehClass;
+    if (!isClass _vehCfg) then { _vehCfg = configFile >> "CfgVehicles" >> _vehClass };
+    if (!isClass _vehCfg) exitWith {
+        diag_log format ["FAC_jukebox_serverPlay: CfgVehicles %1 not found (missionConfigFile/configFile)", _vehClass];
+        [format ["FAIL: CfgVehicles %1 missing (description.ext / mod).", _vehClass], _requester] call FAC_jukebox_serverDbg;
+    };
+
+    [_sourceKey, _song] call FAC_jukebox_fnc_setActiveSourceSong;
+    [format ["OK: %1 @ %2", _song, _sourceKey], _requester] call FAC_jukebox_serverDbg;
+    [_song, _sourceKey] remoteExec ["FAC_jukebox_clientPlay", 0];
 };
 publicVariable "FAC_jukebox_serverPlay";

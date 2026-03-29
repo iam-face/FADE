@@ -8,7 +8,7 @@
 // -----------------------------------------------------------------------------
 // Scenario defaults (Scenario GUI overrides these)
 // -----------------------------------------------------------------------------
-FADE_scenarioTime = 12;
+FADE_scenarioTime = 18;
 FADE_scenarioWeather = "Clear";
 FADE_scenarioEnemyFaction = "OPF_F";
 FADE_scenarioFriendlyFaction = "BLU_F";
@@ -18,7 +18,7 @@ FADE_aoStrength = "Mid";       // AO mission strength: "Low", "Mid", "High" (use
 FADE_limitGearToFriendlyFaction = false;  // When true, Loadout and Vehicle GUIs restrict to chosen Friendly faction
 
 // Loadout box Eden object names - all get Manage My Loadout, Save loadout, ACE Arsenal (if loaded)
-FADE_loadoutBoxNames = ["LOADOUTBOX", "LOADOUTBOX_2", "LOADOUTBOX_3"];
+FADE_loadoutBoxNames = ["LOADOUTBOX", "LOADOUTBOX_2", "LOADOUTBOX_3", "LOADOUTBOX_4"];
 // Pad names - Eden object variable names (expand as needed)
 FADE_padNames = ["HP_1", "HP_2", "HP_3", "HP_4", "HP_5", "HP_6", "HP_7", "HP_8"];
 // Pads where planes cannot spawn (helicopters can use any pad)
@@ -106,6 +106,14 @@ FADE_roadSpawnIntervalMax = 180;
 FADE_civDebug = false;  // systemChat for spawn/despawn/road vehicle actions
 FADE_civDebugMarkers = false;  // when true, show map markers for active civ zones (Civ: zoneId)
 FADE_checkpointDebug = false;  // set true: systemChat for enemy checkpoints / roadblocks (spawn, despawn, patrols off)
+
+// Counter-attack QRF (HVT / Hostage / Clear Area): seconds to wait after first player-in-zone before wave 1 (random between min..max).
+// Testing: short delay. Production: e.g. min 120, max 360.
+FADE_counterAttackFirstDelayMin = 120;
+FADE_counterAttackFirstDelayMax = 360;
+// QRF spawn must be farther than this from FADE_basePos (road/safe pos). Cargo loads into trucks after drivers move (stagger sec).
+FADE_counterAttackMinDistFromBase = 1000;
+FADE_counterAttackCargoStaggerSec = 0.35;
 
 // Trace bis_fnc_cp_getQueueDelay / bis_fnc_cp_main callers (installs stubs in DebugBIScpStub.sqf). Leave false in normal play.
 FADE_debugBIScp = false;
