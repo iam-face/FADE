@@ -1,5 +1,5 @@
 // =============================================================================
-// Missions.sqf -- Dynamic mission implementations (runs on server)
+// Missions.sqf -- Dynamic mission implementations (runs on server; compiled from initServer FADE_startMission)
 // =============================================================================
 //
 // EXECUTION: Invoked via spawn+compile from FADE_startMission (server). Params from FADE_missionParams
@@ -16,7 +16,7 @@
 // All createVehicle/createGroup/BIS_fnc_spawnGroup run on server; markers and tasks are server-global.
 // =============================================================================
 
-// Params from FADE_missionParams (set by FADE_startMission before execVM)
+// Params from FADE_missionParams (set by FADE_startMission before compile)
 if (isNil "FADE_missionParams" || { count FADE_missionParams < 3 }) exitWith {};
 FADE_missionParams params ["_missionType", "_destPos", ["_player", objNull]];
 if (!isServer) exitWith {};
@@ -83,14 +83,16 @@ for "_i" from (count _unitClasses) to (_unitCount - 1) do {
     _unitClasses pushBack _baseClass;
 };
 
-// Task creator: ASSIGNED for requesting player, CREATED (visible) for all other players
+// Task: BI task framework only — one create, owner = starter, ASSIGNED (P4: do not also create
+// for other players / whole side; the old pattern CREATED for _others + ASSIGNED for _player
+// gave everyone the task). No remoteExec / client helpers (some builds reject code in remoteExec).
 private _fnc_createMissionTask = {
     params ["_player", "_taskId", "_desc", "_title", "_pos", "_taskType"];
-    private _others = allPlayers select { !isNull _x && { _x != _player } };
-    if (count _others > 0) then {
-        [_others, _taskId, [_desc, _title, ""], _pos, "CREATED", 1, false, _taskType, true] call BIS_fnc_taskCreate;
+    if (!isNull _player) then {
+        [_player, _taskId, [_desc, _title, ""], _pos, "ASSIGNED", 1, true, _taskType, true] call BIS_fnc_taskCreate;
+    } else {
+        [west, _taskId, [_desc, _title, ""], _pos, "CREATED", 1, false, _taskType, true] call BIS_fnc_taskCreate;
     };
-    [_player, _taskId, [_desc, _title, ""], _pos, "ASSIGNED", 1, true, _taskType, true] call BIS_fnc_taskCreate;
 };
 
 // Apply scenario enemy AI skill and routing (flee) to an EAST group. Call after spawning enemy groups.
@@ -874,6 +876,10 @@ if (_missionType == "HVT") exitWith {
     private _allGroups = [_hvtGroup, _guardGroup] + _patrolGroups;
     [[_guardGroup] + _patrolGroups, _basePos] call FADE_registerEnemyRetreat;
 
+    private _hvtObjectivePos = getPosATL _targetBuilding;
+    if (count _hvtObjectivePos < 3) then { _hvtObjectivePos = [(_hvtObjectivePos select 0), (_hvtObjectivePos select 1), 0] };
+    [_taskId, _hvtObjectivePos, _basePos, _enemyUnits, _allGroups, -1] call FADE_counterAttackStart;
+
     [_taskId, _hvt, _basePos, _baseDistForComplete, _markerName, _player, _allGroups, _hvtBarrel] spawn {
         params ["_taskId", "_hvt", "_basePos", "_baseDistForComplete", "_markerName", "_player", "_allGroups", "_hvtBarrel"];
         private _done = false;
@@ -1115,6 +1121,8 @@ if (_missionType == "Hostage") exitWith {
     private _initialHostageCount = count _hostages;
     private _allGroups = [_hostageGroup] + _guardGroups + _patrolGroups;
     [_guardGroups + _patrolGroups, _basePos] call FADE_registerEnemyRetreat;
+
+    [_taskId, _missionCenter, _basePos, _enemyUnits, _allGroups, -1] call FADE_counterAttackStart;
 
     [_taskId, _hostages, _basePos, _baseDistForComplete, _markerName, _player, _allGroups, _initialHostageCount] spawn {
         params ["_taskId", "_hostages", "_basePos", "_baseDistForComplete", "_markerName", "_player", "_allGroups", "_initialHostageCount"];
@@ -1388,6 +1396,8 @@ if (_missionType == "ClearArea") exitWith {
         _player setVariable ["FADE_myMissionBrief", _brief, true];
         [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#E0E0E0'>Clear Area</t><br/><t color='#B0B0B0'>Grid: %1 -- %2</t><br/><br/><t color='#C0C0C0'>Destroy 80%%+ of enemy forces.</t>", _grid, if (_useTown) then { "town" } else { "camp" }]] remoteExec ["FADE_showMissionHint", _player];
         [_player, "Clear Area"] call FADE_notifyOthersMissionStarted;
+        private _caDetect = (_areaRadius + 180) max 320;
+        [_taskId, _center, _basePos, _enemyUnitsCA, _allGroups, _caDetect] call FADE_counterAttackStart;
         private _clearTimeout = 900;
         [_taskId, _allGroups, _initialCount, _markerName, _player, _campObjects, _areaVehicles, _clearTimeout] spawn {
             params ["_taskId", "_allGroups", "_initialCount", "_markerName", "_player", "_campObjects", "_areaVehicles", "_timeout"];

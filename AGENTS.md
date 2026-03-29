@@ -7,7 +7,8 @@ This is a **helicopter piloting sandbox** for **ARMA 3**, designed for **multipl
 ## Reference Documentation
 
 **Arma 3 Wiki:** https://armedassault.fandom.com/wiki/ArmA_3  
-**Bohemia Community Wiki:** https://community.bistudio.com/wiki/
+**Bohemia Community Wiki:** https://community.bistudio.com/wiki/  
+**Eden custom textures (per-object default sizes):** https://community.bistudio.com/wiki/Eden_Editor:_Custom_Entity_Textures
 **LAMBS AI:** https://github.com/nk3nny/LambsDanger/wiki  
 **KAT Medical:** https://github.com/KAT-Advanced-Medical/KAM  
 **SCRIPT_INDEX.md** (repository root) — Inventory of **every mission `.sqf` file**, server vs client execution, how each file is loaded, multiplayer/dedicated-server notes, and the main `remoteExec` / `publicVariable` surface. Use alongside this document for scripting and architecture work.  
@@ -31,26 +32,26 @@ Use the Wikis as the primary source for:
 
 For a **complete list of scripts** and how they connect in MP, see **SCRIPT_INDEX.md** in the repository root.
 
-- **initServer.sqf** -- Server-side init: CfgVehicles scan, faction/unit caches, helper functions, vehicle spawn/despawn, mission start/abort, weather, Surrender Challenge, Jukebox server side.
-- **initPlayerLocal.sqf** -- Client-side init: load GUI scripts, add board/loadoutbox/radio actions, Surrender Challenge key binding, welcome hint, LightTowers.
-- **description.ext** -- Mission config (Header, CfgSounds, CfgUserActions, CfgIdentities, GUI dialogs). GUI dialogs defined here (RscDisplayVehicle, RscDisplayMissions, RscDisplayScenario, RscDisplayLoadout, RscDisplayJukebox).
+- **initServer.sqf** -- Server-side init: CfgVehicles scan, faction/unit caches, helper functions, vehicle spawn/despawn, mission start/abort, weather, optional Surrender Challenge RPC (disabled for players; see below), Jukebox server side.
+- **initPlayerLocal.sqf** -- Client-side init: load GUI scripts, add board/loadoutbox/radio actions, welcome hint, LightTowers, Ctrl+; / Ctrl+' keybinds (missions + jukebox).
+- **description.ext** -- Mission config (Header, CfgSounds, CfgIdentities, GUI dialogs). GUI dialogs defined here (RscDisplayVehicle, RscDisplayMissions, RscDisplayScenario, RscDisplayLoadout, RscDisplayJukebox).
 - **Img/** -- Mission images (load screen, overview, etc.)
-- **Sounds/** -- Sound files (.ogg): surrender sounds, apprehend shouts, troop transport cues.
+- **Sounds/** -- Sound files (.ogg): apprehend/Surrender-Challenge audio (retained), troop transport cues, hostage/jukebox/locker, etc.
 - **rsc/Config.sqf** -- Scenario defaults (time, weather, factions, pad names, unit fallbacks, civ config).
 - **rsc/Briefing.sqf** -- In-game briefing and diary records (map screen). Keep in sync with key scenario/mission changes.
-- **rsc/Missions.sqf** -- All dynamic mission implementations (server-only). Branched by `_missionType`; calls TroopTransport.sqf for insert/extract.
+- **rsc/Missions.sqf** -- All dynamic mission implementations (server-only). Branched by `_missionType`; calls TroopTransport.sqf for insert/extract. Loaded via `call compile preprocessFileLineNumbers` from `FADE_startMission` (not `execVM`).
 - **rsc/TroopTransport.sqf** -- AI boarding/disembark logic for Troop Insert and Troop Extract (server-only, phase-based spawn pattern).
 - **rsc/AmbientCivilians.sqf** -- Ambient civilian spawning in CIV_T_* zones and road vehicle spawning on ROAD_SP_* points.
 - **rsc/EnemyAAA.sqf** -- Enemy AAA spawning (server-only). Governed by Scenario GUI "Enemy AAA" level: None = no spawns; Light/Medium/Heavy = up to 5 AA units near random CIV_T_* zones: spawn within **500 m** of civ center using **BIS_fnc_findSafePos** (clear of buildings/water); turret/vehicle **oriented toward BASE_1**. MANPADS = 25% chance per active civ zone, max 2 infantry with shoulder-launched AA per zone, non-respawning, SAD waypoint at spawn. **AA assets are resolved from the Scenario GUI enemy faction**: static HMG/GMG (Light), AA vehicles (Medium/Heavy), MANPADS infantry (unit with Titan/Stinger/Igla or launch_*aa* in weapons); vanilla East classnames used as fallback when faction has no match.
-- **rsc/SurrenderChallenge.sqf** -- Surrender challenge system (server-side). Chance-based AI surrender with modifiers (distance, angle, players, captives, ratio). ACE3 captives integration.
+- **rsc/SurrenderChallenge.sqf** -- Surrender challenge logic (server-side); **not used by players** while `FAC_surrenderChallenge_playerEnabled` is false (see Surrender Challenge section). ACE3 captives integration when enabled.
 - **rsc/LightTowers.sqf** -- Invisible ambient lights 25 m above each helipad and vehicle spawn point (client-side, spawned from initPlayerLocal).
 - **rsc/VehicleGui.sqf** -- Manage Vehicles GUI logic.
 - **rsc/MissionsGui.sqf** -- Manage Missions GUI logic.
 - **rsc/ScenarioGui.sqf** -- Manage Scenario GUI logic (weather, time, factions, limit gear).
 - **rsc/LoadoutGui.sqf** -- Manage My Loadout GUI logic.
-- **rsc/JukeboxGui.sqf** -- Jukebox GUI logic (Radio_1 object). Track list, play/stop, now-playing display.
+- **rsc/JukeboxGui.sqf** -- Jukebox GUI logic (per-source: `Radio_1`–`Radio_4` and Ctrl+' personal). Track list, play/stop, now-playing display.
 - **rsc/CQBGui.sqf** -- CQB Training Shoothouse GUI (cqbBoard). Config: enemy type (targets/real), density, civilians; start/end drill.
-- **rsc/TeleportGui.sqf** -- Fast Travel GUI (teleportBoard_1..7). Select destination from list; player is teleported 2 m in front of the target Eden object. Destinations defined in `FAC_teleportGui_destinations`.
+- **rsc/TeleportGui.sqf** -- Fast Travel GUI (teleportBoard_1..8). Select destination from list; player is teleported 5 m behind the target Eden object (facing it). Destinations defined in `FAC_teleportGui_destinations`.
 - **rsc/BaseControls.hpp** -- Shared base control class definitions (included in description.ext).
 - **SoundEvents.md** -- Documents the sound events / OGG files used by CfgSounds.
 
@@ -62,7 +63,7 @@ Dialogs are defined in **description.ext** (RscDisplayVehicle idd=60001, RscDisp
 - **onLoad**: All use `onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_xxxGui_fnc', {}]); };";` and in onLoad set `uinamespace setVariable ["FAC_xxxGui_fnc", FAC_xxxGui_fnc]` so config callbacks find the function.
 - **Layout**: Background/Title use margins 0.02 / 0.96 (or 0.005/0.99 for Loadout). Close button action: `closeDialog 0;`. Base controls come from **rsc/BaseControls.hpp** (included in description.ext). Missions GUI has no map control (map was removed; it caused crashes).
 - **Faction display names**: LoadoutGui defines `FAC_loadoutGui_getFactionDisplayName`; VehicleGui and ScenarioGui reuse it when available.
-- **Jukebox (RscDisplayJukebox):** Opened via `Radio_1` object action. Tracks defined in `FAC_jukebox_tracks` (JukeboxGui.sqf). Play sends `[_class] remoteExec ["FAC_jukebox_serverPlay", 2]`; server broadcasts `FAC_jukebox_clientPlay` to all clients with JIP key `"FAC_jukebox_JIP"`. Each client creates a local sound helper object and calls `playSound3D`. Stop sends `[""] remoteExec ["FAC_jukebox_serverPlay", 2]`. The server-side `FAC_jukebox_serverPlay` is defined in initServer.sqf and publicVariable'd.
+- **Jukebox (RscDisplayJukebox):** Opened via **Jukebox** actions on `Radio_1`–`Radio_4` (optional Eden objects) or **Ctrl+'** (sound follows the player). Tracks in `FAC_jukebox_tracks` (JukeboxGui.sqf). Play sends `[_class, _sourceKey, player] remoteExec ["FAC_jukebox_serverPlay", 2]`; server stores `FAC_jukebox_activeSources` and `remoteExec`s `FAC_jukebox_clientPlay` with `[_song, _sourceKey]` to all clients. Each source has at most one track; multiple sources may play at once. JIP clients replay from `FAC_jukebox_activeSources`. Stop sends `["", _sourceKey, player] remoteExec [...]`. `FAC_jukebox_serverPlay` is in initServer.sqf and publicVariable'd. **Volume / max distance:** `description.ext` **CfgSounds** `Sig_*` (`sound[]` 2nd and 4th numbers); keep **JukeboxGui.sqf** `FAC_jukebox_soundVolumeMission` / `FAC_jukebox_soundDistanceMission` aligned (documentation anchor).
 
 ### In-Game Briefing & Diary
 
@@ -89,18 +90,56 @@ When adding or changing major features or joint fires procedures, update Briefin
 ## Eden Object Callouts
 
 - **BASE_1** -- Defines the player base (centre of map). Used for base position, respawn, mission distance checks, and 1 km exclusion for ambient enemy patrols (no patrol spawn in CIV_T_* zones within 1 km of base).
-- **Boards** -- Eden object names and behaviour (textures set in initServer; actions in initPlayerLocal):
-  - **vehBoard** -- Interactable. **Manage Vehicles** action; texture `img\vehicles.jpg`.
-  - **missionBoard** -- Interactable. **Manage Missions** and **Manage Scenario** actions; texture `img\missionsconfig.jpg`.
-  - **cqbBoard** -- Optional, interactable. **CQB Training** action opens CQB GUI; texture `img\cqb.jpg`. Server spawns at **CQB_POS_*** positions.
-  - **baseBoard_1**, **baseBoard_2**, **baseBoard_3** -- Non-interactable large billboards (Land_Billboard_F). Add `img\base.jpg` and uncomment in initServer to set texture.
-  - **loadoutBoard_1**, **loadoutBoard_2**, **loadoutBoard_3** -- Non-interactable signs above loadout boxes; texture `img\loadouts.jpg`.
+- **Boards** -- Eden object names and behaviour (textures set in initServer under `img\`; actions in initPlayerLocal where noted):
+  - **vehBoard** -- Interactable. **Manage Vehicles** action; texture `img\vehicles2.jpg`.
+  - **missionBoard** -- Interactable. **Manage Missions** and **Manage Scenario** actions; texture `img\laptopScenario.jpg`.
+  - **cqbBoard** -- Optional, interactable. **CQB Training** action opens CQB GUI; texture `img\laptopCQB.jpg`. Server spawns at **CQB_POS_*** positions.
+  - **baseBoard_1**, **baseBoard_2**, **baseBoard_3** -- Non-interactable large billboards (Land_Billboard_F); texture `img\baseBoards.jpg`.
+  - **hqMainBoard** -- Non-interactable; texture `img\hqMainBoard.jpg`.
+  - **canvas_1**, **canvas_3** -- Non-interactable; texture `img\flagCTB.jpg`.
+  - **canvas_2** -- Non-interactable; texture `img\flagAustralia.jpg`.
+  - **canvas_4** -- Non-interactable; texture `img\missionsconfig.jpg`.
+  - **whiteboardAdmin** -- Non-interactable **Land_MapBoard_01_Wall_F**; texture `img\whiteboardAdmin.jpg` (`_applyBoardTextureMapWall` in initServer).
+  - **bannerSDE** -- Non-interactable; texture `img\bannerSDE.jpg`.
+  - **sdeArt_1** -- Non-interactable; texture `img\letsgo.jpg`.
+  - **loadoutboard_1**, **loadoutboard_3**, **loadoutboard_4** -- Non-interactable **Land_MapBoard_01_Wall_F**; texture `img\whiteboardLoadouts.jpg` (Eden names lowercase `board` to match **mission.sqm**). initServer resolves each board via `missionNamespace` **or** `vehicleVarName` scan on `allMissionObjects "Land_MapBoard_01_Wall_F"`, applies slot **0**, then **re-applies at 0.5 s and 2.5 s** (spawn) so textures win over late Eden init. If they stay blank while **whiteboardAdmin** shows art, confirm **`img\whiteboardLoadouts.jpg`** exists in the mission folder and uses a valid resolution (wiki default for this class is **2048×2048** for the map face — match aspect like **whiteboardAdmin.jpg**).
+  - **loadoutBoard_2** -- Non-interactable sign; texture `img\loadouts.jpg`.
   - **musicBoard** -- Non-interactable, next to jukebox; texture `img\music.jpg`.
-  - **firingRangeBoard** -- Non-interactable firing range sign; texture `img\firingRange.jpg`.
-  - **teleportBoard_1** … **teleportBoard_7** -- Interactable. **Fast Travel** action opens Teleport GUI (rsc/TeleportGui.sqf); texture `img\teleporter.jpg`. Destinations: Base (BASE_1), Medical Area (MEDICAL_1), Pads 3–5 (HP_4), Firing Range, CQB Killhouse, Vehicle Pad 2 (VEH_2), CTB Locker Room (LOCKER_1).
+  - **firingRangeBoard**, **signFire_1** -- Non-interactable firing range signs; texture `img\signLiveFire.jpg`.
+  - **teleportBoard_1** … **teleportBoard_8** -- Interactable. **Fast Travel** action opens Teleport GUI (rsc/TeleportGui.sqf); texture `img\teleporter.jpg` on all boards. Fast-travel list preview for SDE's Pub uses `img\teleport_SDE.jpg` (see TeleportGui overrides). Destinations: Base (BASE_1), Medical Area (MEDICAL_1), Pads 3–5 (HP_4), Firing Range, CQB Killhouse, Vehicle Pad 2 (VEH_2), CTB Locker Room (teleportBoard_7), SDE's Pub (teleportBoard_8).
+
+### Eden custom textures: objects and sizes (validation)
+
+**Source of truth:** [Eden Editor: Custom Entity Textures](https://community.bistudio.com/wiki/Eden_Editor:_Custom_Entity_Textures) (Bohemia Community Wiki). It lists entities that support Eden **Custom textures** / `setObjectTexture`, with each **texture slot**, **default `.paa` path**, and **Default Texture Size**.
+
+**Why:** Custom mission art (`img\*.jpg` applied in initServer, or textures set in Eden) is mapped to each model’s UVs. If your image **aspect ratio or proportions** do not match what the object expects, you get stretched, squashed, or cropped signage. Use the wiki row for the **exact** object classname to align new textures with vanilla defaults.
+
+**Workflow:** (1) Note the **CfgVehicles** classname of the billboard/sign/object in Eden (e.g. **Land_Billboard_F** for large billboards). (2) Find that classname in the wiki’s tables and read **Default Texture Size** (and which slot is **Texture #0**, **#1**, … if multiple). (3) Author replacement images at the **same aspect ratio** as the documented default; prefer **power-of-two** width and height where possible (engine texture guidance; see also [setObjectTexture](https://community.bistudio.com/wiki/setObjectTexture)). (4) Verify in-game after applying the texture.
+
+**Mission.sqm ∩ wiki (custom-texture entities):** The following **classnames** appear in **mission.sqm** and are listed on [Eden Editor: Custom Entity Textures](https://community.bistudio.com/wiki/Eden_Editor:_Custom_Entity_Textures). **Eden display name** and **default texture sizes** are taken from that page (re-check if Bohemia updates the table). Where the default is procedural, **Default Texture Size** is **N/A** in the wiki—there is no raster dimension to match; use Eden preview or config paths on the wiki row.
+
+| Eden display name | Classname | Default texture size(s) (wiki) |
+| --- | --- | --- |
+| Banner | `Banner_01_F` | Texture #0: **512×256** |
+| Canvas (Medium, Landscape) | `Canvas_01_Landscape_F` | Texture #0: **2048×1024** |
+| Canvas (Large) | `Canvas_01_Large_F` | Texture #0: **2048×1024** |
+| Billboard 1 (Blank) | `Land_Billboard_F` | Texture #0: **256×256** |
+| Briefing Room Screen | `Land_BriefingRoomScreen_01_F` | Texture #0: **2048×2048** |
+| Laptop (Open, Intel v2) | `Land_Laptop_Intel_02_F` | Texture #0: **1024×512** |
+| Sleeved Map (Livonia) | `Land_Map_unfolded_Enoch_F` | Texture #0: **512×512** |
+| Whiteboard (Empty, Wall) | `Land_MapBoard_01_Wall_F` | Texture #0: **2048×2048** |
+| Notepad | `Land_Notepad_F` | Texture #0: procedural (**N/A**) |
+| PC Set (Screen, Intel v2) | `Land_PCSet_Intel_02_F` | Texture #0: **1024×1024** |
+| Rugged Dual Screen (Black, Horizontal) | `Land_TripodScreen_01_dual_v1_black_F` | Texture #0–#1: **N/A**; Texture #2: **2048×2048** (screen) |
+| VR Obstacle (10x5x4) | `Land_VR_Block_05_F` | Texture #0–#1: procedural (**N/A**) |
+| Rugged Communications Terminal (Large) | `RuggedTerminal_02_communications_F` | Texture #0: **1024×1024**; Texture #1–#2: **N/A**; Texture #3–#7: **2048×2048** |
+| Sign (Sponsor) | `SignAd_Sponsor_F` | Texture #0: **1024×512** |
+
+**Also in mission.sqm but not on that wiki list** (no official per-slot default sizes there): e.g. `Land_LandMark_F`, `ContainmentArea_01_sand_F`, `Land_SignM_WarningMilAreaSmall_english_F`, `Sig_Flag_CTB`, `TargetP_*`, `PLP_spotlight_screen`, and most modded / DLC props—use object config, Eden preview, or trial in-game.
+
 - **CQB_POS_*** -- Optional. Eden triggers or objects defining CQB drill positions (e.g. `CQB_POS_1`, `CQB_POS_2`, …). Listed in `FADE_cqbPosNames` (Config.sqf). Spawned units/targets adopt each position's `getDir`. Used only when a drill is started from the CQB GUI. Density: Low 20%, Medium 33%, High 50% per position; civilians 15% per spawn when enabled. Targets use `noPop` so they do not pop back up when shot; real enemies use `disableAI "PATH"` and scenario enemy/civ factions.
 - **LOADOUTBOX** / **LOADOUTBOX_2** / **LOADOUTBOX_3** (and any in **FADE_loadoutBoxNames**, Config.sqf) -- Loadout boxes. Each gets **Manage My Loadout** (custom GUI), **Save my loadout**, **Open ACE Arsenal** (if ACE3 loaded). All are ACE arsenal-init'd on the server when ACE is present. Add more Eden names to `FADE_loadoutBoxNames` to give new boxes the same actions.
-- **Radio_1** -- The jukebox radio object. Receives the **Jukebox** action (initPlayerLocal). Server owns its locality; `FAC_jukebox_serverPlay` targets server (`remoteExec [..., 2]`). All clients play audio locally via `FAC_jukebox_clientPlay`.
+- **Radio_1**, **Radio_2**, **Radio_3**, **Radio_4** -- Optional jukebox radio objects (same behaviour per object). Each receives **Jukebox** (initPlayerLocal); playback is 3D at that object. **Ctrl+'** opens the same GUI with sound attached to the player (`player:<UID>` source). Texture `img\laptopJukebox.jpg` (initServer).
 - **LOCKER_1** -- Optional. Locker room interaction point. If present in Eden, receives **Locker room** action (initPlayerLocal); plays sound (CfgSounds FAC_LockerSlap or fallback) and local flavour message. Add `Sounds\locker_slap.ogg` for custom slap sound.
 - **Helipads** -- `HP_1` through `HP_8`. Objects where aircraft spawn. Configured in `FADE_padNames` (Config.sqf). Planes cannot spawn at pads in `FADE_planeForbiddenPads` (default: HP_1, HP_2). Helipad markers (map) are updated by `FADE_updateHelipadMarkers` periodically.
 - **Vehicle spawn points** -- `VEH_1`, `VEH_2`. Land vehicles spawn here using `BIS_fnc_findSafePos` for dynamic placement.
@@ -191,20 +230,20 @@ Classnames needed for dynamic mission scripting. Fill in as mods/factions are co
 ### Scripts
 
 - **Server-only scripts:** Start with `if (!isServer) exitWith {};` (initServer.sqf) or `if (!isServer) exitWith {};` after reading params (Missions.sqf, TroopTransport.sqf). Config is loaded once on server: `call compile preprocessFileLineNumbers "rsc\Config.sqf";`.
-- **Mission flow:** Server sets `FADE_missionParams` (or similar), then `execVM "rsc\Missions.sqf";`. Missions.sqf reads params, validates, then branches by mission type and calls sub-scripts (e.g. `FADE_transportParams` → `execVM "rsc\TroopTransport.sqf"`).
+- **Mission flow:** Server sets `FADE_missionParams`, then `call compile preprocessFileLineNumbers "rsc\Missions.sqf";`. Missions.sqf reads params, validates, then branches by mission type and calls sub-scripts (e.g. `FADE_transportParams` → `execVM "rsc\TroopTransport.sqf"`).
 - **Single source of truth:** Scenario unit/vehicle lists live in **missionNamespace** (e.g. `FADE_friendlyUnits`, `FADE_enemyUnits`). Set by initServer defaults and overwritten by Scenario GUI Apply (`FADE_applyScenarioSettings`). All mission spawns read from missionNamespace; do not pass faction/unit lists from client.
 - **Client GUI load order:** initPlayerLocal loads GUIs with `call compile preprocessFileLineNumbers "rsc\LoadoutGui.sqf";` (etc.), then `waitUntil { !isNil "FADE_heliClasses" && !isNil "FADE_boards" };` before adding board actions so server vars are replicated.
 - **Night IR strobes:** `FADE_attachNightStrobes` (Missions.sqf) attaches ACE IR strobe objects to every friendly group unit when time is 19:30–04:30 and `ace_attach` is loaded. Strobes stored in group variable `FADE_irStrobes` for cleanup. TroopTransport.sqf cleans up strobes via `detach` + `deleteVehicle` in `_cleanup`.
 - **Friendly callsigns:** `FADE_assignGroupCallsign` (initServer) assigns a random NATO phonetic callsign (e.g. "Bravo 2-3") to each spawned group and stores it in the group variable `FADE_callsign`. All AI sideChat references use this callsign for consistency.
 - **Helipad markers:** `FADE_updateHelipadMarkers` (initServer) updates map marker text to show the vehicle name when an aircraft is on pad, or restores the original text when the pad is empty. Runs on a 4-second poll loop (server).
 
-### Surrender Challenge
+### Surrender Challenge (player-facing disabled)
 
-- **Key binding:** `DIK_U` (0x16) via `displayAddEventHandler ["KeyDown", ...]` on findDisplay 46 (game HUD). Also bound via `inputAction "FAC_SurrenderChallenge"` or `inputAction "User1"` in a polling loop (fallback for custom key binds). Debounced to 1.5s.
-- **Client flow:** `FAC_surrenderChallenge_fnc_activate` (initPlayerLocal) resolves the target unit from `cursorTarget` / `cursorObject` (handles weapon-mesh quirk via `attachedTo` + `nearestObjects`), plays a random `FAC_apprehend*` sound via `say3D`, then `[player, _target] remoteExec ["FAC_surrenderChallenge_start", 2]`.
-- **Server flow:** `FAC_surrenderChallenge_start` (initServer, publicVariable'd) runs `SurrenderChallenge.sqf`. Validates guards (already in challenge, dead, not Man, same side, already surrendered, >25m). Freezes secondary units within 5m. Rolls surrender chance from base 0.25 + modifiers (distance, player count, angle, captive bonus, ratio malus). Civilians always surrender immediately. High-skill units may refuse immediately before animation.
-- **ACE3:** If `ace_captives` is loaded, surrendered units use `ace_captives_fnc_setSurrendered` (enables escort/frisk interactions). Falls back to `setCaptive true` + surrender animation.
-- **Debug:** `FAC_surrenderChallenge_debug` (initServer) and `FAC_surrenderChallenge_debugKeys` (initPlayerLocal) — both set to `false` in production. Set to `true` only for testing; they flood systemChat.
+- **Production default:** `FAC_surrenderChallenge_playerEnabled = false` in **initServer.sqf** (publicVariable). **Client** `FAC_surrenderChallenge_fnc_activate` and **server** `FAC_surrenderChallenge_start` exit immediately when this flag is false — no hotkey, no CfgUserActions, no U-key or inputAction polling. **rsc/SurrenderChallenge.sqf** and CfgSounds entries remain for future re-enable.
+- **To re-enable for players:** set `FAC_surrenderChallenge_playerEnabled = true`, restore **CfgUserActions** `FAC_SurrenderChallenge` in **description.ext**, re-add **DIK_U** handling and the `inputAction` polling loop in **initPlayerLocal.sqf** (see git history), and restore welcome-hint line if desired.
+- **When enabled — client flow:** `FAC_surrenderChallenge_fnc_activate` resolves target from `cursorTarget` / `cursorObject` (`attachedTo` + `nearestObjects`), plays `FAC_apprehend*` via `say3D`, then `[player, _target, getDir player] remoteExec ["FAC_surrenderChallenge_start", 2]`.
+- **When enabled — server flow:** `FAC_surrenderChallenge_start` runs `SurrenderChallenge.sqf` (validation, roll, ACE `ace_captives_fnc_setSurrendered` or fallback animation).
+- **Debug:** `FAC_surrenderChallenge_debug` (initServer) and `FAC_surrenderChallenge_debugKeys` (initPlayerLocal) — default `false`.
 
 ### Enemy Retreat (50% threshold)
 
@@ -225,8 +264,8 @@ Classnames needed for dynamic mission scripting. Fill in as mods/factions are co
 
 - **Server guard:** `if (!isServer) exitWith {};` at top of initServer.sqf. Mission scripts (Missions.sqf, TroopTransport.sqf) also check `isServer` after reading params.
 - **remoteExec targets:** Use `2` for server-only: `[args] remoteExec ["functionName", 2];`. Use `_player` to target the requesting player for feedback (systemChat, FADE_showMissionHint). Use `0` for all clients when the result is global (e.g. scenario applied hint).
-- **Server functions called from client:** Must be **publicVariable**'d on the server so clients (and JIP) can invoke them. Example: `FADE_applyScenarioSettings`, `FADE_startMission`, `FADE_abortMission`, `FADE_spawnHeli`, `FAC_surrenderChallenge_start` in initServer.sqf.
-- **Client-only context:** initPlayerLocal.sqf runs **only on clients** (not on dedicated server). `cursorObject` / `cursorTarget` are client-side; the server cannot determine what the player is looking at. For target-based actions (e.g. Surrender Challenge), client gets target then `[player, _target] remoteExec ["FAC_surrenderChallenge_start", 2];`.
+- **Server functions called from client:** Must be **publicVariable**'d on the server so clients (and JIP) can invoke them. Example: `FADE_applyScenarioSettings`, `FADE_startMission`, `FADE_abortMission`, `FADE_spawnHeli`, `FAC_surrenderChallenge_start` in initServer.sqf (surrender RPC no-ops while `FAC_surrenderChallenge_playerEnabled` is false).
+- **Client-only context:** initPlayerLocal.sqf runs **only on clients** (not on dedicated server). `cursorObject` / `cursorTarget` are client-side; the server cannot determine what the player is looking at.
 - **JIP:** Variables and functions that clients need (e.g. `FADE_heliClasses`, `FADE_boards`, `FADE_startMission`) are publicVariable'd so joining players receive them.
 
 ### Position & Map

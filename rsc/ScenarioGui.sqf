@@ -72,7 +72,7 @@ FAC_scenarioGui_fnc = {
             // Time list
             private _timeList = _display displayCtrl 60301;
             lbClear _timeList;
-            private _currentHour = missionNamespace getVariable ["FADE_scenarioTime", 12];
+            private _currentHour = missionNamespace getVariable ["FADE_scenarioTime", 18];
             private _timeSel = 0;
             {
                 _x params ["_name", "_hour"];
@@ -234,7 +234,7 @@ FAC_scenarioGui_fnc = {
             private _civEnabledList = _display displayCtrl 60322;
             private _aoJtacList = _display displayCtrl 60323;
 
-            private _hour = 12;
+            private _hour = 18;
             if (lbCurSel _timeList >= 0) then { _hour = parseNumber (_timeList lbData (lbCurSel _timeList)) };
             private _weather = "Clear";
             if (lbCurSel _weatherList >= 0) then { _weather = _weatherList lbData (lbCurSel _weatherList) };

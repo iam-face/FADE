@@ -48,8 +48,9 @@ class RscDisplayVehicle: RscDisplayEmpty {
         class VehiclePreview: RscPicture { idc = 60101; x = 0.51; y = 0.25; w = 0.46; h = 0.27; text = ""; colorBackground[] = {0.08, 0.08, 0.12, 0.9}; };
         // Right-bottom panel: vehicles at base (orange in mockup)
         class SpawnedLabel: RscText { idc = -1; text = "Vehicles at base"; x = 0.51; y = 0.54; w = 0.46; h = 0.03; sizeEx = 0.03; };
-        class SpawnedList: RscListBox { idc = 60110; x = 0.51; y = 0.57; w = 0.46; h = 0.30; rowHeight = 0.038; sizeEx = 0.033; onLBSelChanged = "['updateButtons', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class DespawnBtn: RscButton { idc = 60111; text = "Despawn selected"; x = 0.51; y = 0.89; w = 0.46; h = 0.045; sizeEx = 0.038; action = "['despawn', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class SpawnedList: RscListBox { idc = 60110; x = 0.51; y = 0.57; w = 0.46; h = 0.245; rowHeight = 0.038; sizeEx = 0.033; onLBSelChanged = "['updateButtons', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class ServiceVehicleBtn: RscButton { idc = 60112; text = "Repair, refuel, rearm selected"; x = 0.51; y = 0.825; w = 0.46; h = 0.042; sizeEx = 0.034; action = "['serviceVehicle', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class DespawnBtn: RscButton { idc = 60111; text = "Despawn selected"; x = 0.51; y = 0.875; w = 0.46; h = 0.042; sizeEx = 0.038; action = "['despawn', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
         class CloseBtn: RscButton { idc = 60140; text = "CLOSE"; x = 0.84; y = 0.93; w = 0.14; h = 0.045; sizeEx = 0.038; action = "closeDialog 0;"; };
     };
 };
@@ -184,9 +185,9 @@ class RscDisplayJukebox: RscDisplayEmpty {
         class SongList: RscListBox { idc = 60402; x = 0.27; y = 0.31; w = 0.46; h = 0.33; rowHeight = 0.038; sizeEx = 0.033; onLBSelChanged = "['updateButtons', []] call (missionNamespace getVariable ['FAC_jukeboxGui_fnc', {}]);"; };
         class NowPlayingLabel: RscText { idc = -1; text = "Now playing:"; x = 0.27; y = 0.66; w = 0.13; h = 0.03; sizeEx = 0.030; };
         class NowPlayingText: RscText { idc = 60403; text = "-- Nothing --"; x = 0.40; y = 0.66; w = 0.33; h = 0.03; sizeEx = 0.030; colorText[] = {0.5, 1.0, 0.5, 1}; };
-        class PlayBtn: RscButton { idc = 60404; text = "PLAY"; x = 0.27; y = 0.71; w = 0.46; h = 0.04; sizeEx = 0.035; action = "['play', []] call (missionNamespace getVariable ['FAC_jukeboxGui_fnc', {}]);"; };
-        class InfoLabel: RscText { idc = -1; text = "Tracks cannot be stopped once started."; x = 0.27; y = 0.77; w = 0.32; h = 0.04; sizeEx = 0.026; colorText[] = {0.6, 0.6, 0.6, 1}; };
-        class CloseBtn: RscButton { idc = 60406; text = "CLOSE"; x = 0.62; y = 0.77; w = 0.11; h = 0.04; sizeEx = 0.035; action = "closeDialog 0;"; };
+        class PlayBtn: RscButton { idc = 60404; text = "PLAY"; x = 0.27; y = 0.71; w = 0.22; h = 0.04; sizeEx = 0.035; action = "['play', []] call (missionNamespace getVariable ['FAC_jukeboxGui_fnc', {}]);"; };
+        class StopBtn: RscButton { idc = 60405; text = "STOP"; x = 0.51; y = 0.71; w = 0.22; h = 0.04; sizeEx = 0.035; action = "['stop', []] call (missionNamespace getVariable ['FAC_jukeboxGui_fnc', {}]);"; };
+        class CloseBtn: RscButton { idc = 60406; text = "CLOSE"; x = 0.445; y = 0.76; w = 0.11; h = 0.04; sizeEx = 0.035; action = "closeDialog 0;"; };
     };
 };
 
@@ -338,7 +339,7 @@ class CfgSounds
         sound[] = {"\Sounds\negative.ogg", 2.5, 1, 500};
         titles[] = {};
     };
-    // Initial challenge shouts - player emits when pressing hotkey (random choice)
+    // Initial challenge shouts (Surrender Challenge audio; player path optional)
     class FAC_apprehend001 { name = "FAC_apprehend001"; sound[] = {"\Sounds\fac_apprehend-001.ogg", 2.5, 1, 500}; titles[] = {}; };
     class FAC_apprehend006 { name = "FAC_apprehend006"; sound[] = {"\Sounds\fac_apprehend-006.ogg", 2.5, 1, 500}; titles[] = {}; };
     class FAC_apprehend011 { name = "FAC_apprehend011"; sound[] = {"\Sounds\fac_apprehend-011.ogg", 2.5, 1, 500}; titles[] = {}; };
@@ -374,59 +375,59 @@ class CfgSounds
     };
     // CTB Locker Room (rsc\LockerRoomAmbient.sqf) -- CfgSounds maxDistance 250 m; say3D also passes 250
     // OGG filenames need not match class names; sound[] path is authoritative.
-    class FAC_hostage_interrupt_1 { name = "FAC_hostage_interrupt_1"; sound[] = {"\Sounds\hostage_interrupt_1.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_interrupt_2 { name = "FAC_hostage_interrupt_2"; sound[] = {"\Sounds\hostage_interrupt_2.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_interrupt_3 { name = "FAC_hostage_interrupt_3"; sound[] = {"\Sounds\hostage_interrupt_3.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_interrupt_4 { name = "FAC_hostage_interrupt_4"; sound[] = {"\Sounds\hostage_interrupt_4.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_interrupt_5 { name = "FAC_hostage_interrupt_5"; sound[] = {"\Sounds\hostage_interrupt_5.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_interrupt_6 { name = "FAC_hostage_interrupt_6"; sound[] = {"\Sounds\hostage_interrupt_6.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_interrupt_7 { name = "FAC_hostage_interrupt_7"; sound[] = {"\Sounds\hostage_interrupt_7.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_1 { name = "FAC_hostage_pain_1"; sound[] = {"\Sounds\hostage_pain_1.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_2 { name = "FAC_hostage_pain_2"; sound[] = {"\Sounds\hostage_pain_2.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_3 { name = "FAC_hostage_pain_3"; sound[] = {"\Sounds\hostage_pain_3.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_4 { name = "FAC_hostage_pain_4"; sound[] = {"\Sounds\hostage_pain_4.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_5 { name = "FAC_hostage_pain_5"; sound[] = {"\Sounds\hostage_pain_5.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_6 { name = "FAC_hostage_pain_6"; sound[] = {"\Sounds\hostage_pain_6.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_7 { name = "FAC_hostage_pain_7"; sound[] = {"\Sounds\hostage_pain_7.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_8 { name = "FAC_hostage_pain_8"; sound[] = {"\Sounds\hostage_pain_8.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_9 { name = "FAC_hostage_pain_9"; sound[] = {"\Sounds\hostage_pain_9.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_10 { name = "FAC_hostage_pain_10"; sound[] = {"\Sounds\hostage_pain_10.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_11 { name = "FAC_hostage_pain_11"; sound[] = {"\Sounds\hostage_pain_11.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_12 { name = "FAC_hostage_pain_12"; sound[] = {"\Sounds\hostage_pain_12.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pain_13 { name = "FAC_hostage_pain_13"; sound[] = {"\Sounds\hostage_pain_13.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_1 { name = "FAC_hostage_pickup_1"; sound[] = {"\Sounds\hostage_pickup_1.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_2 { name = "FAC_hostage_pickup_2"; sound[] = {"\Sounds\hostage_pickup_2.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_3 { name = "FAC_hostage_pickup_3"; sound[] = {"\Sounds\hostage_pickup_3.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_4 { name = "FAC_hostage_pickup_4"; sound[] = {"\Sounds\hostage_pickup_4.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_5 { name = "FAC_hostage_pickup_5"; sound[] = {"\Sounds\hostage_pickup_5.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_6 { name = "FAC_hostage_pickup_6"; sound[] = {"\Sounds\hostage_pickup_6.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_7 { name = "FAC_hostage_pickup_7"; sound[] = {"\Sounds\hostage_pickup_7.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_8 { name = "FAC_hostage_pickup_8"; sound[] = {"\Sounds\hostage_pickup_8.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_9 { name = "FAC_hostage_pickup_9"; sound[] = {"\Sounds\hostage_pickup_9.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_10 { name = "FAC_hostage_pickup_10"; sound[] = {"\Sounds\hostage_pickup_10.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_11 { name = "FAC_hostage_pickup_11"; sound[] = {"\Sounds\hostage_pickup_11.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_12 { name = "FAC_hostage_pickup_12"; sound[] = {"\Sounds\hostage_pickup_12.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_pickup_13 { name = "FAC_hostage_pickup_13"; sound[] = {"\Sounds\hostage_pickup_13.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_rescued_1 { name = "FAC_hostage_rescued_1"; sound[] = {"\Sounds\hostage_rescued_1.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_rescued_2 { name = "FAC_hostage_rescued_2"; sound[] = {"\Sounds\hostage_rescued_2.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_rescued_3 { name = "FAC_hostage_rescued_3"; sound[] = {"\Sounds\hostage_rescued_3.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_rescued_4 { name = "FAC_hostage_rescued_4"; sound[] = {"\Sounds\hostage_rescued_4.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_rescued_5 { name = "FAC_hostage_rescued_5"; sound[] = {"\Sounds\hostage_rescued_5.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_1 { name = "FAC_hostage_struggle_1"; sound[] = {"\Sounds\hostage_struggle_1.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_2 { name = "FAC_hostage_struggle_2"; sound[] = {"\Sounds\hostage_struggle_2.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_3 { name = "FAC_hostage_struggle_3"; sound[] = {"\Sounds\hostage_struggle_3.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_4 { name = "FAC_hostage_struggle_4"; sound[] = {"\Sounds\hostage_struggle_4.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_5 { name = "FAC_hostage_struggle_5"; sound[] = {"\Sounds\hostage_struggle_5.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_6 { name = "FAC_hostage_struggle_6"; sound[] = {"\Sounds\hostage_struggle_6.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_7 { name = "FAC_hostage_struggle_7"; sound[] = {"\Sounds\hostage_struggle_7.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_8 { name = "FAC_hostage_struggle_8"; sound[] = {"\Sounds\hostage_struggle_8.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_9 { name = "FAC_hostage_struggle_9"; sound[] = {"\Sounds\hostage_struggle_9.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_10 { name = "FAC_hostage_struggle_10"; sound[] = {"\Sounds\hostage_struggle_10.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_11 { name = "FAC_hostage_struggle_11"; sound[] = {"\Sounds\hostage_struggle_11.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_12 { name = "FAC_hostage_struggle_12"; sound[] = {"\Sounds\hostage_struggle_12.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_13 { name = "FAC_hostage_struggle_13"; sound[] = {"\Sounds\hostage_struggle_13.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_14 { name = "FAC_hostage_struggle_14"; sound[] = {"\Sounds\hostage_struggle_14.ogg", 2.5, 1, 250}; titles[] = {}; };
-    class FAC_hostage_struggle_15 { name = "FAC_hostage_struggle_15"; sound[] = {"\Sounds\hostage_struggle_15.ogg", 2.5, 1, 250}; titles[] = {}; };
+    class FAC_hostage_interrupt_1 { name = "FAC_hostage_interrupt_1"; sound[] = {"\Sounds\hostage_interrupt_1.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_interrupt_2 { name = "FAC_hostage_interrupt_2"; sound[] = {"\Sounds\hostage_interrupt_2.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_interrupt_3 { name = "FAC_hostage_interrupt_3"; sound[] = {"\Sounds\hostage_interrupt_3.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_interrupt_4 { name = "FAC_hostage_interrupt_4"; sound[] = {"\Sounds\hostage_interrupt_4.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_interrupt_5 { name = "FAC_hostage_interrupt_5"; sound[] = {"\Sounds\hostage_interrupt_5.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_interrupt_6 { name = "FAC_hostage_interrupt_6"; sound[] = {"\Sounds\hostage_interrupt_6.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_interrupt_7 { name = "FAC_hostage_interrupt_7"; sound[] = {"\Sounds\hostage_interrupt_7.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_1 { name = "FAC_hostage_pain_1"; sound[] = {"\Sounds\hostage_pain_1.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_2 { name = "FAC_hostage_pain_2"; sound[] = {"\Sounds\hostage_pain_2.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_3 { name = "FAC_hostage_pain_3"; sound[] = {"\Sounds\hostage_pain_3.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_4 { name = "FAC_hostage_pain_4"; sound[] = {"\Sounds\hostage_pain_4.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_5 { name = "FAC_hostage_pain_5"; sound[] = {"\Sounds\hostage_pain_5.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_6 { name = "FAC_hostage_pain_6"; sound[] = {"\Sounds\hostage_pain_6.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_7 { name = "FAC_hostage_pain_7"; sound[] = {"\Sounds\hostage_pain_7.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_8 { name = "FAC_hostage_pain_8"; sound[] = {"\Sounds\hostage_pain_8.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_9 { name = "FAC_hostage_pain_9"; sound[] = {"\Sounds\hostage_pain_9.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_10 { name = "FAC_hostage_pain_10"; sound[] = {"\Sounds\hostage_pain_10.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_11 { name = "FAC_hostage_pain_11"; sound[] = {"\Sounds\hostage_pain_11.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_12 { name = "FAC_hostage_pain_12"; sound[] = {"\Sounds\hostage_pain_12.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pain_13 { name = "FAC_hostage_pain_13"; sound[] = {"\Sounds\hostage_pain_13.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_1 { name = "FAC_hostage_pickup_1"; sound[] = {"\Sounds\hostage_pickup_1.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_2 { name = "FAC_hostage_pickup_2"; sound[] = {"\Sounds\hostage_pickup_2.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_3 { name = "FAC_hostage_pickup_3"; sound[] = {"\Sounds\hostage_pickup_3.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_4 { name = "FAC_hostage_pickup_4"; sound[] = {"\Sounds\hostage_pickup_4.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_5 { name = "FAC_hostage_pickup_5"; sound[] = {"\Sounds\hostage_pickup_5.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_6 { name = "FAC_hostage_pickup_6"; sound[] = {"\Sounds\hostage_pickup_6.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_7 { name = "FAC_hostage_pickup_7"; sound[] = {"\Sounds\hostage_pickup_7.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_8 { name = "FAC_hostage_pickup_8"; sound[] = {"\Sounds\hostage_pickup_8.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_9 { name = "FAC_hostage_pickup_9"; sound[] = {"\Sounds\hostage_pickup_9.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_10 { name = "FAC_hostage_pickup_10"; sound[] = {"\Sounds\hostage_pickup_10.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_11 { name = "FAC_hostage_pickup_11"; sound[] = {"\Sounds\hostage_pickup_11.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_12 { name = "FAC_hostage_pickup_12"; sound[] = {"\Sounds\hostage_pickup_12.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_pickup_13 { name = "FAC_hostage_pickup_13"; sound[] = {"\Sounds\hostage_pickup_13.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_rescued_1 { name = "FAC_hostage_rescued_1"; sound[] = {"\Sounds\hostage_rescued_1.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_rescued_2 { name = "FAC_hostage_rescued_2"; sound[] = {"\Sounds\hostage_rescued_2.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_rescued_3 { name = "FAC_hostage_rescued_3"; sound[] = {"\Sounds\hostage_rescued_3.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_rescued_4 { name = "FAC_hostage_rescued_4"; sound[] = {"\Sounds\hostage_rescued_4.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_rescued_5 { name = "FAC_hostage_rescued_5"; sound[] = {"\Sounds\hostage_rescued_5.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_1 { name = "FAC_hostage_struggle_1"; sound[] = {"\Sounds\hostage_struggle_1.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_2 { name = "FAC_hostage_struggle_2"; sound[] = {"\Sounds\hostage_struggle_2.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_3 { name = "FAC_hostage_struggle_3"; sound[] = {"\Sounds\hostage_struggle_3.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_4 { name = "FAC_hostage_struggle_4"; sound[] = {"\Sounds\hostage_struggle_4.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_5 { name = "FAC_hostage_struggle_5"; sound[] = {"\Sounds\hostage_struggle_5.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_6 { name = "FAC_hostage_struggle_6"; sound[] = {"\Sounds\hostage_struggle_6.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_7 { name = "FAC_hostage_struggle_7"; sound[] = {"\Sounds\hostage_struggle_7.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_8 { name = "FAC_hostage_struggle_8"; sound[] = {"\Sounds\hostage_struggle_8.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_9 { name = "FAC_hostage_struggle_9"; sound[] = {"\Sounds\hostage_struggle_9.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_10 { name = "FAC_hostage_struggle_10"; sound[] = {"\Sounds\hostage_struggle_10.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_11 { name = "FAC_hostage_struggle_11"; sound[] = {"\Sounds\hostage_struggle_11.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_12 { name = "FAC_hostage_struggle_12"; sound[] = {"\Sounds\hostage_struggle_12.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_13 { name = "FAC_hostage_struggle_13"; sound[] = {"\Sounds\hostage_struggle_13.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_14 { name = "FAC_hostage_struggle_14"; sound[] = {"\Sounds\hostage_struggle_14.ogg", 1, 1, 100}; titles[] = {}; };
+    class FAC_hostage_struggle_15 { name = "FAC_hostage_struggle_15"; sound[] = {"\Sounds\hostage_struggle_15.ogg", 1, 1, 100}; titles[] = {}; };
     class FAC_sig_lockerslap_001 { name = "FAC_sig_lockerslap_001"; sound[] = {"\Sounds\sig_lockerslap-001.ogg", 1, 1, 250}; titles[] = {}; };
     class FAC_sig_lockerslap_002 { name = "FAC_sig_lockerslap_002"; sound[] = {"\Sounds\sig_lockerslap-002.ogg", 1, 1, 250}; titles[] = {}; };
     class FAC_sig_lockerslap_003 { name = "FAC_sig_lockerslap_003"; sound[] = {"\Sounds\sig_lockerslap-003.ogg", 1, 1, 250}; titles[] = {}; };
@@ -441,39 +442,90 @@ class CfgSounds
     class FAC_cqbLoudspeakerHorn
     {
         name = "FAC_cqbLoudspeakerHorn";
-        sound[] = {"\Sig_CTB_MSL_SFX_Amb\Sounds\Alarm\alarm_2.ogg", 4, 1, 2000};
+        sound[] = {"\Sig_CTB_MSL_SFX_Amb\Sounds\Alarm\alarm_2.ogg", 3, 1, 250};
         titles[] = {};
     };
-    // CTB Jukebox tracks -- wrappers so say3D can play and return a stoppable sound object
-    class Sig_80smusic_mix_1    { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\1980s\80s_mix_1.ogg",                     1.5, 1, 300}; titles[] = {}; };
-    class Sig_BF2_MEC           { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF2_MECTheme.ogg",                      1.5, 1, 300}; titles[] = {}; };
-    class Sig_BF2_CHI           { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF2_ChinaTheme.ogg",                    1.5, 1, 300}; titles[] = {}; };
-    class Sig_BF1942_Menu       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_MenuTheme.ogg",                  1.5, 1, 300}; titles[] = {}; };
-    class Sig_BF1942_Loading1   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_LoadingTheme.ogg",               1.5, 1, 300}; titles[] = {}; };
-    class Sig_BF1942_Loading2   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_Vehicle3.ogg",                   1.5, 1, 300}; titles[] = {}; };
-    class Sig_BFDC_Menu         { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_DesertCombatTheme.ogg",          1.5, 1, 300}; titles[] = {}; };
-    class Sig_BFDC_Loading      { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_DesertCombatLoading.ogg",        1.5, 1, 300}; titles[] = {}; };
-    class Sig_CNC_Tibdawn_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\c&c_mix.ogg",                          1.5, 1, 300}; titles[] = {}; };
-    class Sig_CNC_Gen_GLA_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\generals_gla_mix.ogg",                 1.5, 1, 300}; titles[] = {}; };
-    class Sig_CNC_Gen_USA_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\generals_USA_mix.ogg",                 1.5, 1, 300}; titles[] = {}; };
-    class Sig_CNC_Gen_CHI_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\generals_CHI_mix.ogg",                 1.5, 1, 300}; titles[] = {}; };
-    class Sig_BHD_Mix           { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\bhd_mix.ogg",                              1.5, 1, 300}; titles[] = {}; };
-    class Sig_Abba_Gimmie       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Abba_Gimmie.ogg",                          1.5, 1, 300}; titles[] = {}; };
-    class Sig_90sdance_Mix      { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\90s\90sdance_mix.ogg",                     1.5, 1, 300}; titles[] = {}; };
-    class Sig_OFPSeventh_mix    { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\ofp_seventh_mix.ogg",                      1.5, 1, 300}; titles[] = {}; };
-    class Sig_SovietMusic_mix_1 { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Soviet\soviet_mix_1.ogg",                  1.5, 1, 300}; titles[] = {}; };
-    class Sig_VietnamMusic_mix_1{ sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Vietnam\vietnam_mix_1.ogg",                1.5, 1, 300}; titles[] = {}; };
+    // CTB Jukebox (CfgSounds): createSoundSource uses FAC_Jukebox_* → these Sig_* entries; volume = sound[] 2nd value, max range (m) = 4th. Match JukeboxGui FAC_jukebox_soundVolumeMission / FAC_jukebox_soundDistanceMission. Addon may override if it defines the same class.
+    class Sig_80smusic_mix_1    { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\1980s\80s_mix_1.ogg",                     3, 1, 250}; titles[] = {}; };
+    class Sig_BF2_MEC           { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF2_MECTheme.ogg",                      3, 1, 250}; titles[] = {}; };
+    class Sig_BF2_CHI           { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF2_ChinaTheme.ogg",                    3, 1, 250}; titles[] = {}; };
+    class Sig_BF1942_Menu       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_MenuTheme.ogg",                  3, 1, 250}; titles[] = {}; };
+    class Sig_BF1942_Loading1   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_LoadingTheme.ogg",               3, 1, 250}; titles[] = {}; };
+    class Sig_BF1942_Loading2   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_Vehicle3.ogg",                   3, 1, 250}; titles[] = {}; };
+    class Sig_BFDC_Menu         { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_DesertCombatTheme.ogg",          3, 1, 250}; titles[] = {}; };
+    class Sig_BFDC_Loading      { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF1942_DesertCombatLoading.ogg",        3, 1, 250}; titles[] = {}; };
+    class Sig_CNC_Tibdawn_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\c&c_mix.ogg",                          3, 1, 250}; titles[] = {}; };
+    class Sig_CNC_Gen_GLA_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\generals_gla_mix.ogg",                 3, 1, 250}; titles[] = {}; };
+    class Sig_CNC_Gen_USA_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\generals_USA_mix.ogg",                 3, 1, 250}; titles[] = {}; };
+    class Sig_CNC_Gen_CHI_Mix   { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\C&C\generals_CHI_mix.ogg",                 3, 1, 250}; titles[] = {}; };
+    class Sig_BHD_Mix           { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\bhd_mix.ogg",                              3, 1, 250}; titles[] = {}; };
+    class Sig_Abba_Gimmie       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Abba_Gimmie.ogg",                          3, 1, 250}; titles[] = {}; };
+    class Sig_90sdance_Mix      { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\90s\90sdance_mix.ogg",                     3, 1, 250}; titles[] = {}; };
+    class Sig_OFPSeventh_mix    { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\ofp_seventh_mix.ogg",                      3, 1, 250}; titles[] = {}; };
+    class Sig_SovietMusic_mix_1 { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Soviet\soviet_mix_1.ogg",                  3, 1, 250}; titles[] = {}; };
+    class Sig_VietnamMusic_mix_1{ sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Vietnam\vietnam_mix_1.ogg",                3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_1        { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_BreakingBenjamin_TheDiaryOfJane.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_2        { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Creed_OneLastBreath.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_3        { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Crossfade_Cold.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_4        { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_DrowningPool_Bodies.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_5        { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_KidRock_Bawitdaba.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_6        { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_LimpBizkit_TakeaLookAround.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_7        { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_LinkinPark_SomewhereIBelong.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_8        { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Nickelback_SavinMe.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_9        { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_POD_boom.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_10       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_PuddleofMudd_Blurry.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_11       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_saliva_clickclickboom.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_12       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_SOAD_Toxicity.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_13       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Staind_ItsBeenAwhile.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_14       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Staind_RainyDayParade.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_15       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_ThreeDaysGrace_AnimalIHaveBecome.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_16       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Trapt_Headstrong.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_17       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_TrustCompany_Downfall.ogg", 3, 1, 250}; titles[] = {}; };
+    class Sig_Buttrock_18       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_TwistedTransistor.ogg", 3, 1, 250}; titles[] = {}; };
 };
 
-// Surrender Challenge: default key U (also bindable via Controls > Configure Addon Options)
-class CfgUserActions
-{
-    class FAC_SurrenderChallenge
-    {
-        displayName = "Surrender Challenge";
-        tooltip = "Challenge the unit you are looking at to surrender";
-        onActivate = "call FAC_surrenderChallenge_fnc_activate";
-    };
+// Jukebox: CfgVehicles Sound subclasses for createSoundSource (3D world sound; deleteVehicle stops playback).
+// Volume / max distance come from CfgSounds Sig_* sound[] above, not from these vehicle classes.
+// Requires matching CfgSFX classes (CTB loudspeaker addon / same names as above).
+// Each references the same CfgSFX class name as the CTB loudspeaker / mission CfgSounds entries.
+class CfgVehicles {
+    class Sound;
+    class FAC_Jukebox_Sig_80smusic_mix_1: Sound { sound = "Sig_80smusic_mix_1"; };
+    class FAC_Jukebox_Sig_BF2_MEC: Sound { sound = "Sig_BF2_MEC"; };
+    class FAC_Jukebox_Sig_BF2_CHI: Sound { sound = "Sig_BF2_CHI"; };
+    class FAC_Jukebox_Sig_BF1942_Menu: Sound { sound = "Sig_BF1942_Menu"; };
+    class FAC_Jukebox_Sig_BF1942_Loading1: Sound { sound = "Sig_BF1942_Loading1"; };
+    class FAC_Jukebox_Sig_BF1942_Loading2: Sound { sound = "Sig_BF1942_Loading2"; };
+    class FAC_Jukebox_Sig_BFDC_Menu: Sound { sound = "Sig_BFDC_Menu"; };
+    class FAC_Jukebox_Sig_BFDC_Loading: Sound { sound = "Sig_BFDC_Loading"; };
+    class FAC_Jukebox_Sig_CNC_Tibdawn_Mix: Sound { sound = "Sig_CNC_Tibdawn_Mix"; };
+    class FAC_Jukebox_Sig_CNC_Gen_GLA_Mix: Sound { sound = "Sig_CNC_Gen_GLA_Mix"; };
+    class FAC_Jukebox_Sig_CNC_Gen_USA_Mix: Sound { sound = "Sig_CNC_Gen_USA_Mix"; };
+    class FAC_Jukebox_Sig_CNC_Gen_CHI_Mix: Sound { sound = "Sig_CNC_Gen_CHI_Mix"; };
+    class FAC_Jukebox_Sig_BHD_Mix: Sound { sound = "Sig_BHD_Mix"; };
+    class FAC_Jukebox_Sig_Abba_Gimmie: Sound { sound = "Sig_Abba_Gimmie"; };
+    class FAC_Jukebox_Sig_90sdance_Mix: Sound { sound = "Sig_90sdance_Mix"; };
+    class FAC_Jukebox_Sig_OFPSeventh_mix: Sound { sound = "Sig_OFPSeventh_mix"; };
+    class FAC_Jukebox_Sig_SovietMusic_mix_1: Sound { sound = "Sig_SovietMusic_mix_1"; };
+    class FAC_Jukebox_Sig_VietnamMusic_mix_1: Sound { sound = "Sig_VietnamMusic_mix_1"; };
+    class FAC_Jukebox_Sig_Buttrock_1: Sound { sound = "Sig_Buttrock_1"; };
+    class FAC_Jukebox_Sig_Buttrock_2: Sound { sound = "Sig_Buttrock_2"; };
+    class FAC_Jukebox_Sig_Buttrock_3: Sound { sound = "Sig_Buttrock_3"; };
+    class FAC_Jukebox_Sig_Buttrock_4: Sound { sound = "Sig_Buttrock_4"; };
+    class FAC_Jukebox_Sig_Buttrock_5: Sound { sound = "Sig_Buttrock_5"; };
+    class FAC_Jukebox_Sig_Buttrock_6: Sound { sound = "Sig_Buttrock_6"; };
+    class FAC_Jukebox_Sig_Buttrock_7: Sound { sound = "Sig_Buttrock_7"; };
+    class FAC_Jukebox_Sig_Buttrock_8: Sound { sound = "Sig_Buttrock_8"; };
+    class FAC_Jukebox_Sig_Buttrock_9: Sound { sound = "Sig_Buttrock_9"; };
+    class FAC_Jukebox_Sig_Buttrock_10: Sound { sound = "Sig_Buttrock_10"; };
+    class FAC_Jukebox_Sig_Buttrock_11: Sound { sound = "Sig_Buttrock_11"; };
+    class FAC_Jukebox_Sig_Buttrock_12: Sound { sound = "Sig_Buttrock_12"; };
+    class FAC_Jukebox_Sig_Buttrock_13: Sound { sound = "Sig_Buttrock_13"; };
+    class FAC_Jukebox_Sig_Buttrock_14: Sound { sound = "Sig_Buttrock_14"; };
+    class FAC_Jukebox_Sig_Buttrock_15: Sound { sound = "Sig_Buttrock_15"; };
+    class FAC_Jukebox_Sig_Buttrock_16: Sound { sound = "Sig_Buttrock_16"; };
+    class FAC_Jukebox_Sig_Buttrock_17: Sound { sound = "Sig_Buttrock_17"; };
+    class FAC_Jukebox_Sig_Buttrock_18: Sound { sound = "Sig_Buttrock_18"; };
 };
 
 // HVT mission: identities so unit name matches briefing codename

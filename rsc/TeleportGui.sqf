@@ -1,5 +1,5 @@
 // =============================================================================
-// TeleportGui.sqf - Fast Travel GUI (opened from teleportBoard_1..7)
+// TeleportGui.sqf - Fast Travel GUI (opened from teleportBoard_1..8)
 // =============================================================================
 // Player selects a destination and is teleported there (client-side setPos).
 // Destinations are Eden object names; player is placed 5 m behind the object, facing it.
@@ -7,12 +7,19 @@
 // (no embedded CT_MAP - caused CTDs). Expected files, matching FAC_teleportGui_destinations Eden names:
 //   teleport_BASE_1.jpg, teleport_MEDICAL_1.jpg, teleport_HP_4.jpg, teleport_firingRangeBoard.jpg,
 //   teleport_cqbBoard.jpg, teleport_VEH_2.jpg, teleport_teleportBoard_7.jpg
+//   teleport_SDE.jpg (teleportBoard_8 via FAC_teleportGui_previewPathOverrides)
 // Optional fallback if a specific file is missing: img\teleport_default.jpg
 // Shared blur + map teleport helpers use FAC_teleport_* prefix.
 // =============================================================================
 
+FAC_teleportGui_previewPathOverrides = createHashMap;
+FAC_teleportGui_previewPathOverrides set ["teleportBoard_8", "img\teleport_SDE.jpg"];
+
 FAC_teleportGui_fnc_previewImagePath = {
     params ["_objName"];
+    if (_objName in FAC_teleportGui_previewPathOverrides) exitWith {
+        FAC_teleportGui_previewPathOverrides get _objName
+    };
     format ["img\teleport_%1.jpg", _objName]
 };
 
@@ -78,7 +85,7 @@ FAC_teleport_fnc_applyBlurAndMove = {
     };
 };
 
-// Map teleport: rsc\TeleportMapPick.sqf (execVM from teleport boards) — onMapSingleClick must be set from
+// Map teleport: rsc\TeleportMapPick.sqf (execVM from teleport boards) - onMapSingleClick must be set from
 // a normal script; see PMC wiki debug-teleport pattern. Do not re-add map logic here via call compile.
 
 FAC_teleport_fnc_addReturnToBase = {
@@ -136,7 +143,8 @@ FAC_teleportGui_destinations = [
     ["Firing Range", "firingRangeBoard"],
     ["CQB Killhouse", "cqbBoard"],
     ["Vehicle Pad 2", "VEH_2"],
-    ["CTB Locker Room", "teleportBoard_7"]
+    ["CTB Locker Room", "teleportBoard_7"],
+    ["SDE's Pub", "teleportBoard_8"]
 ];
 
 FAC_teleportGui_fnc = {

@@ -66,12 +66,12 @@ private _zoneHalfDepth = 1000;
 private _captureRadius = 50;
 private _attackDir = (floor random 4) * 90;  // Random cardinal: 0=E, 90=S, 180=W, 270=N - BLUFOR spawn on this edge, attack toward opposite
 
-// Task for all players
-private _others = allPlayers select { !isNull _x && { _x != _player } };
-if (count _others > 0) then {
-    [_others, _taskId, ["Capture all 3 objective points (OBJ 1 → 2 → 3 in order).", "AO: Capture objectives", ""], _destPos, "CREATED", 1, false, "attack", true] call BIS_fnc_taskCreate;
+// Task: starter only, ASSIGNED (same pattern as Missions.sqf _fnc_createMissionTask — P4)
+if (!isNull _player) then {
+    [_player, _taskId, ["Capture all 3 objective points (OBJ 1 → 2 → 3 in order).", "AO: Capture objectives", ""], _destPos, "ASSIGNED", 1, true, "attack", true] call BIS_fnc_taskCreate;
+} else {
+    [west, _taskId, ["Capture all 3 objective points (OBJ 1 → 2 → 3 in order).", "AO: Capture objectives", ""], _destPos, "CREATED", 1, false, "attack", true] call BIS_fnc_taskCreate;
 };
-[_player, _taskId, ["Capture all 3 objective points (OBJ 1 → 2 → 3 in order).", "AO: Capture objectives", ""], _destPos, "ASSIGNED", 1, true, "attack", true] call BIS_fnc_taskCreate;
 
 // Zone marker: 2 km x 2 km square; BLUFOR spawn 100 m outside edge in _attackDir. Thick black border (outer band + inner border).
 private _borderThick = 40;  // metres extra each side for border thickness

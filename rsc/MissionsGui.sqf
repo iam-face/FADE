@@ -51,14 +51,14 @@ FAC_missionsGui_fnc = {
             uinamespace setVariable ["FAC_missionsGui_fnc", FAC_missionsGui_fnc];
             missionNamespace setVariable ["FAC_missions_abortPendingTime", -99];
 
-            // Mission list: displayName + [G] or [S]
+            // Mission list: [G] or [S] prefix, then displayName
             private _mLb = _display displayCtrl 60120;
             lbClear _mLb;
             private _missionList = missionNamespace getVariable ["FAC_missionsGui_missionList", []];
             {
                 _x params [["_name", ""], ["_id", ""], ["_desc", ""], ["_stream", "Single"]];
-                private _tag = if (_stream == "Global") then {" [G]"} else {" [S]"};
-                private _idx = _mLb lbAdd (_name + _tag);
+                private _tag = if (_stream == "Global") then {"[G] "} else {"[S] "};
+                private _idx = _mLb lbAdd (_tag + _name);
                 _mLb lbSetData [_idx, _id];
             } forEach _missionList;
             _mLb lbSetCurSel -1;
@@ -245,6 +245,7 @@ FAC_missionsGui_fnc = {
             } else {
                 _descCtrl ctrlSetText FAC_missionsGui_defaultDesc;
             };
+            _descCtrl ctrlEnable false;
         };
     };
 };

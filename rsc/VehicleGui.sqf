@@ -212,6 +212,17 @@ FAC_vehicleGui_fnc = {
             systemChat "DESPAWNING...";
             [] spawn { sleep 1; if (!isNull (findDisplay 60001)) then { ["refreshSpawned", []] call FAC_vehicleGui_fnc } };
         };
+        case "serviceVehicle": {
+            if (isNull _display) exitWith {};
+            private _spawnedLb = _display displayCtrl 60110;
+            private _idx = lbCurSel _spawnedLb;
+            if (_idx < 0) then { systemChat "Select a vehicle in Vehicles at base."; return };
+            private _varName = _spawnedLb lbData _idx;
+            if (_varName == "") exitWith {};
+            private _obj = missionNamespace getVariable [_varName, objNull];
+            if (isNull _obj) exitWith { systemChat "VEHICLE NO LONGER EXISTS." };
+            [_obj, player] remoteExec ["FADE_serviceVehicle", 2];
+        };
         case "refreshSpawned": {
             if (isNull _display) exitWith {};
             [player] remoteExec ["FADE_requestVehiclesAtBase", 2];
@@ -236,8 +247,11 @@ FAC_vehicleGui_fnc = {
             private _spawnedLb = _display displayCtrl 60110;
             private _spawnBtn = _display displayCtrl 60102;
             private _despawnBtn = _display displayCtrl 60111;
+            private _serviceBtn = _display displayCtrl 60112;
+            private _spawnedSel = lbSize _spawnedLb > 0 && { lbCurSel _spawnedLb >= 0 };
             _spawnBtn ctrlEnable (lbSize _heliLb > 0 && { lbCurSel _heliLb >= 0 });
-            _despawnBtn ctrlEnable (lbSize _spawnedLb > 0 && { lbCurSel _spawnedLb >= 0 });
+            _despawnBtn ctrlEnable _spawnedSel;
+            if (!isNull _serviceBtn) then { _serviceBtn ctrlEnable _spawnedSel };
         };
     };
 };
