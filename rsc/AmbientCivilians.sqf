@@ -156,6 +156,7 @@ FADE_enemyPatrol_spawnForZone = {
     if (random 1 > 0.4) exitWith {};
     private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", []];
     if (_enemyUnits isEqualTo []) exitWith {};
+    private _sideEnemy = missionNamespace getVariable ["FADE_sideEnemy", east];
     private _patrolGroups = [];
     private _vehicleGroups = [];
     private _vehicles = [];
@@ -177,8 +178,11 @@ FADE_enemyPatrol_spawnForZone = {
         private _shuffled = _enemyUnits call BIS_fnc_arrayShuffle;
         private _units = _shuffled select [0, _size min count _shuffled];
         if (_units isEqualTo []) exitWith {};
-        private _grp = [_sp, EAST, _units] call BIS_fnc_spawnGroup;
+        private _grp = [_sp, _sideEnemy, _units] call BIS_fnc_spawnGroup;
         if (isNull _grp || { count units _grp == 0 }) then { continue };
+        if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
+            { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
+        };
         _grp setBehaviour "SAFE";
         _grp setCombatMode "YELLOW";
         for "_w" from 0 to 3 do {
@@ -214,7 +218,7 @@ FADE_enemyPatrol_spawnForZone = {
                 if (isNull _veh) then { continue };
                 _veh setPosATL _roadPos;
                 _veh setDir (random 360);
-                private _vehGrp = createGroup EAST;
+                private _vehGrp = createGroup _sideEnemy;
                 private _driverCls = selectRandom _enemyUnits;
                 private _driver = _vehGrp createUnit [_driverCls, _roadPos, [], 0, "NONE"];
                 if (isNull _driver) then { deleteVehicle _veh; deleteGroup _vehGrp; continue };
@@ -256,7 +260,7 @@ FADE_enemyPatrol_spawnForZone = {
         private _indices = [];
         for "_i" from 0 to (count _bldPos - 1) do { _indices pushBack _i };
         _indices = _indices call BIS_fnc_arrayShuffle;
-        private _garrisonGrp = createGroup EAST;
+        private _garrisonGrp = createGroup _sideEnemy;
         for "_i" from 0 to (_cnt - 1) do {
             private _p = _bldPos select (_indices select _i);
             if (count _p < 3) then { _p = [(_p select 0), (_p select 1), (if (count _p > 2) then { _p select 2 } else { 0 })] };

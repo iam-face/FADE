@@ -18,7 +18,13 @@ if (!isNull _oldUnit) then {
     } forEach ["FADE_myMission", "FADE_myMissionTaskId", "FADE_myMissionMarker", "FADE_myMissionMarkerEnd", "FADE_myMissionBrief"];
 };
 
-private _savedLoadout = missionNamespace getVariable ["FAC_savedLoadout_" + getPlayerUID player, []];
-if (count _savedLoadout > 0) then {
-    player setUnitLoadout _savedLoadout;
+if (count (missionNamespace getVariable ["FAC_savedLoadout_" + getPlayerUID player, []]) > 0) then {
+    [player] call FAC_loadoutGui_restoreRespawnLoadoutSnapshot;
+};
+
+if (!isNil "FAC_jukebox_fnc_addVehicleLoudspeakerAction") then {
+    [player] call FAC_jukebox_fnc_addVehicleLoudspeakerAction;
+};
+if (!isNil "FAC_jukebox_fnc_installVehicleLoudspeakerHandlers") then {
+    [player] call FAC_jukebox_fnc_installVehicleLoudspeakerHandlers;
 };

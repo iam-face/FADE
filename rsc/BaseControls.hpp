@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // BaseControls.hpp -- Minimal base UI classes (fallback when import fails)
 // =============================================================================
 // Arma 3 GUI control types: 0=CT_STATIC, 1=CT_BUTTON, 4=CT_COMBO, 5=CT_LISTBOX
@@ -116,6 +116,19 @@ class RscEdit {
     autocomplete = "";
 };
 
+// Read-only multiline text: one row per line; ListScrollBar scrolls (RscEdit events are unreliable in custom dialogs).
+class RscListBoxVehicleDetails: RscListBox {
+    colorBackground[] = {0.06, 0.06, 0.1, 0.92};
+    colorText[] = {0.9, 0.9, 0.9, 1};
+    colorSelect[] = {0.9, 0.9, 0.9, 1};
+    colorSelect2[] = {0.9, 0.9, 0.9, 1};
+    colorSelectBackground[] = {0.12, 0.18, 0.26, 0.5};
+    colorSelectBackground2[] = {0.12, 0.18, 0.26, 0.5};
+    rowHeight = 0.028;
+    sizeEx = 0.027;
+    maxHistoryDelay = 0;
+};
+
 class RscCombo {
     type = 4;
     idc = -1;
@@ -130,6 +143,16 @@ class RscCombo {
     colorSelectBackground2[] = {1, 1, 1, 0.5};
     font = "PuristaMedium";
     sizeEx = 0.04;
+};
+
+class RscXSliderH {
+    type = 3;
+    idc = -1;
+    style = 1024;
+    x = 0; y = 0; w = 0.1; h = 0.03;
+    color[] = {1, 1, 1, 0.8};
+    colorActive[] = {1, 1, 1, 1};
+    shadow = 0;
 };
 
 // Map control (CT_MAP_MAIN = 101) -- fallback when game config not available

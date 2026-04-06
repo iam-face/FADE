@@ -37,7 +37,7 @@ All AI and player radio traffic in FADE follows CTB RATEL. Use this format so co
 // -----------------------------------------------------------------------------
 _facNotes pushBack ["Area of Operations and Artillery", "
 <font color='#FFD700' size='14'>AO MISSION AND FIRES SUPPORT</font><br/><br/>
-The <font color='#90EE90'>Area of Operations</font> mission (Manage Missions, <font color='#90EE90'>[G] Global</font>) creates a 2 km x 2 km zone with three capture points. BLUFOR assault from one side; strength is set by <font color='#90EE90'>AO - Strength</font> in Manage Scenario. When <font color='#90EE90'>AO: AI JTAC</font> is on (default), a friendly JTAC is on station and will call CAS in CTB 5-line style; turn it off in Manage Scenario if you want the AO without that unit. Capture all three objectives to complete (30-minute timeout).<br/><br/>
+The <font color='#90EE90'>Area of Operations</font> mission (Manage Missions, <font color='#90EE90'>[G] Global</font>) creates a 2 km x 2 km zone with three capture points. BLUFOR assault from one side; mission strength uses <font color='#90EE90'>FADE_aoStrength</font> from mission <font color='#90EE90'>Config</font> (not the Scenario GUI). Capture all three objectives to complete (30-minute timeout).<br/><br/>
 <font color='#87CEEB'>Player-directed artillery</font> (fire missions requested by players, with AI gun line and CTB-style acknowledgements) is planned; when implemented it will follow the Call for Fire (CFF) and artillery procedures in these Notes.
 "];
 
@@ -406,30 +406,35 @@ player createDiaryRecord ["FAC_Briefing", ["How It Works", "
 - <font color='#00FF00'>Manage Vehicles</font> (vehicle board)  - Spawn or despawn aircraft at helipads and land vehicles at the vehicle points. Lists come from loaded mods (CfgVehicles). Fixed-wing is restricted from some pads; use alternate helipads as labelled. Pilots get a pylon / loadout action on spawned aircraft when supported.<br/><br/>
 - <font color='#FFD700'>Manage Missions</font> and <font color='#87CEEB'>Manage Scenario</font> (scenario laptop)  - Same object, two actions. Missions: pick a type, read the in-GUI description, start or abort. Scenario: environment, factions, AI options, and limits (see below). <font color='#90EE90'>Apply</font> sends settings to the server for everyone.<br/><br/>
 - <font color='#87CEEB'>CQB Training</font> (optional board)  - Configure shoothouse drills (targets or live AI, density, civilians) and start/end from the GUI.<br/><br/>
-- <font color='#87CEEB'>Fast Travel</font> (teleport boards)  - Jump to listed locations (base, medical area, pads, range, CQB, vehicles, locker room, etc., depending on map setup).<br/><br/>
+- <font color='#87CEEB'>Fast Travel</font> (teleport boards)  - Jump to listed locations: HQ, CQB, FIRES range, locker room, medical, helipads (two groups), firing range, SDE's Pub, cargo slingload point, specialist area (see in-game list; Eden anchors use names like <font color='#90EE90'>teleportBase</font>).<br/><br/>
 - <font color='#87CEEB'>Loadout boxes</font>  - <font color='#90EE90'>Manage My Loadout</font> (presets and faction gear), <font color='#90EE90'>Save my loadout</font> (restored after respawn if you saved), and <font color='#90EE90'>ACE Arsenal</font> when ACE3 is loaded.<br/><br/>
-- <font color='#87CEEB'>Jukebox</font>  - Use jukebox radio props for 3D music at that location, or press <font color='#FFD700'>Ctrl+'</font> for the same GUI with sound on your character.<br/><br/>
+- <font color='#87CEEB'>Jukebox</font>  - Use jukebox radio props for 3D music at that location, or the <font color='#FFD700'>Vehicle loudspeaker...</font> scroll action while inside a vehicle (same tracks; 3D sound attached to the vehicle). Stop-all is <font color='#FFD700'>Manage Scenario</font> → Admin only.<br/><br/>
 - <font color='#87CEEB'>Locker room</font> (optional <font color='#90EE90'>LOCKER_1</font>)  - Flavour interaction when placed in Eden.<br/><br/>
 
 <font color='#87CEEB'>KEYBOARD</font><br/>
-<font color='#FFD700'>Ctrl+;</font> opens <font color='#90EE90'>Manage Missions</font> from anywhere. <font color='#FFD700'>Ctrl+'</font> opens the Jukebox (personal source).<br/><br/>
+<font color='#FFD700'>Ctrl+;</font> opens <font color='#90EE90'>Manage Missions</font> from anywhere. Open the Jukebox from a radio prop or from <font color='#FFD700'>Vehicle loudspeaker...</font> when in a vehicle.<br/><br/>
 
 <font color='#87CEEB'>MANAGE SCENARIO (SUMMARY)</font><br/>
-Time of day (set by hour), weather preset (clear through storm), <font color='#90EE90'>Limit gear</font> to friendly faction, and friendly / enemy / civilian factions. Enemy side: patrols on/off, AI skill, routing, AAA level (None through Heavy, plus MANPADS), <font color='#90EE90'>AO - Strength</font>, and <font color='#90EE90'>AO: AI JTAC</font> for the Area of Operations mission. Toggle <font color='#90EE90'>Civilians enabled</font> for ambient civs and traffic in marked zones.<br/><br/>
+Time of day (set by hour), weather preset (clear through storm), <font color='#90EE90'>Limit Gear to Chosen BLUFOR Faction</font>, <font color='#90EE90'>Limit to CTB Loadouts</font>, and friendly / enemy / civilian factions. Enemy side: patrols on/off, AI skill, routing, AAA level (None through Heavy, plus MANPADS), <font color='#90EE90'>OPFOR AT</font> (launcher prevalence), and OPFOR population scaling. Area of Operations difficulty is set in mission <font color='#90EE90'>Config</font> (<font color='#90EE90'>FADE_aoStrength</font>), not in this GUI. Toggle <font color='#90EE90'>Civilians enabled</font> for ambient civs and traffic in marked zones.<br/><br/>
 
 <font color='#87CEEB'>MISSION STREAMS</font><br/>
 In <font color='#FFD700'>Manage Missions</font>, types marked <font color='#90EE90'>[G] Global</font> are large, shared missions: <font color='#FF6666'>only one</font> global mission runs at a time for the whole server. Types marked <font color='#90EE90'>[S] Single</font> are smaller tasks: up to <font color='#FF6666'>three</font> may run at once, each started by a different player. You may only run <font color='#FF6666'>one</font> mission yourself at a time (global or single); finish or abort before starting another.<br/><br/>
 
 <font color='#87CEEB'>MISSION TYPES</font><br/>
 <font color='#87CEEB'>Global [G]</font><br/>
-- <font color='#90EE90'>Area of Operations</font>  - 2 km square AO, three objectives; BLUFOR vs OPFOR; optional AI JTAC calls (Manage Scenario). 30-minute limit.<br/>
+- <font color='#90EE90'>Area of Operations</font>  - 2 km square AO, three objectives; BLUFOR vs OPFOR; optional AI JTAC calls. 30-minute limit.<br/>
 - <font color='#90EE90'>CAS / Fire Support</font>  - Support friendly AI at an objective; fails if all friendlies are lost.<br/>
 - <font color='#90EE90'>Clear Area</font>  - Town or camp; clear about 80% of enemies within the time limit.<br/>
 - <font color='#90EE90'>Hostage</font>  - Rescue hostages from urban buildings; return survivors near base; fail if too many die.<br/>
 - <font color='#90EE90'>HVT</font>  - High-value target in an urban site; kill or capture and return to base.<br/>
-- <font color='#90EE90'>Intercept Convoy</font>  - Destroy the convoy before it reaches its end point.<br/><br/>
+- <font color='#90EE90'>Intercept Convoy</font>  - Destroy the convoy before it reaches its end point.<br/>
+- <font color='#90EE90'>Operation</font>  - Capture several civ zones at once; zones flip every 60 s based on OPFOR vs BLUFOR players on the ground; OPFOR can recapture.<br/>
+- <font color='#90EE90'>Search &amp; Destroy</font>  - Three garrisoned buildings in a town plus patrols; eliminate all hostiles.<br/><br/>
 <font color='#87CEEB'>Single [S]</font><br/>
 - <font color='#90EE90'>Troop Insert</font> / <font color='#90EE90'>Troop Extract</font>  - AI squad transport to or from base.<br/>
+- <font color='#90EE90'>CASEVAC</font>  - Like Troop Extract, but the squad has KIA and ACE injuries before pickup.<br/>
+- <font color='#90EE90'>CSAR</font>  - One survivor at a downed helo wreck; extract and RTB.<br/>
+- <font color='#90EE90'>Asset Retrieval</font>  - Secure intel at the site (scroll action), then RTB.<br/>
 - <font color='#90EE90'>Cargo / Resupply</font>  - Sling-load cargo from <font color='#90EE90'>CargoPoint_1</font>; fly to the spawned camp and land to complete.<br/>
 - <font color='#90EE90'>Medical</font> / <font color='#90EE90'>Medical KAT</font> / <font color='#90EE90'>MASCAS</font> / <font color='#90EE90'>MASCASKAT</font>  - Casualties at <font color='#90EE90'>MEDICAL_1</font>; stabilise or heal per briefing (ACE / KAT variants when those mods are present).<br/>
 - <font color='#90EE90'>Mine Clearing</font>  - Locate and disarm mines in a marked area.<br/>

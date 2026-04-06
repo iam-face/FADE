@@ -53,15 +53,46 @@ FAC_scenarioGui_getFactionsForSide = {
     _result
 };
 
+// Admin dialog cleanup buttons: idc + default label (first click arms "Are you sure?" + red text, like Missions abort)
+FAC_scenarioGui_adminCleanupButtonDefs = [
+    ["makeZeus", 60435, "Make me Zeus"],
+    ["removeMyZeus", 60436, "Remove my Zeus"],
+    ["teleportAllToBase", 60437, "Teleport all players to HQ (teleportBase)"],
+    ["stopAllMusic", 60438, "Stop all music (jukebox)"],
+    ["abortAllMissions", 60430, "Abort all missions"],
+    ["despawnCivilians", 60431, "Despawn civilians"],
+    ["despawnOpfor", 60432, "Despawn OPFOR"]
+];
+
+FAC_scenarioGui_adminResetCleanupButtons = {
+    private _display = findDisplay 60004;
+    if (isNull _display) exitWith {};
+    {
+        _x params ["_action", "_idc", "_text"];
+        private _ctrl = _display displayCtrl _idc;
+        if (!isNull _ctrl) then {
+            _ctrl ctrlSetText _text;
+            _ctrl ctrlSetTextColor [1, 1, 1, 1];
+        };
+    } forEach FAC_scenarioGui_adminCleanupButtonDefs;
+};
+
 FAC_scenarioGui_fnc = {
     params ["_action", "_params"];
     private _display = findDisplay 60003;
-    if (isNull _display && { _action != "open" }) exitWith {};
+    private _displayAdmin = findDisplay 60004;
+    if (isNull _display && { isNull _displayAdmin } && { !(_action in ["open", "openAdmin"]) }) exitWith {};
 
     switch _action do {
         case "open": {
             if (!createDialog "RscDisplayScenario") then {
                 systemChat "SCENARIO GUI: RESOURCE NOT FOUND.";
+            };
+        };
+        case "openAdmin": {
+            if (!isNull (findDisplay 60003)) then { closeDialog 0; };
+            if (!createDialog "RscDisplayScenarioAdmin") then {
+                systemChat "SCENARIO ADMIN GUI: RESOURCE NOT FOUND.";
             };
         };
         case "onLoad": {
@@ -137,7 +168,7 @@ FAC_scenarioGui_fnc = {
             } forEach _civFactions;
             if (lbSize _civList > 0) then { _civList lbSetCurSel _civSel };
 
-            // Limit gear to Friendly faction (TRUE / FALSE)
+            // Limit gear to chosen BLUFOR faction (TRUE / FALSE)
             private _limitGearList = _display displayCtrl 60315;
             lbClear _limitGearList;
             _limitGearList lbAdd "FALSE";
@@ -166,7 +197,7 @@ FAC_scenarioGui_fnc = {
                 private _idx = _skillList lbAdd _str;
                 _skillList lbSetData [_idx, str _val];
             };
-            private _currentSkill = missionNamespace getVariable ["FADE_enemySkill", 0.5];
+            private _currentSkill = missionNamespace getVariable ["FADE_enemySkill", 0.2];
             private _skillSel = (round (_currentSkill * 10)) min 10 max 0;
             _skillList lbSetCurSel _skillSel;
 
@@ -189,14 +220,106 @@ FAC_scenarioGui_fnc = {
             { if (_x == _currentAAA) exitWith { _aaaSel = _forEachIndex } } forEach ["None", "Light", "Medium", "MANPADS", "Heavy"];
             _aaaList lbSetCurSel _aaaSel;
 
-            // AO - Strength (Low / Medium / High); used by Area of Operations mission
-            private _aoStrengthList = _display displayCtrl 60324;
-            lbClear _aoStrengthList;
-            { _aoStrengthList lbAdd _x; _aoStrengthList lbSetData [_forEachIndex, _x] } forEach ["Low", "Medium", "High"];
-            private _currentAoStrength = missionNamespace getVariable ["FADE_aoStrength", "Medium"];
-            private _aoStrengthSel = 1;
-            { if (_x == _currentAoStrength) exitWith { _aoStrengthSel = _forEachIndex } } forEach ["Low", "Medium", "High"];
-            _aoStrengthList lbSetCurSel _aoStrengthSel;
+            // OPFOR AT launchers (secondary slot; MANPADS AA excluded) — same column as former AO strength
+            private _launcherList = _display displayCtrl 60324;
+            lbClear _launcherList;
+            private _launcherChoices = [
+                ["Normal (keep all)", "Normal"],
+                ["Reduced (~25% keep)", "Reduced"],
+                ["Minimal (~10% keep)", "Minimal"],
+                ["None (strip all AT)", "None"]
+            ];
+            {
+                _x params ["_label", "_value"];
+                private _idx = _launcherList lbAdd _label;
+                _launcherList lbSetData [_idx, _value];
+            } forEach _launcherChoices;
+            private _currentLauncher = missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"];
+            private _launcherSel = 0;
+            { if ((_x select 1) == _currentLauncher) exitWith { _launcherSel = _forEachIndex } } forEach _launcherChoices;
+            _launcherList lbSetCurSel _launcherSel;
+
+            // OPFOR ambient air (P24): off / capped + cooldown spawns toward BLUFOR
+            private _opforAirList = _display displayCtrl 60328;
+            lbClear _opforAirList;
+            private _opforAirChoices = [
+                ["Off", "Off"],
+                ["Low (max 1, 10 min between)", "Low"],
+                ["Medium (max 2, 5 min between)", "Medium"]
+            ];
+            {
+                _x params ["_label", "_value"];
+                private _idx = _opforAirList lbAdd _label;
+                _opforAirList lbSetData [_idx, _value];
+            } forEach _opforAirChoices;
+            private _currentAir = missionNamespace getVariable ["FADE_opforAirSetting", "Off"];
+            private _airSel = 0;
+            { if ((_x select 1) == _currentAir) exitWith { _airSel = _forEachIndex } } forEach _opforAirChoices;
+            _opforAirList lbSetCurSel _airSel;
+
+            // Operation mission: number of enemy-held civ zones (2–10)
+            private _opZonesList = _display displayCtrl 60329;
+            lbClear _opZonesList;
+            for "_z" from 2 to 10 do {
+                private _idx = _opZonesList lbAdd (str _z + " towns");
+                _opZonesList lbSetData [_idx, str _z];
+            };
+            private _currentOpZones = missionNamespace getVariable ["FADE_operationZoneCount", 6];
+            _currentOpZones = (round _currentOpZones) max 2 min 10;
+            _opZonesList lbSetCurSel (_currentOpZones - 2);
+
+            // OPFOR population scale (auto/manual)
+            private _opforPopList = _display displayCtrl 60327;
+            lbClear _opforPopList;
+            private _opforChoices = [
+                ["Auto", "Auto"],
+                ["Very Low (0.25x)", "VeryLow"],
+                ["Low (0.5x)", "Low"],
+                ["Normal (1x)", "Normal"],
+                ["High (1.5x)", "High"],
+                ["Very High (2x)", "VeryHigh"],
+                ["Insane (4x)", "Insane"]
+            ];
+            {
+                _x params ["_label", "_value"];
+                private _idx = _opforPopList lbAdd _label;
+                _opforPopList lbSetData [_idx, _value];
+            } forEach _opforChoices;
+            private _currentOpforPop = missionNamespace getVariable ["FADE_opforPopulationSetting", "Normal"];
+            private _opforSel = 3;
+            {
+                if ((_x select 1) == _currentOpforPop) exitWith { _opforSel = _forEachIndex };
+            } forEach _opforChoices;
+            _opforPopList lbSetCurSel _opforSel;
+
+            // Time compression (pseudo): server advances date by extra time on a fixed loop (GUI: 1x / 5x / 25x)
+            private _timeScaleChoices = [["1x", 1], ["5x", 5], ["25x", 25]];
+            private _timeCompressionList = _display displayCtrl 60325;
+            lbClear _timeCompressionList;
+            {
+                _x params ["_label", "_scale"];
+                private _idx = _timeCompressionList lbAdd _label;
+                _timeCompressionList lbSetData [_idx, str _scale];
+            } forEach _timeScaleChoices;
+            private _currentTimeScale = missionNamespace getVariable ["FADE_timeCompressionScale", 1];
+            private _timeScaleSel = 0;
+            {
+                _x params ["_label", "_scale"];
+                if (_scale == _currentTimeScale) exitWith { _timeScaleSel = _forEachIndex };
+            } forEach _timeScaleChoices;
+            if (_currentTimeScale > 25) then { _timeScaleSel = 2 };
+            if (_currentTimeScale > 5 && _currentTimeScale < 25) then { _timeScaleSel = 1 };
+            _timeCompressionList lbSetCurSel _timeScaleSel;
+
+            // Teleport-to-player access mode
+            private _tpPlayerModeList = _display displayCtrl 60326;
+            lbClear _tpPlayerModeList;
+            _tpPlayerModeList lbAdd "All players";
+            _tpPlayerModeList lbSetData [0, "0"];
+            _tpPlayerModeList lbAdd "SL only [admin/Zeus override]";
+            _tpPlayerModeList lbSetData [1, "1"];
+            private _tpPlayerMode = missionNamespace getVariable ["FADE_teleportToPlayerMode", 0];
+            _tpPlayerModeList lbSetCurSel (if (_tpPlayerMode > 0) then { 1 } else { 0 });
 
             // Civilians enabled (governs all ambient civilians)
             private _civEnabledList = _display displayCtrl 60322;
@@ -208,15 +331,92 @@ FAC_scenarioGui_fnc = {
             private _civEnabled = missionNamespace getVariable ["FADE_civiliansEnabled", true];
             _civEnabledList lbSetCurSel (if (_civEnabled) then { 0 } else { 1 });
 
-            // AO: AI JTAC (governs JTAC unit and comms in Area of Operations mission)
-            private _aoJtacList = _display displayCtrl 60323;
-            lbClear _aoJtacList;
-            _aoJtacList lbAdd "TRUE";
-            _aoJtacList lbSetData [0, "true"];
-            _aoJtacList lbAdd "FALSE";
-            _aoJtacList lbSetData [1, "false"];
-            private _aoJtacEnabled = missionNamespace getVariable ["FADE_aoJtacEnabled", true];
-            _aoJtacList lbSetCurSel (if (_aoJtacEnabled) then { 0 } else { 1 });
+            // Limit to CTB loadouts (TRUE / FALSE)
+            private _ctbOnlyList = _display displayCtrl 60323;
+            lbClear _ctbOnlyList;
+            _ctbOnlyList lbAdd "FALSE";
+            _ctbOnlyList lbSetData [0, "false"];
+            _ctbOnlyList lbAdd "TRUE";
+            _ctbOnlyList lbSetData [1, "true"];
+            private _ctbOnly = missionNamespace getVariable ["FADE_limitToCtbLoadouts", false];
+            _ctbOnlyList lbSetCurSel (if (_ctbOnly) then { 1 } else { 0 });
+
+            private _adminBtns = [60330];
+            {
+                private _ctrl = _display displayCtrl _x;
+                if (!isNull _ctrl) then {
+                    _ctrl ctrlEnable true;
+                    _ctrl ctrlSetFade 0;
+                    _ctrl ctrlCommit 0;
+                };
+            } forEach _adminBtns;
+        };
+        case "headerRefresh": {
+            if (!isNull (findDisplay 60004)) then {
+                ["onLoadAdmin", []] call FAC_scenarioGui_fnc;
+            } else {
+                ["onLoad", []] call FAC_scenarioGui_fnc;
+            };
+        };
+        case "onLoadAdmin": {
+            private _display = findDisplay 60004;
+            if (isNull _display) exitWith {};
+            missionNamespace setVariable ["FAC_scenario_adminPending", ["", -99]];
+            missionNamespace setVariable ["FAC_scenario_adminConfirmGen", 0];
+            [] call FAC_scenarioGui_adminResetCleanupButtons;
+            {
+                private _ctrl = _display displayCtrl _x;
+                if (!isNull _ctrl) then {
+                    _ctrl ctrlEnable true;
+                    _ctrl ctrlSetFade 0;
+                    _ctrl ctrlCommit 0;
+                };
+            } forEach [60430, 60431, 60432, 60435, 60436, 60437, 60438];
+        };
+        case "adminCleanup": {
+            if (isNull (findDisplay 60004)) exitWith {};
+            private _cleanupAction = (_params param [0, ""]) + "";
+            if (_cleanupAction == "") exitWith {};
+            private _display = findDisplay 60004;
+            private _state = missionNamespace getVariable ["FAC_scenario_adminPending", ["", -99]];
+            private _pendingAction = _state param [0, ""];
+            private _pendingTime = _state param [1, -99];
+            if (_pendingAction != _cleanupAction || { time - _pendingTime > 3 }) then {
+                private _confirmGen = (missionNamespace getVariable ["FAC_scenario_adminConfirmGen", 0]) + 1;
+                missionNamespace setVariable ["FAC_scenario_adminConfirmGen", _confirmGen];
+                missionNamespace setVariable ["FAC_scenario_adminPending", [_cleanupAction, time]];
+                {
+                    _x params ["_act", "_idc", "_txt"];
+                    private _ctrl = _display displayCtrl _idc;
+                    if (!isNull _ctrl) then {
+                        if (_act == _cleanupAction) then {
+                            _ctrl ctrlSetText "Are you sure?";
+                            _ctrl ctrlSetTextColor [1, 0.35, 0.35, 1];
+                        } else {
+                            _ctrl ctrlSetText _txt;
+                            _ctrl ctrlSetTextColor [1, 1, 1, 1];
+                        };
+                    };
+                } forEach FAC_scenarioGui_adminCleanupButtonDefs;
+                [_confirmGen] spawn {
+                    params ["_gen"];
+                    sleep 3;
+                    if ((missionNamespace getVariable ["FAC_scenario_adminConfirmGen", 0]) != _gen) exitWith {};
+                    private _st = missionNamespace getVariable ["FAC_scenario_adminPending", ["", -99]];
+                    if ((_st param [0, ""]) != "") then {
+                        missionNamespace setVariable ["FAC_scenario_adminPending", ["", -99]];
+                        if (!isNull (findDisplay 60004)) then {
+                            [] call FAC_scenarioGui_adminResetCleanupButtons;
+                        };
+                    };
+                };
+            } else {
+                missionNamespace setVariable ["FAC_scenario_adminConfirmGen", (missionNamespace getVariable ["FAC_scenario_adminConfirmGen", 0]) + 1];
+                missionNamespace setVariable ["FAC_scenario_adminPending", ["", -99]];
+                [] call FAC_scenarioGui_adminResetCleanupButtons;
+                [_cleanupAction, player] remoteExec ["FADE_adminCleanupAction", 2];
+                [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+            };
         };
         case "apply": {
             if (isNull _display) exitWith {};
@@ -230,9 +430,14 @@ FAC_scenarioGui_fnc = {
             private _skillList = _display displayCtrl 60317;
             private _routingList = _display displayCtrl 60318;
             private _aaaList = _display displayCtrl 60319;
-            private _aoStrengthList = _display displayCtrl 60324;
+            private _launcherList = _display displayCtrl 60324;
+            private _opforAirList = _display displayCtrl 60328;
+            private _opZonesList = _display displayCtrl 60329;
+            private _opforPopList = _display displayCtrl 60327;
+            private _timeCompressionList = _display displayCtrl 60325;
             private _civEnabledList = _display displayCtrl 60322;
-            private _aoJtacList = _display displayCtrl 60323;
+            private _ctbOnlyList = _display displayCtrl 60323;
+            private _tpPlayerModeList = _display displayCtrl 60326;
 
             private _hour = 18;
             if (lbCurSel _timeList >= 0) then { _hour = parseNumber (_timeList lbData (lbCurSel _timeList)) };
@@ -248,18 +453,32 @@ FAC_scenarioGui_fnc = {
             if (lbCurSel _limitGearList >= 0) then { _limitGear = (_limitGearList lbData (lbCurSel _limitGearList)) == "true" };
             private _patrolsEnabled = false;
             if (lbCurSel _patrolsList >= 0) then { _patrolsEnabled = (_patrolsList lbData (lbCurSel _patrolsList)) == "true" };
-            private _enemySkill = 0.5;
+            private _enemySkill = 0.2;
             if (lbCurSel _skillList >= 0) then { _enemySkill = parseNumber (_skillList lbData (lbCurSel _skillList)) };
             private _enemyRouting = 0;
             if (lbCurSel _routingList >= 0) then { _enemyRouting = parseNumber (_routingList lbData (lbCurSel _routingList)) };
             private _enemyAAA = "None";
             if (lbCurSel _aaaList >= 0) then { _enemyAAA = _aaaList lbData (lbCurSel _aaaList) };
-            private _aoStrength = "Medium";
-            if (lbCurSel _aoStrengthList >= 0) then { _aoStrength = _aoStrengthList lbData (lbCurSel _aoStrengthList) };
+            // AO mission strength: not in GUI — keep missionNamespace / Config (FADE_aoStrength)
+            private _aoStrength = missionNamespace getVariable ["FADE_aoStrength", "Medium"];
+            if (_aoStrength == "Mid") then { _aoStrength = "Medium" };
+            private _opforPopulationSetting = "Normal";
+            if (lbCurSel _opforPopList >= 0) then { _opforPopulationSetting = _opforPopList lbData (lbCurSel _opforPopList) };
+            private _opforLauncherSetting = "Normal";
+            if (lbCurSel _launcherList >= 0) then { _opforLauncherSetting = _launcherList lbData (lbCurSel _launcherList) };
+            private _opforAirSetting = "Off";
+            if (lbCurSel _opforAirList >= 0) then { _opforAirSetting = _opforAirList lbData (lbCurSel _opforAirList) };
+            private _operationZoneCount = 6;
+            if (lbCurSel _opZonesList >= 0) then { _operationZoneCount = parseNumber (_opZonesList lbData (lbCurSel _opZonesList)) };
+            _operationZoneCount = (round _operationZoneCount) max 2 min 10;
+            private _timeCompressionScale = 1;
+            if (lbCurSel _timeCompressionList >= 0) then { _timeCompressionScale = parseNumber (_timeCompressionList lbData (lbCurSel _timeCompressionList)) };
+            private _teleportToPlayerMode = 0;
+            if (lbCurSel _tpPlayerModeList >= 0) then { _teleportToPlayerMode = parseNumber (_tpPlayerModeList lbData (lbCurSel _tpPlayerModeList)) };
             private _civiliansEnabled = true;
             if (lbCurSel _civEnabledList >= 0) then { _civiliansEnabled = (_civEnabledList lbData (lbCurSel _civEnabledList)) == "true" };
-            private _aoJtacEnabled = true;
-            if (lbCurSel _aoJtacList >= 0) then { _aoJtacEnabled = (_aoJtacList lbData (lbCurSel _aoJtacList)) == "true" };
+            private _ctbOnly = false;
+            if (lbCurSel _ctbOnlyList >= 0) then { _ctbOnly = (_ctbOnlyList lbData (lbCurSel _ctbOnlyList)) == "true" };
 
             // Set locally immediately so Loadout/Vehicle GUIs have correct values when opened right after Apply
             missionNamespace setVariable ["FADE_scenarioFriendlyFaction", _friendlyFaction];
@@ -268,12 +487,19 @@ FAC_scenarioGui_fnc = {
             missionNamespace setVariable ["FADE_enemySkill", _enemySkill];
             missionNamespace setVariable ["FADE_enemyRouting", _enemyRouting];
             missionNamespace setVariable ["FADE_enemyAAALevel", _enemyAAA];
-            missionNamespace setVariable ["FADE_aoStrength", _aoStrength];
+            missionNamespace setVariable ["FADE_opforPopulationSetting", _opforPopulationSetting];
+            missionNamespace setVariable ["FADE_opforLauncherSetting", _opforLauncherSetting];
+            missionNamespace setVariable ["FADE_opforAirSetting", _opforAirSetting];
+            missionNamespace setVariable ["FADE_operationZoneCount", _operationZoneCount];
+            missionNamespace setVariable ["FADE_timeCompressionScale", _timeCompressionScale];
+            missionNamespace setVariable ["FADE_teleportToPlayerMode", _teleportToPlayerMode];
             missionNamespace setVariable ["FADE_civiliansEnabled", _civiliansEnabled];
-            missionNamespace setVariable ["FADE_aoJtacEnabled", _aoJtacEnabled];
+            missionNamespace setVariable ["FADE_limitToCtbLoadouts", _ctbOnly];
 
-            [_hour, _weather, _enemyFaction, _friendlyFaction, _civFaction, _limitGear, player, _patrolsEnabled, _enemySkill, _enemyRouting, _enemyAAA, _civiliansEnabled, _aoJtacEnabled, _aoStrength] remoteExec ["FADE_applyScenarioSettings", 2];
+            private _scenarioApplyArgs = [_hour, _weather, _enemyFaction, _friendlyFaction, _civFaction, _limitGear, _ctbOnly, player, _patrolsEnabled, _enemySkill, _enemyRouting, _enemyAAA, _civiliansEnabled, _aoStrength, _timeCompressionScale, _opforPopulationSetting, _teleportToPlayerMode, _opforLauncherSetting, _opforAirSetting, _operationZoneCount];
+            [_scenarioApplyArgs] remoteExec ["FADE_applyScenarioSettings", 2];
             closeDialog 0;
+            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
     };
 };

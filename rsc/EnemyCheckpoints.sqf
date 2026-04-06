@@ -11,6 +11,15 @@
 
 if (!isServer) exitWith {};
 
+private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {
+    params ["_baseCount", ["_minCount", 1], ["_maxCount", -1]];
+    private _base = floor (_baseCount max 0);
+    if (_base <= 0) exitWith { 0 };
+    private _scaled = _base max _minCount;
+    if (_maxCount >= 0 && { _scaled > _maxCount }) then { _scaled = _maxCount };
+    _scaled
+}];
+
 private _chkLog = {
     params ["_msg"];
     if (missionNamespace getVariable ["FADE_checkpointDebug", false]) then {
@@ -104,8 +113,9 @@ private _spawnCheckpoint = {
     if (isNull _cpObj) exitWith {};
 
     private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", []];
+    private _sideEnemy = missionNamespace getVariable ["FADE_sideEnemy", east];
     if (_enemyUnits isEqualTo []) then {
-        _enemyUnits = ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"];
+        _enemyUnits = +(missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"]]);
     };
     private _enemyVeh = missionNamespace getVariable ["FADE_enemyVehicles", []];
     private _roadVeh = _enemyVeh select {
@@ -132,7 +142,7 @@ private _spawnCheckpoint = {
         if (!isNull _vehObj) then {
             _vehObj setPosATL _vPos;
             _vehObj setDir _dir;
-            private _vehGrp = createGroup EAST;
+            private _vehGrp = createGroup _sideEnemy;
             private _driver = _vehGrp createUnit [selectRandom _enemyUnits, _vPos, [], 0, "NONE"];
             if (!isNull _driver) then { _driver moveInDriver _vehObj };
             if (_vehObj emptyPositions "gunner" > 0) then {
@@ -159,10 +169,10 @@ private _spawnCheckpoint = {
     };
 
     // Infantry manning checkpoint with ambient stand/watch animations.
-    private _infCount = 3 + floor random 3;
+    private _infCount = [3 + floor random 3, 1] call _scaleOpforCount;
     private _infClasses = [];
     for "_i" from 0 to (_infCount - 1) do { _infClasses pushBack (selectRandom _enemyUnits) };
-    private _infGrp = [_center, EAST, _infClasses] call BIS_fnc_spawnGroup;
+    private _infGrp = [_center, _sideEnemy, _infClasses] call BIS_fnc_spawnGroup;
     [_infGrp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
     _groups pushBack _infGrp;
     {
