@@ -21,6 +21,32 @@ call compile preprocessFileLineNumbers "rsc\Config.sqf";
 // Debug: optional BIS campaign function stubs - default off in Config (see rsc\DebugBIScpStub.sqf)
 call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";
 
+// Lobby params mirrored client-side for UI/action gating.
+private _params = if (!isNil "paramsArray" && { paramsArray isEqualType [] }) then { paramsArray } else { [] };
+missionNamespace setVariable ["FAC_param_missionsGuiAccess", _params param [0, missionNamespace getVariable ["FAC_param_missionsGuiAccess", 0]]];
+missionNamespace setVariable ["FAC_param_scenarioGuiAccess", _params param [1, missionNamespace getVariable ["FAC_param_scenarioGuiAccess", 0]]];
+missionNamespace setVariable ["FAC_param_enableAceArsenalActions", _params param [2, missionNamespace getVariable ["FAC_param_enableAceArsenalActions", 1]]];
+
+FAC_playerHasLeaderOverrideAccess = {
+    if (isNull player) exitWith { false };
+    (serverCommandAvailable "#kick") || { !isNull (getAssignedCuratorLogic player) }
+};
+FAC_playerCanUseMissionsGui = {
+    private _mode = missionNamespace getVariable ["FAC_param_missionsGuiAccess", 0];
+    if (_mode <= 0) exitWith { true };
+    (leader group player == player) || { call FAC_playerHasLeaderOverrideAccess }
+};
+FAC_playerCanUseScenarioGui = {
+    private _mode = missionNamespace getVariable ["FAC_param_scenarioGuiAccess", 0];
+    if (_mode <= 0) exitWith { true };
+    (leader group player == player) || { call FAC_playerHasLeaderOverrideAccess }
+};
+FAC_playerCanTeleportToPlayers = {
+    private _mode = missionNamespace getVariable ["FADE_teleportToPlayerMode", 0];
+    if (_mode <= 0) exitWith { true };
+    (leader group player == player) || { call FAC_playerHasLeaderOverrideAccess }
+};
+
 // -----------------------------------------------------------------------------
 // Mission hints  - formatted hint shown only to the targeted player (called via remoteExec from server)
 // -----------------------------------------------------------------------------
@@ -28,13 +54,28 @@ FADE_showMissionHint = {
     if (count _this > 0) then { hint parseText (_this select 0) };
 };
 
+// Dedicated MP: AI sideChat from server may not show on clients; local sideChat + client mirror (P15).
+FADE_aiSideChat_exec = {
+    params ["_unit", "_message"];
+    if (isNull _unit || {!alive _unit}) exitWith {};
+    if (local _unit) then {
+        _unit sideChat _message;
+    };
+    if (hasInterface && {side player == side _unit}) then {
+        if (!local _unit) then {
+            systemChat _message;
+        };
+    };
+};
+
 // -----------------------------------------------------------------------------
 // Scenario config sync  - server sends when Apply; client uses for Loadout/Vehicle GUIs
 // -----------------------------------------------------------------------------
 FADE_syncScenarioConfig = {
-    params [["_friendlyFaction", "BLU_F"], ["_limitGear", false]];
+    params [["_friendlyFaction", "BLU_F"], ["_limitGear", false], ["_ctbOnly", false]];
     missionNamespace setVariable ["FADE_scenarioFriendlyFaction", _friendlyFaction];
     missionNamespace setVariable ["FADE_limitGearToFriendlyFaction", _limitGear];
+    missionNamespace setVariable ["FADE_limitToCtbLoadouts", _ctbOnly];
 };
 
 // -----------------------------------------------------------------------------
@@ -62,7 +103,7 @@ FAC_surrenderChallenge_fnc_activate = {
 
     "U pressed  - Surrender Challenge" call _dbg;
 
-    private _apprehendSounds = ["FAC_apprehend001", "FAC_apprehend006", "FAC_apprehend011", "FAC_apprehend018", "FAC_apprehend024", "FAC_apprehend032", "FAC_apprehend043", "FAC_apprehend050"];
+    private _apprehendSounds = ["FAC_apprehend001", "FAC_apprehend006", "FAC_apprehend011"];
 
     // cursorObject can return the weapon mesh when aiming at a soldier (known Arma quirk).
     // cursorTarget returns the unit but requires knowsAbout for enemies. Try both, then
@@ -124,28 +165,59 @@ FAC_surrenderChallenge_fnc_activate = {
     diag_log "[FAC SurrenderChallenge] Client: Challenge sent for " + (name _target);
 };
 
-// Load GUI scripts
+// Load GUI scripts (LoadoutGui must compile even if CTB data file breaks — CTB presets load lazily when that tab is chosen)
 call compile preprocessFileLineNumbers "rsc\LoadoutGui.sqf";
 call compile preprocessFileLineNumbers "rsc\VehicleGui.sqf";
+call compile preprocessFileLineNumbers "rsc\FiresArtilleryList.sqf";
+call compile preprocessFileLineNumbers "rsc\FiresGui.sqf";
 call compile preprocessFileLineNumbers "rsc\MissionsGui.sqf";
 call compile preprocessFileLineNumbers "rsc\ScenarioGui.sqf";
 call compile preprocessFileLineNumbers "rsc\JukeboxGui.sqf";
 missionNamespace setVariable ["FAC_jukeboxGui_fnc", FAC_jukeboxGui_fnc];
 missionNamespace setVariable ["FAC_jukebox_clientPlay", FAC_jukebox_clientPlay];
+missionNamespace setVariable ["FAC_jukebox_clientStopAll", FAC_jukebox_clientStopAll];
 missionNamespace setVariable ["FAC_jukebox_serverDbgChat", FAC_jukebox_serverDbgChat];
+missionNamespace setVariable ["FAC_jukebox_fnc_addVehicleLoudspeakerAction", FAC_jukebox_fnc_addVehicleLoudspeakerAction];
+missionNamespace setVariable ["FAC_jukebox_fnc_installVehicleLoudspeakerHandlers", FAC_jukebox_fnc_installVehicleLoudspeakerHandlers];
 
-// JIP: replay all active jukebox sources (server maintains FAC_jukebox_activeSources)
-[] spawn {
-    uiSleep 0.75;
-    private _st = missionNamespace getVariable ["FAC_jukebox_activeSources", []];
-    {
-        _x params ["_k", "_s"];
-        if (_s != "") then { [_s, _k] call FAC_jukebox_clientPlay };
-    } forEach _st;
+// Jukebox 3D audio: no JIP replay — replaying from FAC_jukebox_activeSources on connect caused extra playSound3D starts (heard as random restarts on dedicated).
+
+// CQB pop-up targets: server triggers this on all clients so knock-down is visible in MP.
+FADE_cqbClient_forceTargetDown = {
+    params [["_t", objNull]];
+    if (isNull _t) exitWith {};
+    { _t animateSource [_x, 1, true] } forEach ["terc", "popup_Source", "popup_hide", "Target_Up_Source"];
 };
 call compile preprocessFileLineNumbers "rsc\CQBGui.sqf";
 call compile preprocessFileLineNumbers "rsc\CqbLoudspeaker.sqf";
 call compile preprocessFile "rsc\TeleportGui.sqf";
+
+// After server/client actions from board GUIs, refresh any open dialog (same as header Refresh) after a short delay.
+FAC_guiScheduleHeaderRefresh = {
+    params [["_delay", 0.4]];
+    [_delay] spawn {
+        params ["_delay"];
+        sleep _delay;
+        private _veh = missionNamespace getVariable ["FAC_vehicleGui_fnc", {}];
+        private _miss = missionNamespace getVariable ["FAC_missionsGui_fnc", {}];
+        private _scen = missionNamespace getVariable ["FAC_scenarioGui_fnc", {}];
+        private _load = missionNamespace getVariable ["FAC_loadoutGui_fnc", {}];
+        private _juke = missionNamespace getVariable ["FAC_jukeboxGui_fnc", {}];
+        private _cqb = missionNamespace getVariable ["FAC_cqbGui_fnc", {}];
+        private _tp = missionNamespace getVariable ["FAC_teleportGui_fnc", {}];
+        private _fires = missionNamespace getVariable ["FAC_firesGui_fnc", {}];
+        if (!isNull (findDisplay 60001)) then { ["headerRefresh", []] call _veh };
+        if (!isNull (findDisplay 60002)) then { ["headerRefresh", []] call _miss };
+        if (!isNull (findDisplay 60003) || {!isNull (findDisplay 60004)}) then { ["headerRefresh", []] call _scen };
+        if (!isNull (findDisplay 60200)) then { ["headerRefresh", []] call _load };
+        if (!isNull (findDisplay 60400)) then { ["headerRefresh", []] call _juke };
+        if (!isNull (findDisplay 60500)) then { ["headerRefresh", []] call _cqb };
+        if (!isNull (findDisplay 60600)) then { ["headerRefresh", []] call _tp };
+        if (!isNull (findDisplay 60610)) then { ["headerRefreshPlayers", []] call _tp };
+        if (!isNull (findDisplay 60700)) then { ["headerRefresh", []] call _fires };
+    };
+};
+missionNamespace setVariable ["FAC_guiScheduleHeaderRefresh", FAC_guiScheduleHeaderRefresh];
 
 waitUntil {
     sleep 0.05;
@@ -155,13 +227,31 @@ waitUntil {
 // Request scenario config from server (limit gear, friendly faction) for Loadout/Vehicle GUIs
 [player] remoteExec ["FADE_sendScenarioConfigToClient", 2];
 
-// Vehicle board (vehBoard): Manage Vehicles only
-private _vehicleBoard = missionNamespace getVariable ["FADE_vehicleBoard", objNull];
-if (!isNull _vehicleBoard) then {
-    removeAllActions _vehicleBoard;
-    _vehicleBoard addAction [
+// Manage Vehicles: terminalVeh when present; else vehBoard (vehBoard keeps vehicles2.jpg texture on initServer)
+private _vehicleGuiObj = missionNamespace getVariable ["FADE_vehicleTerminal", objNull];
+if (isNull _vehicleGuiObj) then { _vehicleGuiObj = missionNamespace getVariable ["FADE_vehicleBoard", objNull] };
+if (!isNull _vehicleGuiObj) then {
+    removeAllActions _vehicleGuiObj;
+    _vehicleGuiObj addAction [
         "<t color='#00FF00'>Manage Vehicles</t>",
         { [] spawn { sleep 0.2; ["open", []] call FAC_vehicleGui_fnc } },
+        [],
+        5,
+        false,
+        true,
+        "",
+        "",
+        3
+    ];
+};
+
+// FIRES terminal (terminalFires): artillery spawn / rearm / despawn at firesPos_* logic objects
+private _firesTerm = missionNamespace getVariable ["FADE_firesTerminal", objNull];
+if (!isNull _firesTerm) then {
+    removeAllActions _firesTerm;
+    _firesTerm addAction [
+        "<t color='#FFAA66'>FIRES range</t>",
+        { [] spawn { sleep 0.2; ["open", []] call FAC_firesGui_fnc } },
         [],
         5,
         false,
@@ -178,7 +268,12 @@ if (!isNull _missionBoard) then {
     removeAllActions _missionBoard;
     _missionBoard addAction [
         "<t color='#FFD700'>Manage Missions</t>",
-        { [] spawn { sleep 0.2; ["open", []] call FAC_missionsGui_fnc } },
+        {
+            if !(call FAC_playerCanUseMissionsGui) exitWith {
+                systemChat "Missions GUI is restricted to group leaders (admin/Zeus override).";
+            };
+            [] spawn { sleep 0.2; ["open", []] call FAC_missionsGui_fnc };
+        },
         [],
         4,
         false,
@@ -189,7 +284,12 @@ if (!isNull _missionBoard) then {
     ];
     _missionBoard addAction [
         "<t color='#87CEEB'>Manage Scenario</t>",
-        { [] spawn { sleep 0.2; ["open", []] call FAC_scenarioGui_fnc } },
+        {
+            if !(call FAC_playerCanUseScenarioGui) exitWith {
+                systemChat "Scenario GUI is restricted to group leaders (admin/Zeus override).";
+            };
+            [] spawn { sleep 0.2; ["open", []] call FAC_scenarioGui_fnc };
+        },
         [],
         3,
         false,
@@ -220,14 +320,14 @@ if (!isNull (missionNamespace getVariable ["FADE_cqbBoard", objNull])) then {
 // Teleport boards (teleportBoard_1..8) - opens Fast Travel GUI.
 // Each board preselects its matching destination in the GUI.
 private _teleportBoardMap = [
-    ["teleportBoard_1", "BASE_1"],
-    ["teleportBoard_2", "MEDICAL_1"],
-    ["teleportBoard_3", "HP_4"],
-    ["teleportBoard_4", "firingRangeBoard"],
-    ["teleportBoard_5", "cqbBoard"],
-    ["teleportBoard_6", "VEH_2"],
-    ["teleportBoard_7", "teleportBoard_7"],
-    ["teleportBoard_8", "teleportBoard_8"]
+    ["teleportBoard_1", "teleportBase"],
+    ["teleportBoard_2", "teleportMedical"],
+    ["teleportBoard_3", "teleportPad3"],
+    ["teleportBoard_4", "teleportRange"],
+    ["teleportBoard_5", "teleportCQB"],
+    ["teleportBoard_6", "teleportPad1"],
+    ["teleportBoard_7", "teleportLockerRoom"],
+    ["teleportBoard_8", "teleportSDE"]
 ];
 {
     _x params ["_boardName", "_defaultDest"];
@@ -295,8 +395,7 @@ execVM "rsc\Briefing.sqf";
         _box addAction [
             "<t color='#98FB98'>Save my loadout</t>",
             {
-                private _uid = getPlayerUID player;
-                missionNamespace setVariable ["FAC_savedLoadout_" + _uid, getUnitLoadout player];
+                [player] call FAC_loadoutGui_saveRespawnLoadoutSnapshot;
                 systemChat "Loadout saved - will be restored on respawn.";
             },
             [],
@@ -308,17 +407,19 @@ execVM "rsc\Briefing.sqf";
             3
         ];
         if (isClass (configFile >> "CfgPatches" >> "ace_arsenal")) then {
-            _box addAction [
-                "<t color='#FF8C00'>Open ACE Arsenal</t>",
-                { [(_this select 0), (_this select 1)] call ace_arsenal_fnc_openBox },  // target, caller
-                [],
-                5,
-                false,
-                true,
-                "",
-                "",
-                3
-            ];
+            if ((missionNamespace getVariable ["FAC_param_enableAceArsenalActions", 1]) > 0) then {
+                _box addAction [
+                    "<t color='#FF8C00'>Open ACE Arsenal</t>",
+                    { [(_this select 0), (_this select 1)] call ace_arsenal_fnc_openBox },  // target, caller
+                    [],
+                    5,
+                    false,
+                    true,
+                    "",
+                    "",
+                    3
+                ];
+            };
         };
     } forEach _boxes;
 };
@@ -346,6 +447,10 @@ execVM "rsc\Briefing.sqf";
         ];
     };
 } forEach ["Radio_1", "Radio_2", "Radio_3", "Radio_4"];
+
+// Jukebox: Vehicle loudspeaker UI on the *player unit* only (local addAction / ACE self — not on vehicle hull)
+[player] call FAC_jukebox_fnc_addVehicleLoudspeakerAction;
+[player] call FAC_jukebox_fnc_installVehicleLoudspeakerHandlers;
 
 // SDE's bar: Nesk_1 (Eden name) - drink interaction (local player only; lethal)
 private _nesk = missionNamespace getVariable ["Nesk_1", objNull];
@@ -392,7 +497,7 @@ private _welcomeText = format [
     "<t color='#00FF00'>Base Boards</t><t color='#FFFFFF'> have vehicles, missions, scenario, gear, teleportation.</t><br/>" +
     "<t color='#FFCC00'>CTB Doctrine</t><t color='#FFFFFF'> callouts are located in your notes.</t><br/>" +
     "<t color='#FFCC00'>Ctrl + ;</t><t color='#FFFFFF'> opens the Mission GUI from anywhere.</t><br/>" +
-    "<t color='#FFCC00'>Ctrl + '</t><t color='#FFFFFF'> opens the Jukebox (music from your character).</t><br/><br/>" +
+    "<t color='#FFFFFF'>Use </t><t color='#FFCC00'>Vehicle loudspeaker...</t><t color='#FFFFFF'> while in a vehicle for the Jukebox.</t><br/><br/>" +
     "<t color='#FFFFFF'>Remember: Do not take SDE's STANAGS.</t>" +
     "</t>",
     _playerName
@@ -401,6 +506,30 @@ hint parseText _welcomeText;
 
 // Invisible ambient lights 25m above each helipad and vehicle spawn
 [] spawn { execVM "rsc\LightTowers.sqf" };
+
+// Full heal near HQ (FADE_basePos from BASE_1): 30 s poll, local player only
+[] spawn {
+    if (!hasInterface) exitWith {};
+    waitUntil { sleep 0.5; count (missionNamespace getVariable ["FADE_basePos", []]) >= 2 };
+    private _radius = 50;
+    private _interval = 30;
+    while { true } do {
+        sleep _interval;
+        private _u = player;
+        if (alive _u && {local _u}) then {
+            private _hq = missionNamespace getVariable ["FADE_basePos", []];
+            if (
+                (count _hq >= 2)
+                && {(getPosATL _u) distance2D [_hq select 0, _hq select 1] <= _radius}
+            ) then {
+                _u setDamage 0;
+                _u setFatigue 0;
+                if ((getBleedingRemaining _u) > 0) then { _u setBleedingRemaining 0 };
+                if (!isNil "ace_medical_fnc_fullHeal") then { _u call ace_medical_fnc_fullHeal };
+            };
+        };
+    };
+};
 
 // Pilot pylon management: when player is driver of a vehicle with pylons, add action to open vehicle customization (pylon loadout)
 FAC_pylonActionId = -1;
@@ -416,7 +545,7 @@ player addEventHandler ["GetInMan", {
         FAC_pylonActionId = _veh addAction [
             "<t color='#87CEEB'>Manage pylons (vehicle loadout)</t>",
             {
-                (vehicle (_this select 1)) action ["VehicleCustomization", vehicle (_this select 1)];
+                [_this select 0] call FAC_vehicleGui_tryOpenPylonDialog;
             },
             [],
             0,
@@ -439,7 +568,7 @@ player addEventHandler ["GetOutMan", {
 }];
 
 // -----------------------------------------------------------------------------
-// KeyDown on main display (46): Ctrl+; = Missions GUI, Ctrl+' = Jukebox
+// KeyDown on main display (46): Ctrl+; = Missions GUI
 // displayAddEventHandler runs on the client; findDisplay 46 is the game HUD.
 // -----------------------------------------------------------------------------
 [] spawn {
@@ -448,19 +577,30 @@ player addEventHandler ["GetOutMan", {
         params ["_display", "_key", "_shift", "_ctrl", "_alt"];
         // CTRL+; (DIK_SEMICOLON = 0x27)  - open Missions GUI from anywhere
         if (_key == 0x27 && { _ctrl }) exitWith {
+            if !(call FAC_playerCanUseMissionsGui) exitWith {
+                systemChat "Missions GUI is restricted to group leaders (admin/Zeus override).";
+                true
+            };
             if (isNull (findDisplay 60002)) then {
                 ["open", []] call FAC_missionsGui_fnc;
             };
             true
         };
-        // CTRL+' (DIK_APOSTROPHE = 0x28) - Jukebox (sound from player)
-        if (_key == 0x28 && { _ctrl }) exitWith {
-            if (isNull (findDisplay 60400)) then {
-                missionNamespace setVariable ["FAC_jukebox_guiSource", format ["player:%1", getPlayerUID player]];
-                [] spawn { sleep 0.05; ["open", []] call FAC_jukeboxGui_fnc };
-            };
-            true
-        };
         false
     }];
+};
+
+// Mission test suite — manual only. Debug console: [] call FAC_missionTestSuite_execClient  |  server: [player] remoteExec ["FAC_missionTestSuite_execServer", 2]
+FAC_missionTestSuite_execClient = {
+    if (!hasInterface) exitWith {};
+    if (isNil "FAC_missionTestSuite_runClient") then {
+        call compile preprocessFileLineNumbers "rsc\MissionTestSuite.sqf";
+    };
+    private _res = call FAC_missionTestSuite_runClient;
+    if (!(isNil "_res") && { count _res >= 2 }) then {
+        _res params ["_p", "_f"];
+        systemChat format ["[FAC TestSuite] Client finished: %1 pass, %2 fail — see RPT for [FAC TestSuite].", _p, _f];
+    } else {
+        systemChat "[FAC TestSuite] Client: aborted (script error — check RPT).";
+    };
 };

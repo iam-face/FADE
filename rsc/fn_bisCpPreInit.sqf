@@ -6,7 +6,7 @@ if (missionNamespace getVariable ["FADE_bisCpStubGuardStarted", false]) exitWith
 missionNamespace setVariable ["FADE_bisCpStubGuardStarted", true];
 
 // Reapply stubs on a timer - do NOT use EachFrame: 12× setVariable per frame per machine caused noticeable MP stutter.
-// BIS may lazy-load campaign functions; ~10 Hz is enough to win that race without taxing every frame.
+// BIS usually lazy-loads campaign functions once; ~1 Hz is enough to put stubs back (see FADE_bisCpStubReapplyInterval in Config.sqf).
 [] spawn {
     while { true } do {
         if (missionNamespace getVariable ["FADE_debugBIScp", false]) then {
@@ -18,7 +18,7 @@ missionNamespace setVariable ["FADE_bisCpStubGuardStarted", true];
             missionNamespace setVariable ["bis_fnc_cp_getQueueDelay", _d];
             uiNamespace setVariable ["bis_fnc_cp_main", _m];
             uiNamespace setVariable ["bis_fnc_cp_getQueueDelay", _d];
-            sleep 0.1;
+            sleep (missionNamespace getVariable ["FADE_bisCpStubReapplyInterval", 1]);
         };
     };
 };

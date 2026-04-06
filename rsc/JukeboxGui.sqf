@@ -1,12 +1,14 @@
 // =============================================================================
 // JukeboxGui.sqf -- Jukebox: CTB loudspeaker tracks (per client, per source)
 // =============================================================================
-// Sources: radio:Radio_1 | radio:Radio_2 | radio:Radio_3 | radio:Radio_4 (Eden), player:<UID> (Ctrl+')
+// Sources: radio:Radio_1..4 (Eden) use playSound3D (fixed world position at emitters). vehicle:<netId> uses
+//   createSoundSource (CfgVehicles FAC_Jukebox_<CfgSounds name>) + attachTo — playSound3D does not move with objects.
 // Each source has at most one track; different sources may play simultaneously.
-// Client Play -> server validates emitter + CfgVehicles, updates FAC_jukebox_activeSources,
-//   remoteExec FAC_jukebox_clientPlay [song, sourceKey] to all clients.
-// Per client: queued drain (spawn) serializes jobs. Playback uses createSoundSource + attachTo only - Stop = deleteVehicle (reliable). Not on dedicated server (hasInterface).
-// Local object ref on emitter "FAC_jukeboxActiveSnd" + FAC_jukebox_clientAudioList for cleanup.
+// Stop all music: Scenario → Admin only (FAC_jukebox_stopAllMusic → FAC_jukebox_clientStopAll on all clients).
+// Client Play -> server validates emitter + CfgSounds, updates FAC_jukebox_activeSources [key, song, volume, distance],
+//   remoteExec FAC_jukebox_clientPlay [song, sourceKey, volume, distance] to all clients (no JIP replay of active sources).
+// Per client: queued drain (spawn) serializes jobs. Radios: playSound3D + stopSound on handle; vehicles: attached Sound + deleteVehicle.
+// FAC_jukebox_clientAudioList: [sourceKey, playSound3D handle or "", attached Sound object or objNull].
 // =============================================================================
 
 // -----------------------------------------------------------------------------
@@ -51,7 +53,7 @@ FAC_jukebox_tracks = [
     ["Vietnam > Vietnam Mix",                      "Sig_VietnamMusic_mix_1"]
 ];
 
-// Addon .ogg paths (reference / future use). Client playback uses createSoundSource + CfgVehicles FAC_Jukebox_* only.
+// Addon .ogg paths (reference / future use). Fallback file for playSound3D when CfgSounds is missing (e.g. radios).
 FAC_jukebox_oggPairs = [
     ["Sig_80smusic_mix_1",    "\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\1980s\80s_mix_1.ogg"],
     ["Sig_BF2_MEC",           "\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\BF\BF2_MECTheme.ogg"],
@@ -99,22 +101,24 @@ FAC_jukebox_fnc_oggPath = {
 };
 
 // stopSound from scheduled context; delayed second stop helps engine release (BIKI / forum).
+// playSound3D returns a numeric handle only; string handles (legacy) cannot use stopSound in current builds.
 FAC_jukebox_fnc_stopPs3d = {
-    params [["_id", ""]];
-    if (!(_id isEqualType "")) exitWith {};
-    if (_id == "") exitWith {};
+    params ["_id"];
+    if (isNil "_id") exitWith {};
+    if (_id isEqualType "") exitWith {};
+    if (!(_id isEqualType 0)) exitWith {};
     stopSound _id;
-    [_id] spawn {
-        params ["_h"];
+    private _h = _id;
+    [_h] spawn {
+        params ["_x"];
         sleep 0.05;
-        stopSound _h;
+        stopSound _x;
     };
 };
 
-// Loudness is defined in description.ext CfgSounds `Sig_*` → sound[] { path, volume, pitch, distance } (createSoundSource reads config).
-// When you change those numbers, update these constants too (grep anchor / docs only - not applied at runtime by createSoundSource).
-FAC_jukebox_soundVolumeMission = 3;
-FAC_jukebox_soundDistanceMission = 250;
+// GUI defaults (sliders 1–25 / 50–2500); persisted in missionNamespace while mission runs.
+FAC_jukebox_guiVolumeDefault = 4;
+FAC_jukebox_guiDistanceDefault = 400;
 
 // -----------------------------------------------------------------------------
 // Debug: gated by missionNamespace FAC_jukebox_debug (initServer; publicVariable). Default off in initServer.
@@ -139,15 +143,10 @@ FAC_jukebox_fnc_resolveEmitterClient = {
         private _eden = _sourceKey select [6];
         missionNamespace getVariable [_eden, objNull]
     };
-    if (_sourceKey find "player:" == 0) exitWith {
-        private _uid = _sourceKey select [7];
-        private _out = objNull;
-        if (hasInterface && { getPlayerUID player == _uid }) then {
-            _out = player;
-        } else {
-            { if (isPlayer _x && { getPlayerUID _x == _uid }) exitWith { _out = _x }; } forEach allPlayers;
-        };
-        _out
+    if (_sourceKey find "vehicle:" == 0) exitWith {
+        private _nid = _sourceKey select [8];
+        if (_nid == "") exitWith {objNull};
+        objectFromNetId _nid
     };
     objNull
 };
@@ -159,6 +158,20 @@ FAC_jukebox_fnc_getSongForSource = {
     private _hit = _arr select { (_x select 0) == _key };
     if (_hit isEqualTo []) exitWith {""};
     (_hit select 0) select 1
+};
+
+// Resolve OGG path + pitch from CfgSounds (mission first); optional volume/distance from config when not overridden by GUI.
+FAC_jukebox_fnc_soundFileFromCfg = {
+    params [["_song", ""]];
+    if (_song == "") exitWith {["", 1]};
+    private _cfg = missionConfigFile >> "CfgSounds" >> _song;
+    if (!isClass _cfg) then { _cfg = configFile >> "CfgSounds" >> _song };
+    if (!isClass _cfg) exitWith {["", 1]};
+    private _arr = getArray (_cfg >> "sound");
+    if (count _arr < 1) exitWith {["", 1]};
+    private _file = _arr select 0;
+    private _pitch = if (count _arr >= 3) then { _arr select 2 } else { 1 };
+    [_file, _pitch]
 };
 
 FAC_jukebox_fnc_clientClearSourceAudio = {
@@ -184,9 +197,27 @@ FAC_jukebox_fnc_clientClearSourceAudio = {
     missionNamespace setVariable ["FAC_jukebox_clientAudioList", _keep];
 };
 
+// Vehicle loudspeaker: playSound3D position is world-fixed; use mission CfgVehicles Sound FAC_Jukebox_<song> + attachTo.
+// Returns true if playback started. Loudness / range = CfgSounds FAC_JukeVeh_* (description.ext; vehicle 25 / 1000 m). GUI sliders apply to radio playSound3D only.
+FAC_jukebox_fnc_tryVehicleAttachedSound = {
+    params [["_sourceKey", ""], ["_song", ""], ["_emitter", objNull]];
+    if (_sourceKey find "vehicle:" != 0) exitWith {false};
+    if (_song == "" || {isNull _emitter}) exitWith {false};
+    private _cls = format ["FAC_Jukebox_%1", _song];
+    if (!isClass (missionConfigFile >> "CfgVehicles" >> _cls)) exitWith {false};
+    private _snd = createSoundSource [_cls, getPosATL _emitter, [], 0];
+    if (isNull _snd) exitWith {false};
+    _snd attachTo [_emitter, [0, 0, 0]];
+    _emitter setVariable ["FAC_jukeboxActiveSnd", _snd, false];
+    private _list = missionNamespace getVariable ["FAC_jukebox_clientAudioList", []];
+    _list pushBack [_sourceKey, "", _snd];
+    missionNamespace setVariable ["FAC_jukebox_clientAudioList", _list];
+    true
+};
+
 // One playback job (must run inside spawn / scheduled - not directly from remoteExec).
 FAC_jukebox_clientPlay_execOne = {
-    params [["_song", ""], ["_sourceKey", ""]];
+    params [["_song", ""], ["_sourceKey", ""], ["_vol", 4], ["_dist", 400]];
     if (!hasInterface) exitWith {};
     if (_sourceKey == "") exitWith {};
 
@@ -196,24 +227,34 @@ FAC_jukebox_clientPlay_execOne = {
         sleep 0.06;
         private _emitter = [_sourceKey] call FAC_jukebox_fnc_resolveEmitterClient;
         if (isNull _emitter) then {
-            [format ["FAIL: emitter missing for %1 - cannot spawn sound.", _sourceKey]] call FAC_jukebox_dbg;
+            [format ["FAIL: emitter missing for %1 - cannot play sound.", _sourceKey]] call FAC_jukebox_dbg;
         } else {
-            private _vehClass = format ["FAC_Jukebox_%1", _song];
-            private _vehCfg = missionConfigFile >> "CfgVehicles" >> _vehClass;
-            if (!isClass _vehCfg) then { _vehCfg = configFile >> "CfgVehicles" >> _vehClass };
-            if (!isClass _vehCfg) then {
-                [format ["FAIL: CfgVehicles %1 not found (description.ext / mod).", _vehClass]] call FAC_jukebox_dbg;
+            _vol = ((round _vol) max 1) min 25;
+            _dist = ((round _dist) max 50) min 2500;
+            if ([_sourceKey, _song, _emitter] call FAC_jukebox_fnc_tryVehicleAttachedSound) then {
+                [format ["vehicle attach OK: %1 @ %2", _song, _sourceKey]] call FAC_jukebox_dbg;
             } else {
-                private _sndObj = createSoundSource [_vehClass, getPosASL _emitter, [], 0];
-                if (isNull _sndObj) then {
-                    [format ["FAIL: createSoundSource null (%1). Check CfgSFX / mod.", _vehClass]] call FAC_jukebox_dbg;
+                ([_song] call FAC_jukebox_fnc_soundFileFromCfg) params ["_file", "_pitch"];
+                if (_file == "") then {
+                    private _fallback = [_song] call FAC_jukebox_fnc_oggPath;
+                    if (_fallback != "") then {
+                        _file = _fallback;
+                        _pitch = 1;
+                    };
+                };
+                if (_file == "") then {
+                    [format ["FAIL: no CfgSounds / path for %1.", _song]] call FAC_jukebox_dbg;
                 } else {
-                    _sndObj attachTo [_emitter, [0, 0, 0]];
-                    [format ["createSoundSource OK: %1 @ %2", _vehClass, _sourceKey]] call FAC_jukebox_dbg;
-                    private _list = missionNamespace getVariable ["FAC_jukebox_clientAudioList", []];
-                    _list pushBack [_sourceKey, "", _sndObj];
-                    missionNamespace setVariable ["FAC_jukebox_clientAudioList", _list];
-                    _emitter setVariable ["FAC_jukeboxActiveSnd", _sndObj, false];
+                    private _pos = getPosASL _emitter;
+                    private _h = playSound3D [_file, _emitter, false, _pos, _vol, _pitch, _dist];
+                    if (isNil "_h" || {_h isEqualTo ""}) then {
+                        [format ["FAIL: playSound3D (%1 @ %2).", _song, _sourceKey]] call FAC_jukebox_dbg;
+                    } else {
+                        [format ["playSound3D OK: %1 @ %2 (vol=%3 dist=%4)", _song, _sourceKey, _vol, _dist]] call FAC_jukebox_dbg;
+                        private _list = missionNamespace getVariable ["FAC_jukebox_clientAudioList", []];
+                        _list pushBack [_sourceKey, _h, objNull];
+                        missionNamespace setVariable ["FAC_jukebox_clientAudioList", _list];
+                    };
                 };
             };
         };
@@ -264,18 +305,60 @@ FAC_jukebox_clientPlay = {
     if (!(_this isEqualType []) || { count _this < 2 }) exitWith {};
     private _song = _this select 0;
     private _sourceKey = _this select 1;
+    private _vol = _this param [2, missionNamespace getVariable ["FAC_jukebox_guiVolume", FAC_jukebox_guiVolumeDefault]];
+    private _dist = _this param [3, missionNamespace getVariable ["FAC_jukebox_guiDistance", FAC_jukebox_guiDistanceDefault]];
     if (_sourceKey == "") exitWith {};
 
     private _q = missionNamespace getVariable ["FAC_jukebox_cpQueue", []];
     if (_song == "") then {
         _q = (_q select { (_x select 1) != _sourceKey });
-        _q = [["", _sourceKey]] + _q;
+        _q = [["", _sourceKey, _vol, _dist]] + _q;
     } else {
-        _q pushBack [_song, _sourceKey];
+        _q pushBack [_song, _sourceKey, _vol, _dist];
     };
     missionNamespace setVariable ["FAC_jukebox_cpQueue", _q];
 
     [] call FAC_jukebox_clientPlay_kickDrain;
+};
+
+// Stops every jukebox source on this client (radios, all players' personal audio, queued jobs).
+FAC_jukebox_clientStopAll = {
+    if (!hasInterface) exitWith {};
+    missionNamespace setVariable ["FAC_jukebox_cpQueue", []];
+    missionNamespace setVariable ["FAC_jukebox_cpDrainRunning", false];
+
+    private _list = missionNamespace getVariable ["FAC_jukebox_clientAudioList", []];
+    {
+        _x params ["_k", "_ps3d", "_o"];
+        [_ps3d] call FAC_jukebox_fnc_stopPs3d;
+        if (!isNull _o) then {
+            private _parent = attachedTo _o;
+            if (!isNull _parent) then { _parent setVariable ["FAC_jukeboxActiveSnd", nil, false] };
+            deleteVehicle _o;
+        };
+    } forEach _list;
+    missionNamespace setVariable ["FAC_jukebox_clientAudioList", []];
+
+    {
+        private _em = missionNamespace getVariable [_x, objNull];
+        if (!isNull _em) then {
+            private _snd = _em getVariable ["FAC_jukeboxActiveSnd", objNull];
+            if (!isNull _snd) then { deleteVehicle _snd };
+            _em setVariable ["FAC_jukeboxActiveSnd", nil, false];
+        };
+    } forEach ["Radio_1", "Radio_2", "Radio_3", "Radio_4"];
+    {
+        if (!isNull _x && { isPlayer _x }) then {
+            private _snd = _x getVariable ["FAC_jukeboxActiveSnd", objNull];
+            if (!isNull _snd) then { deleteVehicle _snd };
+            _x setVariable ["FAC_jukeboxActiveSnd", nil, false];
+        };
+    } forEach allPlayers;
+
+    if (!isNull (findDisplay 60400)) then {
+        ["updateNowPlaying", []] call FAC_jukeboxGui_fnc;
+        ["updateButtons", []] call FAC_jukeboxGui_fnc;
+    };
 };
 
 // -----------------------------------------------------------------------------
@@ -289,8 +372,8 @@ FAC_jukeboxGui_fnc = {
     switch _action do {
 
         case "open": {
-            if ((missionNamespace getVariable ["FAC_jukebox_guiSource", ""]) == "") then {
-                missionNamespace setVariable ["FAC_jukebox_guiSource", format ["player:%1", getPlayerUID player]];
+            if ((missionNamespace getVariable ["FAC_jukebox_guiSource", ""]) == "") exitWith {
+                systemChat "Jukebox: open from a radio prop or Vehicle loudspeaker (in a vehicle).";
             };
             if (!createDialog "RscDisplayJukebox") then {
                 ["RESOURCE NOT FOUND."] call FAC_jukebox_dbg;
@@ -305,9 +388,58 @@ FAC_jukeboxGui_fnc = {
             uinamespace setVariable ["FAC_jukeboxGui_fnc", FAC_jukeboxGui_fnc];
 
             ["onLoad (populating list)"] call FAC_jukebox_dbg;
+            ["initJukeboxSliders", []] call FAC_jukeboxGui_fnc;
             ["filter",          []] call FAC_jukeboxGui_fnc;
             ["updateNowPlaying",[]] call FAC_jukeboxGui_fnc;
             ["updateButtons",   []] call FAC_jukeboxGui_fnc;
+        };
+
+        case "initJukeboxSliders": {
+            private _disp = findDisplay 60400;
+            if (isNull _disp) exitWith {};
+            private _v = missionNamespace getVariable ["FAC_jukebox_guiVolume", FAC_jukebox_guiVolumeDefault];
+            private _d = missionNamespace getVariable ["FAC_jukebox_guiDistance", FAC_jukebox_guiDistanceDefault];
+            private _sv = _disp displayCtrl 60411;
+            private _sd = _disp displayCtrl 60414;
+            _sv sliderSetRange [1, 25];
+            _sd sliderSetRange [50, 2500];
+            _sv sliderSetPosition _v;
+            _sd sliderSetPosition _d;
+            // Match track list width (0.46 @ x 0.27) — description.ext may still use 0.30 until updated.
+            private _p = ctrlPosition _sv;
+            _sv ctrlSetPosition [0.27, _p select 1, 0.46, _p select 3];
+            _sv ctrlCommit 0;
+            _p = ctrlPosition _sd;
+            _sd ctrlSetPosition [0.27, _p select 1, 0.46, _p select 3];
+            _sd ctrlCommit 0;
+            (_disp displayCtrl 60412) ctrlSetText str (round _v);
+            (_disp displayCtrl 60415) ctrlSetText str (round _d);
+        };
+
+        case "volumeSliderChanged": {
+            private _disp = findDisplay 60400;
+            if (isNull _disp) exitWith {};
+            private _sv = _disp displayCtrl 60411;
+            private _v = round (sliderPosition _sv);
+            _v = _v max 1 min 25;
+            missionNamespace setVariable ["FAC_jukebox_guiVolume", _v];
+            (_disp displayCtrl 60412) ctrlSetText str _v;
+        };
+
+        case "distanceSliderChanged": {
+            private _disp = findDisplay 60400;
+            if (isNull _disp) exitWith {};
+            private _sd = _disp displayCtrl 60414;
+            private _d = round (sliderPosition _sd);
+            _d = _d max 50 min 2500;
+            missionNamespace setVariable ["FAC_jukebox_guiDistance", _d];
+            (_disp displayCtrl 60415) ctrlSetText str _d;
+        };
+
+        case "headerRefresh": {
+            ["filter", []] call FAC_jukeboxGui_fnc;
+            ["updateNowPlaying", []] call FAC_jukeboxGui_fnc;
+            ["updateButtons", []] call FAC_jukeboxGui_fnc;
         };
 
         case "filter": {
@@ -350,8 +482,15 @@ FAC_jukeboxGui_fnc = {
             if (isNull player) exitWith { ["Play aborted (null player)"] call FAC_jukebox_dbg; };
             private _key = missionNamespace getVariable ["FAC_jukebox_guiSource", ""];
             if (_key == "") exitWith { ["No source (re-open the jukebox)."] call FAC_jukebox_dbg };
-            [format ["Play → server: %1 @ %2", _class, _key]] call FAC_jukebox_dbg;
-            [_class, _key, player] remoteExec ["FAC_jukebox_serverPlay", 2];
+            private _vol = round (sliderPosition (_disp displayCtrl 60411));
+            private _dist = round (sliderPosition (_disp displayCtrl 60414));
+            _vol = _vol max 1 min 25;
+            _dist = _dist max 50 min 2500;
+            missionNamespace setVariable ["FAC_jukebox_guiVolume", _vol];
+            missionNamespace setVariable ["FAC_jukebox_guiDistance", _dist];
+            [format ["Play → server: %1 @ %2 (vol=%3 dist=%4)", _class, _key, _vol, _dist]] call FAC_jukebox_dbg;
+            [_class, _key, player, _vol, _dist] remoteExec ["FAC_jukebox_serverPlay", 2];
+            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
 
         case "stop": {
@@ -364,6 +503,7 @@ FAC_jukeboxGui_fnc = {
                 [_k] call FAC_jukebox_fnc_clientClearSourceAudio;
             };
             ["", _key, player] remoteExec ["FAC_jukebox_serverPlay", 2];
+            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
 
         case "updateNowPlaying": {
@@ -395,4 +535,64 @@ FAC_jukeboxGui_fnc = {
         };
 
     };
+};
+
+// Vehicle loudspeaker *menu*: [local Man] call only. addAction + ACE live on the *infantry unit* (player), not the vehicle —
+// avoids scroll/distance quirks when the hull moves fast. Playback uses createSoundSource + attachTo on the vehicle netId.
+// Vanilla: condition uses _target (= unit the action is on). ACE: ACE_SelfActions on same unit.
+FAC_jukebox_fnc_addVehicleLoudspeakerAction = {
+    params [["_u", objNull]];
+    if (isNull _u) then { _u = player };
+    if (isNull _u || {!local _u} || {!(_u isKindOf "Man")}) exitWith {};
+
+    private _aid = _u getVariable ["FAC_jukebox_vehLsAid", -1];
+    if (_aid >= 0) then { _u removeAction _aid };
+    _aid = _u addAction [
+        "Vehicle loudspeaker...",
+        {
+            private _veh = vehicle player;
+            if (_veh isEqualTo player) exitWith {};
+            missionNamespace setVariable ["FAC_jukebox_guiSource", format ["vehicle:%1", netId _veh]];
+            [] spawn { sleep 0.2; ["open", []] call FAC_jukeboxGui_fnc };
+        },
+        [],
+        5,
+        false,
+        false,
+        "",
+        "!((vehicle _target) isEqualTo _target)",
+        3
+    ];
+    _u setVariable ["FAC_jukebox_vehLsAid", _aid, false];
+
+    if (!isNil "ace_interact_menu_fnc_createAction" && {!(_u getVariable ["FAC_jukebox_aceVehLsAdded", false])}) then {
+        private _aceAct = [
+            "FAC_juke_vehicle_ls",
+            "Vehicle loudspeaker...",
+            "",
+            {
+                private _veh = vehicle player;
+                if (_veh isEqualTo player) exitWith {};
+                missionNamespace setVariable ["FAC_jukebox_guiSource", format ["vehicle:%1", netId _veh]];
+                [] spawn { sleep 0.2; ["open", []] call FAC_jukeboxGui_fnc };
+            },
+            { !((vehicle player) isEqualTo player) }
+        ] call ace_interact_menu_fnc_createAction;
+        [_u, 1, ["ACE_SelfActions"], _aceAct] call ace_interact_menu_fnc_addActionToObject;
+        _u setVariable ["FAC_jukebox_aceVehLsAdded", true, false];
+    };
+};
+
+// GetIn/GetOut on the *unit* (not vehicle): refresh vanilla addAction; EHs stay on Man for same reason as above.
+FAC_jukebox_fnc_installVehicleLoudspeakerHandlers = {
+    params [["_u", player]];
+    if (isNull _u || {!local _u} || {!(_u isKindOf "Man")}) exitWith {};
+    private _in = _u getVariable ["FAC_jukebox_ehGetIn", -1];
+    private _out = _u getVariable ["FAC_jukebox_ehGetOut", -1];
+    if (_in >= 0) then { _u removeEventHandler ["GetInMan", _in] };
+    if (_out >= 0) then { _u removeEventHandler ["GetOutMan", _out] };
+    _in = _u addEventHandler ["GetInMan", { params ["_unit"]; [_unit] call FAC_jukebox_fnc_addVehicleLoudspeakerAction }];
+    _out = _u addEventHandler ["GetOutMan", { params ["_unit"]; [_unit] call FAC_jukebox_fnc_addVehicleLoudspeakerAction }];
+    _u setVariable ["FAC_jukebox_ehGetIn", _in, false];
+    _u setVariable ["FAC_jukebox_ehGetOut", _out, false];
 };

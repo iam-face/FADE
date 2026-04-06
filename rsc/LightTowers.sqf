@@ -28,6 +28,17 @@ private _srLight = missionNamespace getVariable ["SR_Light", objNull];
 if (!isNull _srLight) then {
     _padObjects pushBack _srLight;
 };
+{
+    private _extraObj = missionNamespace getVariable [_x, objNull];
+    if (!isNull _extraObj) then {
+        _padObjects pushBack _extraObj;
+    };
+} forEach [
+    "firesTruckSpawnPos",
+    "cqbLightPos",
+    "specialistLightPos",
+    "specialistLightPos_1"
+];
 
 {
     private _pad = _x;

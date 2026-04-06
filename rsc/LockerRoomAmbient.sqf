@@ -25,6 +25,7 @@ private _hostageChance = missionNamespace getVariable ["FADE_lockerHostageChance
 private _sndMax = 250;
 private _emit3d = { [player, [_this, _sndMax, 1, 2]] remoteExec ["say3D", 0] };
 
+// Eden helpers: documented as posLocker_0..N; this mission uses posLockers_1..N (extra "s", 1-based).
 private _lockerObjs = [];
 private _i = 0;
 while { _i <= _lockerMax } do {
@@ -32,25 +33,23 @@ while { _i <= _lockerMax } do {
     if (!isNull _o) then { _lockerObjs pushBack _o };
     _i = _i + 1;
 };
+private _j = 1;
+while { _j <= _lockerMax } do {
+    private _o2 = missionNamespace getVariable [format ["posLockers_%1", _j], objNull];
+    if (!isNull _o2) then { _lockerObjs pushBack _o2 };
+    _j = _j + 1;
+};
 private _hasHelpers = count _lockerObjs > 0;
 
 private _hostage = [
-    "FAC_hostage_interrupt_1", "FAC_hostage_interrupt_2", "FAC_hostage_interrupt_3", "FAC_hostage_interrupt_4",
-    "FAC_hostage_interrupt_5", "FAC_hostage_interrupt_6", "FAC_hostage_interrupt_7",
-    "FAC_hostage_pain_1", "FAC_hostage_pain_2", "FAC_hostage_pain_3", "FAC_hostage_pain_4", "FAC_hostage_pain_5",
-    "FAC_hostage_pain_6", "FAC_hostage_pain_7", "FAC_hostage_pain_8", "FAC_hostage_pain_9", "FAC_hostage_pain_10",
-    "FAC_hostage_pain_11", "FAC_hostage_pain_12", "FAC_hostage_pain_13",
-    "FAC_hostage_pickup_1", "FAC_hostage_pickup_2", "FAC_hostage_pickup_3", "FAC_hostage_pickup_4", "FAC_hostage_pickup_5",
-    "FAC_hostage_pickup_6", "FAC_hostage_pickup_7", "FAC_hostage_pickup_8", "FAC_hostage_pickup_9", "FAC_hostage_pickup_10",
-    "FAC_hostage_pickup_11", "FAC_hostage_pickup_12", "FAC_hostage_pickup_13",
-    "FAC_hostage_rescued_1", "FAC_hostage_rescued_2", "FAC_hostage_rescued_3", "FAC_hostage_rescued_4", "FAC_hostage_rescued_5",
-    "FAC_hostage_struggle_1", "FAC_hostage_struggle_2", "FAC_hostage_struggle_3", "FAC_hostage_struggle_4", "FAC_hostage_struggle_5",
-    "FAC_hostage_struggle_6", "FAC_hostage_struggle_7", "FAC_hostage_struggle_8", "FAC_hostage_struggle_9", "FAC_hostage_struggle_10",
-    "FAC_hostage_struggle_11", "FAC_hostage_struggle_12", "FAC_hostage_struggle_13", "FAC_hostage_struggle_14", "FAC_hostage_struggle_15"
+    "FAC_hostage_interrupt_1", "FAC_hostage_interrupt_2", "FAC_hostage_interrupt_3",
+    "FAC_hostage_pain_1", "FAC_hostage_pain_2", "FAC_hostage_pain_3",
+    "FAC_hostage_pickup_1", "FAC_hostage_pickup_2", "FAC_hostage_pickup_3",
+    "FAC_hostage_rescued_1", "FAC_hostage_rescued_2", "FAC_hostage_rescued_3",
+    "FAC_hostage_struggle_1", "FAC_hostage_struggle_2", "FAC_hostage_struggle_3"
 ];
 private _slap = [
-    "FAC_sig_lockerslap_001", "FAC_sig_lockerslap_002", "FAC_sig_lockerslap_003", "FAC_sig_lockerslap_004", "FAC_sig_lockerslap_005",
-    "FAC_sig_lockerslap_006", "FAC_sig_lockerslap_007", "FAC_sig_lockerslap_008", "FAC_sig_lockerslap_009"
+    "FAC_sig_lockerslap_001", "FAC_sig_lockerslap_002", "FAC_sig_lockerslap_003"
 ];
 
 private _nextHostage = 0;

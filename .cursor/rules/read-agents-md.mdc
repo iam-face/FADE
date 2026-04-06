@@ -1,10 +1,10 @@
 ---
-description: Always read AGENTS.md at the start of work on this project
+description: Always read .cursor/agent-docs/AGENTS.md at the start of work on this project
 alwaysApply: true
 ---
 
-# Read AGENTS.md First
+# Read agent docs first
 
-At the start of any work on this project, **read AGENTS.md** (project root).
+At the start of any work on this project, read **`.cursor/agent-docs/AGENTS.md`** — compact hub with pointers.
 
-AGENTS.md is the single source of project context, mission structure, Eden callouts, GUI conventions, implemented patterns, and guidelines. Following it ensures edits stay consistent and leverage existing best practices.
+Same folder (**`.cursor/agent-docs/`**): **`AGENTS_EDEN.md`**, **`AGENTS_PATTERNS.md`**, **`AGENTS_REFERENCE.md`**, **`SCRIPT_INDEX.md`** (every `.sqf` + verification matrix), **`PRODUCTION_SERVER_ISSUES.md`**. Open only what the task needs. This folder is **gitignored**; **`.cursor/rules/`** remains shareable in git.

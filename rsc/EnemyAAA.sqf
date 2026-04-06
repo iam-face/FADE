@@ -9,6 +9,15 @@
 
 if (!isServer) exitWith {};
 
+private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {
+    params ["_baseCount", ["_minCount", 1], ["_maxCount", -1]];
+    private _base = floor (_baseCount max 0);
+    if (_base <= 0) exitWith { 0 };
+    private _scaled = _base max _minCount;
+    if (_maxCount >= 0 && { _scaled > _maxCount }) then { _scaled = _maxCount };
+    _scaled
+}];
+
 // Storage for cleanup: static/vehicle AA and MANPADS groups
 FADE_aaa_units = [];           // static weapons + crew groups/objects
 FADE_aaa_vehicles = [];        // AA vehicles (for delete)
@@ -157,6 +166,7 @@ FADE_aaa_findSafeSpawnInRadius = {
 // -----------------------------------------------------------------------------
 FADE_aaa_spawnLight = {
     params ["_pos"];
+    private _se = missionNamespace getVariable ["FADE_sideEnemy", east];
     private _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
     private _staticClass = [_faction] call FADE_aaa_getStaticLightClass;
     if (!isClass (configFile >> "CfgVehicles" >> _staticClass)) exitWith {};
@@ -168,19 +178,22 @@ FADE_aaa_spawnLight = {
     private _base = missionNamespace getVariable ["BASE_1", objNull];
     private _dir = if (!isNull _base) then { _pos getDir (getPosATL _base) } else { random 360 };
     _static setDir _dir;
-    private _grp = createGroup EAST;
+    private _grp = createGroup _se;
     private _gunner = _grp createUnit [_gunnerClass, _pos, [], 0, "NONE"];
     if (isNull _gunner) then {
         deleteVehicle _static;
         deleteGroup _grp;
     } else {
         _gunner moveInGunner _static;
-        _gunner setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.5]);
+        _gunner setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.2]);
         private _routing = missionNamespace getVariable ["FADE_enemyRouting", 0];
         _grp setVariable ["FADE_allowFleeing", _routing];
         _grp allowFleeing _routing;
         FADE_aaa_units pushBack _static;
         FADE_aaa_units pushBack _grp;
+        if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
+            { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
+        };
     };
 };
 
@@ -189,6 +202,7 @@ FADE_aaa_spawnLight = {
 // -----------------------------------------------------------------------------
 FADE_aaa_spawnMedium = {
     params ["_pos"];
+    private _se = missionNamespace getVariable ["FADE_sideEnemy", east];
     private _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
     private _vehClass = [_faction] call FADE_aaa_getAAVehicleClass;
     if (!isClass (configFile >> "CfgVehicles" >> _vehClass)) exitWith {};
@@ -199,17 +213,20 @@ FADE_aaa_spawnMedium = {
     private _base = missionNamespace getVariable ["BASE_1", objNull];
     private _dir = if (!isNull _base) then { _pos getDir (getPosATL _base) } else { random 360 };
     _veh setDir _dir;
-    private _grp = createGroup EAST;
+    private _grp = createGroup _se;
     private _driver = _grp createUnit [(_enemyUnits select 0), _pos, [], 0, "NONE"];
     private _gunner = _grp createUnit [(_enemyUnits select (1 min (count _enemyUnits - 1))), _pos, [], 0, "NONE"];
     private _commander = _grp createUnit [(_enemyUnits select (2 min (count _enemyUnits - 1))), _pos, [], 0, "NONE"];
     _driver moveInDriver _veh;
     _gunner moveInGunner _veh;
     _commander moveInCommander _veh;
-    { _x setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.5]) } forEach units _grp;
+    { _x setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.2]) } forEach units _grp;
     _grp allowFleeing (missionNamespace getVariable ["FADE_enemyRouting", 0]);
     FADE_aaa_vehicles pushBack _veh;
     FADE_aaa_units pushBack _grp;
+    if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
+        { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
+    };
 };
 
 // -----------------------------------------------------------------------------
@@ -217,6 +234,7 @@ FADE_aaa_spawnMedium = {
 // -----------------------------------------------------------------------------
 FADE_aaa_spawnHeavy = {
     params ["_pos"];
+    private _se = missionNamespace getVariable ["FADE_sideEnemy", east];
     private _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
     private _vehClass = [_faction] call FADE_aaa_getAAVehicleClass;
     if (!isClass (configFile >> "CfgVehicles" >> _vehClass)) exitWith {};
@@ -227,19 +245,22 @@ FADE_aaa_spawnHeavy = {
     private _base = missionNamespace getVariable ["BASE_1", objNull];
     private _dir = if (!isNull _base) then { _pos getDir (getPosATL _base) } else { random 360 };
     _veh setDir _dir;
-    private _grp = createGroup EAST;
+    private _grp = createGroup _se;
     private _driver = _grp createUnit [(_enemyUnits select 0), _pos, [], 0, "NONE"];
     private _gunner = _grp createUnit [(_enemyUnits select (1 min (count _enemyUnits - 1))), _pos, [], 0, "NONE"];
     private _commander = _grp createUnit [(_enemyUnits select (2 min (count _enemyUnits - 1))), _pos, [], 0, "NONE"];
     _driver moveInDriver _veh;
     _gunner moveInGunner _veh;
     _commander moveInCommander _veh;
-    { _x setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.5]) } forEach units _grp;
+    { _x setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.2]) } forEach units _grp;
     _grp allowFleeing (missionNamespace getVariable ["FADE_enemyRouting", 0]);
     private _wp = _grp addWaypoint [_pos, 0];
     _wp setWaypointType "SAD";
     FADE_aaa_vehicles pushBack _veh;
     FADE_aaa_units pushBack _grp;
+    if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
+        { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
+    };
 };
 
 // -----------------------------------------------------------------------------
@@ -255,7 +276,7 @@ FADE_aaa_spawnAll = {
     private _triggerNames = missionNamespace getVariable ["FADE_civTriggerNames", []];
     if (_triggerNames isEqualTo []) exitWith {};
 
-    private _max = 5;
+    private _max = [5, 1] call _scaleOpforCount;
     private _spawnFnc = switch (_level) do {
         case "Light": { FADE_aaa_spawnLight };
         case "Medium": { FADE_aaa_spawnMedium };
@@ -307,24 +328,27 @@ FADE_aaa_maybeSpawnManpadsInZone = {
     private _unitClass = [_faction] call FADE_aaa_getManpadsUnitClass;
     if (!isClass (configFile >> "CfgVehicles" >> _unitClass)) then { _unitClass = missionNamespace getVariable ["FADE_aaa_fallbackManpads", "O_Soldier_AA_F"] };
 
-    private _count = 2;
+    private _count = [2, 1] call _scaleOpforCount;
     private _groups = [];
-    private _grp = createGroup EAST;
+    private _grp = createGroup (missionNamespace getVariable ["FADE_sideEnemy", east]);
     for "_i" from 0 to (_count - 1) do {
         private _pos = [_center, 0, 30, 4, 0, 0.3, 0, [], _center] call BIS_fnc_findSafePos;
         if (count _pos < 2) then { _pos = _center };
         if (count _pos < 3) then { _pos set [2, 0] };
         private _u = _grp createUnit [_unitClass, _pos, [], 0, "NONE"];
-        if (!isNull _u) then { _u setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.5]) };
+        if (!isNull _u) then { _u setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.2]) };
     };
     if (count units _grp > 0) then {
-        { _x setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.5]) } forEach units _grp;
+        { _x setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.2]) } forEach units _grp;
         _grp allowFleeing (missionNamespace getVariable ["FADE_enemyRouting", 0]);
         private _wp = _grp addWaypoint [_center, 0];
         _wp setWaypointType "SAD";
         _groups pushBack _grp;
         FADE_aaa_manpadsGroups pushBack _grp;
         FADE_aaa_manpadsZones set [_zoneId, _groups];
+        if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
+            { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
+        };
     } else {
         deleteGroup _grp;
         FADE_aaa_manpadsZones set [_zoneId, []];

@@ -29,6 +29,11 @@ private _cleanup = {
     };
     { if (!isNull _x) then { { deleteVehicle _x } forEach units _x; deleteGroup _x } } forEach _enemyGrps;
     [_marker] call FADE_deleteMarkerSafe;
+    if (_taskIdGuard != "") then {
+        private _wreck = missionNamespace getVariable ["FADE_csarWreck_" + _taskIdGuard, objNull];
+        if (!isNull _wreck) then { deleteVehicle _wreck };
+        missionNamespace setVariable ["FADE_csarWreck_" + _taskIdGuard, nil];
+    };
     if (!isNull _pl && { (_pl getVariable ["FADE_myMissionTaskId", ""]) == _taskIdGuard }) then {
         [_pl, _taskIdGuard] call FADE_clearActiveMission;
     };
@@ -69,7 +74,7 @@ private _checkCasualties = {
         if (_group getVariable ["FADE_insertReachedLZ", false]) exitWith { false };
         _alive < (ceil (_initialCount / 2))
     };
-    if (_missionType == "TroopExtract") exitWith { _alive < (ceil (_initialCount / 2)) };
+    if (_missionType in ["TroopExtract", "CASEVAC", "CSAR"]) exitWith { _alive < (ceil (_initialCount / 2)) };
     false
 };
 
@@ -83,10 +88,12 @@ if (!isNull _player && { !isNull _group } && { count units _group > 0 }) then {
     private _leader = leader _group;
     if (!isNull _leader && { alive _leader }) then {
         if (_missionType == "TroopInsert") then {
-            _leader sideChat format ["This is %1. We're at base, standing by for pickup. Over.", _callsign];
+            [_leader, format ["This is %1. We're at base, standing by for pickup. Over.", _callsign]] call FADE_aiSideChat;
         } else {
-            private _grid = mapGridPosition _pickupPos;
-            _leader sideChat format ["This is %1. We're at Grid %2, awaiting pickup. Over.", _callsign, _grid];
+            if (_missionType != "CSAR") then {
+                private _grid = mapGridPosition _pickupPos;
+                [_leader, format ["This is %1. We're at Grid %2, awaiting pickup. Over.", _callsign, _grid]] call FADE_aiSideChat;
+            };
         };
     };
 };
@@ -114,7 +121,7 @@ _phase1 = {
         [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c };
     };
     private _veh = vehicle _player;
-    if (_missionType == "TroopExtract" && { _veh != _player } && { _veh isKindOf "Helicopter" } && { (_veh distance _pickupPos) < 1000 } && !_smokeSpawned) then {
+    if (_missionType in ["TroopExtract", "CASEVAC"] && { _veh != _player } && { _veh isKindOf "Helicopter" } && { (_veh distance _pickupPos) < 1000 } && !_smokeSpawned) then {
         private _capable = (units _group) select { alive _x && { !(_x getVariable ["ACE_isUnconscious", false]) } };
         private _speaker = if (count _capable > 0) then { _capable select 0 } else { objNull };
         private _inCombat = (!isNull _speaker && { (behaviour _speaker) == "COMBAT" });
@@ -123,9 +130,9 @@ _phase1 = {
         if (_isNight && { isClass (configFile >> "CfgPatches" >> "ace_attach") }) then {
             if (!isNull _speaker) then {
                 if (_inCombat) then {
-                    _speaker sideChat format ["This is %1. We're in contact at the pickup zone. IR strobes active on all units. Over!", _callsign];
+                    [_speaker, format ["This is %1. We're in contact at the pickup zone. IR strobes active on all units. Over!", _callsign]] call FADE_aiSideChat;
                 } else {
-                    _speaker sideChat format ["This is %1. Awaiting pickup. IR strobes active on all units. Over.", _callsign];
+                    [_speaker, format ["This is %1. Awaiting pickup. IR strobes active on all units. Over.", _callsign]] call FADE_aiSideChat;
                 };
             };
             ["Friendly units marked with IR strobes (NVG required)"] remoteExec ["systemChat", _player];
@@ -133,9 +140,9 @@ _phase1 = {
             "SmokeShellGreen" createVehicle _pickupPos;
             if (!isNull _speaker) then {
                 if (_inCombat) then {
-                    _speaker sideChat format ["This is %1. Green smoke deployed. We're in contact at the pickup zone. Over!", _callsign];
+                    [_speaker, format ["This is %1. Green smoke deployed. We're in contact at the pickup zone. Over!", _callsign]] call FADE_aiSideChat;
                 } else {
-                    _speaker sideChat format ["This is %1. Green smoke deployed. Marking position. No contact. Over.", _callsign];
+                    [_speaker, format ["This is %1. Green smoke deployed. Marking position. No contact. Over.", _callsign]] call FADE_aiSideChat;
                 };
             };
         };
@@ -150,17 +157,17 @@ _phase1 = {
         private _leader = leader _group;
         if (!isNull _leader && { alive _leader }) then {
             if (_cargoSeats == 0) then {
-                _leader sideChat format ["This is %1. Negative - you have no cargo seats. We cannot board. Over.", _callsign];
+                [_leader, format ["This is %1. Negative - you have no cargo seats. We cannot board. Over.", _callsign]] call FADE_aiSideChat;
             } else {
                 if (_totalCount > _cargoSeats) then {
-                    _leader sideChat format ["This is %1. We have more personnel than you have seats - loading %2. Stand by. Over.", _callsign, _cargoSeats];
+                    [_leader, format ["This is %1. We have more personnel than you have seats - loading %2. Stand by. Over.", _callsign, _cargoSeats]] call FADE_aiSideChat;
                 } else {
-                    _leader sideChat format ["This is %1. We're loading now. Stand by. Over.", _callsign];
+                    [_leader, format ["This is %1. We're loading now. Stand by. Over.", _callsign]] call FADE_aiSideChat;
                 };
             };
         };
         if (count _unitsToBoard > 0) then {
-            ["FADE_embarkStart"] remoteExec ["playSound", _player];
+            if (isClass (missionConfigFile >> "CfgSounds" >> "FADE_embarkStart")) then { ["FADE_embarkStart"] remoteExec ["playSound", _player] };
             [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _veh, _unitsToBoard, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase2;
         } else {
             [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnPhase1, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase1;
@@ -181,19 +188,19 @@ _phase2 = {
         [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c };
     };
     if (({ vehicle _x == _veh } count _unitsToBoard) == count _unitsToBoard) then {
-        if (_missionType == "TroopExtract") then {
+        if (_missionType in ["TroopExtract", "CASEVAC", "CSAR"]) then {
             [_taskId, _dropPos] call BIS_fnc_taskSetDestination;
         };
         private _leader = leader _group;
         private _totalSquad = count units _group;
         if (!isNull _leader && { alive _leader }) then {
             if (count _unitsToBoard < _totalSquad) then {
-                _leader sideChat format ["This is %1. Only %2 aboard - not enough seats for everyone. Proceeding to LZ. Over.", _callsign, count _unitsToBoard];
+                [_leader, format ["This is %1. Only %2 aboard - not enough seats for everyone. Proceeding to LZ. Over.", _callsign, count _unitsToBoard]] call FADE_aiSideChat;
             } else {
-                _leader sideChat format ["This is %1. All aboard. Ready for liftoff. Over.", _callsign];
+                [_leader, format ["This is %1. All aboard. Ready for liftoff. Over.", _callsign]] call FADE_aiSideChat;
             };
         };
-        ["FADE_embarkDone"] remoteExec ["playSound", _player];
+        if (isClass (missionConfigFile >> "CfgSounds" >> "FADE_embarkDone")) then { ["FADE_embarkDone"] remoteExec ["playSound", _player] };
         [_missionType, _group, _player, _dropPos, _taskId, _markerName, _veh, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _fnPhase3, _fnPhase4, _fnPhase4b, _staggerDisembark] spawn _fnPhase3;
     } else {
         [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _veh, _unitsToBoard, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase2;
@@ -219,16 +226,16 @@ _phase3 = {
         if (count _unitsInVeh > 0) then {
             if (_missionType == "TroopInsert") then { _group setVariable ["FADE_insertReachedLZ", true] };
             private _leader = leader _group;
-            if (!isNull _leader && { alive _leader }) then { _leader sideChat format ["This is %1. Disembarking. Over.", _callsign] };
-            ["FADE_disembarkStart"] remoteExec ["playSound", _player];
+            if (!isNull _leader && { alive _leader }) then { [_leader, format ["This is %1. Disembarking. Over.", _callsign]] call FADE_aiSideChat };
+            if (isClass (missionConfigFile >> "CfgSounds" >> "FADE_disembarkStart")) then { ["FADE_disembarkStart"] remoteExec ["playSound", _player] };
             [_unitsInVeh, _veh, 0.35] call _staggerDisembark;
             (units _group) orderGetIn false;
             [_missionType, _group, _player, _taskId, _markerName, _veh, _cleanup, _dropPos, time, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _fnPhase4, _fnPhase4b, _staggerDisembark] spawn _fnPhase4;
         } else {
             [_taskId, "SUCCEEDED", _player] call _setTaskFinalState;
             private _leader = leader _group;
-            if (!isNull _leader && { alive _leader }) then { _leader sideChat format ["This is %1. Mission complete. Over.", _callsign] };
-            if (_missionType == "TroopExtract" && { count FADE_bSpPoints > 0 }) then {
+            if (!isNull _leader && { alive _leader }) then { [_leader, format ["This is %1. Mission complete. Over.", _callsign]] call FADE_aiSideChat };
+            if (_missionType in ["TroopExtract", "CASEVAC", "CSAR"] && { count FADE_bSpPoints > 0 }) then {
                 private _leader = leader _group;
                 private _nearest = [FADE_bSpPoints, _leader] call BIS_fnc_nearestPosition;
                 private _spawnPos = if (_nearest isEqualType []) then { _nearest } else { position _nearest };
@@ -261,11 +268,11 @@ _phase4 = {
     if (count _stillIn == 0) then {
         private _leader = leader _group;
         if (!isNull _leader && { alive _leader }) then {
-            _leader sideChat format ["This is %1. Last man! Over.", _callsign];
+            [_leader, format ["This is %1. Last man! Over.", _callsign]] call FADE_aiSideChat;
         };
-        ["FADE_disembarkDone"] remoteExec ["playSound", _player];
+        if (isClass (missionConfigFile >> "CfgSounds" >> "FADE_disembarkDone")) then { ["FADE_disembarkDone"] remoteExec ["playSound", _player] };
         [_taskId, "SUCCEEDED", _player] call _setTaskFinalState;
-        if (_missionType == "TroopExtract" && { count FADE_bSpPoints > 0 }) then {
+        if (_missionType in ["TroopExtract", "CASEVAC", "CSAR"] && { count FADE_bSpPoints > 0 }) then {
             private _leader = leader _group;
             private _nearest = [FADE_bSpPoints, _leader] call BIS_fnc_nearestPosition;
             private _spawnPos = if (_nearest isEqualType []) then { _nearest } else { position _nearest };
