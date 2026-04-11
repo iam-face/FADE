@@ -16,9 +16,21 @@ waitUntil { !isNil "FADE_helipadList" && !isNil "FADE_vehiclePoints" };
         private _maxSpeedKmh = missionNamespace getVariable ["FADE_padServiceMaxSpeedKmh", 8];
         private _helipadList = missionNamespace getVariable ["FADE_helipadList", []];
         private _vehPoints = missionNamespace getVariable ["FADE_vehiclePoints", []];
-        private _padPositions = [];
-        { _padPositions pushBack (getPosATL (_x select 0)) } forEach _helipadList;
-        { _padPositions pushBack (getPosATL _x) } forEach _vehPoints;
+        private _rawPos = [];
+        { _rawPos pushBack (getPosATL (_x select 0)) } forEach _helipadList;
+        { _rawPos pushBack (getPosATL _x) } forEach _vehPoints;
+        private _dedupe = missionNamespace getVariable ["FADE_padServiceDedupeDist", 12];
+        private _padPositions = if (_dedupe <= 0) then {
+            +_rawPos
+        } else {
+            private _uniq = [];
+            {
+                private _p = _x;
+                if ((_uniq findIf { _x distance2D _p < _dedupe }) < 0) then { _uniq pushBack _p };
+            } forEach _rawPos;
+            _uniq
+        };
+        if (_padPositions isEqualTo []) then { continue };
         private _candidates = [];
         {
             private _pos = _x;

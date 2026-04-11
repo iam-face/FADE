@@ -6,22 +6,18 @@
 // [displayName, missionId, description, "Global"|"Single"] - stream is for logic; list shows [G]/[S]
 private _missionListRaw = [
     ["Area of Operations", "AreaOfOperations", "Large-scale mission across a 2 km x 2 km AO. BLUFOR AI will assault 3 objectives in the sector. OPFOR defend. All units can respawn to continue the fight. [G]", "Global"],
-    ["Asset Retrieval", "AssetRetrieval", "Secure intel at the site (scroll action on case), then RTB. [S]", "Single"],
+    ["Asset Retrieval", "AssetRetrieval", "Secure intel at the site (scroll action on case), then RTB. [G]", "Global"],
     ["CAS / Fire Support", "CAS", "Engage enemy forces and support friendlies at the objective. [G]", "Global"],
     ["Cargo / Resupply", "Cargo", "Optionally pick up a sling-load cargo box, fly to friendly camp and land to complete (non-combat). [S]", "Single"],
     ["CASEVAC", "CASEVAC", "Pick up wounded squad and RTB. ACE Medical. [S]", "Single"],
     ["Clear Area", "ClearArea", "Medium-scale, assault an enemy-occupied town or camp. Destroy at least 80% of enemy to succeed [G]", "Global"],
-    ["CSAR", "CSAR", "Recover a survivor at a helo crash site; RTB. [S]", "Single"],
-    ["Find and Clear IEDs", "FindClearIEDs", "Locate and disarm an IED on a road near a civilian area. [S]", "Single"],
+    ["CSAR", "CSAR", "Recover a survivor at a helo crash site; RTB. Shared global slot. [G]", "Global"],
+    ["Escape & Evasion", "EscapeEvasion", "Evadees (you pick) are dispersed in a hostile civ area without GPS; hunt patrols, truck QRF on contact, and later a search heli (area orbit only). RTB all evadees alive to win. [G]", "Global"],
     ["Hostage", "Hostage", "Rescue hostages from urban buildings. Return all alive to base. [G]", "Global"],
     ["HVT", "HVT", "Find a high value target in urban area. Eliminate or capture. [G]", "Global"],
     ["Intercept Convoy", "InterceptConvoy", "Destroy convoy before it reaches the end zone. [G]", "Global"],
-    ["Mass Casualty (MassCas)", "MASCAS", "3–6 BLUFOR with injuries at the base medical area. [S], ACE", "Single"],
-    ["Mass Casualty (MassCas) KAT", "MASCASKAT", "3–6 BLUFOR with injuries at the base medical area. Heal all. [S], KAT", "Single"],
-    ["Medical", "Medical", "One BLUFOR with injury at the base medical area. [S], ACE", "Single"],
-    ["Medical KAT", "MedicalKAT", "One BLUFOR with injury at the base medical area. [S], KAT", "Single"],
-    ["Mine Clearing", "MineClearing", "Clear 5–10 mines in a 200 m area. Complete when all disarmed. [S]", "Single"],
-    ["Operation", "Operation", "Capture multiple civ zones concurrently; 60s tick, OPFOR can recapture. [G]", "Global"],
+    ["Mine Clearing", "MineClearing", "EOD: 2–5 mines or 1–3 IEDs on roads near a CIV_T_* zone (one type per mission). Spaced along the route. [S]", "Single"],
+    ["Operation", "Operation", "Clear OPFOR from multiple civ zones; each zone stays captured once clear (60s tick). [G]", "Global"],
     ["Search & Destroy", "SearchDestroy", "Find and clear 3 OPFOR buildings in a civ town. [G]", "Global"],
     ["Troop Extract", "TroopExtract", "Fly to pickup zone, land to load squad, return to base. [S]", "Single"],
     ["Troop Insert", "TroopInsert", "Pick up squad at base, fly to LZ, land to disembark. [S]", "Single"]
@@ -47,7 +43,7 @@ FAC_missionsGui_stripDuplicateBriefHeader = {
     if (_missionTypeLabel != "" && { _firstU == _labelU }) then {
         _strip = true;
     } else {
-        if (_missionTypeId == "FindClearIEDs" && { _firstU find "FIND AND CLEAR IED" == 0 }) then {
+        if (_missionTypeId == "MineClearing" && { _firstU find "MINE / EOD CLEARANCE" == 0 }) then {
             _strip = true;
         };
     };
@@ -77,6 +73,7 @@ FAC_missionsGui_fnc = {
         case "onLoad": {
             private _display = findDisplay 60002;
             if (isNull _display) exitWith {};
+            if (!isNil "FAC_escapeEvasionPickGui_fnc_destroyOverlay") then { [] call FAC_escapeEvasionPickGui_fnc_destroyOverlay };
             uinamespace setVariable ["FAC_missionsGui_fnc", FAC_missionsGui_fnc];
             missionNamespace setVariable ["FAC_missions_abortPendingTime", -99];
             missionNamespace setVariable ["FAC_missions_abortSlotPending", ["", -99]];
@@ -159,6 +156,10 @@ FAC_missionsGui_fnc = {
             private _idx = lbCurSel _lb;
             if (_idx < 0) then { systemChat "SELECT MISSION."; return };
             private _missionType = _lb lbData _idx;
+            if (_missionType == "EscapeEvasion") exitWith {
+                if (isNil "FAC_escapeEvasionPickGui_fnc") exitWith { systemChat "ESCAPE & EVASION UI not loaded."; };
+                ["open", []] call FAC_escapeEvasionPickGui_fnc;
+            };
             [_missionType, player] remoteExec ["FADE_startMission", 2];
             hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);

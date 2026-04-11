@@ -1,5 +1,5 @@
 // =============================================================================
-// AmbientCivilians.sqf - Civ spawn/despawn (CIV_T_* triggers, ROAD_SP_* road vehicles)
+// AmbientCivilians.sqf - Civ spawn/despawn (CIV_T_* triggers; ambient road vehicles use active zones + roads)
 // =============================================================================
 // ONLY uses FADE_scenarioCivFaction from Scenario GUI. No fallbacks.
 // If selected faction has no civilian units/vehicles: shows hint error, does not spawn.
@@ -15,9 +15,16 @@ diag_log "[AmbientCivilians] v4 loading (GUI faction only)";
 // bis_fnc_cp_* stubs: see Config.sqf (loaded before this on server)
 
 // Store config in missionNamespace
+missionNamespace setVariable ["FADE_civTriggerIndexMax", missionNamespace getVariable ["FADE_civTriggerIndexMax", if (isNil "FADE_civTriggerIndexMax") then { 109 } else { FADE_civTriggerIndexMax }]];
 missionNamespace setVariable ["FADE_civCheckInterval", missionNamespace getVariable ["FADE_civCheckInterval", 45]];
 missionNamespace setVariable ["FADE_roadSpawnIntervalMin", missionNamespace getVariable ["FADE_roadSpawnIntervalMin", 90]];
 missionNamespace setVariable ["FADE_roadSpawnIntervalMax", missionNamespace getVariable ["FADE_roadSpawnIntervalMax", 180]];
+missionNamespace setVariable ["FADE_roadSpawnTickSec", missionNamespace getVariable ["FADE_roadSpawnTickSec", 60]];
+missionNamespace setVariable ["FADE_roadSpawnChance", missionNamespace getVariable ["FADE_roadSpawnChance", 1]];
+missionNamespace setVariable ["FADE_roadSpawnRingMin", missionNamespace getVariable ["FADE_roadSpawnRingMin", 1000]];
+missionNamespace setVariable ["FADE_roadSpawnRingMax", missionNamespace getVariable ["FADE_roadSpawnRingMax", 2500]];
+missionNamespace setVariable ["FADE_roadSpawnPlayerClear", missionNamespace getVariable ["FADE_roadSpawnPlayerClear", 500]];
+missionNamespace setVariable ["FADE_roadFinalWpMinDist", missionNamespace getVariable ["FADE_roadFinalWpMinDist", 2000]];
 missionNamespace setVariable ["FADE_civPlayerActivateDist", missionNamespace getVariable ["FADE_civPlayerActivateDist", 1000]];
 missionNamespace setVariable ["FADE_civPlayerDeactivateDist", missionNamespace getVariable ["FADE_civPlayerDeactivateDist", 1400]];
 missionNamespace setVariable ["FADE_civSpawnRadius", missionNamespace getVariable ["FADE_civSpawnRadius", 1000]];
@@ -29,6 +36,8 @@ missionNamespace setVariable ["FADE_civSpawnBatchSize", missionNamespace getVari
 missionNamespace setVariable ["FADE_roadVehicleMax", missionNamespace getVariable ["FADE_roadVehicleMax", 10]];
 missionNamespace setVariable ["FADE_civMaxActiveZones", missionNamespace getVariable ["FADE_civMaxActiveZones", 4]];
 missionNamespace setVariable ["FADE_civDebug", missionNamespace getVariable ["FADE_civDebug", false]];
+missionNamespace setVariable ["FADE_civVehCleanupDist", missionNamespace getVariable ["FADE_civVehCleanupDist", if (isNil "FADE_civVehCleanupDist") then { 4500 } else { FADE_civVehCleanupDist }]];
+missionNamespace setVariable ["FADE_civAirCleanupDist", missionNamespace getVariable ["FADE_civAirCleanupDist", if (isNil "FADE_civAirCleanupDist") then { -1 } else { FADE_civAirCleanupDist }]];
 
 // Filter to valid CfgVehicles classes: must exist, scope >= 2 (avoids "Cannot create non-ai vehicle" for player-only/private classes).
 // When _unitsOnly is true, only classes that inherit from Man are kept (avoids "abstract type Civilian_F" / wrong type).
@@ -98,16 +107,17 @@ FADE_civ_showNoCivVehiclesHint = {
     diag_log format ["[AmbientCivilians] No civ vehicles for faction %1 - hint shown", _faction];
 };
 
-// Collect CIV_T_* triggers
+// Collect CIV_T_* triggers (CIV_T_1 .. CIV_T_N, N = FADE_civTriggerIndexMax — keep in sync with Eden / mission.sqm)
 private _civTriggerNames = [];
-for "_i" from 1 to 25 do {
+private _civTMax = missionNamespace getVariable ["FADE_civTriggerIndexMax", 109];
+for "_i" from 1 to _civTMax do {
     private _name = format ["CIV_T_%1", _i];
     private _trig = missionNamespace getVariable [_name, objNull];
     if (!isNull _trig) then { _civTriggerNames pushBack _name };
 };
 missionNamespace setVariable ["FADE_civTriggerNames", _civTriggerNames];
 
-// Collect ROAD_SP_* points
+// ROAD_SP_* still used by Intercept Convoy mission; ambient civ road spawns no longer depend on them
 private _roadPoints = [];
 for "_i" from 1 to 25 do {
     private _obj = missionNamespace getVariable [format ["ROAD_SP_%1", _i], objNull];
@@ -117,6 +127,7 @@ missionNamespace setVariable ["FADE_civRoadPoints", _roadPoints];
 
 FADE_civZoneState = createHashMap;
 FADE_roadVehicles = [];
+FADE_civAmbientAircraft = [];
 FADE_enemyPatrolZoneState = createHashMap;
 
 // Despawn all patrol entities for a zone (groups, vehicle groups, vehicles, garrison groups, barrels)
@@ -171,7 +182,7 @@ FADE_enemyPatrol_spawnForZone = {
         private _angle = random 360;
         private _dist = 200 + random (_zoneRadius - 200);
         private _sp = _center getPos [_dist, _angle];
-        _sp = [_sp, 0, 15, 3, 0, 0.4, 0, [], _sp] call BIS_fnc_findSafePos;
+        _sp = [_sp, 0, 15, 3, 1, 0.4, 0, [], _sp] call BIS_fnc_findSafePos;
         if (!(_sp isEqualType []) || { count _sp < 2 }) then { _sp = _center getPos [_dist, _angle] };
         if (count _sp < 3) then { _sp set [2, 0] };
         private _size = 3 + floor random 4;
@@ -189,7 +200,7 @@ FADE_enemyPatrol_spawnForZone = {
             private _wpAngle = _w * 90 + (random 45);
             private _wpDist = 150 + random (_zoneRadius min 600);
             private _wpPos = [(_center select 0) + _wpDist * (cos _wpAngle), (_center select 1) + _wpDist * (sin _wpAngle), 0];
-            _wpPos = [_wpPos, 0, 10, 2, 0, 0.4, 0, [], _wpPos] call BIS_fnc_findSafePos;
+            _wpPos = [_wpPos, 0, 10, 2, 1, 0.4, 0, [], _wpPos] call BIS_fnc_findSafePos;
             if (_wpPos isEqualType [] && { count _wpPos >= 2 }) then {
                 _wpPos = [(_wpPos select 0), (_wpPos select 1), (if (count _wpPos > 2) then { _wpPos select 2 } else { 0 })];
                 private _wp = _grp addWaypoint [_wpPos, 0];
@@ -272,7 +283,7 @@ FADE_enemyPatrol_spawnForZone = {
             _garrisonGroups pushBack _garrisonGrp;
             private _bldCenter = getPosATL _bld;
             if (count _bldCenter < 3) then { _bldCenter = [(_bldCenter select 0), (_bldCenter select 1), 0] };
-            private _barrelPos = [_bldCenter, 8, 22, 2, 0, 0.3, 0, [], _bldCenter] call BIS_fnc_findSafePos;
+            private _barrelPos = [_bldCenter, 8, 22, 2, 1, 0.3, 0, [], _bldCenter] call BIS_fnc_findSafePos;
             if (_barrelPos isEqualType [] && { count _barrelPos >= 2 }) then {
                 _barrelPos = [(_barrelPos select 0), (_barrelPos select 1), (if (count _barrelPos > 2) then { _barrelPos select 2 } else { 0 })];
                 private _barrel = createVehicle ["MetalBarrel_burning_F", _barrelPos, [], 0, "NONE"];
@@ -346,10 +357,98 @@ FADE_civ_findSpawnPos = {
         private _dist = random _radius;
         private _pos = _center getPos [_dist, _angle];
         _pos set [2, 0];
-        private _safe = [_pos, 0, 5, 2, 0, 0.3, 0, [], _pos] call BIS_fnc_findSafePos;
+        private _safe = [_pos, 0, 5, 2, 1, 0.3, 0, [], _pos] call BIS_fnc_findSafePos;
         if (_safe isEqualType [] && { count _safe >= 2 } && { (_safe distance _center) <= _radius }) exitWith { _safe };
     };
     _center
+};
+
+// Road spawn for ambient civ vehicles: ring around a random active zone centre, on a road, clear of players
+FADE_civ_getAlivePlayers = {
+    private _out = [];
+    { if (alive _x && { isPlayer _x }) then { _out pushBack _x } } forEach allPlayers;
+    _out
+};
+
+FADE_civ_findAmbientRoadSpawnPos = {
+    private _activeIds = keys FADE_civZoneState;
+    if (_activeIds isEqualTo []) exitWith { [] };
+    private _ringMin = missionNamespace getVariable ["FADE_roadSpawnRingMin", 1000];
+    private _ringMax = missionNamespace getVariable ["FADE_roadSpawnRingMax", 2500];
+    private _clear = missionNamespace getVariable ["FADE_roadSpawnPlayerClear", 500];
+    private _players = call FADE_civ_getAlivePlayers;
+
+    private _anchorId = selectRandom _activeIds;
+    private _trig = missionNamespace getVariable [_anchorId, objNull];
+    if (isNull _trig) exitWith { [] };
+    private _zoneCenter = getPosATL _trig;
+    if (count _zoneCenter < 3) then { _zoneCenter = [(_zoneCenter select 0), (_zoneCenter select 1), 0] };
+
+    private _found = [];
+    for "_attempt" from 1 to 55 do {
+        private _angle = random 360;
+        private _dist = _ringMin + random ((_ringMax - _ringMin) max 1);
+        private _rough = _zoneCenter getPos [_dist, _angle];
+        _rough set [2, 0];
+        private _roads = _rough nearRoads 280;
+        if (_roads isEqualTo []) then { continue };
+        private _road = selectRandom _roads;
+        private _pos = getPosATL _road;
+        if (count _pos < 3) then { _pos = [(_pos select 0), (_pos select 1), 0] };
+        private _dZ = _pos distance _zoneCenter;
+        if (_dZ < _ringMin || { _dZ > _ringMax }) then { continue };
+        if !(_players isEqualTo []) then {
+            private _okPl = true;
+            {
+                if ((_pos distance _x) < _clear) exitWith { _okPl = false };
+            } forEach _players;
+            if (!_okPl) then { continue };
+        };
+        _found = _pos;
+    };
+    _found
+};
+
+// Nearest / furthest active civilian zone centres to a position (for road vehicle waypoints)
+FADE_civ_zoneCentersNearestFurthest = {
+    params ["_fromPos"];
+    private _ids = keys FADE_civZoneState;
+    private _nearest = [];
+    private _furthest = [];
+    private _minD = 1e12;
+    private _maxD = -1;
+    {
+        private _t = missionNamespace getVariable [_x, objNull];
+        if (!isNull _t) then {
+            private _c = getPosATL _t;
+            if (count _c < 3) then { _c = [(_c select 0), (_c select 1), 0] };
+            private _d = _c distance _fromPos;
+            if (_d < _minD) then { _minD = _d; _nearest = _c };
+            if (_d > _maxD) then { _maxD = _d; _furthest = _c };
+        };
+    } forEach _ids;
+    if (count _nearest < 2) exitWith { [[], []] };
+    [_nearest, _furthest]
+};
+
+FADE_civ_randomPosMinDistFrom = {
+    params ["_center", "_minDist"];
+    private _pos = [];
+    for "_a" from 1 to 35 do {
+        private _ang = random 360;
+        private _d = _minDist + random 3500;
+        private _p = _center getPos [_d, _ang];
+        _p set [2, 0];
+        private _safe = [_p, 0, 12, 8, 1, 0.35, 0, [], _p] call BIS_fnc_findSafePos;
+        if (_safe isEqualType [] && { count _safe >= 2 } && { (_safe distance _center) >= (_minDist * 0.92) }) exitWith {
+            _pos = [(_safe select 0), (_safe select 1), if (count _safe > 2) then { _safe select 2 } else { 0 }];
+        };
+    };
+    if (_pos isEqualTo []) then {
+        _pos = _center getPos [_minDist + 400 + random 800, random 360];
+        _pos set [2, 0];
+    };
+    _pos
 };
 
 // -----------------------------------------------------------------------------
@@ -501,7 +600,7 @@ FADE_civ_despawnZone = {
 };
 
 // -----------------------------------------------------------------------------
-// Road vehicle spawn - ONLY GUI faction, no fallbacks
+// Road vehicle spawn - ONLY GUI faction; requires ≥1 active civ zone; road in ring around zone
 // -----------------------------------------------------------------------------
 FADE_civ_spawnRoadVehicle = {
     if (!(missionNamespace getVariable ["FADE_civiliansEnabled", true])) exitWith {};
@@ -526,13 +625,10 @@ FADE_civ_spawnRoadVehicle = {
     private _roadMax = missionNamespace getVariable ["FADE_roadVehicleMax", 5];
     if (count FADE_roadVehicles >= _roadMax) exitWith {};
 
-    private _roadPoints = missionNamespace getVariable ["FADE_civRoadPoints", []];
-    if (count _roadPoints < 2) exitWith {};
+    if (count (keys FADE_civZoneState) == 0) exitWith {};
 
-    private _startIdx = floor random count _roadPoints;
-    private _endIdx = (_startIdx + 1 + floor random ((count _roadPoints - 1) max 1)) mod count _roadPoints;
-    private _startPos = getPosATL (_roadPoints select _startIdx);
-    private _endPos = getPosATL (_roadPoints select _endIdx);
+    private _startPos = call FADE_civ_findAmbientRoadSpawnPos;
+    if (_startPos isEqualTo []) exitWith {};
 
     private _cls = _roadVehClasses select (floor random (count _roadVehClasses max 1));
     private _veh = createVehicle [_cls, _startPos, [], 0, "NONE"];
@@ -545,23 +641,106 @@ FADE_civ_spawnRoadVehicle = {
         deleteVehicle _veh;
         deleteGroup _grp;
     } else {
-        // Exclude from BIS Civilian Presence / CPE so they don't run bis_fnc_cp_main (undefined without Tac-Ops or causes RPT errors)
         _driver setVariable ["BIS_cp_excluded", true];
         _grp setVariable ["BIS_cp_excluded", true];
         _driver setVariable ["FADE_ambientCiv", true];
         removeHeadgear _driver;
         removeGoggles _driver;
+        _veh setPosATL _startPos;
         _driver moveInDriver _veh;
         _driver setBehaviour "SAFE";
         _driver setSpeedMode "LIMITED";
 
-        private _wp = _grp addWaypoint [_endPos, 15];
-        _wp setWaypointType "MOVE";
-        _wp setWaypointStatements ["true", "private _v = vehicle this; private _g = group this; FADE_roadVehicles = FADE_roadVehicles - [_v]; { deleteVehicle _x } forEach units _g; deleteGroup _g; deleteVehicle _v;"];
+        private _nearestFurthest = [_startPos] call FADE_civ_zoneCentersNearestFurthest;
+        private _wpNearest = _nearestFurthest select 0;
+        private _wpFurthest = _nearestFurthest select 1;
+        if (count _wpNearest < 2 || { count _wpFurthest < 2 }) then {
+            { deleteVehicle _x } forEach units _grp;
+            deleteGroup _grp;
+            deleteVehicle _veh;
+        } else {
+        private _minFinal = missionNamespace getVariable ["FADE_roadFinalWpMinDist", 2000];
+        private _finalPos = [_wpFurthest, _minFinal] call FADE_civ_randomPosMinDistFrom;
+
+        if ((_wpNearest distance _wpFurthest) < 15) then {
+            private _w1 = _grp addWaypoint [_wpNearest, 0];
+            _w1 setWaypointType "MOVE";
+            _w1 setWaypointSpeed "LIMITED";
+        } else {
+            private _w1 = _grp addWaypoint [_wpNearest, 0];
+            _w1 setWaypointType "MOVE";
+            _w1 setWaypointSpeed "LIMITED";
+            private _w2 = _grp addWaypoint [_wpFurthest, 0];
+            _w2 setWaypointType "MOVE";
+            _w2 setWaypointSpeed "LIMITED";
+        };
+        private _wLast = _grp addWaypoint [_finalPos, 0];
+        _wLast setWaypointType "MOVE";
+        _wLast setWaypointSpeed "LIMITED";
+        _wLast setWaypointStatements ["true", "private _v = vehicle this; private _g = group this; FADE_roadVehicles = FADE_roadVehicles - [_v]; { deleteVehicle _x } forEach units _g; deleteGroup _g; deleteVehicle _v;"];
 
         FADE_roadVehicles pushBack _veh;
         [format ["ROAD VEH SPAWNED (%1/%2) | faction: %3 | vehicle: %4 | driver: %5", count FADE_roadVehicles, _roadMax, _faction, _cls, _driverCls]] call FADE_civ_debugChat;
+        };
     };
+};
+
+// Delete one ambient civ vehicle (road or air) and its crew/group; does not touch FADE_roadVehicles / aircraft list
+FADE_civ_deleteAmbientVehicle = {
+    params ["_veh"];
+    if (isNull _veh) exitWith {};
+    private _d = driver _veh;
+    private _g = if (!isNull _d) then { group _d } else { grpNull };
+    if (!isNull _g) then {
+        { deleteVehicle _x } forEach units _g;
+        deleteGroup _g;
+    } else {
+        { deleteVehicle _x } forEach crew _veh;
+    };
+    if (!isNull _veh) then { deleteVehicle _veh };
+};
+
+// Despawn ambient civ road + aircraft too far from any player (frees sim when nobody can see them)
+FADE_civ_cleanupDistantVehicles = {
+    private _distMax = missionNamespace getVariable ["FADE_civVehCleanupDist", 4500];
+    if (_distMax <= 0) exitWith {};
+    private _players = [];
+    { if (alive _x && { isPlayer _x }) then { _players pushBack _x } } forEach allPlayers;
+    private _nearest = {
+        params ["_pos"];
+        if (_players isEqualTo []) exitWith { 1e12 };
+        private _best = 1e12;
+        { _best = _best min (_pos distance2D _x) } forEach _players;
+        _best
+    };
+
+    private _newRoad = [];
+    {
+        private _v = _x;
+        if (isNull _v || { !alive _v }) then { continue };
+        if (([getPosATL _v] call _nearest) > _distMax) then {
+            [_v] call FADE_civ_deleteAmbientVehicle;
+            [format ["ROAD VEH CLEANUP: too far from players (> %1 m)", round _distMax]] call FADE_civ_debugChat;
+        } else {
+            _newRoad pushBack _v;
+        };
+    } forEach FADE_roadVehicles;
+    FADE_roadVehicles = _newRoad;
+
+    private _airDist = missionNamespace getVariable ["FADE_civAirCleanupDist", -1];
+    if (_airDist < 0) then { _airDist = _distMax * 1.75 };
+    private _newAir = [];
+    {
+        private _v = _x;
+        if (isNull _v || { !alive _v }) then { continue };
+        if (([getPosATL _v] call _nearest) > _airDist) then {
+            [_v] call FADE_civ_deleteAmbientVehicle;
+            [format ["CIV AIR CLEANUP: too far from players (> %1 m)", round _airDist]] call FADE_civ_debugChat;
+        } else {
+            _newAir pushBack _v;
+        };
+    } forEach FADE_civAmbientAircraft;
+    FADE_civAmbientAircraft = _newAir;
 };
 
 // -----------------------------------------------------------------------------
@@ -569,6 +748,7 @@ FADE_civ_spawnRoadVehicle = {
 // -----------------------------------------------------------------------------
 FADE_civ_checkZones = {
     if (!(missionNamespace getVariable ["FADE_civiliansEnabled", true])) exitWith {};
+    call FADE_civ_cleanupDistantVehicles;
     private _players = [];
     { if (alive _x && { isPlayer _x }) then { _players pushBack _x } } forEach allPlayers;
     if (_players isEqualTo []) exitWith {};
@@ -633,7 +813,7 @@ private _civClasses = call FADE_civ_getUnitClassesFromGui;
 private _civVehClasses = call FADE_civ_getVehicleClassesFromGui;
 private _factionStart = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
 if (_zoneCount == 0) then {
-    ["NO CIV_T_* TRIGGERS. CONFIGURE CIV_T_1/2/3 IN EDEN."] call FADE_civ_debugChat;
+    ["NO CIV_T_* TRIGGERS. PLACE CIV_T_* ZONES IN EDEN."] call FADE_civ_debugChat;
 } else {
     if (_civClasses isEqualTo [] && { _civVehClasses isEqualTo [] }) then {
         call FADE_civ_showNoCivsHint;
@@ -646,21 +826,27 @@ if (_zoneCount == 0) then {
         } else {
             if (_civVehClasses isEqualTo []) then {
                 call FADE_civ_showNoCivVehiclesHint;
-                [format ["CIV POP: %1 ZONES, %2 ROAD PTS, faction %3 - zone spawns OK, no civ vehicles (road spawns disabled)", _zoneCount, count (missionNamespace getVariable ["FADE_civRoadPoints", []]), _factionStart]] call FADE_civ_debugChat;
+                [format ["CIV POP: %1 ZONES, faction %2 - zone spawns OK, no civ vehicles (road spawns disabled)", _zoneCount, _factionStart]] call FADE_civ_debugChat;
             } else {
-                [format ["CIV POP: %1 ZONES, %2 ROAD PTS, faction %3 - %4 unit types, %5 vehicle types", _zoneCount, count (missionNamespace getVariable ["FADE_civRoadPoints", []]), _factionStart, count _civClasses, count _civVehClasses]] call FADE_civ_debugChat;
+                [format ["CIV POP: %1 ZONES, faction %2 - %3 unit types, %4 vehicle types (ambient road: ring around active zones)", _zoneCount, _factionStart, count _civClasses, count _civVehClasses]] call FADE_civ_debugChat;
             };
         };
     };
 };
 
 [] spawn {
-    sleep 60;
-    private _min = missionNamespace getVariable ["FADE_roadSpawnIntervalMin", 90];
-    private _max = missionNamespace getVariable ["FADE_roadSpawnIntervalMax", 180];
+    private _tick = missionNamespace getVariable ["FADE_roadSpawnTickSec", 60];
+    private _chance = missionNamespace getVariable ["FADE_roadSpawnChance", 1];
+    sleep _tick;
     while { true } do {
-        call FADE_civ_spawnRoadVehicle;
-        sleep (_min + random ((_max - _min) max 1));
+        if (
+            (missionNamespace getVariable ["FADE_civiliansEnabled", true]) &&
+            { count (keys FADE_civZoneState) > 0 } &&
+            { random 1 < _chance }
+        ) then {
+            call FADE_civ_spawnRoadVehicle;
+        };
+        sleep _tick;
     };
 };
 
@@ -671,8 +857,6 @@ if (_zoneCount == 0) then {
 // -----------------------------------------------------------------------------
 [] spawn {
     sleep 120;
-    private _mapSize = worldSize;
-    private _margin = 500;
     while { true } do {
         sleep (540 + random 120);
         if (!(missionNamespace getVariable ["FADE_civiliansEnabled", true])) then { continue };
@@ -700,12 +884,16 @@ if (_zoneCount == 0) then {
 
         private _aircraftClass = selectRandom _civAir;
         private _side = random 360;
-        private _halfMap = _mapSize / 2;
-        private _startEdge = [_halfMap + _halfMap * (sin _side) * 0.95, _halfMap + _halfMap * (cos _side) * 0.95, 180 + random 250];
-        private _endEdge   = [_halfMap - _halfMap * (sin _side) * 0.95, _halfMap - _halfMap * (cos _side) * 0.95, _startEdge select 2];
+        private _mapMin = missionNamespace getVariable ["FADE_mapMin", 0];
+        private _mapMax = missionNamespace getVariable ["FADE_mapMax", worldSize];
+        private _halfMap = (_mapMin + _mapMax) / 2;
+        private _halfSpan = (_mapMax - _mapMin) / 2;
+        private _startEdge = [_halfMap + _halfSpan * (sin _side) * 0.95, _halfMap + _halfSpan * (cos _side) * 0.95, 180 + random 250];
+        private _endEdge   = [_halfMap - _halfSpan * (sin _side) * 0.95, _halfMap - _halfSpan * (cos _side) * 0.95, _startEdge select 2];
 
         private _aircraft = createVehicle [_aircraftClass, _startEdge, [], 0, "FLY"];
         if (!isNull _aircraft) then {
+            FADE_civAmbientAircraft pushBack _aircraft;
             _aircraft flyInHeight (180 + random 250);
             private _grp = createGroup civilian;
             private _driverCls = call FADE_civ_getUnitClassesFromGui;
@@ -719,7 +907,7 @@ if (_zoneCount == 0) then {
             _aircraft setSpeedMode "FULL";
             private _wp = _grp addWaypoint [_endEdge, 0];
             _wp setWaypointType "MOVE";
-            _wp setWaypointStatements ["true", "private _v = vehicle this; private _g = group this; { deleteVehicle _x } forEach units _g; deleteGroup _g; deleteVehicle _v;"];
+            _wp setWaypointStatements ["true", "private _v = vehicle this; if (!isNil 'FADE_civAmbientAircraft') then { FADE_civAmbientAircraft = FADE_civAmbientAircraft - [_v] }; private _g = group this; { deleteVehicle _x } forEach units _g; deleteGroup _g; deleteVehicle _v;"];
             [format ["AMBIENT AIRCRAFT: %1 spawned", _aircraftClass]] call FADE_civ_debugChat;
         };
     };

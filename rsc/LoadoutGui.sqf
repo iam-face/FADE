@@ -562,6 +562,16 @@ FAC_loadoutGui_saveRespawnLoadoutSnapshot = {
     ];
 };
 
+// Capture mission slot / JIP spawn gear once; skipped if player already saved (loadout box) — same keys as saveRespawnLoadoutSnapshot.
+FAC_loadoutGui_trySaveInitialRespawnLoadoutIfMissing = {
+    params [["_u", player]];
+    if (!hasInterface) exitWith {};
+    if (isNull _u || {!alive _u} || {!local _u}) exitWith {};
+    private _uid = getPlayerUID _u;
+    if (count (missionNamespace getVariable ["FAC_savedLoadout_" + _uid, []]) > 0) exitWith {};
+    [_u] call FAC_loadoutGui_saveRespawnLoadoutSnapshot;
+};
+
 FAC_loadoutGui_restoreRespawnLoadoutSnapshot = {
     params [["_u", player]];
     if (isNull _u || {!local _u}) exitWith {};

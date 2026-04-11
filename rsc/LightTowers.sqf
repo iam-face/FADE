@@ -1,5 +1,5 @@
 // =============================================================================
-// LightTowers.sqf -- Invisible ambient lights above pads, vehicle spawns, LOADOUTBOX, SR_Light
+// LightTowers.sqf -- Invisible ambient lights above pads, vehicle spawns, LOADOUTBOX, SR_Light; HQ at object
 // =============================================================================
 // Runs on each client (spawned from initPlayerLocal). createVehicleLocal ensures lights
 // exist only on the local machine; no network sync. Waits for server-replicated
@@ -62,3 +62,17 @@ if (!isNull _srLight) then {
     _light setLightUseFlare false;
 
 } forEach _padObjects;
+
+// HQ markers: same light params, at object position (not elevated)
+{
+    private _hq = missionNamespace getVariable [_x, objNull];
+    if (isNull _hq) then { continue };
+
+    private _pos = getPosATL _hq;
+    private _light = "#lightpoint" createVehicleLocal _pos;
+    _light setLightColor [1, 0.95, 0.9];
+    _light setLightAmbient [0.2, 0.19, 0.18];
+    _light setLightIntensity 10;
+    _light setLightAttenuation [0, 0, 0.0004, 0.0004, 60, 100];
+    _light setLightUseFlare false;
+} forEach ["hqLight_1", "hqLight_2"];

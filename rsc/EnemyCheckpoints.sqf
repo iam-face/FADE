@@ -1,6 +1,7 @@
 // =============================================================================
 // EnemyCheckpoints.sqf -- Dynamic enemy checkpoints near players
 // =============================================================================
+// Loaded from initServer only when FADE_enemyCheckpointsEnabled is true (Config.sqf).
 // Spawns at Eden objects named checkPointPos_*
 // - Gated by Scenario setting: FADE_scenarioPatrols (Enemy Patrols ON/OFF)
 // - Spawn radius: 2 km from any alive player
@@ -135,7 +136,7 @@ private _spawnCheckpoint = {
     if (_spawnAsVehicle) then {
         private _vClass = selectRandom _roadVeh;
         _layoutDesc = format ["vehicle %1", _vClass];
-        private _vPos = [_center, 0, 18, 6, 0, 0.3, 0, [], _center] call BIS_fnc_findSafePos;
+        private _vPos = [_center, 0, 18, 6, 1, 0.3, 0, [], _center] call BIS_fnc_findSafePos;
         if (count _vPos < 2) then { _vPos = _center };
         if (count _vPos < 3) then { _vPos = [(_vPos select 0), (_vPos select 1), 0] };
         _vehObj = createVehicle [_vClass, _vPos, [], 0, "NONE"];

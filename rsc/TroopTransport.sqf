@@ -33,6 +33,10 @@ private _cleanup = {
         private _wreck = missionNamespace getVariable ["FADE_csarWreck_" + _taskIdGuard, objNull];
         if (!isNull _wreck) then { deleteVehicle _wreck };
         missionNamespace setVariable ["FADE_csarWreck_" + _taskIdGuard, nil];
+        {
+            if (!isNull _x) then { deleteVehicle _x };
+        } forEach (missionNamespace getVariable ["FADE_csarBodies_" + _taskIdGuard, []]);
+        missionNamespace setVariable ["FADE_csarBodies_" + _taskIdGuard, nil];
     };
     if (!isNull _pl && { (_pl getVariable ["FADE_myMissionTaskId", ""]) == _taskIdGuard }) then {
         [_pl, _taskIdGuard] call FADE_clearActiveMission;
@@ -78,11 +82,42 @@ private _checkCasualties = {
     false
 };
 
-private _pickupRadius = 250;
+private _pickupRadius = 200;
 private _dropRadius = if (_missionType == "TroopInsert") then { 500 } else { 50 };
 private _timeout = 600;
 private _startTime = time;
 private _smokeSpawned = false;
+// Find player-occupied vehicles near the pickup, sorted nearest-first.
+// _requireGround true is used for boarding checks (landed/ground vehicle only).
+private _findPickupVehicles = {
+    params ["_center", ["_radius", 200], ["_requireGround", true]];
+    private _pairs = [];
+    {
+        if (isPlayer _x && { alive _x }) then {
+            private _veh = vehicle _x;
+            if (!isNull _veh && { _veh != _x } && { alive _veh } && { (_veh distance _center) <= _radius }) then {
+                private _okGround = true;
+                if (_requireGround) then {
+                    _okGround = if (_veh isKindOf "Air") then { isTouchingGround _veh } else { true };
+                };
+                if (_okGround) then {
+                    _pairs pushBack [(_veh distance _center), _veh];
+                };
+            };
+        };
+    } forEach allUnits;
+    private _sorted = [_pairs, [], { _x select 0 }, "ASCEND"] call BIS_fnc_sortBy;
+    private _seen = [];
+    private _vehicles = [];
+    {
+        private _veh = _x select 1;
+        if (!(_veh in _seen)) then {
+            _seen pushBack _veh;
+            _vehicles pushBack _veh;
+        };
+    } forEach _sorted;
+    _vehicles
+};
 
 if (!isNull _player && { !isNull _group } && { count units _group > 0 }) then {
     private _leader = leader _group;
@@ -106,22 +141,29 @@ private _phase4 = {};
 private _phase4b = {};
 
 _phase1 = {
-    params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", "_markerName", "_pickupRadius", "_dropRadius", "_timeout", "_cleanup", "_startTime", "_smokeSpawned", "_initialCount", "_enemyGroups", "_checkCasualties", "_setTaskFinalState", "_staggerDisembark", "_fnPhase1", "_fnPhase2", "_fnPhase3", "_fnPhase4", "_fnPhase4b"];
+    params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", "_markerName", "_pickupRadius", "_dropRadius", "_timeout", "_cleanup", "_startTime", "_smokeSpawned", "_initialCount", "_enemyGroups", "_checkCasualties", "_setTaskFinalState", "_staggerDisembark", "_fnFindPickupVehicles", "_fnPhase1", "_fnPhase2", "_fnPhase3", "_fnPhase4", "_fnPhase4b"];
     private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
     sleep 1;
-    if (isNull _player) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c } };
-    if (isNull _group || { count units _group == 0 }) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c } };
-    if ((_taskId call BIS_fnc_taskState) in ["CANCELED","FAILED"]) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c } };
+    if (isNull _player) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c } };
+    if (isNull _group || { count units _group == 0 }) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c } };
+    if ((_taskId call BIS_fnc_taskState) in ["CANCELED","FAILED"]) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c } };
     if ([_missionType, _group, _initialCount] call _checkCasualties) exitWith {
         [_taskId, "FAILED", _player, "MISSION FAILED. EXCESSIVE CASUALTIES."] call _setTaskFinalState;
-        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c };
+        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c };
     };
     if (time - _startTime > _timeout) exitWith {
         [_taskId, "CANCELED", _player, "MISSION FAILED. EXFIL WINDOW EXPIRED."] call _setTaskFinalState;
-        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c };
+        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c };
     };
-    private _veh = vehicle _player;
-    if (_missionType in ["TroopExtract", "CASEVAC"] && { _veh != _player } && { _veh isKindOf "Helicopter" } && { (_veh distance _pickupPos) < 1000 } && !_smokeSpawned) then {
+    private _anchorUnit = leader _group;
+    if (isNull _anchorUnit || { !alive _anchorUnit }) then {
+        private _aliveUnits = (units _group) select { alive _x };
+        if (count _aliveUnits > 0) then { _anchorUnit = _aliveUnits select 0 };
+    };
+    private _pickupAnchor = if (!isNull _anchorUnit) then { getPosATL _anchorUnit } else { _pickupPos };
+    private _signalVehs = [_pickupAnchor, 1000, false] call _fnFindPickupVehicles;
+    private _signalVeh = if (count _signalVehs > 0) then { _signalVehs select 0 } else { objNull };
+    if (_missionType in ["TroopExtract", "CASEVAC"] && { !isNull _signalVeh } && !_smokeSpawned) then {
         private _capable = (units _group) select { alive _x && { !(_x getVariable ["ACE_isUnconscious", false]) } };
         private _speaker = if (count _capable > 0) then { _capable select 0 } else { objNull };
         private _inCombat = (!isNull _speaker && { (behaviour _speaker) == "COMBAT" });
@@ -137,7 +179,7 @@ _phase1 = {
             };
             ["Friendly units marked with IR strobes (NVG required)"] remoteExec ["systemChat", _player];
         } else {
-            "SmokeShellGreen" createVehicle _pickupPos;
+            "SmokeShellGreen" createVehicle _pickupAnchor;
             if (!isNull _speaker) then {
                 if (_inCombat) then {
                     [_speaker, format ["This is %1. Green smoke deployed. We're in contact at the pickup zone. Over!", _callsign]] call FADE_aiSideChat;
@@ -148,7 +190,12 @@ _phase1 = {
         };
         _smokeSpawned = true;
     };
-    if (_veh != _player && { _veh isKindOf "Helicopter" } && { (_veh distance _pickupPos) < _pickupRadius } && { isTouchingGround _veh }) then {
+    private _candidateVehs = [_pickupAnchor, _pickupRadius, true] call _fnFindPickupVehicles;
+    private _veh = objNull;
+    {
+        if ((_x emptyPositions "cargo") > 0) exitWith { _veh = _x };
+    } forEach _candidateVehs;
+    if (!isNull _veh) then {
         private _cargoSeats = (_veh emptyPositions "cargo") max 0;
         private _unitsToBoard = (units _group) select [0, _cargoSeats];
         private _totalCount = count units _group;
@@ -170,10 +217,10 @@ _phase1 = {
             if (isClass (missionConfigFile >> "CfgSounds" >> "FADE_embarkStart")) then { ["FADE_embarkStart"] remoteExec ["playSound", _player] };
             [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _veh, _unitsToBoard, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase2;
         } else {
-            [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnPhase1, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase1;
+            [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnFindPickupVehicles, _fnPhase1, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase1;
         };
     } else {
-        [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnPhase1, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase1;
+        [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnFindPickupVehicles, _fnPhase1, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase1;
     };
 };
 
@@ -181,11 +228,12 @@ _phase2 = {
     params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", "_markerName", "_veh", "_unitsToBoard", "_dropRadius", "_timeout", "_cleanup", "_startTime", "_initialCount", "_enemyGroups", "_checkCasualties", "_setTaskFinalState", "_staggerDisembark", "_fnPhase2", "_fnPhase3", "_fnPhase4", "_fnPhase4b"];
     private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
     sleep 0.5;
-    if (isNull _veh || !alive _veh) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c } };
-    if (time - _startTime > _timeout) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c } };
+    if ((_taskId call BIS_fnc_taskState) in ["CANCELED","FAILED"]) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c } };
+    if (isNull _veh || !alive _veh) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c } };
+    if (time - _startTime > _timeout) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c } };
     if ([_missionType, _group, _initialCount] call _checkCasualties) exitWith {
         [_taskId, "FAILED", _player, "MISSION FAILED. EXCESSIVE CASUALTIES."] call _setTaskFinalState;
-        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c };
+        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c };
     };
     if (({ vehicle _x == _veh } count _unitsToBoard) == count _unitsToBoard) then {
         if (_missionType in ["TroopExtract", "CASEVAC", "CSAR"]) then {
@@ -211,15 +259,15 @@ _phase3 = {
     params ["_missionType", "_group", "_player", "_dropPos", "_taskId", "_markerName", "_veh", "_dropRadius", "_timeout", "_cleanup", "_startTime", "_initialCount", "_enemyGroups", "_checkCasualties", "_setTaskFinalState", "_fnPhase3", "_fnPhase4", "_fnPhase4b", "_staggerDisembark"];
     private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
     sleep 1;
-    if (isNull _player || isNull _veh || !alive _veh) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c } };
-    if ((_taskId call BIS_fnc_taskState) in ["CANCELED","FAILED"]) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c } };
+    if (isNull _player || isNull _veh || !alive _veh) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c } };
+    if ((_taskId call BIS_fnc_taskState) in ["CANCELED","FAILED"]) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c } };
     if ([_missionType, _group, _initialCount] call _checkCasualties) exitWith {
         [_taskId, "FAILED", _player, "MISSION FAILED. EXCESSIVE CASUALTIES."] call _setTaskFinalState;
-        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c };
+        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c };
     };
     if (time - _startTime > _timeout) exitWith {
         [_taskId, "CANCELED", _player, "MISSION FAILED. LZ NOT REACHED. TIME EXPIRED."] call _setTaskFinalState;
-        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c };
+        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c };
     };
     if ((_veh distance _dropPos) < _dropRadius && { isTouchingGround _veh }) then {
         private _unitsInVeh = (units _group) select { vehicle _x == _veh };
@@ -246,7 +294,7 @@ _phase3 = {
                     [_group, _markerName, _player, _cleanup, _enemyGroups, _taskId] spawn { params ["_group", "_markerName", "_player", "_cleanup", "_enemyGroups", "_tid"]; sleep 60; [_group, _markerName, _player, _enemyGroups, _tid] call _cleanup };
                 };
             } else {
-                private _wpPos = [_dropPos, 80, 120, 5, 0, 0, 0, [], _dropPos] call BIS_fnc_findSafePos;
+                private _wpPos = [_dropPos, 80, 120, 5, 1, 0, 0, [], _dropPos] call BIS_fnc_findSafePos;
                 _group addWaypoint [_wpPos, 0];
                 [_group, _markerName, _player, _cleanup, _enemyGroups, _taskId] spawn { params ["_group", "_markerName", "_player", "_cleanup", "_enemyGroups", "_tid"]; sleep 60; [_group, _markerName, _player, _enemyGroups, _tid] call _cleanup };
             };
@@ -260,9 +308,10 @@ _phase4 = {
     params ["_missionType", "_group", "_player", "_taskId", "_markerName", "_veh", "_cleanup", "_dropPos", "_exitStart", "_initialCount", "_enemyGroups", "_checkCasualties", "_setTaskFinalState", "_fnPhase4", "_fnPhase4b", "_staggerDisembark"];
     private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
     sleep 0.5;
+    if ((_taskId call BIS_fnc_taskState) in ["CANCELED","FAILED"]) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c } };
     if ([_missionType, _group, _initialCount] call _checkCasualties) exitWith {
         [_taskId, "FAILED", _player, "MISSION FAILED. EXCESSIVE CASUALTIES."] call _setTaskFinalState;
-        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c };
+        [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c };
     };
     private _stillIn = (units _group) select { vehicle _x == _veh };
     if (count _stillIn == 0) then {
@@ -283,13 +332,13 @@ _phase4 = {
                 [_group, _markerName, _player, _cleanup, _enemyGroups, _taskId] spawn { params ["_group", "_markerName", "_player", "_cleanup", "_enemyGroups", "_tid"]; sleep 60; [_group, _markerName, _player, _enemyGroups, _tid] call _cleanup };
             };
         } else {
-            private _wpPos = [_dropPos, 80, 120, 5, 0, 0, 0, [], _dropPos] call BIS_fnc_findSafePos;
+            private _wpPos = [_dropPos, 80, 120, 5, 1, 0, 0, [], _dropPos] call BIS_fnc_findSafePos;
             _group addWaypoint [_wpPos, 0];
             [_group, _markerName, _player, _cleanup, _enemyGroups, _taskId] spawn { params ["_group", "_markerName", "_player", "_cleanup", "_enemyGroups", "_tid"]; sleep 60; [_group, _markerName, _player, _enemyGroups, _tid] call _cleanup };
         };
     } else {
         if (time - _exitStart > 30) then {
-            [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c };
+            [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c };
         } else {
             [_missionType, _group, _player, _taskId, _markerName, _veh, _cleanup, _dropPos, _exitStart, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _fnPhase4, _fnPhase4b, _staggerDisembark] spawn _fnPhase4;
         };
@@ -302,14 +351,18 @@ _phase4b = {
     private _timeout = 120;
     private _start = time;
     scriptName "FADE_transport_phase4b";
-    while { !isNull _group && { count units _group > 0 } && { (leader _group) distance _spawnPos > _arrivalDist } && { time - _start < _timeout } } do {
+    while {
+        !isNull _group && { count units _group > 0 } && { (leader _group) distance _spawnPos > _arrivalDist } && { time - _start < _timeout }
+        && { !((_taskId call BIS_fnc_taskState) in ["CANCELED","FAILED"]) }
+    } do {
         sleep 1;
     };
-    [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 60; [_g,_m,_p,_e,_tid] call _c };
+    private _stagingDelay = if ((_taskId call BIS_fnc_taskState) in ["CANCELED","FAILED"]) then { 0 } else { 60 };
+    [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId, _stagingDelay] spawn { params ["_g","_m","_p","_e","_c","_tid","_d"]; if (_d > 0) then { sleep _d }; [_g,_m,_p,_e,_tid] call _c };
 };
 
 // Start phase 1 (spawn = fresh scheduler entry, minimal stack)
 [
     _missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark,
-    _phase1, _phase2, _phase3, _phase4, _phase4b
+    _findPickupVehicles, _phase1, _phase2, _phase3, _phase4, _phase4b
 ] spawn _phase1;

@@ -1,7 +1,8 @@
 // =============================================================================
 // FiresGui.sqf - FIRES terminal: spawn / rearm / despawn artillery at logic slots
 // =============================================================================
-// Server RPCs: FADE_fires_spawnPiece, FADE_fires_despawnSlot, FADE_fires_rearmSlot, FADE_fires_requestState (initServer)
+// Server RPCs: FADE_fires_spawnPiece, FADE_fires_despawnSlot, FADE_fires_rearmSlot, FADE_fires_requestState,
+//   FADE_firesFoS_droneSpawnRequest, FADE_firesFoS_droneDespawnRequest, FADE_firesFoS_requestSync (initServer)
 
 FAC_firesGui_setDetailsList = {
     params ["_ctrl", ["_text", ""]];
@@ -20,6 +21,21 @@ FAC_firesGui_getAvailableDefs = {
     FAC_fires_artilleryDefinitions select {
         isClass (configFile >> "CfgVehicles" >> (_x select 2))
     }
+};
+
+FAC_firesGui_updateDroneStatus = {
+    private _display = findDisplay 60700;
+    if (isNull _display) exitWith {};
+    private _st = _display displayCtrl 60724;
+    if (isNull _st) exitWith {};
+    private _nid = missionNamespace getVariable ["FAC_firesFoS_rangeDroneNetId", ""];
+    private _nm = missionNamespace getVariable ["FAC_firesFoS_droneOwnerName", ""];
+    if (_nid == "") then {
+        _st ctrlSetText "Drone: inactive — map-click Place; operator gets UAV terminal.";
+    } else {
+        private _op = if (_nm != "") then { _nm } else { "unknown" };
+        _st ctrlSetText format ["Drone: ACTIVE — operator %1 (UAV terminal).", _op];
+    };
 };
 
 FAC_firesGui_getSlotDisplayName = {
@@ -91,15 +107,19 @@ FAC_firesGui_fnc = {
             uinamespace setVariable ["FAC_firesGui_fnc", FAC_firesGui_fnc];
             missionNamespace setVariable ["FAC_firesGui_lastStateSig", ""];
             [player] remoteExec ["FADE_fires_requestState", 2];
+            [player] remoteExec ["FADE_firesFoS_requestSync", 2];
             ["refreshUi", [true]] call FAC_firesGui_fnc;
+            call FAC_firesGui_updateDroneStatus;
         };
 
         case "headerRefresh": {
             [player] remoteExec ["FADE_fires_requestState", 2];
+            [player] remoteExec ["FADE_firesFoS_requestSync", 2];
             [] spawn {
                 sleep 0.35;
                 if (!isNull (findDisplay 60700)) then {
                     ["refreshUi", [true]] call FAC_firesGui_fnc;
+                    call FAC_firesGui_updateDroneStatus;
                 };
             };
         };
@@ -130,7 +150,8 @@ FAC_firesGui_fnc = {
                 if (_type == "") then { _type = _cls };
                 private _dn = getText (configFile >> "CfgVehicles" >> _cls >> "displayName");
                 if (_dn == "") then { _dn = _cls };
-                private _row = _pieceLb lbAdd format ["%1 > %2", _type, _dn];
+                private _show = if (_label != "") then { _label } else { _dn };
+                private _row = _pieceLb lbAdd format ["%1 > %2", _type, _show];
                 _pieceLb lbSetData [_row, _cls];
                 private _tip = [_cls] call FAC_firesGui_buildPieceTooltip;
                 _pieceLb lbSetTooltip [_row, if (_tip != "") then { _tip } else { _cls }];
@@ -172,6 +193,7 @@ FAC_firesGui_fnc = {
 
             ["selChanged", []] call FAC_firesGui_fnc;
             call FAC_firesGui_updateAmmoPanel;
+            call FAC_firesGui_updateDroneStatus;
         };
 
         case "selChanged": {
@@ -315,6 +337,25 @@ FAC_firesGui_fnc = {
             [player] remoteExec ["FADE_fires_spawnAmmoTruck", 2];
             systemChat "FIRES: ammo truck spawn requested.";
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+        };
+
+        case "droneMapPlace": {
+            closeDialog 0;
+            [] spawn {
+                sleep 0.15;
+                if (!hasInterface) exitWith {};
+                [] call FAC_firesFoS_fnc_startMapClickDrone;
+            };
+            systemChat "FIRES: map opening — click where the observer drone should hover.";
+        };
+
+        case "droneDespawn": {
+            [player] remoteExec ["FADE_firesFoS_droneDespawnRequest", 2];
+            systemChat "FIRES: observer drone despawn requested.";
+            [] spawn {
+                sleep 0.5;
+                if (!isNull (findDisplay 60700)) then { call FAC_firesGui_updateDroneStatus };
+            };
         };
     };
 };

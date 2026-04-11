@@ -18,11 +18,15 @@ FADE_startupFactionFriendly = "";
 FADE_startupFactionEnemy = "";
 FADE_startupFactionCiv = "";
 FADE_civiliansEnabled = true;  // When false, no ambient civilians (zones, road vehicles, civ aircraft)
+// Highest CIV_T_* index placed in Eden (mission.sqm); AmbientCivilians scans CIV_T_1 .. this number
+FADE_civTriggerIndexMax = 109;
 FADE_aoStrength = "Mid";       // AO mission strength: "Low", "Mid", "High" (used by AO mission type)
 // Operation (global): number of enemy-held civ zones (Scenario GUI); must match available CIV_T_* zones
 FADE_operationZoneCount = 6;
 // Legacy: random pool if ever needed — Operation uses FADE_operationZoneCount from scenario
 FADE_operationZoneCountChoices = [4, 6, 10];
+// Intercept Convoy: minimum straight-line distance (m) between road start and road end (mission picks random roads; no Eden ROAD_SP_*).
+FADE_convoyMinRouteM = 5000;
 // Operation: enemy-held zone spawns an extra patrol vehicle every (min..max) seconds (randomized per tick)
 FADE_operationVehicleResupplyMin = 240;
 FADE_operationVehicleResupplyMax = 360;
@@ -42,30 +46,61 @@ FADE_opforAirSetting = "Off";               // "Off", "Low" (max 1, 10 min coold
 FADE_limitGearToFriendlyFaction = false;  // When true, Loadout and Vehicle GUIs restrict to chosen Friendly faction
 FADE_limitToCtbLoadouts = false;          // When true, Loadout GUI allows CTB presets only
 FADE_teleportToPlayerMode = 0;            // 0 = all players can teleport-to-player, 1 = SL/admin/Zeus only
+// Client (initPlayerLocal): seconds between HQ auto-heal checks when inside radius of FADE_basePos.
+FADE_hqHealIntervalSec = 40;
 
 // Loadout box Eden object names - all get Manage My Loadout, Save loadout, ACE Arsenal (if loaded)
-FADE_loadoutBoxNames = ["LOADOUTBOX", "LOADOUTBOX_2", "LOADOUTBOX_3", "LOADOUTBOX_4"];
+FADE_loadoutBoxNames = ["LOADOUTBOX", "LOADOUTBOX_1", "LOADOUTBOX_2", "LOADOUTBOX_3", "LOADOUTBOX_4"];
 // Pad names - Eden object variable names (expand as needed)
 FADE_padNames = ["HP_1", "HP_2", "HP_3", "HP_4", "HP_5", "HP_6", "HP_7", "HP_8"];
 // FIRES range: game logic object names (position + direction = spawn transform). Match mission.sqm / expand as needed.
 FADE_firesPosNames = ["firesPos_1", "firesPos_2", "firesPos_3", "firesPos_4", "firesPos_5", "firesPos_6"];
 // FIRES GUI slot list labels (same order / length as FADE_firesPosNames).
 FADE_firesPosDisplayNames = [
-    "Position 1 (South)",
-    "Position 2 (South)",
-    "Position 3 (South)",
-    "Position 4 (North)",
-    "Position 5 (North)",
-    "Position 6 (North)"
+    "Position 1 (East)",
+    "Position 2 (East)",
+    "Position 3 (East)",
+    "Position 4 (West)",
+    "Position 5 (West)",
+    "Position 6 (West)"
 ];
+// FIRES fall-of-shot: Eden object names for per-slot impact RTT screens (same order / length as FADE_firesPosNames). Texture index 0 = video (see AGENTS_EDEN).
+FADE_firesImpactScreenNames = [
+    "firesScreenPos_1",
+    "firesScreenPos_2",
+    "firesScreenPos_3",
+    "firesScreenPos_4",
+    "firesScreenPos_5",
+    "firesScreenPos_6"
+];
+// Assigned item class given to the player who spawns the range observer drone (faction-specific if needed).
+FADE_firesUavTerminalClass = "B_UavTerminal";
+// Range observer UAV CfgVehicles class (vanilla Darter default).
+FADE_firesRangeDroneClass = "B_UAV_01_F";
+// Seconds to show impact-area RTT on firesScreenPos_* after a qualifying round lands.
+FADE_firesImpactFeedDuration = 10;
+// RTT setObjectTextureGlobal indices on firesScreenPos_* . Use [0] for the main panel only; adding 1+ repeats the feed on PiP/bezel selections (tiled picture-in-picture).
+FADE_firesImpactVideoTextureIndices = [0];
+// 512+ recommended; non–power-of-two sizes often produce black RTT on some GPUs.
+FADE_firesImpactVideoRttResolution = 512;
+// r2t(name, aspect): 1.0 matches common PiP/RTT examples; widen/narrow if the panel looks stretched.
+FADE_firesImpactRttAspect = 1;
+// Server: projectile position poll for impact PiP (smaller = more accurate, more server load during arty fire).
+FADE_firesProjectileTrackSleep = 0.1;
+// Camera height (m) above impact for PiP (local anchor = impact point).
+FADE_firesImpactCamHeightM = 90;
 // Pads where planes cannot spawn (helicopters can use any pad)
 FADE_planeForbiddenPads = ["HP_1", "HP_2"];
 // Helipad markers (map markers to update when aircraft spawn/despawn). Index = pad order in FADE_helipadList. Empty = no marker.
 FADE_helipadMarkers = ["HeliMark_1", "HeliMark_2", "HeliMark_3", "HeliMark_4", "HeliMark_5", "HeliMark_6", "HeliMark_7", ""];
+// Seconds between pad marker text refreshes (initServer); 8s is enough for parked aircraft display.
+FADE_helipadMarkerUpdateInterval = 8;
 
 // Full repair / refuel / rearm while stationary within this radius of any HP_* or VEH_* pad (server: rsc\PadVehicleService.sqf)
 FADE_padServiceRadius = 22;
-FADE_padServiceInterval = 7;
+FADE_padServiceInterval = 10;
+// Merge pad sample points within this distance (m) so one nearestObjects covers nearby HP_/VEH_ markers.
+FADE_padServiceDedupeDist = 12;
 FADE_padServiceMaxSpeedKmh = 8;
 
 // Friendly / enemy infantry fallbacks when FADE_getUnitsForFaction returns empty (optional: set to mod rifleman classes).
@@ -97,7 +132,7 @@ FADE_cargoClasses = [
 ];
 
 // -----------------------------------------------------------------------------
-// Ambient civilians (CIV_T_* triggers, ROAD_SP_* road spawn points)
+// Ambient civilians (CIV_T_* triggers). Eden ROAD_SP_* only needed for Intercept Convoy mission.
 // Fallbacks when faction has no units/vehicles
 // -----------------------------------------------------------------------------
 FADE_civUnitClasses = [
@@ -136,13 +171,26 @@ FADE_civSpawnStaggerDelay = 1.5;  // seconds between spawn batches (lazy-load to
 FADE_civSpawnBatchSize = 2;       // civs per batch
 FADE_civParkedCountMin = 2;
 FADE_civParkedCountMax = 5;
-FADE_civCheckInterval = 45;
+FADE_civCheckInterval = 55;
 FADE_civMaxActiveZones = 4;  // max civ zones (and their patrol zones) active at once
 FADE_roadVehicleMax = 5;
+// Legacy (unused): old ROAD_SP_* ambient interval; ambient road civs now use FADE_roadSpawnTickSec + chance
 FADE_roadSpawnIntervalMin = 90;
 FADE_roadSpawnIntervalMax = 180;
+FADE_roadSpawnTickSec = 75;       // check interval while any civ zone is active
+FADE_roadSpawnChance = 1;        // each tick: probability of attempting a spawn (1 = every tick; still capped by FADE_roadVehicleMax)
+FADE_roadSpawnRingMin = 1000;    // m from active zone centre (ambient road spawn)
+FADE_roadSpawnRingMax = 2500;
+FADE_roadSpawnPlayerClear = 500; // spawn must be farther than this from any player
+FADE_roadFinalWpMinDist = 2000;  // final waypoint: random point at least this far from furthest-zone centre
+// Ambient civ road traffic: delete if farther than this from every player (0 = disable distance cleanup)
+FADE_civVehCleanupDist = 3500;
+// Civ ambient aircraft: same idea; -1 = use (FADE_civVehCleanupDist * 1.75) so air can stay visible a bit longer
+FADE_civAirCleanupDist = -1;
 FADE_civDebug = false;  // systemChat for spawn/despawn/road vehicle actions
 FADE_civDebugMarkers = false;  // when true, show map markers for active civ zones (Civ: zoneId)
+// Dynamic enemy checkpoints / roadblocks (rsc\EnemyCheckpoints.sqf at checkPointPos_*). Off until Eden spawn markers exist again.
+FADE_enemyCheckpointsEnabled = false;
 FADE_checkpointDebug = false;  // set true: systemChat for enemy checkpoints / roadblocks (spawn, despawn, patrols off)
 
 // Counter-attack QRF (HVT / Hostage / Clear Area): seconds to wait after first player-in-zone before wave 1 (random between min..max).
@@ -155,8 +203,8 @@ FADE_counterAttackCargoStaggerSec = 0.35;
 
 // Trace bis_fnc_cp_getQueueDelay / bis_fnc_cp_main callers (installs stubs in DebugBIScpStub.sqf). Leave false in normal play.
 FADE_debugBIScp = false;
-// Seconds between re-applies of bis_fnc_cp_* stubs (BIS can lazy-load over them). 1 is plenty; lower only if RPT shows CP errors after combat.
-FADE_bisCpStubReapplyInterval = 1;
+// Seconds between re-applies of bis_fnc_cp_* stubs (BIS can lazy-load over them). 2 Hz is enough for normal play; use 1 if RPT shows CP errors after combat.
+FADE_bisCpStubReapplyInterval = 2;
 
 // BIS Civilian Presence (Tac-Ops): see rsc\fn_bisCpPreInit.sqf - do not stub getQueueDelay with { 0 } when main is real CODE.
 call compile preprocessFileLineNumbers "rsc\fn_bisCpPreInit.sqf";
@@ -174,6 +222,32 @@ while { _cqbI <= 49 } do {
 };
 // Pop-up target class (vanilla); CQB server logic + noPop + client animateSource keep it down until drill end
 FADE_cqbTargetClass = "TargetP_Inf_F";
+
+// Sniper range (terminalSniper + sniperRangeTarget_*); same pop-up class unless overridden
+FADE_sniperTargetClass = "TargetP_Inf_F";
+// Impact marker at bullet hit (server); falls back if class missing from modset
+FADE_sniperImpactMarkerClass = "Sign_sphere25cm_EP1";
+
+// Firing / AT range (terminalRange)
+// Vehicle class toggles in GUI map to these keys: car, truck, apc, tank.
+FADE_rangeVehicleTypeMap = [
+    ["car", "UK3CB_CSAT_B_O_UAZ_Open"],
+    ["truck", "UK3CB_CW_SOV_O_EARLY_Ural"],
+    ["apc", "rhs_bmp2e_vv"],
+    ["tank", "rhsgref_ins_t72bc"]
+];
+// AT weapons list for rangeGunPos_* slots (label, class).
+FADE_rangeAtWeaponDefinitions = [
+    ["RPG-42 [AT] (placeholder)", "launch_RPG32_F"],
+    ["MRAWS [AT] (placeholder)", "launch_MRAWS_green_F"],
+    ["Titan AT [placeholder]", "launch_B_Titan_short_F"]
+];
+FADE_rangeGunPosNames = ["rangeGunPos_1", "rangeGunPos_2", "rangeGunPos_3", "rangeGunPos_4", "rangeGunPos_5", "rangeGunPos_6"];
+// Friendly BLUFOR ground vehicles (same class pool as Vehicle GUI land spawn); logic positions in Eden.
+FADE_rangeFriendlyVehPosNames = [
+    "rangeFriendlyVehPos_1", "rangeFriendlyVehPos_2", "rangeFriendlyVehPos_3",
+    "rangeFriendlyVehPos_4", "rangeFriendlyVehPos_5", "rangeFriendlyVehPos_6"
+];
 
 // -----------------------------------------------------------------------------
 // CTB Locker Room ambient (client: rsc\LockerRoomAmbient.sqf)

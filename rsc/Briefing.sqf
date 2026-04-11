@@ -339,6 +339,63 @@ Pilot: Read back as required; call ''In'', ''Off'', ''Splash'' and egress; reque
 "];
 
 // -----------------------------------------------------------------------------
+// KAT Medical (KAM) — by topic; condensed from KAM docs for in-mission reference
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["KAT — Airway and vomiting", "
+<font color='#FFD700' size='14'>KAT AIRWAY (KAM DOCS)</font><br/><br/>
+<font color='#87CEEB'>Obstruction</font>  - Airway blocked (e.g. tongue, debris). <font color='#90EE90'>Guedel tube</font> (<font color='#C0C0C0'>kat_guedel</font>) supports the airway and clears obstruction; patient must be unconscious and <font color='#FF6666'>not</font> occluded. One-time use; removed if patient wakes.<br/><br/>
+<font color='#87CEEB'>Occlusion</font>  - Different from obstruction: material in the airway (e.g. after vomiting while supine). Guedel does <font color='#FF6666'>not</font> clear occlusions. Use <font color='#90EE90'>Accuvac</font> (<font color='#C0C0C0'>kat_accuvac</font>) suction from Head &gt; Airway Management; patient must be unconscious; clears occlusion reliably per KAM.<br/><br/>
+<font color='#87CEEB'>Vomiting</font>  - Unconscious patients can vomit; on the back, vomit can remain and cause occlusion  - treat as occlusion (suction / appropriate KAT actions).<br/><br/>
+<font color='#87CEEB'>Chest seal path</font>  - Chest seal is under Torso &gt; Airway Management for pneumothorax / tension / hemopneumothorax (see chest note).
+"];
+
+_facNotes pushBack ["KAT — Bleeding and wounds", "
+<font color='#FFD700' size='14'>KAT BLEEDING / WOUNDS (KAM DOCS)</font><br/><br/>
+In-game, wound severity often shows as bandage colours (rough guide): <font color='#EEEE00'>yellow</font>  - moderate bleed; <font color='#FFA500'>orange</font>  - heavy; <font color='#FF6666'>red</font>  - severe. Stop bleeding with the right tools (tourniquets on limbs, packing, etc.) per your SOP.<br/><br/>
+<font color='#87CEEB'>Coagulation</font>  - If enabled, wounds can clot over time (unstable clot); clotting factors are consumed. <font color='#90EE90'>TXA</font> (IV) can help stabilise clots; IV fluid choice affects coagulation (see fluids note).<br/><br/>
+<font color='#87CEEB'>Deep penetrating injury</font>  - See separate note; treated in the chest / seal workflow, not ordinary surface bandaging alone.
+"];
+
+_facNotes pushBack ["KAT — Blood volume and IV fluids", "
+<font color='#FFD700' size='14'>KAT BLOOD VOLUME &amp; IV (KAM DOCS)</font><br/><br/>
+Rough blood state (about <font color='#90EE90'>6 L</font> total): <font color='#90EE90'>5.9  - 5.1 L</font> lost some; <font color='#90EE90'>5.1  - 4.2 L</font> lost a lot; <font color='#90EE90'>4.2  - 3.6 L</font> lost a large amount; <font color='#90EE90'>3.6  - 3.0 L</font> lost a fatal amount. By default, below about <font color='#FF6666'>3 L</font> is lethal unless treated; severe loss leads toward <font color='#90EE90'>cardiac arrest</font>.<br/><br/>
+<font color='#87CEEB'>IV / IO</font>  - Establish access: <font color='#90EE90'>16g IV</font> (limbs, minor damage, no TQ on that limb) or <font color='#90EE90'>FAST IO</font> (torso; painful). <font color='#87CEEB'>IV obstruction</font>  - After some drugs (e.g. TXA, EACA), line can block; use Inspect Catheter and <font color='#90EE90'>saline flush</font> (needs saline on line).<br/><br/>
+<font color='#87CEEB'>Fluids</font>  - Saline, blood, plasma increase circulating volume; each differs in effect on coagulation and kidney pH (see KAM Nephrology if using long treatments).
+"];
+
+_facNotes pushBack ["KAT — Cardiac arrest and AED", "
+<font color='#FFD700' size='14'>KAT CARDIAC ARREST (KAM DOCS)</font><br/><br/>
+Arrest from critical HR/BP; patient becomes unconscious with no effective breathing/perfusion. <font color='#87CEEB'>Rhythms</font>  - <font color='#90EE90'>Shockable:</font> <font color='#90EE90'>VT</font> (ventricular tachycardia), <font color='#90EE90'>VF</font> (ventricular fibrillation). <font color='#90EE90'>Non-shockable:</font> <font color='#90EE90'>PEA</font> (pulseless electrical activity  - EKG may look organised but no pulse), <font color='#90EE90'>asystole</font> (flat/near-flat line). <font color='#FF6666'>PEA can mimic normal sinus on EKG</font>  - check pulse.<br/><br/>
+<font color='#87CEEB'>AED</font> (<font color='#C0C0C0'>kat_AED</font>)  - Analyse rhythm; shock if advised (clear the patient); if no shock advised, CPR and meds per algorithm. <font color='#87CEEB'>AED-X</font> adds EKG to identify VT vs VF vs PEA vs asystole. If you only have a basic AED, KAM notes you may treat shockable rhythms similarly to V-tach.<br/><br/>
+<font color='#87CEEB'>Treatment assumptions (KAM)</font>  - Docs assume major bleeding controlled, airway managed, IV access and fluids where appropriate, pads connected, and rhythm identified before advanced arrest care (epinephrine, amiodarone, lidocaine, shocks as indicated).
+"];
+
+_facNotes pushBack ["KAT — Chest deep penetrating injury", "
+<font color='#FFD700' size='14'>KAT CHEST / DEEP PENETRATING (KAM DOCS)</font><br/><br/>
+<font color='#90EE90'>Deep penetrating injury</font>  - A chest injury pattern in KAM tied to ballistic/thoracic trauma logic; shown in injury UI. Manage with appropriate KAT chest interventions (e.g. <font color='#90EE90'>chest seal</font> <font color='#C0C0C0'>kat_chestseal</font> for open chest wounds, pneumothorax, tension pneumothorax, hemopneumothorax per mod). Use Torso &gt; Airway Management &gt; chest seal as per training.<br/><br/>
+Pair with bleeding control and respiratory assessment (breath sounds, SpO2, decompression options if your modset enables them).
+"];
+
+_facNotes pushBack ["KAT — Pharmacy quick reference", "
+<font color='#FFD700' size='14'>KAT PHARMACY (KAM DOCS  - SHORT)</font><br/><br/>
+<font color='#87CEEB'>IM (examples)</font>  - <font color='#90EE90'>Epinephrine</font> used in arrest algorithms and shocks; follow KAM cardiac pages for sequencing with CPR and analysis.<br/><br/>
+<font color='#87CEEB'>IV (examples)</font>  - <font color='#90EE90'>Amiodarone</font>, <font color='#90EE90'>lidocaine</font> appear in shockable-rhythm treatment chains; <font color='#90EE90'>TXA</font> supports clot stabilisation; <font color='#90EE90'>EACA</font> also tied to coagulation/line care. Always confirm dose and contraindications in-game.<br/><br/>
+Full tables: KAM docs under Pharmacy (IV / IM / Oral).
+"];
+
+_facNotes pushBack ["KAT — Medical training terminal (FADE)", "
+<font color='#FFD700' size='14'>MEDICAL TRAINING TERMINAL</font><br/><br/>
+Use the <font color='#90EE90'>Medical training</font> scroll action on <font color='#90EE90'>terminalMedical</font> (Medical Training Area). Spawn training dummies, apply <font color='#90EE90'>random or chosen presets</font> from the KAT injury pool (same framework as before). Dummies are uniform-only (no vest, backpack, NVG, or carried items) when configured that way from the terminal:<br/><br/>
+<font color='#87CEEB'>Bleeding tiers</font>  - Minor: awake, few wounds, light bleed. Moderate: <font color='#90EE90'>unconscious</font>, several wounds (yellow-tier bleed rates). Massive: unconscious, many wounds (orange-tier rates). Catastrophic: unconscious, very many wounds (red-tier rates). <font color='#C0C0C0'>Uncon</font> means unconscious.<br/><br/>
+<font color='#87CEEB'>Airway</font>  - Obstruction; occlusion; or vomiting pathway (occlusion / suction scenario).<br/><br/>
+<font color='#87CEEB'>Blood volume</font>  - Hypovolemia from reduced circulating volume (some to severe) plus light wounds.<br/><br/>
+<font color='#87CEEB'>Deep penetrating injury</font>  - KAM deep penetrating chest flag with torso trauma.<br/><br/>
+<font color='#87CEEB'>Cardiac</font>  - Arrest rhythm <font color='#90EE90'>VT</font>, <font color='#90EE90'>VF</font>, <font color='#90EE90'>PEA</font>, or <font color='#90EE90'>asystole</font> (KAM types).<br/><br/>
+<font color='#87CEEB'>Fractures</font>  - KAM Surgery simple, compound, or comminuted fracture on a random body part (requires KAT Surgery).<br/><br/>
+Requires <font color='#90EE90'>ACE Medical + KAM (KAT)</font> (and <font color='#90EE90'>KAT Surgery</font> for fracture presets). Heal or remove dummies from the terminal when finished.
+"];
+
+// -----------------------------------------------------------------------------
 // Note: Rotary Piloting 101
 // -----------------------------------------------------------------------------
 _facNotes pushBack ["Rotary Piloting 101", "
@@ -406,8 +463,8 @@ player createDiaryRecord ["FAC_Briefing", ["How It Works", "
 - <font color='#00FF00'>Manage Vehicles</font> (vehicle board)  - Spawn or despawn aircraft at helipads and land vehicles at the vehicle points. Lists come from loaded mods (CfgVehicles). Fixed-wing is restricted from some pads; use alternate helipads as labelled. Pilots get a pylon / loadout action on spawned aircraft when supported.<br/><br/>
 - <font color='#FFD700'>Manage Missions</font> and <font color='#87CEEB'>Manage Scenario</font> (scenario laptop)  - Same object, two actions. Missions: pick a type, read the in-GUI description, start or abort. Scenario: environment, factions, AI options, and limits (see below). <font color='#90EE90'>Apply</font> sends settings to the server for everyone.<br/><br/>
 - <font color='#87CEEB'>CQB Training</font> (optional board)  - Configure shoothouse drills (targets or live AI, density, civilians) and start/end from the GUI.<br/><br/>
-- <font color='#87CEEB'>Fast Travel</font> (teleport boards)  - Jump to listed locations: HQ, CQB, FIRES range, locker room, medical, helipads (two groups), firing range, SDE's Pub, cargo slingload point, specialist area (see in-game list; Eden anchors use names like <font color='#90EE90'>teleportBase</font>).<br/><br/>
-- <font color='#87CEEB'>Loadout boxes</font>  - <font color='#90EE90'>Manage My Loadout</font> (presets and faction gear), <font color='#90EE90'>Save my loadout</font> (restored after respawn if you saved), and <font color='#90EE90'>ACE Arsenal</font> when ACE3 is loaded.<br/><br/>
+- <font color='#87CEEB'>Fast Travel</font> (teleport boards)  - Jump to listed locations: CTB HQ, Sultan's CQB Killhouse, Joon's Fires Range, Juko's Locker Room, Bean's Medical Area, helipads (two groups), firing range, SDE's Pub, cargo slingload point, CTB Specialist Area (see in-game list; Eden anchors use names like <font color='#90EE90'>teleportBase</font>).<br/><br/>
+- <font color='#87CEEB'>Loadout boxes</font>  - <font color='#90EE90'>Manage My Loadout</font> (presets and faction gear), <font color='#90EE90'>Save my loadout</font> (updates what you respawn with; your mission spawn gear is captured automatically until you save), and <font color='#90EE90'>ACE Arsenal</font> when ACE3 is loaded.<br/><br/>
 - <font color='#87CEEB'>Jukebox</font>  - Use jukebox radio props for 3D music at that location, or the <font color='#FFD700'>Vehicle loudspeaker...</font> scroll action while inside a vehicle (same tracks; 3D sound attached to the vehicle). Stop-all is <font color='#FFD700'>Manage Scenario</font> → Admin only.<br/><br/>
 - <font color='#87CEEB'>Locker room</font> (optional <font color='#90EE90'>LOCKER_1</font>)  - Flavour interaction when placed in Eden.<br/><br/>
 
@@ -428,20 +485,20 @@ In <font color='#FFD700'>Manage Missions</font>, types marked <font color='#90EE
 - <font color='#90EE90'>Hostage</font>  - Rescue hostages from urban buildings; return survivors near base; fail if too many die.<br/>
 - <font color='#90EE90'>HVT</font>  - High-value target in an urban site; kill or capture and return to base.<br/>
 - <font color='#90EE90'>Intercept Convoy</font>  - Destroy the convoy before it reaches its end point.<br/>
-- <font color='#90EE90'>Operation</font>  - Capture several civ zones at once; zones flip every 60 s based on OPFOR vs BLUFOR players on the ground; OPFOR can recapture.<br/>
+- <font color='#90EE90'>Operation</font>  - Capture several civ zones at once; each zone is captured once OPFOR in the ellipse are eliminated (stays captured until OPFOR return); evaluation every 60 s.<br/>
 - <font color='#90EE90'>Search &amp; Destroy</font>  - Three garrisoned buildings in a town plus patrols; eliminate all hostiles.<br/><br/>
+- <font color='#90EE90'>Asset Retrieval</font>  - Secure intel at the site (scroll action), then RTB.<br/>
+- <font color='#90EE90'>CSAR</font>  - One survivor at a downed helo wreck; extract and RTB (global slot).<br/>
+- <font color='#90EE90'>Escape &amp; Evasion</font>  - Starter picks evadees (must include self); they are dispersed without GPS in a hostile area; RTB all alive within 1000 m of base. No task markers. After some time OPFOR may orbit a search helicopter over the area (not directly tasked on players).<br/><br/>
 <font color='#87CEEB'>Single [S]</font><br/>
 - <font color='#90EE90'>Troop Insert</font> / <font color='#90EE90'>Troop Extract</font>  - AI squad transport to or from base.<br/>
 - <font color='#90EE90'>CASEVAC</font>  - Like Troop Extract, but the squad has KIA and ACE injuries before pickup.<br/>
-- <font color='#90EE90'>CSAR</font>  - One survivor at a downed helo wreck; extract and RTB.<br/>
-- <font color='#90EE90'>Asset Retrieval</font>  - Secure intel at the site (scroll action), then RTB.<br/>
 - <font color='#90EE90'>Cargo / Resupply</font>  - Sling-load cargo from <font color='#90EE90'>CargoPoint_1</font>; fly to the spawned camp and land to complete.<br/>
-- <font color='#90EE90'>Medical</font> / <font color='#90EE90'>Medical KAT</font> / <font color='#90EE90'>MASCAS</font> / <font color='#90EE90'>MASCASKAT</font>  - Casualties at <font color='#90EE90'>MEDICAL_1</font>; stabilise or heal per briefing (ACE / KAT variants when those mods are present).<br/>
-- <font color='#90EE90'>Mine Clearing</font>  - Locate and disarm mines in a marked area.<br/>
-- <font color='#90EE90'>Find and Clear IEDs</font>  - Find and disarm an IED near civil zones / roads.<br/><br/>
+- <font color='#90EE90'>Medical training</font>  - <font color='#90EE90'>terminalMedical</font> at the Medical Training Area: GUI to spawn dummies and apply KAT presets (bleeding, airway, blood volume, deep penetrating chest, cardiac rhythms, fractures). Requires ACE Medical + KAT. <font color='#C0C0C0'>Uncon</font> in notes means unconscious.<br/>
+- <font color='#90EE90'>Mine Clearing</font>  - EOD on roads near civil zones: either 2–5 mines or 1–3 IEDs (one type per mission), spaced along the route; SMEAC states which.<br/><br/>
 
 <font color='#87CEEB'>RESPAWN AND BRIEFING</font><br/>
-Respawn is enabled; after death, use the respawn menu as configured. Saved loadouts (loadout box) re-apply when you respawn. Use the map: <font color='#FFD700'>Scenario Brief</font> for this guide and <font color='#FFD700'>CTB Notes</font> for RATEL, 9-line, 5-line, CFF, and joint-fires reference.
+Respawn is enabled; after death, use the respawn menu as configured. You respawn with your mission spawn loadout unless you use <font color='#90EE90'>Save my loadout</font> at a loadout box to replace it. Use the map: <font color='#FFD700'>Scenario Brief</font> for this guide; open <font color='#FFD700'>CTB Notes</font> for RATEL, 9-line, 5-line, CFF, joint-fires reference, and the <font color='#FFD700'>KAT — …</font> medical quick-reference topics (same diary subject).
 "]];
 
 // -----------------------------------------------------------------------------
@@ -454,8 +511,8 @@ player createDiaryRecord ["FAC_Briefing", ["Overview", "
 This is a <font color='#90EE90'>multiplayer dynamic sandbox</font> built for <font color='#90EE90'>Combat Team Bravo (CTB)</font> style training, with emphasis on <font color='#B0D0FF'>helicopter operations</font> (insert, extract, CAS, resupply, formation and terrain flying). The same session can include <font color='#B0D0FF'>joint fires</font> practice (CAS talk-on, AO AI JTAC when enabled), <font color='#B0D0FF'>dismounted and urban tasks</font> (HVT, hostage, clear area, CQB drills), and <font color='#B0D0FF'>combined arms</font> (convoy intercept, large AO fights). Objectives and enemy layouts are generated per mission; scenario settings (weather, factions, AI, AAA, civilians) apply to the whole server once applied.<br/><br/>
 
 <font color='#87CEEB'>LOCATION</font><br/>
-Your base is the main FOB (<font color='#90EE90'>BASE_1</font>). Boards and laptops there open the vehicle, mission, and scenario GUIs; loadout boxes, teleport boards, optional CQB and jukebox props, and keyboard shortcuts support the same workflow without Zeus. Aircraft use marked helipads; ground vehicles use marked spawn points. Medical and mass-casualty missions need <font color='#90EE90'>MEDICAL_1</font> placed on the map.<br/><br/>
+Your base is the main FOB (<font color='#90EE90'>BASE_1</font>). Boards and laptops there open the vehicle, mission, and scenario GUIs; loadout boxes, teleport boards, optional CQB and jukebox props, and keyboard shortcuts support the same workflow without Zeus. Aircraft use marked helipads; ground vehicles use marked spawn points. <font color='#90EE90'>KAT medical drills</font> use the <font color='#90EE90'>Medical training</font> terminal at the Medical Training Area.<br/><br/>
 
 <font color='#87CEEB'>INTENT</font><br/>
-Spawn what you need, configure the theatre in <font color='#FFD700'>Manage Scenario</font>, then start missions from <font color='#FFD700'>Manage Missions</font> (or <font color='#FFD700'>Ctrl+;</font>). Global missions are large one-at-a-time operations (AO, CAS, HVT, hostage, clear area, convoy); single missions include troop transport, cargo, medical lines, mines, and IEDs. Open <font color='#FFD700'>How It Works</font> below for the full checklist, and <font color='#FFD700'>CTB Notes</font> for RATEL, 9-line, 5-line, CFF, and marking.
+Spawn what you need, configure the theatre in <font color='#FFD700'>Manage Scenario</font>, then start missions from <font color='#FFD700'>Manage Missions</font> (or <font color='#FFD700'>Ctrl+;</font>). Global missions are one-at-a-time shared operations (AO, CAS, HVT, hostage, clear area, convoy, CSAR, and others); single missions include troop transport, cargo, and mine/IED clearance (EOD). KAT medical practice is via the <font color='#90EE90'>Medical training</font> terminal, not Manage Missions. Open <font color='#FFD700'>How It Works</font> below for the full checklist, <font color='#FFD700'>CTB Notes</font> for RATEL, 9-line, 5-line, CFF, and marking, and <font color='#FFD700'>KAT — …</font> topics for KAM medical quick reference.
 "]];

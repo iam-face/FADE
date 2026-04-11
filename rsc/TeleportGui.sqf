@@ -1,32 +1,42 @@
 // =============================================================================
-// TeleportGui.sqf - Fast Travel GUI (opened from teleportBoard_1..8)
+// TeleportGui.sqf - Fast Travel GUI (opened from teleportBoard_1..9 or Ctrl+Shift+apostrophe hotkey in initPlayerLocal)
 // =============================================================================
-// Player selects a destination and is teleported there (client-side setPos).
+// Player picks a destination button (two-click confirm) and is teleported (client-side setPos).
 // Destinations are Eden object names or MARKER_<markerName>; player is placed 5 m behind the anchor, facing it.
-// List is sorted A–Z; right panel: 60604 = centered destination title; 60605 = JPG (img\teleport_<varName>.jpg)
-// (no embedded CT_MAP - caused CTDs). Eden variable names in FAC_teleportGui_destinations (e.g. teleportBase).
-// Legacy art remapped via FAC_teleportGui_previewPathOverrides; new points use img\teleport_teleport*.jpg or overrides.
-// Optional fallback if a specific file is missing: img\teleport_default.jpg
-// Shared blur + map teleport helpers use FAC_teleport_* prefix.
+// Destination tiles (idc 60620+) fill the main panel grid. Shared blur helpers use FAC_teleport_* prefix.
 // =============================================================================
 
-FAC_teleportGui_previewPathOverrides = createHashMap;
-FAC_teleportGui_previewPathOverrides set ["teleportBase", "img\teleport_BASE_1.jpg"];
-FAC_teleportGui_previewPathOverrides set ["teleportSDE", "img\teleport_SDE.jpg"];
-FAC_teleportGui_previewPathOverrides set ["teleportMedical", "img\teleport_MEDICAL_1.jpg"];
-FAC_teleportGui_previewPathOverrides set ["teleportPad3", "img\teleport_HP_4.jpg"];
-FAC_teleportGui_previewPathOverrides set ["teleportRange", "img\teleport_firingRangeBoard.jpg"];
-FAC_teleportGui_previewPathOverrides set ["teleportCQB", "img\teleport_cqbBoard.jpg"];
-FAC_teleportGui_previewPathOverrides set ["teleportLockerRoom", "img\teleport_teleportBoard_7.jpg"];
 // Return-to-base / default Fast Travel anchor (Eden object name)
 FAC_teleportGui_destBaseKey = "teleportBase";
+FAC_teleportGui_destBtnIdcFirst = 60620;
+FAC_teleportGui_destBtnIdcLast = 60639;
+FAC_teleportGui_destBtnTextNormal = [1, 1, 1, 1];
+FAC_teleportGui_destBtnTextConfirm = [1, 0.2, 0.2, 1];
 
-FAC_teleportGui_fnc_previewImagePath = {
-    params ["_objName"];
-    if (_objName in FAC_teleportGui_previewPathOverrides) exitWith {
-        FAC_teleportGui_previewPathOverrides get _objName
-    };
-    format ["img\teleport_%1.jpg", _objName]
+FAC_teleportGui_fnc_destroyDestButtons = {
+    params ["_display"];
+    if (isNull _display) exitWith {};
+    {
+        _x params ["_idc"];
+        private _c = _display displayCtrl _idc;
+        if (!isNull _c) then { ctrlDelete _c; };
+    } forEach (uiNamespace getVariable ["FAC_teleportGui_destButtonMeta", []]);
+    uiNamespace setVariable ["FAC_teleportGui_destButtonMeta", []];
+};
+
+FAC_teleportGui_fnc_resetDestButtonVisuals = {
+    private _display = findDisplay 60600;
+    if (isNull _display) exitWith {};
+    private _defBg = [0.2, 0.4, 0.62, 1];
+    {
+        _x params ["_idc", "_objNameMeta", "_label"];
+        private _c = _display displayCtrl _idc;
+        if (!isNull _c) then {
+            _c ctrlSetText _label;
+            _c ctrlSetBackgroundColor _defBg;
+            _c ctrlSetForegroundColor FAC_teleportGui_destBtnTextNormal;
+        };
+    } forEach (uiNamespace getVariable ["FAC_teleportGui_destButtonMeta", []]);
 };
 
 // Returns [ok, atlPos, faceDir] for teleport offset math (Eden object or MARKER_name).
@@ -45,53 +55,6 @@ FAC_teleportGui_fnc_resolveDestination = {
     };
 };
 
-FAC_teleportGui_fnc_updateDestPreview = {
-    params ["_display", "_objName"];
-    if (_objName isEqualTo "" || {!(_objName isEqualType "")}) exitWith {};
-    private _st = _display displayCtrl 60604;
-    private _pic = _display displayCtrl 60605;
-    if (isNull _st || {isNull _pic}) exitWith {};
-    private _list = _display displayCtrl 60601;
-    private _cur = lbCurSel _list;
-    private _label = if (_cur >= 0) then { _list lbText _cur } else { "?" };
-
-    private _path = [_objName] call FAC_teleportGui_fnc_previewImagePath;
-    private _pathDefault = "img\teleport_default.jpg";
-    private _tex = "";
-    if (fileExists _path) then {
-        _tex = _path;
-    } else {
-        if (fileExists _pathDefault) then { _tex = _pathDefault };
-    };
-    _pic ctrlSetText _tex;
-
-    private _resolved = [_objName] call FAC_teleportGui_fnc_resolveDestination;
-    _resolved params ["_ok", "_anchorPos", "_anchorDir"];
-    if (!_ok) exitWith {
-        private _hint = if (_tex isEqualTo "") then {
-            "<br/><t color='#888888' size='0.85'>Add: " + _path + "</t>"
-        } else {
-            ""
-        };
-        private _why = if (_objName find "MARKER_" == 0) then {
-            format ["Marker '%1' not found.", _objName select [8]]
-        } else {
-            "Eden object not found."
-        };
-        _st ctrlSetStructuredText parseText format [
-            "<t align='center' valign='middle' size='1.05' color='#FFAAAA'>%1</t><br/><t align='center' color='#AAAAAA' size='0.88'>%2</t>%3",
-            _label,
-            _why,
-            _hint
-        ];
-    };
-    private _title = format ["<t align='center' valign='middle' size='1.15' color='#FFFFFF'>%1</t>", _label];
-    if (_tex isEqualTo "") then {
-        _title = _title + format ["<br/><t align='center' color='#888888' size='0.78'>Add image: %1</t>", _path];
-    };
-    _st ctrlSetStructuredText parseText _title;
-};
-
 // Run inside spawn: blur -> _args call _moveCode -> unblur.
 // Pass numeric/array data in _args - do not capture caller private vars inside _moveCode; spawn runs after the
 // caller returns, so closures over private locals become undefined (see RPT: Undefined variable _tpPos).
@@ -101,16 +64,32 @@ FAC_teleport_fnc_applyBlurAndMove = {
     if (isNil "_args") then { _args = [] };
     [_moveCode, _args] spawn {
         params ["_moveCode", "_args"];
-        private _pp = ppEffectCreate ["DynamicBlur", 315];
-        _pp ppEffectEnable true;
-        _pp ppEffectAdjust [0.55];
-        _pp ppEffectCommit 0.12;
-        sleep 1;
+        private _blur = ppEffectCreate ["DynamicBlur", 315];
+        if (_blur >= 0) then {
+            _blur ppEffectEnable true;
+            _blur ppEffectAdjust [22];
+            _blur ppEffectCommit 0.1;
+        };
+        private _chroma = ppEffectCreate ["ChromAberration", 316];
+        private _chromaOk = _chroma >= 0;
+        if (_chromaOk) then {
+            _chroma ppEffectEnable true;
+            _chroma ppEffectAdjust [0.05, 0.05, true];
+            _chroma ppEffectCommit 0.1;
+        };
+        sleep 0.85;
         _args call _moveCode;
-        _pp ppEffectAdjust [0];
-        _pp ppEffectCommit 0.22;
-        sleep 1;
-        ppEffectDestroy _pp;
+        if (_blur >= 0) then {
+            _blur ppEffectAdjust [0];
+            _blur ppEffectCommit 0.35;
+        };
+        if (_chromaOk) then {
+            _chroma ppEffectAdjust [0, 0, true];
+            _chroma ppEffectCommit 0.35;
+        };
+        sleep 0.85;
+        if (_chromaOk) then { ppEffectDestroy _chroma; };
+        if (_blur >= 0) then { ppEffectDestroy _blur; };
     };
 };
 
@@ -145,7 +124,7 @@ FAC_teleport_fnc_addReturnToBase = {
 FAC_teleport_fnc_returnToBase = {
     private _resolved = [FAC_teleportGui_destBaseKey] call FAC_teleportGui_fnc_resolveDestination;
     _resolved params ["_ok", "_pos", "_dir"];
-    if (!_ok) exitWith { systemChat "HQ (teleportBase) not found."; };
+    if (!_ok) exitWith { systemChat "CTB HQ (teleportBase) not found."; };
     private _dx = sin _dir * 5;
     private _dy = cos _dir * 5;
     private _tpPos = [(_pos select 0) - _dx, (_pos select 1) - _dy, _pos select 2];
@@ -161,21 +140,23 @@ FAC_teleport_fnc_returnToBase = {
         player removeAction _aid;
         player setVariable ["FAC_teleport_returnAid", -1];
     };
-    systemChat "Returned to base.";
+    systemChat "Returned to CTB HQ.";
 };
 
 FAC_teleportGui_destinations = [
     ["Cargo Slingload", "teleportSlingload"],
-    ["CQB Killhouse", "teleportCQB"],
-    ["FIRES Range", "teleportFires"],
-    ["HQ", "teleportBase"],
-    ["Locker Room", "teleportLockerRoom"],
-    ["Medical Area", "teleportMedical"],
+    ["Sultan's CQB Killhouse", "teleportCQB"],
+    ["Joon's Fires Range", "teleportFires"],
+    ["CTB HQ", "teleportBase"],
+    ["Juko's Locker Room", "teleportLockerRoom"],
+    ["Bean's Medical Area", "teleportMedical"],
+    ["Officer Area", "teleportOfficer"],
     ["Pads 1 and 2", "teleportPad1"],
     ["Pads 3, 4 and 5", "teleportPad3"],
     ["Firing Range", "teleportRange"],
+    ["Sniper Range", "teleportSniper"],
     ["SDE's Pub", "teleportSDE"],
-    ["Specialist Area", "teleportSpecialist"]
+    ["CTB Specialist Area", "teleportSpecialist"]
 ];
 
 FAC_teleportGui_fnc_buildPlayerDestinations = {
@@ -319,48 +300,115 @@ FAC_teleportGui_fnc = {
             if (isNull _display) exitWith {};
             ["onLoadPlayers", []] call FAC_teleportGui_fnc;
         };
-        case "selChanged": {
-            if (missionNamespace getVariable ["FAC_teleportGui_suppressPreviewSel", false]) exitWith {};
-            private _display = findDisplay 60600;
-            if (isNull _display) exitWith {};
-            private _list = _display displayCtrl 60601;
-            private _cur = lbCurSel _list;
-            if (_cur < 0) exitWith {};
-            private _objName = _list lbData _cur;
-            [_display, _objName] call FAC_teleportGui_fnc_updateDestPreview;
-        };
         case "onLoad": {
             private _display = findDisplay 60600;
             if (isNull _display) exitWith {};
+            missionNamespace setVariable ["FAC_teleportGui_fnc", FAC_teleportGui_fnc];
             uinamespace setVariable ["FAC_teleportGui_fnc", FAC_teleportGui_fnc];
 
-            private _list = _display displayCtrl 60601;
-            lbClear _list;
+            missionNamespace setVariable ["FAC_teleportGui_pendingObj", ""];
+            [_display] call FAC_teleportGui_fnc_destroyDestButtons;
+            private _defaultObjName = missionNamespace getVariable ["FAC_teleportGui_defaultDest", ""];
+
             private _sorted = +FAC_teleportGui_destinations;
             _sorted sort true;
+            private _count = count _sorted;
+            if (_count > (FAC_teleportGui_destBtnIdcLast - FAC_teleportGui_destBtnIdcFirst + 1)) then {
+                diag_log "[FAC] Teleport GUI: destination count exceeds button idc range.";
+            };
+
+            private _meta = [];
+            private _idc = FAC_teleportGui_destBtnIdcFirst;
+            private _gx0 = 0.04;
+            private _gx1 = 0.96;
+            private _gy0 = 0.122;
+            private _gy1 = 0.772;
+            private _gapH = 0.01;
+            private _gapV = 0.01;
+            private _totalW = _gx1 - _gx0;
+            private _totalH = _gy1 - _gy0;
+            private _cols = ((ceil (sqrt _count)) max 1) min 5;
+            if (_count > 16) then { _cols = 5; };
+            private _rows = ceil (_count / _cols);
+            private _cellW = (_totalW - _gapH * (_cols - 1)) / _cols;
+            private _cellH = (_totalH - _gapV * (_rows - 1)) / _rows;
+            private _gi = 0;
             {
-                _x params ["_name", "_objName"];
-                private _idx = _list lbAdd _name;
-                _list lbSetData [_idx, _objName];
+                if (_idc > FAC_teleportGui_destBtnIdcLast) exitWith {};
+                _x params ["_label", "_objName"];
+                private _row = floor (_gi / _cols);
+                private _col = _gi % _cols;
+                private _xPos = _gx0 + _col * (_cellW + _gapH);
+                private _yPos = _gy0 + _row * (_cellH + _gapV);
+                private _ctrl = _display ctrlCreate ["RscButton", _idc];
+                _ctrl ctrlSetPosition [_xPos, _yPos, _cellW, _cellH];
+                _ctrl ctrlCommit 0;
+                _ctrl ctrlSetText _label;
+                _ctrl ctrlSetBackgroundColor [0.2, 0.4, 0.62, 1];
+                _ctrl ctrlSetForegroundColor FAC_teleportGui_destBtnTextNormal;
+                private _act = format [
+                    "['destBtn', ['%1']] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);",
+                    _objName
+                ];
+                _ctrl buttonSetAction _act;
+                _meta pushBack [_idc, _objName, _label];
+                _idc = _idc + 1;
+                _gi = _gi + 1;
             } forEach _sorted;
-            if (lbSize _list > 0) then {
-                private _defaultObjName = missionNamespace getVariable ["FAC_teleportGui_defaultDest", ""];
-                private _sel = 0;
-                if (_defaultObjName != "") then {
-                    for "_i" from 0 to (lbSize _list - 1) do {
-                        if ((_list lbData _i) == _defaultObjName) exitWith { _sel = _i };
+            uiNamespace setVariable ["FAC_teleportGui_destButtonMeta", _meta];
+            if (_defaultObjName != "") then {
+                {
+                    _x params ["_idc", "_ob", "_lab"];
+                    if (_ob isEqualTo _defaultObjName) exitWith {
+                        private _hc = _display displayCtrl _idc;
+                        if (!isNull _hc) then { _hc ctrlSetBackgroundColor [0.28, 0.52, 0.78, 1]; };
                     };
-                } else {
-                    for "_i" from 0 to (lbSize _list - 1) do {
-                        if ((_list lbData _i) == FAC_teleportGui_destBaseKey) exitWith { _sel = _i };
-                    };
-                };
-                missionNamespace setVariable ["FAC_teleportGui_suppressPreviewSel", true];
-                _list lbSetCurSel _sel;
-                missionNamespace setVariable ["FAC_teleportGui_suppressPreviewSel", false];
-                [_display, _list lbData _sel] call FAC_teleportGui_fnc_updateDestPreview;
+                } forEach _meta;
             };
             missionNamespace setVariable ["FAC_teleportGui_defaultDest", ""];
+        };
+        case "destBtn": {
+            _params params ["_objName"];
+            private _display = findDisplay 60600;
+            if (isNull _display) exitWith {};
+            private _pending = missionNamespace getVariable ["FAC_teleportGui_pendingObj", ""];
+            if (_objName isEqualTo _pending) then {
+                missionNamespace setVariable ["FAC_teleportGui_pendingObj", ""];
+                [] call FAC_teleportGui_fnc_resetDestButtonVisuals;
+
+                private _resolved = [_objName] call FAC_teleportGui_fnc_resolveDestination;
+                _resolved params ["_ok", "_pos", "_dir"];
+                if (!_ok) exitWith {
+                    systemChat format ["Destination not found: %1", _objName];
+                };
+                private _dx = sin _dir * 5;
+                private _dy = cos _dir * 5;
+                private _tpPos = [(_pos select 0) - _dx, (_pos select 1) - _dy, _pos select 2];
+                private _faceDir = _tpPos getDir _pos;
+                private _doGuiMove = {
+                    params ["_atl", "_dir"];
+                    player setPosATL _atl;
+                    player setDir _dir;
+                };
+                closeDialog 0;
+                [_doGuiMove, [_tpPos, _faceDir]] call FAC_teleport_fnc_applyBlurAndMove;
+                systemChat "Fast travel complete.";
+                [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+            } else {
+                missionNamespace setVariable ["FAC_teleportGui_pendingObj", _objName];
+                [] call FAC_teleportGui_fnc_resetDestButtonVisuals;
+                {
+                    _x params ["_idc", "_ob", "_lab"];
+                    if (_ob isEqualTo _objName) exitWith {
+                        private _c = _display displayCtrl _idc;
+                        if (!isNull _c) then {
+                            _c ctrlSetText "Are you sure?";
+                            _c ctrlSetForegroundColor FAC_teleportGui_destBtnTextConfirm;
+                            _c ctrlSetBackgroundColor [0.22, 0.1, 0.1, 1];
+                        };
+                    };
+                } forEach (uiNamespace getVariable ["FAC_teleportGui_destButtonMeta", []]);
+            };
         };
         case "openPlayers": {
             if (!(call FAC_playerCanTeleportToPlayers)) exitWith {
@@ -457,38 +505,11 @@ FAC_teleportGui_fnc = {
                 };
                 systemChat format ["Redeployed to %1.", name _t];
             };
-            [_doPlayerMove, [_uid]] call FAC_teleport_fnc_applyBlurAndMove;
             closeDialog 0;
+            [_doPlayerMove, [_uid]] call FAC_teleport_fnc_applyBlurAndMove;
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
-        };
-        case "teleport": {
-            private _display = findDisplay 60600;
-            if (isNull _display) exitWith {};
-            private _list = _display displayCtrl 60601;
-            private _cur = lbCurSel _list;
-            if (_cur < 0) exitWith { systemChat "Select a destination."; };
-            private _objName = _list lbData _cur;
-            if (_objName == "") exitWith { systemChat "Invalid destination."; };
-
-            private _resolved = [_objName] call FAC_teleportGui_fnc_resolveDestination;
-            _resolved params ["_ok", "_pos", "_dir"];
-            if (!_ok) then {
-                systemChat format ["Destination not found: %1", _objName];
-            } else {
-                private _dx = sin _dir * 5;
-                private _dy = cos _dir * 5;
-                private _tpPos = [(_pos select 0) - _dx, (_pos select 1) - _dy, _pos select 2];
-                private _faceDir = _tpPos getDir _pos;
-                private _doGuiMove = {
-                    params ["_atl", "_dir"];
-                    player setPosATL _atl;
-                    player setDir _dir;
-                };
-                [_doGuiMove, [_tpPos, _faceDir]] call FAC_teleport_fnc_applyBlurAndMove;
-                closeDialog 0;
-                systemChat "Fast travel complete.";
-                [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
-            };
         };
     };
 };
+
+missionNamespace setVariable ["FAC_teleportGui_fnc", FAC_teleportGui_fnc];
