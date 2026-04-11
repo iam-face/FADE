@@ -1,17 +1,19 @@
 // =============================================================================
 // OperationMission.sqf - Multi-zone capture (global). Random civ zones; players
 // only (BLUFOR). Main loop polls every 5s (abort/task); zone evaluation every 60s
-// using distance2D vs ellipse radius — captured if 0 OPFOR and ≥1 BLUFOR player;
-// recaptured if OPFOR count > BLUFOR player count.
+// using distance2D vs ellipse radius — captured when 0 OPFOR (latched until OPFOR
+// re-enter); markers: enemy if OPFOR outnumber BLUFOR players in ellipse, else
+// orange if OPFOR present, friendly when clear.
 // Infantry: patrols + building garrison (optional smoking barrel). Vehicles with
 // cargo run between enemy-held zones; periodic resupply vehicles per zone; QRF
 // from nearest enemy-held zone when zone is contested (BLUFOR + OPFOR present).
-// Params: FADE_operationParams = [_player, _taskId, _basePos, _enemyUnits]
+// Params: FADE_operationParams = [_player, _taskId, _basePos, _enemyUnits, _operationNameUpper, _operationName]
 // =============================================================================
 if (!isServer) exitWith {};
-if (isNil "FADE_operationParams" || { count FADE_operationParams < 4 }) exitWith {};
+if (isNil "FADE_operationParams" || { count FADE_operationParams < 5 }) exitWith {};
 
-FADE_operationParams params ["_player", "_taskId", "_basePos", "_enemyUnits"];
+FADE_operationParams params ["_player", "_taskId", "_basePos", "_enemyUnits", ["_operationNameUpper", "OPERATION"], ["_operationName", "Operation"]];
+private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", { params [["_p", [0, 0, 0]]]; [_p] call FADE_normPos3 }];
 
 _enemyUnits = [_enemyUnits] call FADE_resolveScenarioEnemyUnits;
 
@@ -78,6 +80,17 @@ _zones = [_zones, [], {
     { _m = _m min (_c distance2D _x) } forEach _playersOpSort;
     _m
 }, "ASCEND"] call BIS_fnc_sortBy;
+private _operationCenter = [0, 0, 0];
+if (count _zones > 0) then {
+    private _sx = 0;
+    private _sy = 0;
+    {
+        private _p = [_x] call FADE_normPos3;
+        _sx = _sx + (_p select 0);
+        _sy = _sy + (_p select 1);
+    } forEach _zones;
+    _operationCenter = [_sx / (count _zones), _sy / (count _zones), 0];
+};
 
 private _zoneRadius = 250;
 private _opAllGroups = [];
@@ -109,7 +122,7 @@ private _fnc_opFindSpawnPos = {
     params ["_zoneCenter", "_zoneRadius", "_minDist"];
     private _players = [] call _fnc_opPlayers;
     if (count _players == 0) exitWith {
-        [[_zoneCenter, 0, _zoneRadius * 0.85, 10, 0, 0.4, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray
+        [[_zoneCenter, 0, _zoneRadius * 0.85, 10, 1, 0.4, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray
     };
     private _zc = [_zoneCenter] call FADE_normPos3;
     private _try = 0;
@@ -119,7 +132,7 @@ private _fnc_opFindSpawnPos = {
         private _angle = random 360;
         private _dist = random (_zoneRadius * 0.95);
         private _sp = [(_zc select 0) + _dist * cos _angle, (_zc select 1) + _dist * sin _angle, 0];
-        _sp = [[_sp, 0, 25, 3, 0, 0.4, 0, [], _sp], _zc] call FADE_findSafePosArray;
+        _sp = [[_sp, 0, 25, 3, 1, 0.4, 0, [], _sp], _zc] call FADE_findSafePosArray;
         if (count _sp < 2) then { _sp = _zc };
         if (count _sp < 3) then { _sp = [(_sp select 0), (_sp select 1), 0] };
         private _ok = true;
@@ -132,7 +145,7 @@ private _fnc_opFindSpawnPos = {
     { if (_zc distance2D _x < _minPd) then { _minPd = _zc distance2D _x; _nearestP = _x } } forEach _players;
     private _dirAway = _nearestP getDir _zc;
     private _sp = _nearestP getPos [_minDist + _zoneRadius + 50, _dirAway];
-    _sp = [[_sp, 0, 50, 5, 0, 0.4, 0, [], _sp], _zc] call FADE_findSafePosArray;
+    _sp = [[_sp, 0, 50, 5, 1, 0.4, 0, [], _sp], _zc] call FADE_findSafePosArray;
     if (count _sp < 2) then { _sp = _zc };
     _sp
 };
@@ -230,10 +243,10 @@ private _fnc_opMakeVeh = {
     _m setMarkerAlpha 0.5;
 
     private _iconName = _mName + "_icon";
-    private _mi = createMarker [_iconName, _center];
+    private _mi = createMarker [_iconName, [_center, (_zoneRadius - 25) min 100] call _mkrJitter];
     _mi setMarkerType "hd_flag";
     _mi setMarkerColor _markerEnemyOp;
-    _mi setMarkerText format ["Zone %1", _idx + 1];
+    _mi setMarkerText _operationName;
     _markerNames pushBack _iconName;
 
     // --- Patrols (2 groups, loop around the ellipse) ---
@@ -242,7 +255,7 @@ private _fnc_opMakeVeh = {
         private _angle0 = (_pg / (_numPatrol max 1)) * 360 + random 45;
         private _dist0 = 50 + random ((_zoneRadius - 50) max 0);
         private _sp = [(_center select 0) + _dist0 * (cos _angle0), (_center select 1) + _dist0 * (sin _angle0), 0];
-        _sp = [[_sp, 0, 25, 3, 0, 0.4, 0, [], _sp], _center] call FADE_findSafePosArray;
+        _sp = [[_sp, 0, 25, 3, 1, 0.4, 0, [], _sp], _center] call FADE_findSafePosArray;
         private _ps = [3 + floor random 3, 2] call _scaleOpforCount;
         private _shuf = _enemyUnits call BIS_fnc_arrayShuffle;
         private _classes = _shuf select [0, _ps min count _shuf];
@@ -255,7 +268,7 @@ private _fnc_opMakeVeh = {
             private _a = _angle0 + _w * 90 + random 25;
             private _d = 60 + random ((_zoneRadius - 70) max 0);
             private _wp = [(_center select 0) + _d * (cos _a), (_center select 1) + _d * (sin _a), 0];
-            _wp = [[_wp, 0, 20, 3, 0, 0.4, 0, [], _wp], _center] call FADE_findSafePosArray;
+            _wp = [[_wp, 0, 20, 3, 1, 0.4, 0, [], _wp], _center] call FADE_findSafePosArray;
             private _way = _grp addWaypoint [_wp, _w];
             _way setWaypointType "MOVE";
             _way setWaypointSpeed "LIMITED";
@@ -293,7 +306,7 @@ private _fnc_opMakeVeh = {
                     if (_added == 1 && { random 1 < 0.5 }) then {
                         private _bc = getPosATL _building;
                         _bc = [_bc] call FADE_normPos3;
-                        private _barrelPos = [[_bc, 0, 18, 2, 0, 0.3, 0, [], _bc], _bc] call FADE_findSafePosArray;
+                        private _barrelPos = [[_bc, 0, 18, 2, 1, 0.3, 0, [], _bc], _bc] call FADE_findSafePosArray;
                         if (count _barrelPos >= 2) then {
                             private _bar = createVehicle ["MetalBarrel_burning_F", _barrelPos, [], 0, "NONE"];
                             if (!isNull _bar) then {
@@ -345,16 +358,95 @@ missionNamespace setVariable ["FADE_operationCapState_" + _taskId, +_captured];
 
 missionNamespace setVariable ["FADE_operationEntities_" + _taskId, [_opAllGroups, _markerNames, _zones, _zoneRadius, _allVehs, _barrels]];
 
-if (!isNull _player) then {
-    [_player, _taskId, [
-        format [
-            "Capture all %1 marked zones. OPFOR must be cleared while BLUFOR players hold each ellipse. Zones can be recaptured if OPFOR outnumber friendly players inside the zone. Evaluation every 60 seconds.",
-            count _zones
-        ],
+private _taskBuilderOp = missionNamespace getVariable ["FADE_buildMissionTaskSmeacText", {}];
+private _countFriendlyPlayersOp = missionNamespace getVariable ["FADE_countFriendlyPlayers", {
+    params [["_friendlySide", west]];
+    private _n = 0;
+    { if (isPlayer _x && { side group _x == _friendlySide }) then { _n = _n + 1 } } forEach allPlayers;
+    _n
+}];
+private _friendlyPlayerCountOp = [_sideFriendly] call _countFriendlyPlayersOp;
+private _acreSummaryOp = [] call (missionNamespace getVariable ["FADE_getAcreChannelSummary", { "ACRE channel names unavailable" }]);
+private _actualOpforCountOp = { alive _x && { side group _x == _sideEnemy } } count allUnits;
+private _opforBaselineOp = if (_actualOpforCountOp > 0) then { _actualOpforCountOp } else { 36 };
+private _opforCountFactorOp = if (random 1 < 0.5) then { 0.8 } else { 1.2 };
+private _estimatedOpforCountOp = (round (_opforBaselineOp * _opforCountFactorOp)) max 0;
+private _topoOp = [_operationCenter] call (missionNamespace getVariable ["FADE_getTopographySummary", { ["UNKNOWN", "Unknown area"] }]);
+private _topoGridOp = _topoOp param [0, "UNKNOWN"];
+private _topoAreaOp = _topoOp param [1, "Unknown area"];
+private _enemyFactionClassOp = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
+private _enemyFactionNameOp = getText (configFile >> "CfgFactionClasses" >> _enemyFactionClassOp >> "displayName");
+if (_enemyFactionNameOp == "") then { _enemyFactionNameOp = _enemyFactionClassOp };
+private _friendlyFactionClassOp = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"];
+private _friendlyFactionNameOp = getText (configFile >> "CfgFactionClasses" >> _friendlyFactionClassOp >> "displayName");
+if (_friendlyFactionNameOp == "") then { _friendlyFactionNameOp = _friendlyFactionClassOp };
+private _intelFormatterOp = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
+private _situationIntelOp = if (_intelFormatterOp isEqualTo {}) then {
+    format [
+        "<t align='left' color='#B0B0B0'>Topography: Grid %1 | Area: %2</t><br/><t align='left' color='#B0B0B0'>Enemy: %3 | Strength: ~%4 personnel (estimated).</t>",
+        _topoGridOp,
+        _topoAreaOp,
+        _enemyFactionNameOp,
+        _estimatedOpforCountOp
+    ]
+} else {
+    [
         "Operation",
-        ""
-    ], _basePos, "ASSIGNED", 1, true, "attack", true] call BIS_fnc_taskCreate;
+        _operationCenter,
+        _sideEnemy,
+        _sideFriendly,
+        _estimatedOpforCountOp,
+        _opforCountFactorOp,
+        _enemyFactionNameOp,
+        _friendlyFactionNameOp,
+        _friendlyPlayerCountOp,
+        _topoGridOp,
+        _topoAreaOp
+    ] call _intelFormatterOp
 };
+private _situationIntelOpHint = if (_intelFormatterOp isEqualTo {}) then {
+    format [
+        "<t align='left' color='#FFFFFF'>Topography: Grid %1 | Area: %2</t><br/><t align='left' color='#FFFFFF'>Enemy: %3 | Strength: ~%4 personnel (estimated).</t>",
+        _topoGridOp,
+        _topoAreaOp,
+        _enemyFactionNameOp,
+        _estimatedOpforCountOp
+    ]
+} else {
+    [
+        "Operation",
+        _operationCenter,
+        _sideEnemy,
+        _sideFriendly,
+        _estimatedOpforCountOp,
+        _opforCountFactorOp,
+        _enemyFactionNameOp,
+        _friendlyFactionNameOp,
+        _friendlyPlayerCountOp,
+        _topoGridOp,
+        _topoAreaOp,
+        "#FFFFFF"
+    ] call _intelFormatterOp
+};
+private _zeroAlphaObjOp = missionNamespace getVariable ["CTB_PILOT_1", objNull];
+private _zeroAlphaNameOp = if (isNull _zeroAlphaObjOp) then { "UNASSIGNED" } else { name _zeroAlphaObjOp };
+if (_zeroAlphaNameOp == "") then { _zeroAlphaNameOp = "UNASSIGNED" };
+private _taskDescOp = if (_taskBuilderOp isEqualTo {}) then {
+    format [
+        "Capture all %1 marked zones. Clear OPFOR in each zone and prevent enemy re-entry.",
+        count _zones
+    ]
+} else {
+    [
+        format ["Capture all %1 marked zones across the AO.", count _zones],
+        _operationCenter,
+        _situationIntelOp,
+        "Clear each zone methodically, then transition to the next while maintaining pressure across the AO.",
+        format ["Zero Alpha (%1).", _zeroAlphaNameOp],
+        format ["ACRE channels: %1", _acreSummaryOp]
+    ] call _taskBuilderOp
+};
+[_sideFriendly, _taskId, [_taskDescOp, "Operation", ""], _operationCenter, "CREATED", 1, true, "attack", true] call BIS_fnc_taskCreate;
 
 missionNamespace setVariable ["FADE_operationAborted_" + _taskId, false];
 
@@ -413,13 +505,25 @@ missionNamespace setVariable ["FADE_operationAborted_" + _taskId, false];
 } forEach _allVehs;
 
 private _brief = format [
-    "OPERATION%1%1Capture %2 zones across the AO. Clear all OPFOR in each ellipse and keep BLUFOR players inside while holding — OPFOR can retake a zone if they outnumber you.%1%1Enemy patrols, garrisoned buildings, and vehicles move between zones; QRF may respond when you are engaged in a zone.%1%1Evaluation runs every 60 seconds.",
+    "OPERATION%1%1Capture %2 zones across the AO. Clear all OPFOR in each ellipse — once a zone is clear it stays captured so you can move on; if OPFOR re-enter they contest it again (they control the marker if they outnumber BLUFOR players there).%1%1Enemy patrols, garrisoned buildings, and vehicles move between zones; QRF may respond when you are engaged in a zone.%1%1Evaluation runs every 60 seconds.",
     toString [10],
     count _zones
 ];
 if (!isNull _player) then {
     _player setVariable ["FADE_myMissionBrief", _brief, true];
-    [format ["<t color='#B0B0B0'>Zones: %1</t><br/><br/><t color='#C0C0C0'>Clear and hold all zones concurrently.</t>", count _zones]] remoteExec ["FADE_showMissionHint", _player];
+    private _smeacFormatter = missionNamespace getVariable ["FADE_formatMissionAssignedSmeac", {}];
+    if (_smeacFormatter isEqualTo {}) then {
+        [format ["<t color='#FFFFFF'>Zones: %1</t><br/><br/><t color='#FFFFFF'>Clear all zones — each stays captured once OPFOR are eliminated.</t>", count _zones]] remoteExec ["FADE_showMissionHint", 0];
+    } else {
+        [([
+            _operationNameUpper,
+            format ["<t align='left' color='#FFFFFF'>Objective zones: %1</t><br/><t align='left' color='#FFFFFF'>Capture and hold all marked zones.</t>", count _zones],
+            _situationIntelOpHint,
+            "<t align='left' color='#FFFFFF'>Clear OPFOR in each zone, then move to the next while maintaining pressure across the AO.</t>",
+            format ["<t align='left' color='#FFFFFF'>Zero Alpha (%1)</t>", _zeroAlphaNameOp],
+            format ["<t align='left' color='#FFFFFF'>Command &amp; Signal: %1</t>", _acreSummaryOp]
+        ]) call _smeacFormatter] remoteExec ["FADE_showMissionHint", 0];
+    };
     [_player, "Operation"] call FADE_notifyOthersMissionStarted;
 };
 
@@ -446,7 +550,7 @@ private _resSpan = (_resMax - _resMin) max 0;
         params ["_zoneCenter", "_zr", "_minD"];
         private _players = [] call _fncPlayers;
         if (count _players == 0) exitWith {
-            [[_zoneCenter, 0, _zr * 0.85, 10, 0, 0.4, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray
+            [[_zoneCenter, 0, _zr * 0.85, 10, 1, 0.4, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray
         };
         private _zc = [_zoneCenter] call FADE_normPos3;
         private _try = 0;
@@ -456,7 +560,7 @@ private _resSpan = (_resMax - _resMin) max 0;
             private _angle = random 360;
             private _dist = random (_zr * 0.95);
             private _sp = [(_zc select 0) + _dist * cos _angle, (_zc select 1) + _dist * sin _angle, 0];
-            _sp = [[_sp, 0, 25, 3, 0, 0.4, 0, [], _sp], _zc] call FADE_findSafePosArray;
+            _sp = [[_sp, 0, 25, 3, 1, 0.4, 0, [], _sp], _zc] call FADE_findSafePosArray;
             if (count _sp < 2) then { _sp = _zc };
             if (count _sp < 3) then { _sp = [(_sp select 0), (_sp select 1), 0] };
             private _ok = true;
@@ -469,7 +573,7 @@ private _resSpan = (_resMax - _resMin) max 0;
         { if (_zc distance2D _x < _minPd) then { _minPd = _zc distance2D _x; _nearestP = _x } } forEach _players;
         private _dirAway = _nearestP getDir _zc;
         private _sp = _nearestP getPos [_minD + _zr + 50, _dirAway];
-        _sp = [[_sp, 0, 50, 5, 0, 0.4, 0, [], _sp], _zc] call FADE_findSafePosArray;
+        _sp = [[_sp, 0, 50, 5, 1, 0.4, 0, [], _sp], _zc] call FADE_findSafePosArray;
         if (count _sp < 2) then { _sp = _zc };
         _sp
     };
@@ -635,20 +739,19 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, 0];
             private _i = _forEachIndex;
             private _wCnt = [_center, _zoneRadius] call FADE_op_countBluforPlayersInRadius;
             private _eCnt = [_center, _zoneRadius] call FADE_op_countEnemyMenInRadius;
-            if (_eCnt > _wCnt) then {
+            if (_eCnt > 0) then {
                 _captured set [_i, false];
-                (_markerNames select (_i * 2)) setMarkerColor _markerEnemyOp;
-                (_markerNames select (_i * 2 + 1)) setMarkerColor _markerEnemyOp;
-            } else {
-                if (_eCnt == 0 && _wCnt > 0) then {
-                    _captured set [_i, true];
-                    (_markerNames select (_i * 2)) setMarkerColor _markerFriendlyOp;
-                    (_markerNames select (_i * 2 + 1)) setMarkerColor _markerFriendlyOp;
+                if (_eCnt > _wCnt) then {
+                    (_markerNames select (_i * 2)) setMarkerColor _markerEnemyOp;
+                    (_markerNames select (_i * 2 + 1)) setMarkerColor _markerEnemyOp;
                 } else {
-                    _captured set [_i, false];
                     (_markerNames select (_i * 2)) setMarkerColor "ColorOrange";
                     (_markerNames select (_i * 2 + 1)) setMarkerColor "ColorOrange";
                 };
+            } else {
+                _captured set [_i, true];
+                (_markerNames select (_i * 2)) setMarkerColor _markerFriendlyOp;
+                (_markerNames select (_i * 2 + 1)) setMarkerColor _markerFriendlyOp;
             };
         } forEach _zones;
         missionNamespace setVariable ["FADE_operationCapState_" + _taskId, +_captured];

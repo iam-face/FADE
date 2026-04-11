@@ -21,6 +21,10 @@ call compile preprocessFileLineNumbers "rsc\Config.sqf";
 // Debug: optional BIS campaign function stubs - default off in Config (see rsc\DebugBIScpStub.sqf)
 call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";
 
+// Mission-start client visual baseline.
+setViewDistance 1500;
+setTerrainGrid 25;
+
 // Lobby params mirrored client-side for UI/action gating.
 private _params = if (!isNil "paramsArray" && { paramsArray isEqualType [] }) then { paramsArray } else { [] };
 missionNamespace setVariable ["FAC_param_missionsGuiAccess", _params param [0, missionNamespace getVariable ["FAC_param_missionsGuiAccess", 0]]];
@@ -48,10 +52,26 @@ FAC_playerCanTeleportToPlayers = {
 };
 
 // -----------------------------------------------------------------------------
-// Mission hints  - formatted hint shown only to the targeted player (called via remoteExec from server)
+// Mission hints  - formatted hint (remoteExec from server: one player, or 0 = all clients with interface)
 // -----------------------------------------------------------------------------
 FADE_showMissionHint = {
     if (count _this > 0) then { hint parseText (_this select 0) };
+};
+
+// Server → evadee client: teleport to mission start position
+FADE_clientTeleportPos = {
+    params [["_pos", [0, 0, 0]]];
+    if (!hasInterface) exitWith {};
+    if (count _pos < 2) exitWith {};
+    private _z = _pos param [2, 0];
+    player setPosATL [(_pos select 0), (_pos select 1), _z];
+};
+
+// Server → evadee client: remove GPS (linked item) only
+FADE_clientStripEvadeeGPS = {
+    if (!hasInterface) exitWith {};
+    if ("ItemGPS" in assignedItems player) then { player unlinkItem "ItemGPS" };
+    player removeItem "ItemGPS";
 };
 
 // Dedicated MP: AI sideChat from server may not show on clients; local sideChat + client mirror (P15).
@@ -72,10 +92,12 @@ FADE_aiSideChat_exec = {
 // Scenario config sync  - server sends when Apply; client uses for Loadout/Vehicle GUIs
 // -----------------------------------------------------------------------------
 FADE_syncScenarioConfig = {
-    params [["_friendlyFaction", "BLU_F"], ["_limitGear", false], ["_ctbOnly", false]];
+    params [["_friendlyFaction", "BLU_F"], ["_limitGear", false], ["_ctbOnly", false], ["_enemyFaction", "OPF_F"], ["_civFaction", "CIV_F"]];
     missionNamespace setVariable ["FADE_scenarioFriendlyFaction", _friendlyFaction];
     missionNamespace setVariable ["FADE_limitGearToFriendlyFaction", _limitGear];
     missionNamespace setVariable ["FADE_limitToCtbLoadouts", _ctbOnly];
+    missionNamespace setVariable ["FADE_scenarioEnemyFaction", _enemyFaction];
+    missionNamespace setVariable ["FADE_scenarioCivFaction", _civFaction];
 };
 
 // -----------------------------------------------------------------------------
@@ -167,11 +189,21 @@ FAC_surrenderChallenge_fnc_activate = {
 
 // Load GUI scripts (LoadoutGui must compile even if CTB data file breaks — CTB presets load lazily when that tab is chosen)
 call compile preprocessFileLineNumbers "rsc\LoadoutGui.sqf";
+// Respawn snapshot: capture Eden slot / JIP loadout early (before long waitUntil / death) if not yet saved (loadout box overwrites).
+[] spawn {
+    sleep 0.3;
+    [player] call FAC_loadoutGui_trySaveInitialRespawnLoadoutIfMissing;
+};
 call compile preprocessFileLineNumbers "rsc\VehicleGui.sqf";
 call compile preprocessFileLineNumbers "rsc\FiresArtilleryList.sqf";
+call compile preprocessFileLineNumbers "rsc\FiresFallOfShot.sqf";
 call compile preprocessFileLineNumbers "rsc\FiresGui.sqf";
+call compile preprocessFileLineNumbers "rsc\MedicalTrainingKAT_fractureLocal.sqf";
+call compile preprocessFileLineNumbers "rsc\MedicalTrainingGui.sqf";
+call compile preprocessFileLineNumbers "rsc\EscapeEvasionPickGui.sqf";
 call compile preprocessFileLineNumbers "rsc\MissionsGui.sqf";
 call compile preprocessFileLineNumbers "rsc\ScenarioGui.sqf";
+missionNamespace setVariable ["FAC_scenarioGui_fnc", FAC_scenarioGui_fnc];
 call compile preprocessFileLineNumbers "rsc\JukeboxGui.sqf";
 missionNamespace setVariable ["FAC_jukeboxGui_fnc", FAC_jukeboxGui_fnc];
 missionNamespace setVariable ["FAC_jukebox_clientPlay", FAC_jukebox_clientPlay];
@@ -183,14 +215,27 @@ missionNamespace setVariable ["FAC_jukebox_fnc_installVehicleLoudspeakerHandlers
 // Jukebox 3D audio: no JIP replay — replaying from FAC_jukebox_activeSources on connect caused extra playSound3D starts (heard as random restarts on dedicated).
 
 // CQB pop-up targets: server triggers this on all clients so knock-down is visible in MP.
+// animateSource errors if the source name is missing on this model — walk CfgVehicles inheritance (leg hits etc. use same path).
 FADE_cqbClient_forceTargetDown = {
     params [["_t", objNull]];
     if (isNull _t) exitWith {};
-    { _t animateSource [_x, 1, true] } forEach ["terc", "popup_Source", "popup_hide", "Target_Up_Source"];
+    private _v = _t;
+    {
+        private _src = _x;
+        private _c = configFile >> "CfgVehicles" >> (typeOf _v);
+        private _ok = false;
+        while { isClass _c && { !_ok } } do {
+            if (isClass (_c >> "AnimationSources" >> _src)) then { _ok = true };
+            if (!_ok) then { _c = inheritsFrom _c };
+        };
+        if (_ok) then { _v animateSource [_src, 1, true]; };
+    } forEach ["terc", "popup_Source", "popup_hide", "Target_Up_Source"];
 };
 call compile preprocessFileLineNumbers "rsc\CQBGui.sqf";
+call compile preprocessFileLineNumbers "rsc\SniperGui.sqf";
+call compile preprocessFileLineNumbers "rsc\RangeGui.sqf";
 call compile preprocessFileLineNumbers "rsc\CqbLoudspeaker.sqf";
-call compile preprocessFile "rsc\TeleportGui.sqf";
+call compile preprocessFileLineNumbers "rsc\TeleportGui.sqf";
 
 // After server/client actions from board GUIs, refresh any open dialog (same as header Refresh) after a short delay.
 FAC_guiScheduleHeaderRefresh = {
@@ -206,26 +251,81 @@ FAC_guiScheduleHeaderRefresh = {
         private _cqb = missionNamespace getVariable ["FAC_cqbGui_fnc", {}];
         private _tp = missionNamespace getVariable ["FAC_teleportGui_fnc", {}];
         private _fires = missionNamespace getVariable ["FAC_firesGui_fnc", {}];
+        private _medTr = missionNamespace getVariable ["FAC_medicalTrainingGui_fnc", {}];
+        private _sniper = missionNamespace getVariable ["FAC_sniperGui_fnc", {}];
+        private _range = missionNamespace getVariable ["FAC_rangeGui_fnc", {}];
         if (!isNull (findDisplay 60001)) then { ["headerRefresh", []] call _veh };
         if (!isNull (findDisplay 60002)) then { ["headerRefresh", []] call _miss };
-        if (!isNull (findDisplay 60003) || {!isNull (findDisplay 60004)}) then { ["headerRefresh", []] call _scen };
+        if (!isNull (findDisplay 60003)) then { ["headerRefresh", []] call _scen };
         if (!isNull (findDisplay 60200)) then { ["headerRefresh", []] call _load };
         if (!isNull (findDisplay 60400)) then { ["headerRefresh", []] call _juke };
         if (!isNull (findDisplay 60500)) then { ["headerRefresh", []] call _cqb };
         if (!isNull (findDisplay 60600)) then { ["headerRefresh", []] call _tp };
         if (!isNull (findDisplay 60610)) then { ["headerRefreshPlayers", []] call _tp };
         if (!isNull (findDisplay 60700)) then { ["headerRefresh", []] call _fires };
+        if (!isNull (findDisplay 60800)) then { ["headerRefresh", []] call _medTr };
+        if (!isNull (findDisplay 60910)) then { ["headerRefresh", []] call _sniper };
+        if (!isNull (findDisplay 60920)) then { ["headerRefresh", []] call _range };
     };
 };
 missionNamespace setVariable ["FAC_guiScheduleHeaderRefresh", FAC_guiScheduleHeaderRefresh];
 
 waitUntil {
-    sleep 0.05;
+    sleep 0.1;
     !isNil "FADE_heliClasses" && !isNil "FADE_boards" && !isNil "FADE_loadoutBox" && !isNil "FADE_cqbBoard"
+};
+
+FAC_addScenarioActionToTerminal = {
+    params ["_obj", ["_priority", 2.5]];
+    if (isNull _obj) exitWith {};
+    _obj addAction [
+        "<t color='#87CEEB'>Manage Scenario</t>",
+        {
+            if !(call FAC_playerCanUseScenarioGui) exitWith {
+                systemChat "Scenario GUI is restricted to group leaders (admin/Zeus override).";
+            };
+            [] spawn { sleep 0.2; ["open", []] call FAC_scenarioGui_fnc };
+        },
+        [],
+        _priority,
+        false,
+        true,
+        "",
+        "",
+        3
+    ];
 };
 
 // Request scenario config from server (limit gear, friendly faction) for Loadout/Vehicle GUIs
 [player] remoteExec ["FADE_sendScenarioConfigToClient", 2];
+
+// FIRES fall-of-shot: clear stale client drone-screen state after JIP / load (no briefing RTT)
+[] spawn {
+    sleep 1.5;
+    if (!hasInterface) exitWith {};
+    [player] remoteExec ["FADE_firesFoS_requestSync", 2];
+};
+
+// Firing / AT range: terminalRange (human + vehicle targets, AT weapon slots)
+[] spawn {
+    sleep 0.35;
+    private _rangeTerm = missionNamespace getVariable ["FADE_terminalRange", objNull];
+    if (isNull _rangeTerm) then { _rangeTerm = missionNamespace getVariable ["terminalRange", objNull] };
+    if (isNull _rangeTerm) exitWith {};
+    removeAllActions _rangeTerm;
+    _rangeTerm addAction [
+        "<t color='#FFA45B'>Firing and AT range</t>",
+        { [] spawn { sleep 0.2; ["open", []] call FAC_rangeGui_fnc } },
+        [],
+        5,
+        false,
+        true,
+        "",
+        "",
+        3
+    ];
+    [_rangeTerm, 2] call FAC_addScenarioActionToTerminal;
+};
 
 // Manage Vehicles: terminalVeh when present; else vehBoard (vehBoard keeps vehicles2.jpg texture on initServer)
 private _vehicleGuiObj = missionNamespace getVariable ["FADE_vehicleTerminal", objNull];
@@ -260,6 +360,25 @@ if (!isNull _firesTerm) then {
         "",
         3
     ];
+    [_firesTerm, 2] call FAC_addScenarioActionToTerminal;
+};
+
+// Medical training terminal (terminalMedical): dummy spawn / injuries / heal
+private _medTerm = missionNamespace getVariable ["FADE_medicalTrainingTerminal", objNull];
+if (!isNull _medTerm) then {
+    removeAllActions _medTerm;
+    _medTerm addAction [
+        "<t color='#66DDCC'>Medical training</t>",
+        { [] spawn { sleep 0.2; ["open", []] call FAC_medicalTrainingGui_fnc } },
+        [],
+        5,
+        false,
+        true,
+        "",
+        "",
+        3
+    ];
+    [_medTerm, 2] call FAC_addScenarioActionToTerminal;
 };
 
 // Missions/Config board (missionBoard): Manage Missions + Manage Scenario
@@ -300,6 +419,27 @@ if (!isNull _missionBoard) then {
     ];
 };
 
+// Sniper range: resolve Eden name + synced var (JIP); short delay so other inits / MP sync do not strip the action
+[] spawn {
+    sleep 0.35;
+    private _sniperTerm = missionNamespace getVariable ["FADE_sniperTerminal", objNull];
+    if (isNull _sniperTerm) then { _sniperTerm = missionNamespace getVariable ["terminalSniper", objNull] };
+    if (isNull _sniperTerm) exitWith {};
+    removeAllActions _sniperTerm;
+    _sniperTerm addAction [
+        "<t color='#B8A0FF'>Sniper range</t>",
+        { [] spawn { sleep 0.2; ["open", []] call FAC_sniperGui_fnc } },
+        [],
+        5,
+        false,
+        true,
+        "",
+        "",
+        3
+    ];
+    [_sniperTerm, 2] call FAC_addScenarioActionToTerminal;
+};
+
 // CQB Training Shoothouse board (cqbBoard) - opens CQB GUI
 if (!isNull (missionNamespace getVariable ["FADE_cqbBoard", objNull])) then {
     private _cqbBoard = missionNamespace getVariable "FADE_cqbBoard";
@@ -315,19 +455,21 @@ if (!isNull (missionNamespace getVariable ["FADE_cqbBoard", objNull])) then {
         "",
         3
     ];
+    [_cqbBoard, 2] call FAC_addScenarioActionToTerminal;
 };
 
-// Teleport boards (teleportBoard_1..8) - opens Fast Travel GUI.
+// Teleport boards (teleportBoard_1..9) - opens Fast Travel GUI.
 // Each board preselects its matching destination in the GUI.
 private _teleportBoardMap = [
     ["teleportBoard_1", "teleportBase"],
-    ["teleportBoard_2", "teleportMedical"],
+    ["teleportBoard_2", "teleportOfficer"],
     ["teleportBoard_3", "teleportPad3"],
     ["teleportBoard_4", "teleportRange"],
     ["teleportBoard_5", "teleportCQB"],
     ["teleportBoard_6", "teleportPad1"],
     ["teleportBoard_7", "teleportLockerRoom"],
-    ["teleportBoard_8", "teleportSDE"]
+    ["teleportBoard_8", "teleportSDE"],
+    ["teleportBoard_9", "teleportFires"]
 ];
 {
     _x params ["_boardName", "_defaultDest"];
@@ -488,16 +630,21 @@ if (!isNull _nesk) then {
 // CTB Locker Room -- hostage VO + locker slaps (game logic posLockerRoom + posLocker_*); see rsc\Config.sqf
 [] execVM "rsc\LockerRoomAmbient.sqf";
 
-// Welcome hint  - replaces loading hint when config and actions are ready (keep short: briefing + GUIs hold detail)
+// Welcome hint  - replaces loading hint when config and actions are ready (briefing + GUIs hold full detail)
 private _playerName = name player;
 private _welcomeText = format [
     "<t size='1.25' color='#FFD700'>[FADE] FACE'S DYNAMIC ENVIRONMENT</t><br/><br/>" +
     "<t align='left'>" +
     "<t color='#FFFFFF'>Welcome, </t><t color='#FFCC00'>%1</t><t color='#FFFFFF'>!</t><br/><br/>" +
-    "<t color='#00FF00'>Base Boards</t><t color='#FFFFFF'> have vehicles, missions, scenario, gear, teleportation.</t><br/>" +
-    "<t color='#FFCC00'>CTB Doctrine</t><t color='#FFFFFF'> callouts are located in your notes.</t><br/>" +
+    "<t color='#00FF00'>CTB Headquarters</t><t color='#FFFFFF'> has vehicles, missions, scenario, gear, music, teleportation.</t><br/>" +
+    "<t color='#FFFFFF'>Visit </t><t color='#FFCC00'>Rhodesy's office</t><t color='#FFFFFF'> to manage scenario, mission and admin settings.</t><br/>" +
+    "<t color='#FFFFFF'>Visit </t><t color='#FFCC00'>MB's gear room</t><t color='#FFFFFF'> for loadouts and kit.</t><br/><br/>" +
+    "<t color='#FFCC00'>Other key locations include</t><t color='#FFFFFF'> Bean's Medical area, Joon's FIRES range, Sultan's CQB facility, Sniper, Rifle and AT ranges, SDE's pub, Juko's locker room, C3 Quiet Area, and other training spots around base.</t><br/>" +
+    "<t color='#FFCC00'>Quick-reference CTB Doctrine callouts</t><t color='#FFFFFF'> are located in your notes.</t><br/>" +
+    "<t color='#FFCC00'>SMEACs</t><t color='#FFFFFF'> are generated when started pre-defined mission types (from Rhodesy's office or via mission hotkey).</t><br/>" +
     "<t color='#FFCC00'>Ctrl + ;</t><t color='#FFFFFF'> opens the Mission GUI from anywhere.</t><br/>" +
-    "<t color='#FFFFFF'>Use </t><t color='#FFCC00'>Vehicle loudspeaker...</t><t color='#FFFFFF'> while in a vehicle for the Jukebox.</t><br/><br/>" +
+    "<t color='#FFCC00'>Ctrl + Shift + 'apostrophe'</t><t color='#FFFFFF'> (quotation mark) opens Fast Travel from anywhere.</t><br/>" +
+    "" +
     "<t color='#FFFFFF'>Remember: Do not take SDE's STANAGS.</t>" +
     "</t>",
     _playerName
@@ -507,12 +654,13 @@ hint parseText _welcomeText;
 // Invisible ambient lights 25m above each helipad and vehicle spawn
 [] spawn { execVM "rsc\LightTowers.sqf" };
 
-// Full heal near HQ (FADE_basePos from BASE_1): 30 s poll, local player only
+// Full heal near HQ (FADE_basePos from BASE_1): poll, local player only (40s reduces idle client wakeups)
 [] spawn {
     if (!hasInterface) exitWith {};
     waitUntil { sleep 0.5; count (missionNamespace getVariable ["FADE_basePos", []]) >= 2 };
     private _radius = 50;
-    private _interval = 30;
+    private _interval = missionNamespace getVariable ["FADE_hqHealIntervalSec", 40];
+    if (_interval < 15) then { _interval = 15 };
     while { true } do {
         sleep _interval;
         private _u = player;
@@ -568,8 +716,10 @@ player addEventHandler ["GetOutMan", {
 }];
 
 // -----------------------------------------------------------------------------
-// KeyDown on main display (46): Ctrl+; = Missions GUI
+// KeyDown on main display (46): Ctrl+; = Missions GUI; Ctrl+Shift+apostrophe = Fast Travel
 // displayAddEventHandler runs on the client; findDisplay 46 is the game HUD.
+// Teleport uses DIK_APOSTROPHE (0x28) + _shift + _ctrl (same chord as typing " on US QWERTY).
+// RCtrl-only tracking via DIK 0x9D was unreliable (flag never set on some setups), so either Ctrl works.
 // -----------------------------------------------------------------------------
 [] spawn {
     waitUntil { !isNull findDisplay 46 };
@@ -583,6 +733,13 @@ player addEventHandler ["GetOutMan", {
             };
             if (isNull (findDisplay 60002)) then {
                 ["open", []] call FAC_missionsGui_fnc;
+            };
+            true
+        };
+        // Ctrl+Shift+apostrophe: Fast Travel / Teleport GUI (same as teleport boards)
+        if (_key == 0x28 && { _shift } && { _ctrl }) exitWith {
+            if (isNull (findDisplay 60600) && { isNull (findDisplay 60610) }) then {
+                ["open", []] call FAC_teleportGui_fnc;
             };
             true
         };

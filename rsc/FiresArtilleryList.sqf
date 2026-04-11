@@ -1,35 +1,33 @@
 // =============================================================================
 // FiresArtilleryList.sqf - Approved FIRES range pieces (display label + CfgVehicles class)
 // =============================================================================
-// Replace placeholder classnames with mod-accurate names when confirmed in Editor
-// (Config Viewer / log a null spawn). Order: category, label, classname.
+// Whitelist aligned with Indirect Fire Platforms board. Order: category, label, classname.
 
 FAC_fires_artilleryDefinitions = [
-    ["Mortars", "M252 (RHS)", "RHS_M252_USMC_WD"],
-    ["Mortars", "M2 60mm (SOG) — PLACEHOLDER", "B_G_Mortar_01_F"],
-    ["Mortars", "M29 81mm (SOG) — PLACEHOLDER", "O_G_Mortar_01_F"],
-    ["Mortars", "2B14 Podnos (RHS)", "rhs_2b14_82mm_msv"],
-    ["Mortars", "Type 53 82mm (SOG) — PLACEHOLDER", "O_Mortar_01_F"],
-    ["Mortars", "Type 63 60mm (SOG) — PLACEHOLDER", "I_G_Mortar_01_F"],
-    ["Mortars", "M1 81mm (SPE) — PLACEHOLDER", "I_Mortar_01_F"],
-    ["Mortars", "8.14cm GrW 278/1 (SPE) — PLACEHOLDER", "B_Mortar_01_F"],
+    ["Mortars", "M252 (RHS)", "RHS_M252_WD"],
+    ["Mortars", "M2 60mm (SOG)", "vn_b_army_static_mortar_m2"],
+    ["Mortars", "M29 81mm (SOG)", "vn_b_army_static_mortar_m29"],
+    ["Mortars", "2B14-1 (RHS)", "rhs_2b14_82mm_msv"],
+    ["Mortars", "Type 53 82mm (SOG)", "vn_o_kr_static_mortar_type53"],
+    ["Mortars", "Type 63 60mm (SOG)", "vn_o_nva_65_static_mortar_type63"],
+    ["Mortars", "M1 81mm (SPE)", "SPE_M1_81"],
+    ["Mortars", "8.14cm GrW 278/1 (SPE)", "SPE_ST_GrW278_1"],
 
-    ["MLRS", "M142 HIMARS (RHS)", "RHS_M142_ADS"],
-    ["MLRS", "SF2 LARS 2 (GM) — PLACEHOLDER", "B_MBT_01_mlrs_F"],
+    ["MLRS", "M142 HIMARS (RHS)", "rhsusf_M142_usarmy_D"],
+    ["MLRS", "SF2 LARS 2 (GM)", "gm_ge_army_kat1_463_mlrs"],
     ["MLRS", "BM-21 (RHS)", "RHS_BM21_MSV_01"],
-    ["MLRS", "BM-21 (GM) — PLACEHOLDER", "I_Truck_02_MRL_F"],
-    ["MLRS", "H12 Rocket Launcher (SOG) — PLACEHOLDER", "O_MBT_02_arty_F"],
+    ["MLRS", "H12 Rocket Launcher (SOG)", "dcx_b_fia_static_h12"],
 
-    ["Field guns", "M119A2 (RHS)", "RHS_M119_D"],
-    ["Field guns", "M101 105mm (SOG) — PLACEHOLDER", "B_MBT_01_arty_F"],
-    ["Field guns", "2A18M D-30 (RHS)", "rhs_d30_msv"],
-    ["Field guns", "10.5cm leFH18 (SPE) — PLACEHOLDER", "O_MBT_02_arty_F"],
-    ["Field guns", "D44 85mm (SOG) — PLACEHOLDER", "I_Truck_02_MRL_F"],
+    ["Field", "M119A2 (RHS)", "RHS_M119_D"],
+    ["Field", "M101 105mm (SOG)", "vn_b_army_static_m101_02"],
+    ["Field", "2A18M (D-30A) (RHS)", "rhs_D30_msv"],
+    ["Field", "10.5cm leFH18 (SPE)", "SPE_leFH18"],
+    ["Field", "D44 85mm Divisional Gun (SOG)", "dcx_ws_b_una_static_d44_artillery"],
 
-    ["SPG", "M109A6 (RHS)", "rhsusf_m109_usarmy"],
-    ["SPG", "M109G (GM) — PLACEHOLDER", "B_MBT_01_arty_F"],
-    ["SPG", "2S1 (GM) — PLACEHOLDER", "O_MBT_02_arty_F"],
+    ["SPG", "M109A6 (RHS)", "rhsusf_m109d_usarmy"],
+    ["SPG", "M109G (GM)", "gm_ge_army_m109g"],
+    ["SPG", "2S1 (GM)", "gm_pl_army_2s1"],
     ["SPG", "2S3M1 (RHS)", "rhs_2s3_tv"],
-    ["SPG", "2S1 (RHS)", "rhs_2s1_tv"],
-    ["SPG", "M125A1 M29 mortar (SOG) — PLACEHOLDER", "I_Mortar_01_F"]
+    ["SPG", "2S1 (RHS)", "rhs_2s1_vmf"],
+    ["SPG", "M125A1 M29 Mortar (SOG)", "vn_b_armor_m125_01"]
 ];

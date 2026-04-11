@@ -1,8 +1,8 @@
 // =============================================================================
 // onPlayerRespawn.sqf -- runs on the local client after each respawn
 // =============================================================================
-// When respawn is enabled (e.g. via in-game menu): force position to base and
-// restore saved loadout if the player used "Save my loadout" at the loadout box.
+// When respawn is enabled (e.g. via in-game menu): restore respawn snapshot (mission
+// spawn gear captured once, or loadout box "Save my loadout" which overwrites that).
 // =============================================================================
 
 // Brief yield so the engine finishes spawning the unit before we move/overwrite gear
@@ -18,8 +18,15 @@ if (!isNull _oldUnit) then {
     } forEach ["FADE_myMission", "FADE_myMissionTaskId", "FADE_myMissionMarker", "FADE_myMissionMarkerEnd", "FADE_myMissionBrief"];
 };
 
-if (count (missionNamespace getVariable ["FAC_savedLoadout_" + getPlayerUID player, []]) > 0) then {
-    [player] call FAC_loadoutGui_restoreRespawnLoadoutSnapshot;
+if (!isNil "FAC_loadoutGui_restoreRespawnLoadoutSnapshot") then {
+    private _uid = getPlayerUID player;
+    if (count (missionNamespace getVariable ["FAC_savedLoadout_" + _uid, []]) > 0) then {
+        [player] call FAC_loadoutGui_restoreRespawnLoadoutSnapshot;
+    } else {
+        if (!isNil "FAC_loadoutGui_trySaveInitialRespawnLoadoutIfMissing") then {
+            [player] call FAC_loadoutGui_trySaveInitialRespawnLoadoutIfMissing;
+        };
+    };
 };
 
 if (!isNil "FAC_jukebox_fnc_addVehicleLoudspeakerAction") then {
@@ -27,4 +34,9 @@ if (!isNil "FAC_jukebox_fnc_addVehicleLoudspeakerAction") then {
 };
 if (!isNil "FAC_jukebox_fnc_installVehicleLoudspeakerHandlers") then {
     [player] call FAC_jukebox_fnc_installVehicleLoudspeakerHandlers;
+};
+
+// FIRES fall-of-shot: Fired EH is on the unit; re-attach after respawn so mortar tracking keeps working.
+if (!isNil "FAC_firesFoS_fnc_client_installFiresFiredEh") then {
+    [player] call FAC_firesFoS_fnc_client_installFiresFiredEh;
 };

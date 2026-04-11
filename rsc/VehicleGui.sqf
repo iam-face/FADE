@@ -1,7 +1,7 @@
 // =============================================================================
 // VehicleGui.sqf - Vehicles: single dialog (60001), header tabs + main content
 // =============================================================================
-// Spawn: aircraft on HP_* (optional pad index); land vehicles always auto-pick VEH slot on server.
+// Spawn: aircraft on HP_* (optional pad index); land vehicles use VEH_* slot selection (auto by default).
 // Manage: list at base, repair/refuel/rearm, despawn. Server RPCs in initServer.
 // =============================================================================
 
@@ -24,6 +24,16 @@ FAC_vehicleGui_syncHeaderTabs = {
         _tNew ctrlSetBackgroundColor _inact;
         _tEx ctrlSetBackgroundColor _act;
     };
+};
+
+FAC_vehicleGui_resetDeleteWreckButton = {
+    private _d = findDisplay FAC_vehicleGui_IDD;
+    if (isNull _d) exitWith {};
+    private _btn = _d displayCtrl 61004;
+    if (isNull _btn) exitWith {};
+    _btn ctrlSetText "Delete wrecks";
+    _btn ctrlSetTextColor [0.98, 0.97, 0.95, 1];
+    _btn ctrlSetBackgroundColor [0.36, 0.22, 0.16, 1];
 };
 
 FAC_vehicleGui_syncSpawnCategoryButtons = {
@@ -319,11 +329,48 @@ FAC_vehicleGui_fnc = {
             };
             if (isNull _display) then { _display = findDisplay FAC_vehicleGui_IDD };
             if (isNull _display) exitWith {};
+            missionNamespace setVariable ["FAC_vehicleGui_deleteWreckPending", -99];
+            missionNamespace setVariable ["FAC_vehicleGui_deleteWreckConfirmGen", 0];
+            [] call FAC_vehicleGui_resetDeleteWreckButton;
             // Tab visibility first (config has manage controls show=0; setTab enforces spawn vs manage).
             missionNamespace setVariable ["FAC_vehicleGui_spawnCategory", "aircraft"];
             ["setTab", ["new"]] call FAC_vehicleGui_fnc;
             ["spawnCategoryChanged", []] call FAC_vehicleGui_fnc;
             ["refreshSpawned", []] call FAC_vehicleGui_fnc;
+        };
+
+        case "deleteWrecks": {
+            private _display = findDisplay FAC_vehicleGui_IDD;
+            if (isNull _display) exitWith {};
+            private _btn = _display displayCtrl 61004;
+            if (isNull _btn) exitWith {};
+            private _pendingAt = missionNamespace getVariable ["FAC_vehicleGui_deleteWreckPending", -99];
+            if (time - _pendingAt > 3) then {
+                private _confirmGen = (missionNamespace getVariable ["FAC_vehicleGui_deleteWreckConfirmGen", 0]) + 1;
+                missionNamespace setVariable ["FAC_vehicleGui_deleteWreckConfirmGen", _confirmGen];
+                missionNamespace setVariable ["FAC_vehicleGui_deleteWreckPending", time];
+                _btn ctrlSetText "Are you sure?";
+                _btn ctrlSetTextColor [1, 0.35, 0.35, 1];
+                _btn ctrlSetBackgroundColor [0.22, 0.10, 0.10, 1];
+                [_confirmGen] spawn {
+                    params ["_gen"];
+                    sleep 3;
+                    if ((missionNamespace getVariable ["FAC_vehicleGui_deleteWreckConfirmGen", 0]) != _gen) exitWith {};
+                    if ((time - (missionNamespace getVariable ["FAC_vehicleGui_deleteWreckPending", -99])) > 3) then {
+                        missionNamespace setVariable ["FAC_vehicleGui_deleteWreckPending", -99];
+                        if (!isNull (findDisplay FAC_vehicleGui_IDD)) then {
+                            [] call FAC_vehicleGui_resetDeleteWreckButton;
+                        };
+                    };
+                };
+            } else {
+                missionNamespace setVariable ["FAC_vehicleGui_deleteWreckConfirmGen", (missionNamespace getVariable ["FAC_vehicleGui_deleteWreckConfirmGen", 0]) + 1];
+                missionNamespace setVariable ["FAC_vehicleGui_deleteWreckPending", -99];
+                [] call FAC_vehicleGui_resetDeleteWreckButton;
+                [player] remoteExec ["FADE_deleteWrecksNearVehicleTerminal", 2];
+                systemChat "Requesting wreck cleanup...";
+                [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+            };
         };
 
         case "headerRefresh": {
@@ -785,12 +832,11 @@ FAC_vehicleGui_fnc = {
                     } else {
                         if (_occ) then { " — OCCUPIED" } else { " — empty" }
                     };
-                    private _rowName = if (_eden != "") then { _eden } else { _disp };
-                    private _row = _padLb lbAdd (_rowName + _suffix);
+                    private _row = _padLb lbAdd (_disp + _suffix);
                     _padLb lbSetData [_row, str _forEachIndex];
                 } forEach _helipads;
             } else {
-                private _iAuto = _padLb lbAdd "Auto — random clear spot at vehicle spawn";
+                private _iAuto = _padLb lbAdd "Auto — first clear VEH slot";
                 _padLb lbSetData [_iAuto, "-1"];
             };
 
@@ -863,7 +909,7 @@ FAC_vehicleGui_fnc = {
                 [_class, player, _slotIdx] remoteExec ["FADE_spawnHeli", 2];
                 systemChat format ["Requesting spawn: %1...", _displayName];
             } else {
-                [_class, player, -1] remoteExec ["FADE_spawnLandVehicle", 2];
+                [_class, player, _slotIdx] remoteExec ["FADE_spawnLandVehicle", 2];
                 systemChat format ["Requesting spawn: %1...", _displayName];
             };
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
@@ -936,10 +982,7 @@ FAC_vehicleGui_fnc = {
                     private _cls = typeOf _veh;
                     private _name = getText (configFile >> "CfgVehicles" >> _cls >> "displayName");
                     if (_name == "") then { _name = _cls };
-                    private _faction = getText (configFile >> "CfgVehicles" >> _cls >> "faction");
-                    private _factionDn = getText (configFile >> "CfgFactionClasses" >> _faction >> "displayName");
-                    if (_factionDn == "") then { _factionDn = _faction };
-                    private _label = format ["'%1' > %2 — %3", _factionDn, _name, _padName];
+                    private _label = format ["%1 — %2", _name, _padName];
                     private _varName = "FADE_obj_" + (str _veh);
                     missionNamespace setVariable [_varName, _veh];
                     private _idx = _lb lbAdd _label;

@@ -67,6 +67,8 @@ FAC_missionTestSuite_runServer = {
     private _smt = missionNamespace getVariable ["FADE_singleMissionTypes", []];
     _ok = _gmt isEqualType [] && { "Operation" in _gmt };
     if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_globalMissionTypes contains Operation"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_globalMissionTypes / Operation"; };
+    _ok = _gmt isEqualType [] && { "EscapeEvasion" in _gmt };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_globalMissionTypes contains EscapeEvasion"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_globalMissionTypes / EscapeEvasion"; };
     _ok = _smt isEqualType [] && { count _smt > 0 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_singleMissionTypes (%1)", count _smt]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_singleMissionTypes"; };
 
@@ -210,6 +212,10 @@ FAC_missionTestSuite_runServer = {
         "FADE_fires_requestState",
         "FADE_fires_setAmmoAmount",
         "FADE_fires_spawnAmmoTruck",
+        "FADE_firesFoS_droneSpawnRequest",
+        "FADE_firesFoS_droneDespawnRequest",
+        "FADE_firesFoS_requestSync",
+        "FADE_firesFoS_toggleImpactScreenSlot",
         "FADE_assetIntelTakeServer",
         "FADE_abortMissionSlot",
         "FAC_jukebox_stopAllMusic",
@@ -218,7 +224,17 @@ FAC_missionTestSuite_runServer = {
         "FAC_surrenderChallenge_start",
         "FAC_loadoutGui_serverRequestApplyToMember",
         "FADE_cqbStartDrill",
-        "FADE_cqbEndDrill"
+        "FADE_cqbEndDrill",
+        "FADE_sniperStartSession",
+        "FADE_sniperEndSession",
+        "FADE_sniperServer_impactSphereFromClient",
+        "FADE_rangeStartSession",
+        "FADE_rangeEndSession",
+        "FADE_rangeRequestAtWeaponState",
+        "FADE_rangeSpawnAtWeaponAtSlot",
+        "FADE_rangeDespawnAtWeaponSlot",
+        "FADE_rangeSpawnFriendlyLandAtSlot",
+        "FADE_rangeDespawnFriendlyLandAtSlot"
     ];
     {
         private _n = _x;
@@ -245,7 +261,11 @@ FAC_missionTestSuite_runServer = {
         "rsc\EnemyCheckpoints.sqf",
         "rsc\DummyUnits.sqf",
         "rsc\PadVehicleService.sqf",
-        "rsc\SurrenderChallenge.sqf"
+        "rsc\FiresFallOfShot.sqf",
+        "rsc\SurrenderChallenge.sqf",
+        "rsc\SniperRangeServer.sqf",
+        "rsc\RangeShared.sqf",
+        "rsc\RangeServer.sqf"
     ];
     {
         private _path = _x;
@@ -290,10 +310,24 @@ FAC_missionTestSuite_runClient = {
         "FAC_jukebox_fnc_installVehicleLoudspeakerHandlers",
         "FAC_cqbGui_fnc",
         "FAC_firesGui_fnc",
+        "FAC_firesFoS_fnc_clientDroneSync",
+        "FAC_firesFoS_fnc_clientDroneStop",
+        "FAC_firesFoS_fnc_clientImpactFeed",
+        "FAC_firesFoS_fnc_reDroneSync",
+        "FAC_firesFoS_fnc_reDroneStop",
+        "FAC_firesFoS_fnc_reImpactFeed",
+        "FAC_firesFoS_fnc_startMapClickDrone",
         "FAC_teleportGui_fnc",
         "FAC_cqbLoudspeaker_clientPlay",
         "FAC_surrenderChallenge_fnc_activate",
-        "FADE_cqbClient_forceTargetDown"
+        "FADE_cqbClient_forceTargetDown",
+        "FAC_sniperGui_fnc",
+        "FADE_sniperClient_setProjectileTrace",
+        "FADE_sniperClient_clearRangeFx",
+        "FADE_sniperClient_setProjectileImpactMarkers",
+        "FADE_sniperClient_showTrialHint",
+        "FAC_rangeGui_fnc",
+        "FADE_rangeClient_setAtWeaponState"
     ];
     private _ok = false;
     {
@@ -319,18 +353,27 @@ FAC_missionTestSuite_runClient = {
     _ok = _fires isEqualType [] && { count _fires > 0 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (client): FAC_fires_artilleryDefinitions (%1)", count _fires]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (client): FAC_fires_artilleryDefinitions"; };
 
+    private _rangeVehicleMap = missionNamespace getVariable ["FADE_rangeVehicleTypeMap", []];
+    _ok = _rangeVehicleMap isEqualType [] && {count _rangeVehicleMap >= 4};
+    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (client): FADE_rangeVehicleTypeMap (%1)", count _rangeVehicleMap]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (client): FADE_rangeVehicleTypeMap"; };
+
+    private _rangeAtDefs = missionNamespace getVariable ["FADE_rangeAtWeaponDefinitions", []];
+    _ok = _rangeAtDefs isEqualType [] && {count _rangeAtDefs > 0};
+    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (client): FADE_rangeAtWeaponDefinitions (%1)", count _rangeAtDefs]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (client): FADE_rangeAtWeaponDefinitions"; };
+
     // ----- description.ext / Rsc displays (createDialog targets) -----
     private _rscNames = [
         "RscDisplayVehicle",
         "RscDisplayMissions",
         "RscDisplayScenario",
-        "RscDisplayScenarioAdmin",
         "RscDisplayLoadout",
         "RscDisplayJukebox",
         "RscDisplayCQB",
         "RscDisplayTeleport",
         "RscDisplayTeleportPlayers",
-        "RscDisplayFires"
+        "RscDisplayFires",
+        "RscDisplaySniper",
+        "RscDisplayRange"
     ];
     {
         private _cls = _x;

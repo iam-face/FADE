@@ -9,14 +9,16 @@
 
 if (!isServer) exitWith {};
 
-private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {
+// FADE_aaa_applyLevel is call'd from initServer (scenario apply); spawn helpers must resolve
+// FADE_scaleOpforCount from missionNamespace — execVM-private locals are not in that scope.
+FADE_aaa_scaleOpforCountDefault = {
     params ["_baseCount", ["_minCount", 1], ["_maxCount", -1]];
     private _base = floor (_baseCount max 0);
     if (_base <= 0) exitWith { 0 };
     private _scaled = _base max _minCount;
     if (_maxCount >= 0 && { _scaled > _maxCount }) then { _scaled = _maxCount };
     _scaled
-}];
+};
 
 // Storage for cleanup: static/vehicle AA and MANPADS groups
 FADE_aaa_units = [];           // static weapons + crew groups/objects
@@ -152,7 +154,7 @@ FADE_aaa_despawnManpadsInZone = {
 FADE_aaa_findSafeSpawnInRadius = {
     params ["_center", ["_radius", 500]];
     if (count _center < 2) exitWith { _center };
-    private _flat = [_center, 20, _radius, 8, 0, 0.4, 0, [], _center] call BIS_fnc_findSafePos;
+    private _flat = [_center, 20, _radius, 8, 1, 0.4, 0, [], _center] call BIS_fnc_findSafePos;
     if (_flat isEqualType [] && { count _flat >= 2 }) then {
         if (count _flat < 3) then { _flat set [2, 0] };
         _flat
@@ -268,6 +270,7 @@ FADE_aaa_spawnHeavy = {
 // find safe pos within 500 m of civ center (no building/water), spawn one unit.
 // -----------------------------------------------------------------------------
 FADE_aaa_spawnAll = {
+    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", FADE_aaa_scaleOpforCountDefault];
     private _level = missionNamespace getVariable ["FADE_enemyAAALevel", "None"];
     if (_level == "None") exitWith {};
 
@@ -317,6 +320,7 @@ FADE_aaa_applyLevel = {
 // -----------------------------------------------------------------------------
 FADE_aaa_maybeSpawnManpadsInZone = {
     params ["_zoneId", "_center"];
+    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", FADE_aaa_scaleOpforCountDefault];
     private _level = missionNamespace getVariable ["FADE_enemyAAALevel", "None"];
     if (_level != "MANPADS") exitWith {};
     if (!(isNil { FADE_aaa_manpadsZones get _zoneId })) exitWith {};  // already decided/spawned for this zone
@@ -332,7 +336,7 @@ FADE_aaa_maybeSpawnManpadsInZone = {
     private _groups = [];
     private _grp = createGroup (missionNamespace getVariable ["FADE_sideEnemy", east]);
     for "_i" from 0 to (_count - 1) do {
-        private _pos = [_center, 0, 30, 4, 0, 0.3, 0, [], _center] call BIS_fnc_findSafePos;
+        private _pos = [_center, 0, 30, 4, 1, 0.3, 0, [], _center] call BIS_fnc_findSafePos;
         if (count _pos < 2) then { _pos = _center };
         if (count _pos < 3) then { _pos set [2, 0] };
         private _u = _grp createUnit [_unitClass, _pos, [], 0, "NONE"];
