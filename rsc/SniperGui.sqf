@@ -45,22 +45,29 @@ FADE_sniperClient_trackProjectileImpact = {
         _last = getPosASL _projectile;
         sleep 0.003;
     };
-    if (!(missionNamespace getVariable ["FADE_sniperRangeActive", false])) exitWith {};
+    private _snA = missionNamespace getVariable ["FADE_sniperRangeActive", false];
+    private _rgA = missionNamespace getVariable ["FADE_rangeSessionActive", false];
+    private _stillMine = (_snA && {_uid == missionNamespace getVariable ["FADE_sniperStarterUid", ""]}) ||
+        {_rgA && {_uid == missionNamespace getVariable ["FADE_rangeStarterUid", ""]}};
+    if (!_stillMine) exitWith {};
     if (getPlayerUID player != _uid) exitWith {};
     if !([_last] call FADE_sniperClient_aslIsFinite) exitWith {};
     [_last, _uid] remoteExecCall ["FADE_sniperServer_impactSphereFromClient", 2];
 };
 
 FADE_sniperClient_onFiredForImpact = {
-    if (!(missionNamespace getVariable ["FADE_sniperRangeActive", false])) exitWith {};
-    if (getPlayerUID player != missionNamespace getVariable ["FADE_sniperStarterUid", ""]) exitWith {};
+    private _uid = getPlayerUID player;
+    private _snA = missionNamespace getVariable ["FADE_sniperRangeActive", false];
+    private _rgA = missionNamespace getVariable ["FADE_rangeSessionActive", false];
+    if (!((_snA && {_uid == missionNamespace getVariable ["FADE_sniperStarterUid", ""]}) ||
+        {_rgA && {_uid == missionNamespace getVariable ["FADE_rangeStarterUid", ""]}})) exitWith {};
     private _unit = _this param [0, objNull];
     if (_unit != player) exitWith {};
     private _bullet = _this param [6, objNull];
     [_bullet] spawn FADE_sniperClient_trackProjectileImpact;
 };
 
-// While sniper session is yours: every Fired → track projectile to impact (terrain or target)
+// While you are the sniper or range starter: every Fired → track projectile to impact (terrain or target)
 FADE_sniperClient_setProjectileImpactMarkers = {
     params [["_on", false]];
     if (!hasInterface) exitWith {};
@@ -109,10 +116,10 @@ FAC_sniperGui_fnc = {
     private _fncRefreshMaxRange = {
         private _display = findDisplay 60910;
         if (isNull _display) exitWith {};
-        private _m = uinamespace getVariable ["FAC_sniperGui_maxRange", 1000];
-        _m = (_m max 100) min 1000;
+        private _m = uinamespace getVariable ["FAC_sniperGui_maxRange", 600];
+        _m = (_m max 100) min 600;
         private _slider = _display displayCtrl 60931;
-        if (!isNull _slider) then { _slider sliderSetRange [100, 1000]; _slider sliderSetSpeed [25, 100]; _slider sliderSetPosition _m; };
+        if (!isNull _slider) then { _slider sliderSetRange [100, 600]; _slider sliderSetSpeed [25, 100]; _slider sliderSetPosition _m; };
         (_display displayCtrl 60932) ctrlSetText (format ["%1 m", _m]);
     };
 
@@ -178,9 +185,9 @@ FAC_sniperGui_fnc = {
             "",
             "Firing range — spawns exactly your selected target count (clamped to lane count). No time limit; end when finished.",
             "",
-            "Max range limits eligible lanes to 100..1000m from shooter (horizontal distance).",
+            "Max range limits eligible lanes to 100..600m from shooter (horizontal distance).",
             "",
-            "Time trial — uses target count + max range (near→far lanes). Each stage uses a shuffled sniperPos_1..7 logic: within 1m you get “At position N, engage target!” then damage is enabled; hints also guide moves between stages.",
+            "Time trial — uses target count + max range (near→far lanes). Each stage picks a lane with clear line of sight from the required sniperPos (terrain + objects); if none, falls back with a chat note. Shuffled sniperPos_1..7: within 2.5m you get 'At position N, engage target!' then damage is enabled.",
             "",
             "Impact marker (~5 s, everyone sees): starter's machine tracks each projectile to its last ASL, then server spawns Config FADE_sniperImpactMarkerClass (hits, misses, terrain).",
             "",
@@ -188,7 +195,7 @@ FAC_sniperGui_fnc = {
             "",
             "Projectile trace (shooter): vanilla BIS_fnc_traceBullets — ballistics / penetration path.",
             "",
-            "Only one session can be active on the server at a time."
+            "Sniper range and firing/AT range can run at the same time (separate shooters and targets)."
         ];
         private _body = "";
         { _body = _body + format ["<t color='#d2e8dc'>%1</t><br/>", _x] } forEach _lines;
@@ -211,7 +218,7 @@ FAC_sniperGui_fnc = {
 
             uinamespace setVariable ["FAC_sniperGui_enemyType", "targets"];
             uinamespace setVariable ["FAC_sniperGui_targetCount", 10];
-            uinamespace setVariable ["FAC_sniperGui_maxRange", 1000];
+            uinamespace setVariable ["FAC_sniperGui_maxRange", 600];
             uinamespace setVariable ["FAC_sniperGui_trace", false];
             uinamespace setVariable ["FAC_sniperGui_hitTrack", true];
             uinamespace setVariable ["FAC_sniperGui_mode", "firing"];
@@ -246,9 +253,9 @@ FAC_sniperGui_fnc = {
             [] call _fncRefreshTargetCount;
         };
         case "setMaxRange": {
-            _params params [["_raw", 1000]];
+            _params params [["_raw", 600]];
             private _m = round _raw;
-            _m = (_m max 100) min 1000;
+            _m = (_m max 100) min 600;
             uinamespace setVariable ["FAC_sniperGui_maxRange", _m];
             [] call _fncRefreshMaxRange;
         };
@@ -299,7 +306,7 @@ FAC_sniperGui_fnc = {
             } else {
                 private _enemyType = uinamespace getVariable ["FAC_sniperGui_enemyType", "targets"];
                 private _targetCount = uinamespace getVariable ["FAC_sniperGui_targetCount", 10];
-                private _maxRange = uinamespace getVariable ["FAC_sniperGui_maxRange", 1000];
+                private _maxRange = uinamespace getVariable ["FAC_sniperGui_maxRange", 600];
                 private _trace = uinamespace getVariable ["FAC_sniperGui_trace", false];
                 private _hit = uinamespace getVariable ["FAC_sniperGui_hitTrack", true];
                 private _mode = uinamespace getVariable ["FAC_sniperGui_mode", "firing"];

@@ -4,8 +4,8 @@
 // Allows players to change their loadout by selecting from all infantry units
 // of the same side. Supports filtering by faction.
 //
-// CTB presets (ACE/getUnitLoadout arrays) live in rsc\CTBLoadouts.sqf; compiled
-// when the dialog opens (default view) or when the player clicks "CTB Loadouts".
+// Preset loadouts (ACE/getUnitLoadout arrays) live in rsc\PresetLoadouts.sqf; compiled
+// when the dialog opens (default view) or when the player clicks "Preset Loadouts".
 // =============================================================================
 
 // Join strings without joinString (engine compatibility).
@@ -19,32 +19,32 @@ FAC_loadoutGui_linesJoin = {
     _s
 };
 
-// Build CTB preset entries from FAC_ctbLoadouts:
+// Build preset entries from FAC_presetLoadouts:
 // [
 //   [eraKey, eraDisplay, [[roleDisplay, loadoutArray], ...]],
 //   ...
 // ]
 // Returns rows in the same shape as regular rows:
 // [key, displayName, factionKey, factionDisplayName, typeDisplayName]
-FAC_loadoutGui_buildCtbEntries = {
-    private _ctb = missionNamespace getVariable ["FAC_ctbLoadouts", []];
+FAC_loadoutGui_buildPresetEntries = {
+    private _preset = missionNamespace getVariable ["FAC_presetLoadouts", []];
     private _out = [];
     {
         _x params ["_eraKey", "_eraDn", "_roles"];
         {
             _x params ["_roleDn", "_loadout"];
             if (_loadout isEqualType [] && {count _loadout > 0}) then {
-                private _entryKey = format ["CTB:%1:%2", _eraKey, _forEachIndex];
+                private _entryKey = format ["FAC:%1:%2", _eraKey, _forEachIndex];
                 _out pushBack [_entryKey, _roleDn, _eraKey, _eraDn, "Preset"];
             };
         } forEach _roles;
-    } forEach _ctb;
+    } forEach _preset;
     _out
 };
 
 // getUnitLoadout / setUnitLoadout use exactly 10 elements (see Tequila Outfits.sqf / BI wiki).
 // ACE/ACEAX exports often append an 11th cell (e.g. aceax_textureOptions) — setUnitLoadout then fails silently.
-FAC_loadoutGui_normalizeCtbLoadoutArray = {
+FAC_loadoutGui_normalizePresetLoadoutArray = {
     params ["_lo"];
     if (!(_lo isEqualType [])) exitWith { [] };
     if ((count _lo) > 10) then {
@@ -54,7 +54,7 @@ FAC_loadoutGui_normalizeCtbLoadoutArray = {
 };
 
 // ACE exports sometimes nest the real loadout as [[[[...]]]]; unwrap single-element chains until we have the real array.
-FAC_loadoutGui_unwrapCtbLoadoutArray = {
+FAC_loadoutGui_unwrapPresetLoadoutArray = {
     params ["_lo"];
     if (!(_lo isEqualType [])) exitWith { [] };
     private _d = 0;
@@ -70,15 +70,15 @@ FAC_loadoutGui_unwrapCtbLoadoutArray = {
 };
 
 // After unwrap: ACEAX sometimes stores [ loadout, [ ["aceax_textureOptions",[]] ] ] (count 2). Pick the branch that unwraps to a full loadout (>= 10 cells).
-FAC_loadoutGui_resolveCtbLoadoutArray = {
+FAC_loadoutGui_resolvePresetLoadoutArray = {
     params ["_lo"];
     if (!(_lo isEqualType [])) exitWith { [] };
-    _lo = [_lo] call FAC_loadoutGui_unwrapCtbLoadoutArray;
+    _lo = [_lo] call FAC_loadoutGui_unwrapPresetLoadoutArray;
     if ((count _lo) == 2) then {
         private _pick = [];
         {
             if (_x isEqualType [] && { count _pick == 0 }) then {
-                private _c = [_x] call FAC_loadoutGui_unwrapCtbLoadoutArray;
+                private _c = [_x] call FAC_loadoutGui_unwrapPresetLoadoutArray;
                 if ((count _c) >= 10) then {
                     _pick = _c;
                 };
@@ -88,19 +88,19 @@ FAC_loadoutGui_resolveCtbLoadoutArray = {
             _lo = _pick;
         };
     };
-    _lo = [_lo] call FAC_loadoutGui_unwrapCtbLoadoutArray;
-    [_lo] call FAC_loadoutGui_normalizeCtbLoadoutArray
+    _lo = [_lo] call FAC_loadoutGui_unwrapPresetLoadoutArray;
+    [_lo] call FAC_loadoutGui_normalizePresetLoadoutArray
 };
 
-// Resolve CTB loadout array from synthetic key: CTB:<eraKey>:<index>
-FAC_loadoutGui_getCtbLoadoutByKey = {
+// Resolve preset loadout array from synthetic key: FAC:<eraKey>:<index>
+FAC_loadoutGui_getPresetLoadoutByKey = {
     params ["_key"];
-    if ((_key find "CTB:") != 0) exitWith { [] };
+    if ((_key find "FAC:") != 0) exitWith { [] };
     private _parts = _key splitString ":";
     if ((count _parts) < 3) exitWith { [] };
     private _eraKey = _parts select 1;
     private _idx = parseNumber (_parts select 2);
-    private _ctb = missionNamespace getVariable ["FAC_ctbLoadouts", []];
+    private _preset = missionNamespace getVariable ["FAC_presetLoadouts", []];
     private _out = [];
     {
         _x params ["_k", "_eraDn", "_roles"];
@@ -109,15 +109,15 @@ FAC_loadoutGui_getCtbLoadoutByKey = {
                 _out = (_roles select _idx) select 1;
             };
         };
-    } forEach _ctb;
-    [_out] call FAC_loadoutGui_resolveCtbLoadoutArray
+    } forEach _preset;
+    [_out] call FAC_loadoutGui_resolvePresetLoadoutArray
 };
 
-// Human-readable summary for CTB arrays in list tooltips.
+// Human-readable summary for preset arrays in list tooltips.
 FAC_loadoutGui_buildLoadoutTextFromArray = {
     params ["_loadout"];
-    if (!(_loadout isEqualType [])) exitWith { "CTB preset (invalid loadout format)." };
-    if ((count _loadout) < 10) exitWith { "CTB preset (invalid loadout length)." };
+    if (!(_loadout isEqualType [])) exitWith { "Preset loadout (invalid format)." };
+    if ((count _loadout) < 10) exitWith { "Preset loadout (invalid length)." };
     private _primary = (((_loadout select 0) param [0, ""]) call FAC_loadoutGui_getItemDisplayName);
     private _launcher = (((_loadout select 1) param [0, ""]) call FAC_loadoutGui_getItemDisplayName);
     private _handgun = (((_loadout select 2) param [0, ""]) call FAC_loadoutGui_getItemDisplayName);
@@ -135,7 +135,7 @@ FAC_loadoutGui_buildLoadoutTextFromArray = {
     if (_backpack isEqualType [] && {count _backpack > 0}) then { _lines pushBack ("Backpack: " + ([_backpack select 0] call FAC_loadoutGui_getItemDisplayName)) };
     if (_headgear != "") then { _lines pushBack ("Headgear: " + ([_headgear] call FAC_loadoutGui_getItemDisplayName)) };
     if (_goggles != "") then { _lines pushBack ("Eyewear: " + ([_goggles] call FAC_loadoutGui_getItemDisplayName)) };
-    if (count _lines == 0) exitWith { "CTB preset (loadout array)." };
+    if (count _lines == 0) exitWith { "Preset loadout (array)." };
     [_lines, toString [10]] call FAC_loadoutGui_linesJoin
 };
 
@@ -197,7 +197,7 @@ FAC_loadoutGui_getFactionDisplayName = {
     _faction
 };
 
-// Config-based unit rows only (respects scenario gear limit); no CTB merge.
+// Config-based unit rows only (respects scenario gear limit); no preset merge.
 FAC_loadoutGui_buildStdUnits = {
     private _allUnits = [side player] call FAC_loadoutGui_getUnitsForSide;
     if (missionNamespace getVariable ["FADE_limitGearToFriendlyFaction", false]) then {
@@ -209,11 +209,11 @@ FAC_loadoutGui_buildStdUnits = {
     _allUnits
 };
 
-// Compile rsc/CTBLoadouts.sqf once when user opens CTB tab (failure must not break main GUI).
-FAC_loadoutGui_ensureCtbData = {
-    if (!((missionNamespace getVariable ["FAC_ctbLoadouts", []]) isEqualTo [])) exitWith { true };
-    call compile preprocessFileLineNumbers "rsc\CTBLoadouts.sqf";
-    !((missionNamespace getVariable ["FAC_ctbLoadouts", []]) isEqualTo [])
+// Compile rsc/PresetLoadouts.sqf once when user opens preset tab (failure must not break main GUI).
+FAC_loadoutGui_ensurePresetData = {
+    if (!((missionNamespace getVariable ["FAC_presetLoadouts", []]) isEqualTo [])) exitWith { true };
+    call compile preprocessFileLineNumbers "rsc\PresetLoadouts.sqf";
+    !((missionNamespace getVariable ["FAC_presetLoadouts", []]) isEqualTo [])
 };
 
 FAC_loadoutGui_populateStdFactionList = {
@@ -231,21 +231,21 @@ FAC_loadoutGui_populateStdFactionList = {
     { _x params ["_dn", "_key"]; _idx = _factionList lbAdd _dn; _factionList lbSetData [_idx, _key] } forEach _factionRows;
 };
 
-FAC_loadoutGui_populateCtbFactionList = {
+FAC_loadoutGui_populatePresetFactionList = {
     params ["_display"];
     private _factionList = _display displayCtrl 60210;
     lbClear _factionList;
     private _idx = _factionList lbAdd "All eras";
     _factionList lbSetData [_idx, ""];
     _factionList lbSetCurSel 0;
-    private _ctb = missionNamespace getVariable ["FAC_ctbLoadouts", []];
+    private _preset = missionNamespace getVariable ["FAC_presetLoadouts", []];
     {
         _x params ["_eraKey", "_eraDn", "_roles"];
         if (_eraKey != "" && { count _roles > 0 }) then {
             _idx = _factionList lbAdd _eraDn;
             _factionList lbSetData [_idx, _eraKey];
         };
-    } forEach _ctb;
+    } forEach _preset;
 };
 
 // Get display name for config class (CfgWeapons or CfgVehicles)
@@ -389,7 +389,7 @@ FAC_loadoutGui_tryAddItemCount = {
     systemChat format ["Cannot add %1: no inventory space.", _label];
 };
 
-// Same IR strobe inventory item as FADE_attachNightStrobes / CTB vests (ACE_IR_Strobe_Item).
+// Same IR strobe inventory item as FADE_attachNightStrobes / preset vests (ACE_IR_Strobe_Item).
 FAC_loadoutGui_tryAddBandageBundle = {
     private _pairs = [
         ["ACE_elasticBandage", 2],
@@ -473,7 +473,7 @@ FAC_loadoutGui_clientApplyAuthorizedLoadout = {
     private _u = player;
     if (isNull _u || {!alive _u} || {!local _u}) exitWith {};
     if (!(_loadout isEqualType []) || { (count _loadout) < 10 }) exitWith {};
-    private _norm = [_loadout] call FAC_loadoutGui_resolveCtbLoadoutArray;
+    private _norm = [_loadout] call FAC_loadoutGui_resolvePresetLoadoutArray;
     if ((count _norm) < 10) exitWith {};
     [_u] call FAC_loadoutGui_stripUnitForLoadout;
     _u setUnitLoadout _norm;
@@ -492,7 +492,7 @@ FAC_loadoutGui_applyLoadoutArrayLocal = {
     private _u = player;
     if (isNull _u || {!alive _u} || {!local _u}) exitWith { false };
     if (!(_loadout isEqualType []) || { _loadout isEqualTo [] }) exitWith { false };
-    private _norm = [_loadout] call FAC_loadoutGui_resolveCtbLoadoutArray;
+    private _norm = [_loadout] call FAC_loadoutGui_resolvePresetLoadoutArray;
     if ((count _norm) < 10) exitWith { false };
     [_u] call FAC_loadoutGui_stripUnitForLoadout;
     _u setUnitLoadout _norm;
@@ -530,15 +530,15 @@ FAC_loadoutGui_getCfgRoleTraits = {
     ]
 };
 
-// CTB display name -> [medic, engineer, explosiveSpecialist]. Unknown roles clear all three (zeros/false).
-// Medic level: missionNamespace FAC_loadoutGui_ctbMedicTraitLevel (default 2).
-FAC_loadoutGui_getCtbRoleTraits = {
+// Preset role display name -> [medic, engineer, explosiveSpecialist]. Unknown roles clear all three (zeros/false).
+// Medic level: missionNamespace FAC_loadoutGui_presetMedicTraitLevel (default 2).
+FAC_loadoutGui_getPresetRoleTraits = {
     params ["_roleDn"];
     private _medic = 0;
     private _eng = false;
     private _exp = false;
     if (_roleDn == "Medic") then {
-        _medic = missionNamespace getVariable ["FAC_loadoutGui_ctbMedicTraitLevel", 2];
+        _medic = missionNamespace getVariable ["FAC_loadoutGui_presetMedicTraitLevel", 2];
     };
     if (_roleDn == "Engineer") then {
         _eng = true;
@@ -621,19 +621,19 @@ FAC_loadoutGui_fillSquadMemberList = {
     if (lbSize _lb > 0) then { _lb lbSetCurSel 0 };
 };
 
-// Highlight active loadout source (60213 = CTB, 60214 = Faction Units).
+// Highlight active loadout source (60213 = Presets, 60214 = Faction Units).
 FAC_loadoutGui_updateSourceButtons = {
     params ["_display"];
-    private _mode = missionNamespace getVariable ["FAC_loadoutGui_listMode", "ctb"];
+    private _mode = missionNamespace getVariable ["FAC_loadoutGui_listMode", "preset"];
     private _active = [0.2, 0.45, 0.65, 1];
     private _idle = [0.22, 0.22, 0.26, 1];
-    private _bCtb = _display displayCtrl 60213;
+    private _bPreset = _display displayCtrl 60213;
     private _bStd = _display displayCtrl 60214;
-    if (_mode == "ctb") then {
-        _bCtb ctrlSetBackgroundColor _active;
+    if (_mode == "preset") then {
+        _bPreset ctrlSetBackgroundColor _active;
         _bStd ctrlSetBackgroundColor _idle;
     } else {
-        _bCtb ctrlSetBackgroundColor _idle;
+        _bPreset ctrlSetBackgroundColor _idle;
         _bStd ctrlSetBackgroundColor _active;
     };
 };
@@ -642,41 +642,41 @@ FAC_loadoutGui_updateSourceButtons = {
 FAC_loadoutGui_populateWorker = {
     params ["_display"];
     if (isNull _display) exitWith {};
-    private _btnCtb = _display displayCtrl 60213;
+    private _btnPreset = _display displayCtrl 60213;
     private _btnStd = _display displayCtrl 60214;
-    _btnCtb ctrlShow true;
+    _btnPreset ctrlShow true;
     _btnStd ctrlShow true;
-    _btnCtb ctrlSetPosition [0.18, 0.082, 0.40, 0.042];
+    _btnPreset ctrlSetPosition [0.18, 0.082, 0.40, 0.042];
     _btnStd ctrlSetPosition [0.59, 0.082, 0.39, 0.042];
-    _btnCtb ctrlCommit 0;
+    _btnPreset ctrlCommit 0;
     _btnStd ctrlCommit 0;
 
     private _limitToBlu = missionNamespace getVariable ["FADE_limitGearToFriendlyFaction", false];
-    private _limitToCtb = missionNamespace getVariable ["FADE_limitToCtbLoadouts", false];
+    private _limitToPreset = missionNamespace getVariable ["FADE_limitToPresetLoadouts", false];
     private _forceStd = _limitToBlu;
-    private _forceCtb = (!_forceStd) && { _limitToCtb };
+    private _forcePreset = (!_forceStd) && { _limitToPreset };
 
     if (_forceStd) then {
-        _btnCtb ctrlShow false;
+        _btnPreset ctrlShow false;
         _btnStd ctrlSetPosition [0.18, 0.082, 0.80, 0.042];
         _btnStd ctrlCommit 0;
         missionNamespace setVariable ["FAC_loadoutGui_listMode", "std"];
         missionNamespace setVariable ["FAC_loadoutGui_allUnits", [] call FAC_loadoutGui_buildStdUnits];
         [_display] call FAC_loadoutGui_populateStdFactionList;
     } else {
-        if (_forceCtb) then {
+        if (_forcePreset) then {
             _btnStd ctrlShow false;
-            _btnCtb ctrlSetPosition [0.18, 0.082, 0.80, 0.042];
-            _btnCtb ctrlCommit 0;
+            _btnPreset ctrlSetPosition [0.18, 0.082, 0.80, 0.042];
+            _btnPreset ctrlCommit 0;
         };
-        missionNamespace setVariable ["FAC_loadoutGui_listMode", "ctb"];
-        if (!([] call FAC_loadoutGui_ensureCtbData)) then {
-            systemChat "[Loadout] CTB presets failed to load — check RPT and rsc\CTBLoadouts.sqf.";
+        missionNamespace setVariable ["FAC_loadoutGui_listMode", "preset"];
+        if (!([] call FAC_loadoutGui_ensurePresetData)) then {
+            systemChat "[Loadout] Presets failed to load — check RPT and rsc\\PresetLoadouts.sqf.";
             missionNamespace setVariable ["FAC_loadoutGui_allUnits", []];
         } else {
-            missionNamespace setVariable ["FAC_loadoutGui_allUnits", [] call FAC_loadoutGui_buildCtbEntries];
+            missionNamespace setVariable ["FAC_loadoutGui_allUnits", [] call FAC_loadoutGui_buildPresetEntries];
         };
-        [_display] call FAC_loadoutGui_populateCtbFactionList;
+        [_display] call FAC_loadoutGui_populatePresetFactionList;
     };
     [_display] call FAC_loadoutGui_updateSourceButtons;
 
@@ -771,27 +771,27 @@ FAC_loadoutGui_fnc = {
             [_display] call FAC_loadoutGui_updateApplyToSquadControls;
         };
         case "sourcePick": {
-            _params params [["_mode", "ctb", [""]]];
-            if (!(_mode in ["ctb", "std"])) exitWith {};
+            _params params [["_mode", "preset", [""]]];
+            if (!(_mode in ["preset", "std"])) exitWith {};
             _display = findDisplay 60200;
             if (isNull _display) exitWith {};
             private _limitToBlu = missionNamespace getVariable ["FADE_limitGearToFriendlyFaction", false];
-            private _limitToCtb = missionNamespace getVariable ["FADE_limitToCtbLoadouts", false];
+            private _limitToPreset = missionNamespace getVariable ["FADE_limitToPresetLoadouts", false];
             if (_limitToBlu && { _mode != "std" }) exitWith { systemChat "Loadouts are limited to chosen BLUFOR faction."; };
-            if (!_limitToBlu && { _limitToCtb } && { _mode != "ctb" }) exitWith { systemChat "Loadouts are limited to CTB presets."; };
+            if (!_limitToBlu && { _limitToPreset } && { _mode != "preset" }) exitWith { systemChat "Loadouts are limited to preset loadouts."; };
             missionNamespace setVariable ["FAC_loadoutGui_listMode", _mode];
 
             if (_mode == "std") then {
                 missionNamespace setVariable ["FAC_loadoutGui_allUnits", [] call FAC_loadoutGui_buildStdUnits];
                 [_display] call FAC_loadoutGui_populateStdFactionList;
             } else {
-                if (!([] call FAC_loadoutGui_ensureCtbData)) then {
-                    systemChat "[Loadout] CTB presets failed to load — check RPT and rsc\CTBLoadouts.sqf.";
+                if (!([] call FAC_loadoutGui_ensurePresetData)) then {
+                    systemChat "[Loadout] Presets failed to load — check RPT and rsc\\PresetLoadouts.sqf.";
                     missionNamespace setVariable ["FAC_loadoutGui_allUnits", []];
                 } else {
-                    missionNamespace setVariable ["FAC_loadoutGui_allUnits", [] call FAC_loadoutGui_buildCtbEntries];
+                    missionNamespace setVariable ["FAC_loadoutGui_allUnits", [] call FAC_loadoutGui_buildPresetEntries];
                 };
-                [_display] call FAC_loadoutGui_populateCtbFactionList;
+                [_display] call FAC_loadoutGui_populatePresetFactionList;
             };
             [_display] call FAC_loadoutGui_updateSourceButtons;
             ["filterChanged", []] call FAC_loadoutGui_fnc;
@@ -799,7 +799,7 @@ FAC_loadoutGui_fnc = {
         case "filterChanged": {
             if (isNull _display) exitWith {};
             private _allUnits = missionNamespace getVariable ["FAC_loadoutGui_allUnits", []];
-            private _listMode = missionNamespace getVariable ["FAC_loadoutGui_listMode", "ctb"];
+            private _listMode = missionNamespace getVariable ["FAC_loadoutGui_listMode", "preset"];
             private _factionList = _display displayCtrl 60210;
             private _filterFaction = "";
             private _sel = lbCurSel _factionList;
@@ -812,7 +812,7 @@ FAC_loadoutGui_fnc = {
             {
                 _x params ["_class", "_displayName", "_faction", "_factionDn", "_typeDn"];
                 if (_filterFaction == "" || { _faction == _filterFaction }) then {
-                    private _label = if (_listMode == "ctb" && ((_class find "CTB:") == 0)) then {
+                    private _label = if (_listMode == "preset" && ((_class find "FAC:") == 0)) then {
                         _factionDn + " > " + _displayName
                     } else {
                         _factionDn + " > " + _typeDn + " > " + _displayName
@@ -823,7 +823,7 @@ FAC_loadoutGui_fnc = {
                 };
             } forEach _allUnits;
 
-            if (_listMode == "ctb") then {
+            if (_listMode == "preset") then {
                 _filtered = _filtered apply { [_x select 3, _x select 1, _x] };
             } else {
                 _filtered = _filtered apply { [_x select 3, _x select 4, _x select 1, _x] };
@@ -835,7 +835,7 @@ FAC_loadoutGui_fnc = {
             lbClear _unitLb;
             {
                 _x params ["_class", "_displayName", "_faction", "_factionDn", "_typeDn"];
-                private _label = if (_listMode == "ctb" && ((_class find "CTB:") == 0)) then {
+                private _label = if (_listMode == "preset" && ((_class find "FAC:") == 0)) then {
                     _factionDn + " > " + _displayName
                 } else {
                     _factionDn + " > " + _typeDn + " > " + _displayName
@@ -843,14 +843,14 @@ FAC_loadoutGui_fnc = {
                 private _idx = _unitLb lbAdd _label;
                 _unitLb lbSetData [_idx, _class];
                 private _pic = "\a3\ui_f\data\map\markers\nato\b_inf.paa";
-                if ((_class find "CTB:") != 0) then {
+                if ((_class find "FAC:") != 0) then {
                     _pic = getText (configFile >> "CfgVehicles" >> _class >> "picture");
                     if (_pic == "") then { _pic = getText (configFile >> "CfgVehicles" >> _class >> "icon") };
                     if (_pic == "") then { _pic = "\a3\ui_f\data\map\markers\nato\b_inf.paa" };
                 };
                 _unitLb lbSetPicture [_idx, _pic];
-                private _loadoutTip = if ((_class find "CTB:") == 0) then {
-                    private _arr = [_class] call FAC_loadoutGui_getCtbLoadoutByKey;
+                private _loadoutTip = if ((_class find "FAC:") == 0) then {
+                    private _arr = [_class] call FAC_loadoutGui_getPresetLoadoutByKey;
                     [_arr] call FAC_loadoutGui_buildLoadoutTextFromArray
                 } else {
                     [_class] call FAC_loadoutGui_buildLoadoutText
@@ -877,15 +877,15 @@ FAC_loadoutGui_fnc = {
                 systemChat "Loadout GUI: no row data — re-open the dialog.";
             };
 
-            if ((_class find "CTB:") == 0) then {
-                private _ctbLoadout = [_class] call FAC_loadoutGui_getCtbLoadoutByKey;
-                if (_ctbLoadout isEqualType [] && { count _ctbLoadout > 0 }) then {
+            if ((_class find "FAC:") == 0) then {
+                private _presetLoadout = [_class] call FAC_loadoutGui_getPresetLoadoutByKey;
+                if (_presetLoadout isEqualType [] && { count _presetLoadout > 0 }) then {
                     private _line = _unitLb lbText _idx;
-                    [_ctbLoadout, _line, _class] spawn {
+                    [_presetLoadout, _line, _class] spawn {
                         params ["_load", "_msgLine", "_rowKey"];
                         uiSleep 0.01;
                         if (isNull player || {!alive player} || {!local player}) exitWith {
-                            systemChat "CTB apply: no local player.";
+                            systemChat "Preset apply: no local player.";
                         };
                         // Close loadout dialog — some setups block inventory writes while it is open.
                         if (!isNull (findDisplay 60200)) then { closeDialog 0; };
@@ -895,19 +895,19 @@ FAC_loadoutGui_fnc = {
                             {
                                 if ((_x select 0) == _rowKey) exitWith { _roleDn = _x select 1 };
                             } forEach (missionNamespace getVariable ["FAC_loadoutGui_allUnits", []]);
-                            private _tr = [_roleDn] call FAC_loadoutGui_getCtbRoleTraits;
+                            private _tr = [_roleDn] call FAC_loadoutGui_getPresetRoleTraits;
                             [player, _tr select 0, _tr select 1, _tr select 2] call FAC_loadoutGui_syncRoleTraitsLocal;
-                            systemChat format ["My CTB loadout applied: %1", _msgLine];
+                            systemChat format ["My preset loadout applied: %1", _msgLine];
                         } else {
-                            private _n = [_load] call FAC_loadoutGui_resolveCtbLoadoutArray;
+                            private _n = [_load] call FAC_loadoutGui_resolvePresetLoadoutArray;
                             systemChat format [
-                                "CTB apply failed: resolved loadout length %1 (need 10). Check CTBLoadouts.sqf / ACE export shape.",
+                                "Preset apply failed: resolved loadout length %1 (need 10). Check PresetLoadouts.sqf / ACE export shape.",
                                 count _n
                             ];
                         };
                     };
                 } else {
-                    systemChat "CTB preset is missing or invalid.";
+                    systemChat "Preset loadout is missing or invalid.";
                 };
             } else {
                 private _resolvedLoadout = [_class] call FAC_loadoutGui_getLoadoutFromClass;
@@ -964,6 +964,34 @@ FAC_loadoutGui_fnc = {
 
         case "addBandages": {
             [] call FAC_loadoutGui_tryAddBandageBundle;
+        };
+
+        case "setCivInterpreter": {
+            if (isNull player || {!alive player}) exitWith {};
+            player setVariable ["FADE_civInterpreter", true, true];
+            systemChat "Marked as interpreter — you can talk to civilians when the scenario requires it.";
+            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+        };
+
+        case "clearCivInterpreter": {
+            if (isNull player) exitWith {};
+            player setVariable ["FADE_civInterpreter", false, true];
+            systemChat "Interpreter flag removed.";
+            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+        };
+
+        case "setIntelSpecialist": {
+            if (isNull player || {!alive player}) exitWith {};
+            player setVariable ["FADE_intelSpecialist", true, true];
+            systemChat "Marked as Intel specialist.";
+            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+        };
+
+        case "clearIntelSpecialist": {
+            if (isNull player) exitWith {};
+            player setVariable ["FADE_intelSpecialist", false, true];
+            systemChat "Intel specialist flag removed.";
+            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
 
         case "updateSaveStatus": {

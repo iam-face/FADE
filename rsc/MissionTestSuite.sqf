@@ -111,7 +111,7 @@ FAC_missionTestSuite_runServer = {
 
     if (count _civNames == 0) then {
         _fail = _fail + 1;
-        diag_log "[FAC TestSuite] FAIL (server): Operation — no CIV_T_* (FADE_civTriggerNames empty)";
+        diag_log "[FAC TestSuite] FAIL (server): Operation — no civ zones (FADE_civTriggerNames empty)";
     } else {
         _pass = _pass + 1;
         diag_log format ["[FAC TestSuite] PASS (server): Operation — CIV zones listed (%1)", count _civNames];
@@ -182,6 +182,7 @@ FAC_missionTestSuite_runServer = {
         "FADE_resolveScenarioFriendlyUnits",
         "FADE_resolveScenarioEnemyUnits",
         "FADE_normPos3",
+        "FADE_surfaceIsDry",
         "FADE_findSafePosArray",
         "FADE_op_countBluforPlayersInRadius",
         "FADE_op_countEnemyMenInRadius",
@@ -206,6 +207,7 @@ FAC_missionTestSuite_runServer = {
         "FADE_startMission",
         "FADE_abortMission",
         "FADE_getCargoSeats",
+        "FADE_ensureEnemyVehicleGunner",
         "FADE_fires_spawnPiece",
         "FADE_fires_despawnSlot",
         "FADE_fires_rearmSlot",
@@ -231,10 +233,12 @@ FAC_missionTestSuite_runServer = {
         "FADE_rangeStartSession",
         "FADE_rangeEndSession",
         "FADE_rangeRequestAtWeaponState",
-        "FADE_rangeSpawnAtWeaponAtSlot",
-        "FADE_rangeDespawnAtWeaponSlot",
         "FADE_rangeSpawnFriendlyLandAtSlot",
-        "FADE_rangeDespawnFriendlyLandAtSlot"
+        "FADE_rangeDespawnFriendlyLandAtSlot",
+        "FADE_civTalk_start",
+        "FADE_civTalk_topic",
+        "FADE_civTalk_end",
+        "FADE_civTalk_serverCivAnim"
     ];
     {
         private _n = _x;
@@ -258,14 +262,18 @@ FAC_missionTestSuite_runServer = {
         "rsc\OperationMission.sqf",
         "rsc\AmbientCivilians.sqf",
         "rsc\EnemyAAA.sqf",
-        "rsc\EnemyCheckpoints.sqf",
+        "rsc\RoadblockCommon.sqf",
+        "rsc\DynamicRoadblocks.sqf",
         "rsc\DummyUnits.sqf",
-        "rsc\PadVehicleService.sqf",
         "rsc\FiresFallOfShot.sqf",
+        "rsc\FiresDrillServer.sqf",
         "rsc\SurrenderChallenge.sqf",
         "rsc\SniperRangeServer.sqf",
         "rsc\RangeShared.sqf",
-        "rsc\RangeServer.sqf"
+        "rsc\RangeServer.sqf",
+        "rsc\CivTalkServer.sqf",
+        "rsc\FADE_IntelServer.sqf",
+        "rsc\FADE_IntelClient.sqf"
     ];
     {
         private _path = _x;
@@ -327,7 +335,30 @@ FAC_missionTestSuite_runClient = {
         "FADE_sniperClient_setProjectileImpactMarkers",
         "FADE_sniperClient_showTrialHint",
         "FAC_rangeGui_fnc",
-        "FADE_rangeClient_setAtWeaponState"
+        "FADE_rangeClient_onSessionStarted",
+        "FADE_rangeClient_enableSniperFxForRange",
+        "FADE_rangeClient_disableSniperFxForRange",
+        "FADE_rangeClient_setAtWeaponState",
+        "FAC_civTalkGui_fnc",
+        "FADE_civTalk_addLocalAction",
+        "FADE_civTalk_clientOpen",
+        "FADE_civTalk_clientBeginCutscene",
+        "FADE_civTalk_clientTeardown",
+        "FADE_civTalk_clientPlayerAnim",
+        "FADE_civTalk_clientSetReply",
+        "FADE_civTalk_clientPlayGestureAnimOnUnit",
+        "FADE_civTalk_clientCloseCivTalkForGesture",
+        "FADE_civTalk_clientMenuApplyLabels",
+        "FADE_civTalk_clientApplyVerticalLayout",
+        "FADE_civTalk_clientAppendIntelDiary",
+        "FADE_civTalk_clientClearPlayerAnim",
+        "FADE_civTalk_debugPreviewCamera",
+        "FADE_civTalk_debugApplyPreviewCamera",
+        "FADE_civTalk_debugSpawnSceneAndCamera",
+        "FADE_civTalk_debugResetScene",
+        "FADE_civTalk_debugStopCamera",
+        "FADE_intel_clientRegister",
+        "FADE_intel_clientAppendIntelDiary"
     ];
     private _ok = false;
     {

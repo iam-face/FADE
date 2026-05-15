@@ -2,10 +2,24 @@
 // EscapeEvasionPickGui.sqf — evadee selection overlay on Manage Missions (60002)
 // =============================================================================
 if (hasInterface) then {
+    // Config-defined controls (description.ext) draw above ctrlCreate overlay — hide them while overlay is up.
+    FAC_escapeEvasionPickGui_fnc_baseMissionsIdcs = [60133, 60110, 60111, 60112, 60113, 60114, 60115, 60120, 60131, 60121, 60130, 60134, 60135, 60136, 60150, 60151, 60152, 60153];
+
+    FAC_escapeEvasionPickGui_fnc_setBaseMissionsLayerVisible = {
+        params [["_show", true]];
+        private _d = findDisplay 60002;
+        if (isNull _d) exitWith {};
+        {
+            private _c = _d displayCtrl _x;
+            if (!isNull _c) then { _c ctrlShow _show };
+        } forEach FAC_escapeEvasionPickGui_fnc_baseMissionsIdcs;
+    };
+
     FAC_escapeEvasionPickGui_fnc_destroyOverlay = {
         private _lst = uinamespace getVariable ["FAC_eePick_overlayCtrls", []];
         { if (!isNull _x) then { ctrlDelete _x } } forEach _lst;
         uinamespace setVariable ["FAC_eePick_overlayCtrls", nil];
+        [true] call FAC_escapeEvasionPickGui_fnc_setBaseMissionsLayerVisible;
     };
 
     FAC_escapeEvasionPickGui_fnc = {
@@ -18,6 +32,7 @@ if (hasInterface) then {
                 };
                 disableSerialization;
                 [] call FAC_escapeEvasionPickGui_fnc_destroyOverlay;
+                [false] call FAC_escapeEvasionPickGui_fnc_setBaseMissionsLayerVisible;
                 private _controls = [];
                 private _bg = _display ctrlCreate ["RscText", 60280];
                 _bg ctrlSetPosition [0.02, 0.09, 0.96, 0.72];

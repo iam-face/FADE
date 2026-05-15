@@ -11,6 +11,8 @@ local_server/
 *.py
 # Agent / AI context (local only unless force-added); .cursor/rules stays tracked
 .cursor/agent-docs/
+.cursor/rules/
+.cursor
 
 # Arma / Eden (optional: uncomment if you don't want to track these)
 # *.bisign

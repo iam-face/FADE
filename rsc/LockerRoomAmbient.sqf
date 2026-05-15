@@ -1,4 +1,4 @@
-// CTB Locker Room - client only (initPlayerLocal). Dedicated server does not run this; each human client runs one loop (not 30× on the server).
+// Locker Room - client only (initPlayerLocal). Dedicated server does not run this; each human client runs one loop (not 30× on the server).
 // Hostage + slap: independent timers (Config: default 3–6s).
 // Perf: distanceSqr vs precomputed r² (no sqrt); adaptive sleep when far; nearestObjects only if no posLocker_* (prefer Eden helpers).
 // MP: [player, [class, dist, pitch, 2]] remoteExec ["say3D", 0] so all clients hear 3D audio.

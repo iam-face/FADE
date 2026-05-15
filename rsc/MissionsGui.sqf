@@ -4,30 +4,31 @@
 // Weather and time are managed via Scenario GUI (Manage Scenario).
 
 // [displayName, missionId, description, "Global"|"Single"] - stream is for logic; list shows [G]/[S]
+// Keep [0]/[1] in sync with rsc/FAC_MissionTypeLabels.sqf (server mission intro subtitle).
 private _missionListRaw = [
-    ["Area of Operations", "AreaOfOperations", "Large-scale mission across a 2 km x 2 km AO. BLUFOR AI will assault 3 objectives in the sector. OPFOR defend. All units can respawn to continue the fight. [G]", "Global"],
-    ["Asset Retrieval", "AssetRetrieval", "Secure intel at the site (scroll action on case), then RTB. [G]", "Global"],
-    ["CAS / Fire Support", "CAS", "Engage enemy forces and support friendlies at the objective. [G]", "Global"],
-    ["Cargo / Resupply", "Cargo", "Optionally pick up a sling-load cargo box, fly to friendly camp and land to complete (non-combat). [S]", "Single"],
-    ["CASEVAC", "CASEVAC", "Pick up wounded squad and RTB. ACE Medical. [S]", "Single"],
-    ["Clear Area", "ClearArea", "Medium-scale, assault an enemy-occupied town or camp. Destroy at least 80% of enemy to succeed [G]", "Global"],
-    ["CSAR", "CSAR", "Recover a survivor at a helo crash site; RTB. Shared global slot. [G]", "Global"],
-    ["Escape & Evasion", "EscapeEvasion", "Evadees (you pick) are dispersed in a hostile civ area without GPS; hunt patrols, truck QRF on contact, and later a search heli (area orbit only). RTB all evadees alive to win. [G]", "Global"],
-    ["Hostage", "Hostage", "Rescue hostages from urban buildings. Return all alive to base. [G]", "Global"],
-    ["HVT", "HVT", "Find a high value target in urban area. Eliminate or capture. [G]", "Global"],
-    ["Intercept Convoy", "InterceptConvoy", "Destroy convoy before it reaches the end zone. [G]", "Global"],
-    ["Mine Clearing", "MineClearing", "EOD: 2–5 mines or 1–3 IEDs on roads near a CIV_T_* zone (one type per mission). Spaced along the route. [S]", "Single"],
-    ["Operation", "Operation", "Clear OPFOR from multiple civ zones; each zone stays captured once clear (60s tick). [G]", "Global"],
-    ["Search & Destroy", "SearchDestroy", "Find and clear 3 OPFOR buildings in a civ town. [G]", "Global"],
-    ["Troop Extract", "TroopExtract", "Fly to pickup zone, land to load squad, return to base. [S]", "Single"],
-    ["Troop Insert", "TroopInsert", "Pick up squad at base, fly to LZ, land to disembark. [S]", "Single"]
+    ["Area of Operations", "AreaOfOperations", "Shared fight across a wide sector with multiple objectives. Expect steady contact and space to manoeuvre. [G]", "Global"],
+    ["Asset Retrieval", "AssetRetrieval", "Recover priority equipment from enemy-held ground. Expect guarded routes, patrols and buildings; plan your extraction. [G]", "Global"],
+    ["CAS / Fire Support", "CAS", "Provide close air or indirect fires to support friendly forces under attack. Identify friendlies and deconflict before engaging. [G]", "Global"],
+    ["Cargo / Resupply", "Cargo", "Deliver supplies to a forward camp. Land to unload or practice sling loads. Follow PZ and LZ procedures. [S]", "Single"],
+    ["CASEVAC", "CASEVAC", "Evacuate wounded from the field to medical care. Fast, careful pickups; LZs may be tight or informal. [S]", "Single"],
+    ["Clear Area", "ClearArea", "Clear and secure an enemy-held town or camp. Expect close fighting and reinforced positions. [G]", "Global"],
+    ["CSAR", "CSAR", "Search and recover personnel from a crash site. Treat the area as dangerous until secured. [G]", "Global"],
+    ["Escape & Evasion", "EscapeEvasion", "Move separated personnel out of hostile territory while a rescue force coordinates recovery. Navigate with limited aids. [G]", "Global"],
+    ["Hostage", "Hostage", "Rescue civilians held by hostiles in dense terrain. Move fast, control the scene, and separate civilians from combatants. [G]", "Global"],
+    ["HVT", "HVT", "Locate and neutralise or capture a priority target in built-up areas. Secure the target and extract them to base. [G]", "Global"],
+    ["Intercept Convoy", "InterceptConvoy", "Ambush and stop a moving enemy column before it reaches its destination. Expect escorts and rapid reactions. [G]", "Global"],
+    ["Mine Clearing", "MineClearing", "Clear a short road segment of mines or IEDs. Use deliberate recon and proven clearance procedures. [S]", "Single"],
+    ["Operation", "Operation", "Linked fights across several zones. Clear, hold, and prevent enemy movement between areas. [G]", "Global"],
+    ["Search & Destroy", "SearchDestroy", "Find and eliminate hardened enemy positions inside a town. Expect multiple strongpoints and interior fights. [G]", "Global"],
+    ["Troop Extract", "TroopExtract", "Pick up a ground team and return them to base. LZ discipline and calm loading are essential. [S]", "Single"],
+    ["Troop Insert", "TroopInsert", "Insert troops into a surveyed LZ from base. Aim for clear, safe landings and quick dismounts. [S]", "Single"]
 ];
 private _sorted = [_missionListRaw, [], { _x select 0 }, "ASCEND"] call BIS_fnc_sortBy;
 if (isNil "_sorted" || { !(_sorted isEqualType []) }) then { _sorted = _missionListRaw };
 missionNamespace setVariable ["FAC_missionsGui_missionList", _sorted];
 
 // Default intro when no mission selected
-FAC_missionsGui_defaultDesc = "Select a mission from the list to view details. After you start one, this area shows pickup, objectives, and completion criteria from your task briefing.";
+FAC_missionsGui_defaultDesc = "Select a mission to see the commander’s intent and expected tasks. After you start, check your Tasks panel and map markers for full orders, grids, and completion criteria.";
 
 // Remove first line of server brief when it duplicates the mission type already shown in "OpName (Type)" header.
 FAC_missionsGui_stripDuplicateBriefHeader = {
@@ -179,7 +180,8 @@ FAC_missionsGui_fnc = {
                 params ["_entry"];
                 private _type = _entry param [0, ""];
                 private _operationName = _entry param [4, ""];
-                if (_operationName isEqualType "" && { _operationName != "" }) exitWith { _operationName };
+                // If an operation name is provided, prefer "Operation <name>" as the title.
+                if (!(_operationName isEqualType "") && { _operationName != "" }) exitWith { format ["Operation %1", _operationName] };
                 [_type] call _displayName
             };
             private _entryTypeLabel = {
@@ -191,6 +193,18 @@ FAC_missionsGui_fnc = {
                 params ["_o"];
                 if (!isNull _o) then { name _o } else { "?" }
             };
+            private _slotFocusLine = {
+                params ["_entry"];
+                if (count _entry < 3) exitWith { "Focus: see Tasks / markers." };
+                private _mType = _entry param [0, ""];
+                private _pos = _entry param [2, []];
+                if (_mType == "InterceptConvoy") exitWith { "Route: start and end markers — full orders in Tasks." };
+                if (_mType == "Operation") exitWith { "AO: multiple zones — capture rules in Tasks." };
+                if (_pos isEqualType [] && { count _pos >= 2 } && { !(_pos isEqualTo [0, 0, 0]) }) exitWith {
+                    "Approx. area grid: " + (mapGridPosition _pos) + " — detail in Tasks."
+                };
+                "Focus: see Tasks / markers."
+            };
             private _nl = toString [10];
             private _slotGlobal = _display displayCtrl 60130;
             if (!isNull _slotGlobal) then {
@@ -199,7 +213,8 @@ FAC_missionsGui_fnc = {
                     private _typeLabel = [_global] call _entryTypeLabel;
                     private _owner = _global select 1;
                     private _oStr = [_owner] call _ownerStr;
-                    _slotGlobal ctrlSetText (_title + _nl + _typeLabel + _nl + "Started by: " + _oStr);
+                    private _focus = [_global] call _slotFocusLine;
+                    _slotGlobal ctrlSetText (_title + _nl + _typeLabel + _nl + _focus + _nl + "Started by: " + _oStr);
                 } else {
                     _slotGlobal ctrlSetText ("No mission active." + _nl + "(Global slot is free.)");
                 };
@@ -215,7 +230,8 @@ FAC_missionsGui_fnc = {
                         private _n = [_entry] call _entryTitle;
                         private _typeLabel = [_entry] call _entryTypeLabel;
                         private _oStr = [_o] call _ownerStr;
-                        _c ctrlSetText (_n + _nl + _typeLabel + _nl + "Started by: " + _oStr);
+                        private _focus = [_entry] call _slotFocusLine;
+                        _c ctrlSetText (_n + _nl + _typeLabel + _nl + _focus + _nl + "Started by: " + _oStr);
                     } else {
                         _c ctrlSetText ("No mission in this slot.");
                     };
@@ -264,8 +280,8 @@ FAC_missionsGui_fnc = {
         case "missionSelChanged": {
             ["refreshDescription", []] call FAC_missionsGui_fnc;
         };
-        // Description: shows *your* FADE_myMissionBrief while you have an active mission; otherwise the
-        // static blurb for the currently selected list row. It does not merge or rotate multiple active missions.
+        // Description: shows *your* FADE_myMissionBrief (short grid + intent + “see Tasks”) while active; otherwise
+        // the list-row preview blurb. Does not merge multiple active missions.
         case "refreshDescription": {
             if (isNull _display) exitWith {};
             private _descCtrl = _display displayCtrl 60131;
@@ -292,21 +308,21 @@ FAC_missionsGui_fnc = {
             private _text = "";
             if (_brief isEqualType "" && { count _brief > 0 }) then {
                 _text = _brief;
-                private _opName = [] call _operationNameForPlayer;
-                if (_opName != "") then {
-                    private _missionTypeId = player getVariable ["FADE_myMission", ""];
-                    private _missionTypeLabel = _missionTypeId;
-                    if (_missionTypeId != "") then {
-                        private _list = missionNamespace getVariable ["FAC_missionsGui_missionList", []];
-                        {
-                            if ((_x select 1) == _missionTypeId) exitWith {
-                                _missionTypeLabel = _x select 0;
-                            };
-                        } forEach _list;
+                    private _opName = [] call _operationNameForPlayer;
+                    if (_opName != "") then {
+                        private _missionTypeId = player getVariable ["FADE_myMission", ""];
+                        private _missionTypeLabel = _missionTypeId;
+                        if (_missionTypeId != "") then {
+                            private _list = missionNamespace getVariable ["FAC_missionsGui_missionList", []];
+                            {
+                                if ((_x select 1) == _missionTypeId) exitWith {
+                                    _missionTypeLabel = _x select 0;
+                                };
+                            } forEach _list;
+                        };
+                        _text = [_text, _missionTypeLabel, _missionTypeId] call FAC_missionsGui_stripDuplicateBriefHeader;
+                        _text = format ["Operation %1 \u2014 %2%3%3%4", _opName, _missionTypeLabel, toString [10], _text];
                     };
-                    _text = [_text, _missionTypeLabel, _missionTypeId] call FAC_missionsGui_stripDuplicateBriefHeader;
-                    _text = format ["%1 (%2)%3%3%4", _opName, _missionTypeLabel, toString [10], _text];
-                };
             } else {
                 private _mLb = _display displayCtrl 60120;
                 private _idx = lbCurSel _mLb;

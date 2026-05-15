@@ -141,7 +141,7 @@ private _situationIntelAoHint = if (_intelFormatterAo isEqualTo {}) then {
         "#FFFFFF"
     ] call _intelFormatterAo
 };
-private _zeroAlphaObjAo = missionNamespace getVariable ["CTB_PILOT_1", objNull];
+private _zeroAlphaObjAo = missionNamespace getVariable ["FAC_PILOT_1", objNull];
 private _zeroAlphaNameAo = if (isNull _zeroAlphaObjAo) then { "UNASSIGNED" } else { name _zeroAlphaObjAo };
 if (_zeroAlphaNameAo == "") then { _zeroAlphaNameAo = "UNASSIGNED" };
 private _taskDescAo = if (_taskBuilderAo isEqualTo {}) then {
@@ -163,6 +163,7 @@ private _taskDescAo = if (_taskBuilderAo isEqualTo {}) then {
 private _borderThick = 40;  // metres extra each side for border thickness
 private _zoneOuterName = "FADE_ao_zone_outer_" + _taskId;
 private _zoneOuter = createMarker [_zoneOuterName, _destPos];
+[_taskId, _zoneOuterName] call FADE_missionEnt_registerMarker;
 _zoneOuter setMarkerShape "RECTANGLE";
 _zoneOuter setMarkerSize [_zoneHalfDepth + _borderThick, _zoneHalfWidth + _borderThick];
 _zoneOuter setMarkerDir _attackDir;
@@ -171,6 +172,7 @@ _zoneOuter setMarkerColor "ColorBlack";
 _zoneOuter setMarkerAlpha 0.9;
 private _zoneName = "FADE_ao_zone_" + _taskId;
 private _zone = createMarker [_zoneName, _destPos];
+[_taskId, _zoneName] call FADE_missionEnt_registerMarker;
 _zone setMarkerShape "RECTANGLE";
 _zone setMarkerSize [_zoneHalfDepth, _zoneHalfWidth];
 _zone setMarkerDir _attackDir;
@@ -243,12 +245,14 @@ private _objComposition = [
 
 private _pointMarkers = [];
 {
-    private _m = createMarker ["FADE_ao_pt_" + _taskId + str _forEachIndex, [_x, 100] call _mkrJitter];
+    private _ptName = "FADE_ao_pt_" + _taskId + str _forEachIndex;
+    private _m = createMarker [_ptName, [_x, 100] call _mkrJitter];
+    [_taskId, _ptName] call FADE_missionEnt_registerMarker;
     _m setMarkerType "o_unknown";
     _m setMarkerColor _markerEnemy;
     _m setMarkerText _operationName;
     _m setMarkerAlpha 0;  // hidden
-    _pointMarkers pushBack _m;
+    _pointMarkers pushBack _ptName;
 } forEach _points;
 missionNamespace setVariable ["FADE_aoMarkers_" + _taskId, [_zoneOuterName, _zoneName] + _pointMarkers];
 
@@ -257,21 +261,11 @@ private _timeout = 30 * 60;
 
 // Brief and hint
 private _grid = mapGridPosition _destPos;
-private _brief = format ["AREA OF OPERATIONS%1%1ZONE: 2 km x 2 km at Grid %2. BLUFOR spawn 100 m outside one edge; assault OBJ 1 (closest), then OBJ 2, then OBJ 3. OPFOR on objectives and patrolling around each.%1%1Secure all 3 objectives to complete.", toString [10], _grid];
+private _briefGuiTail = toString [10] + toString [10] + "See your Tasks panel and map markers for objectives, routes, and completion criteria.";
+private _brief = format ["AREA OF OPERATIONS%1%1Battlespace anchor (approx.): Grid %2%1%1Large-sector fight with successive objectives — assault order and OPFOR layout on task.", toString [10], _grid] + _briefGuiTail;
 _player setVariable ["FADE_myMissionBrief", _brief, true];
-private _smeacFormatter = missionNamespace getVariable ["FADE_formatMissionAssignedSmeac", {}];
-if (_smeacFormatter isEqualTo {}) then {
-    [format ["<t size='1.3' color='#FFD700'>MISSION ASSIGNED</t><br/><br/><t size='1.1' color='#FFFFFF'>Area of Operations</t><br/><t color='#FFFFFF'>Zone: 2 km x 2 km at Grid %1</t><br/><t color='#FFFFFF'>OBJ 1 → OBJ 2 → OBJ 3. OPFOR on objectives + patrols.</t><br/><br/><t color='#FFFFFF'>Capture all 3 objectives to complete.</t>", _grid]] remoteExec ["FADE_showMissionHint", 0];
-} else {
-    [([
-        _operationNameUpper,
-        format ["<t align='left' color='#FFFFFF'>AO Grid: %1</t><br/><t align='left' color='#FFFFFF'>Secure OBJ 1 -> OBJ 2 -> OBJ 3 in sequence.</t>", _grid],
-        _situationIntelAoHint,
-        "<t align='left' color='#FFFFFF'>Insert from outside the AO edge, clear objective depth in order, and hold each objective until secured.</t>",
-        format ["<t align='left' color='#FFFFFF'>Zero Alpha (%1)</t>", _zeroAlphaNameAo],
-        format ["<t align='left' color='#FFFFFF'>Command &amp; Signal: %1</t>", _acreSummaryAo]
-    ]) call _smeacFormatter] remoteExec ["FADE_showMissionHint", 0];
-};
+private _starterName = if (isNull _player) then { "Unknown" } else { name _player };
+[_operationNameUpper, _starterName] remoteExec ["FADE_showMissionAssignedIntro", 0];
 [_player, "Area of Operations"] call FADE_notifyOthersMissionStarted;
 
 // OPFOR: strength from Scenario GUI (Low / Mid / High). Per objective: guard group(s), patrol groups, turrets (Mid+), vehicle (High only).
@@ -420,6 +414,7 @@ private _bluEdgeCenter = [_destPos, _zoneHalfDepth + 100, _attackDir] call BIS_f
                     _gunner assignAsGunner _veh;
                     _gunner moveInGunner _veh;
                 };
+                [_veh, _enemyUnits] call FADE_ensureEnemyVehicleGunner;
                 [_crewGrp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
                 _crewGrp setBehaviour "COMBAT";
                 _crewGrp setCombatMode "RED";
@@ -451,6 +446,7 @@ if (!(_bluSpawn isEqualType []) || { count _bluSpawn < 2 }) then { _bluSpawn = _
 if (count _bluSpawn < 3) then { _bluSpawn set [2, 0] };
 private _bluSpawnMarkerName = "FADE_ao_bluSpawn_" + _taskId;
 private _bluSpawnM = createMarker [_bluSpawnMarkerName, [_bluSpawn, 100] call _mkrJitter];
+[_taskId, _bluSpawnMarkerName] call FADE_missionEnt_registerMarker;
 _bluSpawnM setMarkerType "b_inf";
 _bluSpawnM setMarkerText _operationName;
 missionNamespace setVariable ["FADE_aoMarkers_" + _taskId, (missionNamespace getVariable ["FADE_aoMarkers_" + _taskId, []]) + [_bluSpawnMarkerName]];
@@ -474,6 +470,8 @@ for "_g" from 0 to (1 + floor random 2) do {
 
 // Define before JTAC block so JTAC respawn spawn can receive _aoAllGroups; JTAC group added when created
 private _aoAllGroups = _bluGroups + _opforGroups;
+[_taskId, _aoAllGroups] call FADE_missionEnt_bindGroups;
+{ [_taskId, _x] call FADE_missionEnt_registerObject } forEach _aoCompositionObjects;
 missionNamespace setVariable ["FADE_aoEntities_" + _taskId, [_aoAllGroups, _aoCompositionObjects]];
 
 // BLUFOR reinforcements: keep 2-4 BLUFOR squads (groups) active; spawn in a wave at BLUFOR edge every 30-60s when below 2 squads
@@ -594,6 +592,7 @@ missionNamespace setVariable ["FADE_aoEntities_" + _taskId, [_aoAllGroups, _aoCo
                         _gunner assignAsGunner _veh;
                         _gunner moveInGunner _veh;
                     };
+                    [_veh, _enemyUnits] call FADE_ensureEnemyVehicleGunner;
                     [_crewGrp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
                     _crewGrp setBehaviour "COMBAT";
                     _crewGrp setCombatMode "RED";
@@ -704,14 +703,7 @@ if (time - _startTime <= _timeout) then {
 };
 
 // 60 s delay before cleanup (match Cargo/Resupply and other modes)
-sleep 60;
-
-// Cleanup: markers, all AO groups (BLUFOR, OPFOR, reinforcements), composition objects, mission state
-{ [_x] call FADE_deleteMarkerSafe } forEach (_pointMarkers + [_zoneOuterName, _zoneName, _bluSpawnMarkerName]);
-{ if (!isNull _x) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } } forEach _aoAllGroups;
-{ if (!isNull _x) then { deleteVehicle _x } } forEach _aoCompositionObjects;
-missionNamespace setVariable ["FADE_aoMarkers_" + _taskId, nil];
-missionNamespace setVariable ["FADE_aoEntities_" + _taskId, nil];
+[_taskId, 60, _player] call FADE_missionEnt_scheduledCleanup;
 [_player, _taskId] call FADE_clearActiveMission;
 missionNamespace setVariable ["FADE_currentMissionType", ""];
 missionNamespace setVariable ["FADE_currentMissionPlayer", objNull];

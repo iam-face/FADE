@@ -1,5 +1,5 @@
 // =============================================================================
-// JukeboxGui.sqf -- Jukebox: CTB loudspeaker tracks (per client, per source)
+// JukeboxGui.sqf -- Jukebox: loudspeaker tracks (per client, per source)
 // =============================================================================
 // Sources: radio:Radio_1..4 (Eden) use playSound3D (fixed world position at emitters). vehicle:<netId> uses
 //   createSoundSource (CfgVehicles FAC_Jukebox_<CfgSounds name>) + attachTo — playSound3D does not move with objects.
@@ -12,7 +12,7 @@
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-// CTB loudspeaker track list -- [displayLabel, CfgSFX / CfgSounds classname] pairs.
+// Loudspeaker track list -- [displayLabel, CfgSFX / CfgSounds classname] pairs.
 // -----------------------------------------------------------------------------
 FAC_jukebox_tracks = [
     ["80s > 80s Mix",                   "Sig_80smusic_mix_1"],

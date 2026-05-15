@@ -1,4 +1,7 @@
 // Mission-level CBA/ACE overrides
+// ACE Medical AI: require treatment items (and auto-replace vanilla gear for AI).
+// 0=Disabled, 1=Enabled, 2=Enabled + auto-replace (see ace_medical_ai initSettings.inc.sqf).
+force ace_medical_ai_requireItems = 2;
 // Disable ACE hearing penalties/ringing for this mission.
 force ace_hearing_enableCombatDeafness = false;
 force ace_hearing_disableEarRinging = true;

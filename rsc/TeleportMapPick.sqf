@@ -9,7 +9,7 @@ if (missionNamespace getVariable ["FAC_teleport_mapPickActive", false]) exitWith
 
 missionNamespace setVariable ["FAC_teleport_mapPickActive", true];
 
-private _mapClick = "missionNamespace setVariable [""FAC_teleport_mapPickActive"", false]; player setPos _pos; onMapSingleClick ''; openMap false; [] spawn { sleep 0.55; [] call FAC_teleport_fnc_addReturnToBase }; hint 'Teleported successfully.'; true;";
+private _mapClick = "missionNamespace setVariable [""FAC_teleport_mapPickActive"", false]; player setPos _pos; [format [""%1 teleported to map grid %2"", name player, mapGridPosition player]] remoteExec [""systemChat"", 0]; onMapSingleClick ''; openMap false; [] spawn { sleep 0.55; [] call FAC_teleport_fnc_addReturnToBase }; hint 'Teleported successfully.'; true;";
 onMapSingleClick _mapClick;
 
 openMap true;

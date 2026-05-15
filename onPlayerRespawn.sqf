@@ -8,6 +8,10 @@
 // Brief yield so the engine finishes spawning the unit before we move/overwrite gear
 sleep 0.1;
 
+if (isNil "FAC_ensureLoadoutGui") then { call compile preprocessFileLineNumbers "rsc\FAC_ClientGuiEnsure.sqf"; };
+call FAC_ensureLoadoutGui;
+call FAC_ensureJukeboxGui;
+
 // Keep mission ownership/UI variables across respawn so abort and mission details remain available.
 params [["_newUnit", objNull], ["_oldUnit", objNull]];
 if (isNull _newUnit) then { _newUnit = player };

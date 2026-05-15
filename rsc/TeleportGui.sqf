@@ -93,6 +93,16 @@ FAC_teleport_fnc_applyBlurAndMove = {
     };
 };
 
+// Self-service fast travel: announce to every client (build message here so name player is the teleporter).
+FAC_teleport_fnc_broadcastSelfTeleport = {
+    params ["_destinationLabel"];
+    private _who = name player;
+    if (_who == "") then { _who = "Unknown"; };
+    private _dest = _destinationLabel;
+    if (_dest == "" || { isNil "_dest" }) then { _dest = "unknown destination"; };
+    [format ["%1 teleported to %2", _who, _dest]] remoteExec ["systemChat", 0];
+};
+
 // Map teleport: rsc\TeleportMapPick.sqf (execVM from teleport boards) - onMapSingleClick must be set from
 // a normal script; see PMC wiki debug-teleport pattern. Do not re-add map logic here via call compile.
 
@@ -124,7 +134,7 @@ FAC_teleport_fnc_addReturnToBase = {
 FAC_teleport_fnc_returnToBase = {
     private _resolved = [FAC_teleportGui_destBaseKey] call FAC_teleportGui_fnc_resolveDestination;
     _resolved params ["_ok", "_pos", "_dir"];
-    if (!_ok) exitWith { systemChat "CTB HQ (teleportBase) not found."; };
+    if (!_ok) exitWith { systemChat "Base HQ (teleportBase) not found."; };
     private _dx = sin _dir * 5;
     private _dy = cos _dir * 5;
     private _tpPos = [(_pos select 0) - _dx, (_pos select 1) - _dy, _pos select 2];
@@ -133,6 +143,7 @@ FAC_teleport_fnc_returnToBase = {
         params ["_atl", "_dir"];
         player setPosATL _atl;
         player setDir _dir;
+        [([FAC_teleportGui_destBaseKey] call FAC_teleportGui_fnc_destinationDisplayLabel)] call FAC_teleport_fnc_broadcastSelfTeleport;
     };
     [_doBaseMove, [_tpPos, _faceDir]] call FAC_teleport_fnc_applyBlurAndMove;
     private _aid = player getVariable ["FAC_teleport_returnAid", -1];
@@ -140,14 +151,13 @@ FAC_teleport_fnc_returnToBase = {
         player removeAction _aid;
         player setVariable ["FAC_teleport_returnAid", -1];
     };
-    systemChat "Returned to CTB HQ.";
 };
 
 FAC_teleportGui_destinations = [
     ["Cargo Slingload", "teleportSlingload"],
     ["Sultan's CQB Killhouse", "teleportCQB"],
     ["Joon's Fires Range", "teleportFires"],
-    ["CTB HQ", "teleportBase"],
+    ["Base HQ", "teleportBase"],
     ["Juko's Locker Room", "teleportLockerRoom"],
     ["Bean's Medical Area", "teleportMedical"],
     ["Officer Area", "teleportOfficer"],
@@ -156,8 +166,17 @@ FAC_teleportGui_destinations = [
     ["Firing Range", "teleportRange"],
     ["Sniper Range", "teleportSniper"],
     ["SDE's Pub", "teleportSDE"],
-    ["CTB Specialist Area", "teleportSpecialist"]
+    ["Specialist Area", "teleportSpecialist"]
 ];
+
+FAC_teleportGui_fnc_destinationDisplayLabel = {
+    params ["_objName"];
+    private _label = _objName;
+    {
+        if ((_x select 1) isEqualTo _objName) exitWith { _label = _x select 0 };
+    } forEach FAC_teleportGui_destinations;
+    _label
+};
 
 FAC_teleportGui_fnc_buildPlayerDestinations = {
     private _entries = [];
@@ -385,14 +404,15 @@ FAC_teleportGui_fnc = {
                 private _dy = cos _dir * 5;
                 private _tpPos = [(_pos select 0) - _dx, (_pos select 1) - _dy, _pos select 2];
                 private _faceDir = _tpPos getDir _pos;
+                private _destLabel = [_objName] call FAC_teleportGui_fnc_destinationDisplayLabel;
                 private _doGuiMove = {
-                    params ["_atl", "_dir"];
+                    params ["_atl", "_dir", "_ann"];
                     player setPosATL _atl;
                     player setDir _dir;
+                    [_ann] call FAC_teleport_fnc_broadcastSelfTeleport;
                 };
                 closeDialog 0;
-                [_doGuiMove, [_tpPos, _faceDir]] call FAC_teleport_fnc_applyBlurAndMove;
-                systemChat "Fast travel complete.";
+                [_doGuiMove, [_tpPos, _faceDir, _destLabel]] call FAC_teleport_fnc_applyBlurAndMove;
                 [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
             } else {
                 missionNamespace setVariable ["FAC_teleportGui_pendingObj", _objName];
@@ -503,7 +523,9 @@ FAC_teleportGui_fnc = {
                     if (vehicle player != player) then { moveOut player; };
                     player moveInCargo _v;
                 };
-                systemChat format ["Redeployed to %1.", name _t];
+                private _tn = name _t;
+                if (_tn == "") then { _tn = "Unknown"; };
+                [_tn] call FAC_teleport_fnc_broadcastSelfTeleport;
             };
             closeDialog 0;
             [_doPlayerMove, [_uid]] call FAC_teleport_fnc_applyBlurAndMove;
