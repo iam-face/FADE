@@ -1,5 +1,5 @@
 // =============================================================================
-// ScenarioGui.sqf - Scenario settings: tabs (Scenario / Factions / Admin), toggles, weather sliders
+// ScenarioGui.sqf - Scenario settings: tabs (Scenario / Weather / Factions / Admin), toggles, weather sliders
 // =============================================================================
 
 FAC_scenarioGui_IDD = 60003;
@@ -31,11 +31,18 @@ FAC_scenarioGui_weatherPresets = [
 ];
 
 FAC_scenarioGui_scenarioContentIdcs = [
-    60804, 60805, 60806, 60820, 60821, 60822, 60302,
-    60830, 60831, 60832, 60833, 60834, 60835, 60836, 60837, 60838, 60839, 60840, 60841, 60842, 60843,
-    60940, 60941, 60942,
+    60804, 60805, 60820, 60821, 60822,
+    60942,
     60844, 60845, 60846, 60847, 60848,
-    60850, 60851, 60852, 60853, 60854, 60855, 60856, 60857, 60858, 60859, 60860, 60861, 60862
+    60850, 60851, 60852, 60853, 60854, 60855, 60856, 60857, 60858, 60859, 60860, 60861, 60862,
+    60950, 60951, 60650, 60651, 60652, 60653,
+    60340, 60341, 60342, 60343, 60344, 60345
+];
+
+FAC_scenarioGui_weatherContentIdcs = [
+    60902, 60806, 60302,
+    60830, 60831, 60832, 60833, 60834, 60835, 60836, 60837, 60838, 60839, 60840, 60841, 60842, 60843,
+    60941, 60940
 ];
 
 FAC_scenarioGui_factionsContentIdcs = [
@@ -101,10 +108,12 @@ FAC_scenarioGui_syncHeaderTabs = {
     if (isNull _d) exitWith {};
     private _tab = missionNamespace getVariable ["FAC_scenarioGui_tab", "scenario"];
     private _bS = _d displayCtrl 60810;
+    private _bW = _d displayCtrl 60813;
     private _bF = _d displayCtrl 60811;
     private _bA = _d displayCtrl 60812;
-    if (isNull _bS || { isNull _bF } || { isNull _bA }) exitWith {};
+    if (isNull _bS || { isNull _bW } || { isNull _bF } || { isNull _bA }) exitWith {};
     _bS ctrlSetBackgroundColor (if (_tab == "scenario") then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+    _bW ctrlSetBackgroundColor (if (_tab == "weather") then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
     _bF ctrlSetBackgroundColor (if (_tab == "factions") then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
     _bA ctrlSetBackgroundColor (if (_tab == "admin") then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
 };
@@ -114,9 +123,11 @@ FAC_scenarioGui_setTabVisibility = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
     private _showS = (_tab == "scenario");
+    private _showW = (_tab == "weather");
     private _showF = (_tab == "factions");
     private _showA = (_tab == "admin");
     { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow _showS } } forEach FAC_scenarioGui_scenarioContentIdcs;
+    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow _showW } } forEach FAC_scenarioGui_weatherContentIdcs;
     { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow _showF } } forEach FAC_scenarioGui_factionsContentIdcs;
     { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow _showA } } forEach FAC_scenarioGui_adminContentIdcs;
 };
@@ -251,6 +262,11 @@ FAC_scenarioGui_selectPresetForCurrentSliders = {
     } else {
         if (_customIdx >= 0) then { _wl lbSetCurSel _customIdx };
     };
+    private _i = lbCurSel _wl;
+    if (_i >= 0) then {
+        private _id = _wl lbData _i;
+        if (_id != "") then { missionNamespace setVariable ["FAC_scenarioGui_pickWeatherId", _id] };
+    };
 };
 
 FAC_scenarioGui_syncLimitGearBtns = {
@@ -277,10 +293,10 @@ FAC_scenarioGui_syncCivBtns = {
     };
 };
 
-FAC_scenarioGui_syncCtbBtns = {
+FAC_scenarioGui_syncPresetBtns = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
-    private _on = missionNamespace getVariable ["FAC_scenarioGui_ctb", false];
+    private _on = missionNamespace getVariable ["FAC_scenarioGui_preset", false];
     private _b0 = _d displayCtrl 60854;
     private _b1 = _d displayCtrl 60855;
     if (!isNull _b0 && { !isNull _b1 }) then {
@@ -315,6 +331,30 @@ FAC_scenarioGui_syncTeleportBtns = {
     };
 };
 
+FAC_scenarioGui_syncCivTalkBtns = {
+    private _d = findDisplay FAC_scenarioGui_IDD;
+    if (isNull _d) exitWith {};
+    private _interpOnly = missionNamespace getVariable ["FAC_scenarioGui_civTalkInterpOnly", false];
+    private _b0 = _d displayCtrl 60341;
+    private _b1 = _d displayCtrl 60342;
+    if (!isNull _b0 && { !isNull _b1 }) then {
+        _b0 ctrlSetBackgroundColor (if (!_interpOnly) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        _b1 ctrlSetBackgroundColor (if (_interpOnly) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+    };
+};
+
+FAC_scenarioGui_syncIntelReadBtns = {
+    private _d = findDisplay FAC_scenarioGui_IDD;
+    if (isNull _d) exitWith {};
+    private _specOnly = missionNamespace getVariable ["FAC_scenarioGui_intelSpecialistsOnly", false];
+    private _b0 = _d displayCtrl 60344;
+    private _b1 = _d displayCtrl 60345;
+    if (!isNull _b0 && { !isNull _b1 }) then {
+        _b0 ctrlSetBackgroundColor (if (!_specOnly) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        _b1 ctrlSetBackgroundColor (if (_specOnly) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+    };
+};
+
 FAC_scenarioGui_syncPatrolBtns = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
@@ -342,8 +382,8 @@ FAC_scenarioGui_syncRoutingBtns = {
 FAC_scenarioGui_syncAAABtns = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
-    private _lvl = missionNamespace getVariable ["FAC_scenarioGui_aaa", "None"];
-    private _map = [["None", 60876], ["Light", 60877], ["Medium", 60878], ["MANPADS", 60879], ["Heavy", 60880]];
+    private _lvl = missionNamespace getVariable ["FAC_scenarioGui_aaa", "Off"];
+    private _map = [["Off", 60876], ["AAA", 60877], ["AAA+MANPADS", 60878], ["", 60879], ["", 60880]];
     {
         _x params ["_name", "_idc"];
         private _c = _d displayCtrl _idc;
@@ -370,7 +410,7 @@ FAC_scenarioGui_syncLauncherBtns = {
 FAC_scenarioGui_syncOpforPopBtns = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
-    private _v = missionNamespace getVariable ["FAC_scenarioGui_opforPop", "Normal"];
+    private _v = missionNamespace getVariable ["FAC_scenarioGui_opforPop", "Auto"];
     private _map = [["Auto", 60885], ["VeryLow", 60886], ["Low", 60887], ["Normal", 60888], ["High", 60889], ["VeryHigh", 60890], ["Insane", 60891]];
     {
         _x params ["_name", "_idc"];
@@ -415,7 +455,25 @@ FAC_scenarioGui_updateTownsLabel = {
     if (isNull _sl || { isNull _lb }) exitWith {};
     private _z = 2 + round (sliderPosition _sl);
     _z = _z max 2 min 10;
-    _lb ctrlSetText format ["Operation towns: %1", _z];
+    _lb ctrlSetText format ["Number of target towns in Operation mission: %1", _z];
+};
+
+// Sliders: foot cap 0–300 (0 = unlimited); density 25–250 -> 0.25–2.5x
+FAC_scenarioGui_updateCivAmbientLabels = {
+    private _d = findDisplay FAC_scenarioGui_IDD;
+    if (isNull _d) exitWith {};
+    private _sCap = _d displayCtrl 60650;
+    private _lCap = _d displayCtrl 60651;
+    if (!isNull _sCap && { !isNull _lCap }) then {
+        private _cap = (round (sliderPosition _sCap)) max 0 min 300;
+        _lCap ctrlSetText format ["Max alive: %1 (0 = unlimited)", _cap];
+    };
+    private _sDen = _d displayCtrl 60652;
+    private _lDen = _d displayCtrl 60653;
+    if (!isNull _sDen && { !isNull _lDen }) then {
+        private _v = ((round (sliderPosition _sDen)) max 25 min 250) / 100;
+        _lDen ctrlSetText format ["Scale: %1x (capital→local tiers)", (round (_v * 100)) / 100];
+    };
 };
 
 FAC_scenarioGui_fnc = {
@@ -432,7 +490,7 @@ FAC_scenarioGui_fnc = {
 
         case "setTab": {
             _params params [["_tab", "scenario"]];
-            if !(_tab in ["scenario", "factions", "admin"]) then { _tab = "scenario" };
+            if !(_tab in ["scenario", "weather", "factions", "admin"]) then { _tab = "scenario" };
             missionNamespace setVariable ["FAC_scenarioGui_tab", _tab];
             [_tab] call FAC_scenarioGui_setTabVisibility;
             [] call FAC_scenarioGui_syncHeaderTabs;
@@ -461,7 +519,7 @@ FAC_scenarioGui_fnc = {
             missionNamespace setVariable ["FAC_scenarioGui_hour", missionNamespace getVariable ["FADE_scenarioTime", 18]];
             missionNamespace setVariable ["FAC_scenarioGui_limitGear", missionNamespace getVariable ["FADE_limitGearToFriendlyFaction", false]];
             missionNamespace setVariable ["FAC_scenarioGui_civs", missionNamespace getVariable ["FADE_civiliansEnabled", true]];
-            missionNamespace setVariable ["FAC_scenarioGui_ctb", missionNamespace getVariable ["FADE_limitToCtbLoadouts", false]];
+            missionNamespace setVariable ["FAC_scenarioGui_preset", missionNamespace getVariable ["FADE_limitToPresetLoadouts", false]];
             private _ts = missionNamespace getVariable ["FADE_timeCompressionScale", 1];
             _ts = (_ts max 1) min 100;
             private _pick = 1;
@@ -470,11 +528,24 @@ FAC_scenarioGui_fnc = {
             if (_ts > 5 && _ts < 25) then { _pick = 5 };
             missionNamespace setVariable ["FAC_scenarioGui_timeScale", _pick];
             missionNamespace setVariable ["FAC_scenarioGui_tpMode", missionNamespace getVariable ["FADE_teleportToPlayerMode", 0]];
+            missionNamespace setVariable ["FAC_scenarioGui_civTalkInterpOnly", missionNamespace getVariable ["FADE_civTalkInterpretersOnly", false]];
+            missionNamespace setVariable ["FAC_scenarioGui_intelSpecialistsOnly", missionNamespace getVariable ["FADE_intelSpecialistsOnly", false]];
             missionNamespace setVariable ["FAC_scenarioGui_patrols", missionNamespace getVariable ["FADE_scenarioPatrols", false]];
             missionNamespace setVariable ["FAC_scenarioGui_routing", (missionNamespace getVariable ["FADE_enemyRouting", 0]) > 0];
-            missionNamespace setVariable ["FAC_scenarioGui_aaa", missionNamespace getVariable ["FADE_enemyAAALevel", "None"]];
+            private _aaaSetting = missionNamespace getVariable ["FADE_enemyAAALevel", "Off"];
+            private _aaaNorm = switch (toUpper _aaaSetting) do {
+                case "NONE": { "Off" };
+                case "LIGHT";
+                case "MEDIUM";
+                case "HEAVY": { "AAA" };
+                case "MANPADS";
+                case "AAA+MANPADS": { "AAA+MANPADS" };
+                case "AAA": { "AAA" };
+                default { "Off" };
+            };
+            missionNamespace setVariable ["FAC_scenarioGui_aaa", _aaaNorm];
             missionNamespace setVariable ["FAC_scenarioGui_launcher", missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"]];
-            missionNamespace setVariable ["FAC_scenarioGui_opforPop", missionNamespace getVariable ["FADE_opforPopulationSetting", "Normal"]];
+            missionNamespace setVariable ["FAC_scenarioGui_opforPop", missionNamespace getVariable ["FADE_opforPopulationSetting", "Auto"]];
             missionNamespace setVariable ["FAC_scenarioGui_opforAir", missionNamespace getVariable ["FADE_opforAirSetting", "Off"]];
 
             [] call FAC_scenarioGui_updateTimeDisplay;
@@ -499,6 +570,15 @@ FAC_scenarioGui_fnc = {
                 { if ((_x select 1) == _curWid) exitWith { _sel = _forEachIndex } } forEach FAC_scenarioGui_weatherPresets;
                 _wl lbSetCurSel (_sel min ((lbSize _wl) - 1));
             };
+            private _pickWeather = "Clear";
+            if (!isNull _wl && { lbSize _wl > 0 }) then {
+                private _psi = lbCurSel _wl;
+                if (_psi >= 0) then {
+                    private _pd = _wl lbData _psi;
+                    if (_pd != "") then { _pickWeather = _pd };
+                };
+            };
+            missionNamespace setVariable ["FAC_scenarioGui_pickWeatherId", _pickWeather];
 
             private _st = _d displayCtrl 60861;
             if (!isNull _st) then {
@@ -509,13 +589,31 @@ FAC_scenarioGui_fnc = {
             };
             [] call FAC_scenarioGui_updateTownsLabel;
 
+            private _sCivCap = _d displayCtrl 60650;
+            if (!isNull _sCivCap) then {
+                private _cap = missionNamespace getVariable ["FADE_civGlobalMaxAlive", 55];
+                _cap = (round _cap) max 0 min 300;
+                _sCivCap sliderSetRange [0, 300];
+                _sCivCap sliderSetSpeed [2, 8];
+                _sCivCap sliderSetPosition _cap;
+            };
+            private _sCivDen = _d displayCtrl 60652;
+            if (!isNull _sCivDen) then {
+                private _den = missionNamespace getVariable ["FADE_civDensityScale", 1];
+                _den = (_den max 0.25) min 2.5;
+                _sCivDen sliderSetRange [25, 250];
+                _sCivDen sliderSetSpeed [1, 5];
+                _sCivDen sliderSetPosition (round (_den * 100));
+            };
+            [] call FAC_scenarioGui_updateCivAmbientLabels;
+
             private _scenHelp = _d displayCtrl 60940;
             if (!isNull _scenHelp) then {
                 _scenHelp ctrlSetStructuredText parseText (
                     "<t color='#c8d8e8' size='1'>" +
                     "Presets snap the weather sliders; moving a slider switches the list to <t color='#a8d8ff'>Custom</t>.<br/>" +
                     "<t color='#a8d8ff'>Apply and Close</t> commits time, weather, rules, and faction picks from this dialog.<br/>" +
-                    "Enemy AI and spawn factions live under <t color='#a8d8ff'>Factions</t>; Zeus and cleanup under <t color='#a8d8ff'>Admin</t>." +
+                    "Weather presets and fine sliders are on <t color='#a8d8ff'>Weather</t>; enemy AI and spawn factions under <t color='#a8d8ff'>Factions</t>; Zeus and cleanup under <t color='#a8d8ff'>Admin</t>." +
                     "</t>"
                 );
             };
@@ -575,9 +673,11 @@ FAC_scenarioGui_fnc = {
 
             [] call FAC_scenarioGui_syncLimitGearBtns;
             [] call FAC_scenarioGui_syncCivBtns;
-            [] call FAC_scenarioGui_syncCtbBtns;
+            [] call FAC_scenarioGui_syncPresetBtns;
             [] call FAC_scenarioGui_syncTimeScaleBtns;
             [] call FAC_scenarioGui_syncTeleportBtns;
+            [] call FAC_scenarioGui_syncCivTalkBtns;
+            [] call FAC_scenarioGui_syncIntelReadBtns;
             [] call FAC_scenarioGui_syncPatrolBtns;
             [] call FAC_scenarioGui_syncRoutingBtns;
             [] call FAC_scenarioGui_syncAAABtns;
@@ -616,6 +716,7 @@ FAC_scenarioGui_fnc = {
             private _i = lbCurSel _wl;
             if (_i < 0) exitWith {};
             private _id = _wl lbData _i;
+            missionNamespace setVariable ["FAC_scenarioGui_pickWeatherId", _id];
             if (_id == "Custom") exitWith {};
             private _arr = [_id] call FAC_scenarioGui_getWeatherParamsForPresetId;
             [_d, _arr] call FAC_scenarioGui_applyWeatherArrayToSliders;
@@ -633,6 +734,9 @@ FAC_scenarioGui_fnc = {
             };
             if (_idc == 60861) then {
                 [] call FAC_scenarioGui_updateTownsLabel;
+            };
+            if (_idc in [60650, 60652]) then {
+                [] call FAC_scenarioGui_updateCivAmbientLabels;
             };
             if (_idc == 60872) then {
                 private _lb = _d displayCtrl 60873;
@@ -658,10 +762,10 @@ FAC_scenarioGui_fnc = {
             missionNamespace setVariable ["FAC_scenarioGui_civs", _on];
             [] call FAC_scenarioGui_syncCivBtns;
         };
-        case "toggleCtb": {
+        case "togglePreset": {
             _params params ["_on"];
-            missionNamespace setVariable ["FAC_scenarioGui_ctb", _on];
-            [] call FAC_scenarioGui_syncCtbBtns;
+            missionNamespace setVariable ["FAC_scenarioGui_preset", _on];
+            [] call FAC_scenarioGui_syncPresetBtns;
         };
         case "setTimeScale": {
             _params params ["_s"];
@@ -672,6 +776,16 @@ FAC_scenarioGui_fnc = {
             _params params ["_m"];
             missionNamespace setVariable ["FAC_scenarioGui_tpMode", _m];
             [] call FAC_scenarioGui_syncTeleportBtns;
+        };
+        case "toggleCivTalkInterp": {
+            _params params ["_interpOnly"];
+            missionNamespace setVariable ["FAC_scenarioGui_civTalkInterpOnly", _interpOnly];
+            [] call FAC_scenarioGui_syncCivTalkBtns;
+        };
+        case "toggleIntelSpecialists": {
+            _params params ["_specOnly"];
+            missionNamespace setVariable ["FAC_scenarioGui_intelSpecialistsOnly", _specOnly];
+            [] call FAC_scenarioGui_syncIntelReadBtns;
         };
         case "togglePatrols": {
             _params params ["_on"];
@@ -685,6 +799,7 @@ FAC_scenarioGui_fnc = {
         };
         case "setAAA": {
             _params params ["_lvl"];
+            if !(_lvl in ["Off", "AAA", "AAA+MANPADS"]) then { _lvl = "Off" };
             missionNamespace setVariable ["FAC_scenarioGui_aaa", _lvl];
             [] call FAC_scenarioGui_syncAAABtns;
         };
@@ -761,24 +876,27 @@ FAC_scenarioGui_fnc = {
             private _hour = missionNamespace getVariable ["FAC_scenarioGui_hour", 12];
             _hour = (round _hour) max 0 min 23;
 
-            private _wl = _d displayCtrl 60302;
-            private _weather = "Clear";
-            if (lbCurSel _wl >= 0) then { _weather = _wl lbData (lbCurSel _wl) };
+            private _weather = missionNamespace getVariable ["FAC_scenarioGui_pickWeatherId", "Clear"];
+            if (_weather == "") then {
+                private _wl0 = _d displayCtrl 60302;
+                if (!isNull _wl0 && { lbCurSel _wl0 >= 0 }) then { _weather = _wl0 lbData (lbCurSel _wl0) };
+            };
+            if (_weather == "") then { _weather = "Clear" };
 
             private _friendlyFaction = missionNamespace getVariable ["FAC_scenarioGui_pickFriendlyFaction", missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]];
             private _enemyFaction = missionNamespace getVariable ["FAC_scenarioGui_pickEnemyFaction", missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"]];
             private _civFaction = missionNamespace getVariable ["FAC_scenarioGui_pickCivFaction", missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"]];
 
             private _limitGear = missionNamespace getVariable ["FAC_scenarioGui_limitGear", false];
-            private _ctbOnly = missionNamespace getVariable ["FAC_scenarioGui_ctb", false];
+            private _presetOnly = missionNamespace getVariable ["FAC_scenarioGui_preset", false];
             private _patrolsEnabled = missionNamespace getVariable ["FAC_scenarioGui_patrols", false];
             private _enemySkill = sliderPosition (_d displayCtrl 60872);
             _enemySkill = (_enemySkill max 0) min 1;
             private _enemyRouting = if (missionNamespace getVariable ["FAC_scenarioGui_routing", false]) then { 0.5 } else { 0 };
-            private _enemyAAA = missionNamespace getVariable ["FAC_scenarioGui_aaa", "None"];
+            private _enemyAAA = missionNamespace getVariable ["FAC_scenarioGui_aaa", "Off"];
             private _opforLauncherSetting = missionNamespace getVariable ["FAC_scenarioGui_launcher", "Normal"];
             private _opforAirSetting = missionNamespace getVariable ["FAC_scenarioGui_opforAir", "Off"];
-            private _opforPopulationSetting = missionNamespace getVariable ["FAC_scenarioGui_opforPop", "Normal"];
+            private _opforPopulationSetting = missionNamespace getVariable ["FAC_scenarioGui_opforPop", "Auto"];
             private _timeCompressionScale = missionNamespace getVariable ["FAC_scenarioGui_timeScale", 1];
             private _teleportToPlayerMode = missionNamespace getVariable ["FAC_scenarioGui_tpMode", 0];
             private _civiliansEnabled = missionNamespace getVariable ["FAC_scenarioGui_civs", true];
@@ -793,6 +911,17 @@ FAC_scenarioGui_fnc = {
 
             private _weatherParams = [_d] call FAC_scenarioGui_readWeatherParamsFromSliders;
 
+            private _sCivCapA = _d displayCtrl 60650;
+            private _civGlobalMaxAlive = missionNamespace getVariable ["FADE_civGlobalMaxAlive", 55];
+            if (!isNull _sCivCapA) then {
+                _civGlobalMaxAlive = (round (sliderPosition _sCivCapA)) max 0 min 300;
+            };
+            private _sCivDenA = _d displayCtrl 60652;
+            private _civDensityScale = missionNamespace getVariable ["FADE_civDensityScale", 1];
+            if (!isNull _sCivDenA) then {
+                _civDensityScale = ((round (sliderPosition _sCivDenA)) max 25 min 250) / 100;
+            };
+
             missionNamespace setVariable ["FADE_scenarioFriendlyFaction", _friendlyFaction];
             missionNamespace setVariable ["FADE_limitGearToFriendlyFaction", _limitGear];
             missionNamespace setVariable ["FADE_scenarioPatrols", _patrolsEnabled];
@@ -806,13 +935,20 @@ FAC_scenarioGui_fnc = {
             missionNamespace setVariable ["FADE_timeCompressionScale", _timeCompressionScale];
             missionNamespace setVariable ["FADE_teleportToPlayerMode", _teleportToPlayerMode];
             missionNamespace setVariable ["FADE_civiliansEnabled", _civiliansEnabled];
-            missionNamespace setVariable ["FADE_limitToCtbLoadouts", _ctbOnly];
+            missionNamespace setVariable ["FADE_limitToPresetLoadouts", _presetOnly];
+            missionNamespace setVariable ["FADE_civGlobalMaxAlive", _civGlobalMaxAlive];
+            missionNamespace setVariable ["FADE_civDensityScale", _civDensityScale];
+
+            private _civTalkInterpretersOnly = missionNamespace getVariable ["FAC_scenarioGui_civTalkInterpOnly", false];
+            private _intelSpecialistsOnly = missionNamespace getVariable ["FAC_scenarioGui_intelSpecialistsOnly", false];
 
             private _scenarioApplyArgs = [
-                _hour, _weather, _enemyFaction, _friendlyFaction, _civFaction, _limitGear, _ctbOnly, player,
+                _hour, _weather, _enemyFaction, _friendlyFaction, _civFaction, _limitGear, _presetOnly, player,
                 _patrolsEnabled, _enemySkill, _enemyRouting, _enemyAAA, _civiliansEnabled, _aoStrength,
                 _timeCompressionScale, _opforPopulationSetting, _teleportToPlayerMode, _opforLauncherSetting,
-                _opforAirSetting, _operationZoneCount, _weatherParams
+                _opforAirSetting, _operationZoneCount, _weatherParams,
+                _civGlobalMaxAlive, _civDensityScale,
+                _civTalkInterpretersOnly, _intelSpecialistsOnly
             ];
             [_scenarioApplyArgs] remoteExec ["FADE_applyScenarioSettings", 2];
             closeDialog 0;

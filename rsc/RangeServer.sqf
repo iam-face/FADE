@@ -3,24 +3,20 @@
 // =============================================================================
 if (!isServer) exitWith {};
 
-FADE_rangeHumanPositions = [];
-for "_i" from 1 to 64 do {
-    private _o = missionNamespace getVariable [format ["shootPos_%1", _i], objNull];
-    if (!isNull _o) then { FADE_rangeHumanPositions pushBack _o };
+// Session targets + time trial: Eden game logics firingRangePos_1 .. firingRangePos_210 (shared pool for pop-ups, OPFOR, vehicles).
+FADE_rangeFiringPositions = [];
+for "_i" from 1 to 210 do {
+    private _o = missionNamespace getVariable [format ["firingRangePos_%1", _i], objNull];
+    if (!isNull _o) then { FADE_rangeFiringPositions pushBack _o };
 };
-missionNamespace setVariable ["FADE_rangeHumanPosCount", count FADE_rangeHumanPositions, true];
-
-FADE_rangeVehiclePositions = [];
-for "_j" from 1 to 64 do {
-    private _o = missionNamespace getVariable [format ["shootVehPos_%1", _j], objNull];
-    if (!isNull _o) then { FADE_rangeVehiclePositions pushBack _o };
-};
-missionNamespace setVariable ["FADE_rangeVehPosCount", count FADE_rangeVehiclePositions, true];
+missionNamespace setVariable ["FADE_rangeFiringPositions", FADE_rangeFiringPositions];
+missionNamespace setVariable ["FADE_rangeFiringPosCount", count FADE_rangeFiringPositions, true];
+missionNamespace setVariable ["FADE_rangeHumanPosCount", count FADE_rangeFiringPositions, true];
+missionNamespace setVariable ["FADE_rangeVehPosCount", count FADE_rangeFiringPositions, true];
+missionNamespace setVariable ["FADE_rangeHumanUseBounds", false, true];
+missionNamespace setVariable ["FADE_rangeHumanSpawnBounds", [], true];
 
 private _gunSlots = missionNamespace getVariable ["FADE_rangeGunPosNames", []];
-if (_gunSlots isEqualTo []) then {
-    _gunSlots = ["rangeGunPos_1","rangeGunPos_2","rangeGunPos_3","rangeGunPos_4","rangeGunPos_5","rangeGunPos_6"];
-};
 FADE_rangeGunSlots = [];
 {
     FADE_rangeGunSlots pushBack [_x, missionNamespace getVariable [_x, objNull], objNull];
@@ -49,6 +45,7 @@ FADE_rangeSpawned = [];
 FADE_rangeEnemyGroups = [];
 FADE_rangeStarterKilledEh = [];
 FADE_rangeTrialScript = scriptNull;
+missionNamespace setVariable ["FADE_rangeHitTrack", false];
 missionNamespace setVariable ["FADE_rangeSessionActive", false, true];
 missionNamespace setVariable ["FADE_rangeSessionMode", "", true];
 missionNamespace setVariable ["FADE_rangeLastResult", "", true];
@@ -104,6 +101,13 @@ FADE_rangeSelectVehicleClasses = {
     _allowed
 };
 
+// Logic object for firing-range UI / spawn facing (Eden: terminalRange).
+FADE_rangeTerminalObj = {
+    private _t = missionNamespace getVariable ["FADE_terminalRange", objNull];
+    if (isNull _t) then { _t = missionNamespace getVariable ["terminalRange", objNull] };
+    _t
+};
+
 FADE_rangeRegisterEntityForHitFeedback = {
     params [["_obj", objNull]];
     if (isNull _obj) exitWith {};
@@ -123,40 +127,63 @@ FADE_rangeRegisterEntityForHitFeedback = {
 };
 
 FADE_rangeSpawnHumanAt = {
-    params ["_player", "_posObj", "_enemyType"];
+    params ["_player", "_posOrObj", "_enemyType"];
+    private _sessMode = missionNamespace getVariable ["FADE_rangeSessionMode", "firing"];
     private _spawned = missionNamespace getVariable ["FADE_rangeSpawned", []];
     private _enemyGroups = missionNamespace getVariable ["FADE_rangeEnemyGroups", []];
     private _menList = missionNamespace getVariable ["FADE_rangeSpawnedMen", []];
-    private _pos = getPosATL _posObj;
-    private _dir = [getPosATL _posObj, _player, _enemyType == "enemies"] call FADE_sniperFacingToPlayer;
+    private _pos = if (_posOrObj isEqualType [] && { count _posOrObj >= 2 }) then {
+        private _z = if (count _posOrObj > 2) then { _posOrObj select 2 } else { 0.25 };
+        [_posOrObj select 0, _posOrObj select 1, _z]
+    } else {
+        getPosATL _posOrObj
+    };
+    private _term = call FADE_rangeTerminalObj;
+    private _dir = if (!isNull _term) then {
+        _pos getDir (getPosATL _term)
+    } else {
+        [_pos, _player, _enemyType == "enemies"] call FADE_sniperFacingToPlayer
+    };
     if (_enemyType == "targets") then {
         private _cls = missionNamespace getVariable ["FADE_sniperTargetClass", "TargetP_Inf_F"];
         if (!isClass (configFile >> "CfgVehicles" >> _cls)) then { _cls = "Target_F" };
         private _t = createVehicle [_cls, _pos, [], 0, "NONE"];
-        _t setPosATL _pos;
-        _t setDir _dir;
-        [_t] call FADE_sniperRegisterSteelTarget;
-        _spawned pushBack _t;
-        _menList pushBack _t;
+        if (!isNull _t) then {
+            _t setPosATL _pos;
+            _t setDir ((_dir + 180) mod 360);
+            _t setVariable ["FADE_sniperVictimEnemyType", _enemyType, false];
+            _t setVariable ["FADE_sniperVictimSessionKind", "range", false];
+            _t setVariable ["FADE_sniperVictimSessionMode", _sessMode, false];
+            [_t] call FADE_sniperRegisterSteelTarget;
+            _spawned pushBack _t;
+            _menList pushBack _t;
+        };
     } else {
         private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_F"]]];
         _enemyUnits = [_enemyUnits] call FADE_filterUnitsArmed;
         if (_enemyUnits isEqualTo []) then { _enemyUnits = +(missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_F"]]) };
         private _grp = createGroup (missionNamespace getVariable ["FADE_sideEnemy", east]);
         private _u = _grp createUnit [selectRandom _enemyUnits, _pos, [], 0, "NONE"];
-        _u setPosATL _pos;
-        _u setDir _dir;
-        {
-            _u disableAI _x;
-        } forEach ["MOVE","PATH","TARGET","AUTOTARGET","AUTOCOMBAT","COVER","SUPPRESSION","FSM","WEAPONAIM","AIMINGERROR","CHECKVISIBLE","RADIOPROTOCOL","TEAMSWITCH","NVG","MINEDETECTION"];
-        _grp allowFleeing 0;
-        _grp setBehaviour "CARELESS";
-        _grp setCombatMode "BLUE";
-        _u setUnitPos "UP";
-        [_u] call FADE_rangeRegisterEntityForHitFeedback;
-        _spawned pushBack _grp;
-        _enemyGroups pushBack _grp;
-        _menList pushBack _u;
+        if (isNull _u) then {
+            deleteGroup _grp;
+        } else {
+            _u setPosATL _pos;
+            _u setDir _dir;
+            {
+                _u disableAI _x;
+            } forEach ["MOVE","PATH","TARGET","AUTOTARGET","AUTOCOMBAT","COVER","SUPPRESSION","FSM","WEAPONAIM","AIMINGERROR","CHECKVISIBLE","RADIOPROTOCOL","TEAMSWITCH","NVG","MINEDETECTION"];
+            _grp allowFleeing 0;
+            _grp setBehaviour "CARELESS";
+            _grp setCombatMode "BLUE";
+            _u setUnitPos "UP";
+            _u setVariable ["FADE_sniperVictimEnemyType", _enemyType, false];
+            _u setVariable ["FADE_sniperVictimSessionKind", "range", false];
+            _u setVariable ["FADE_sniperVictimSessionMode", _sessMode, false];
+            [_u] call FADE_rangeRegisterEntityForHitFeedback;
+            _spawned pushBack _grp;
+            _enemyGroups pushBack _grp;
+            _menList pushBack _u;
+        };
     };
     missionNamespace setVariable ["FADE_rangeSpawnedMen", _menList];
     missionNamespace setVariable ["FADE_rangeSpawned", _spawned];
@@ -164,15 +191,27 @@ FADE_rangeSpawnHumanAt = {
 };
 
 FADE_rangeSpawnVehicleAt = {
-    params ["_posObj", "_allowedVehicleClasses"];
+    params ["_posOrObj", "_allowedVehicleClasses"];
     if (_allowedVehicleClasses isEqualTo []) exitWith {};
+    private _sessMode = missionNamespace getVariable ["FADE_rangeSessionMode", "firing"];
     private _spawned = missionNamespace getVariable ["FADE_rangeSpawned", []];
     private _cls = selectRandom _allowedVehicleClasses;
-    private _pos = getPosATL _posObj;
+    private _pos = if (_posOrObj isEqualType []) then {
+        if (count _posOrObj >= 2) then {
+            private _z = if (count _posOrObj > 2) then { _posOrObj select 2 } else { 0 };
+            [_posOrObj select 0, _posOrObj select 1, _z]
+        } else { [0, 0, 0] }
+    } else {
+        getPosATL _posOrObj
+    };
     private _veh = createVehicle [_cls, _pos, [], 0, "NONE"];
+    if (isNull _veh) exitWith {};
     _veh setPosATL _pos;
     _veh setDir (random 360);
     _veh engineOn true;
+    _veh setVariable ["FADE_sniperVictimEnemyType", "targets", false];
+    _veh setVariable ["FADE_sniperVictimSessionKind", "range", false];
+    _veh setVariable ["FADE_sniperVictimSessionMode", _sessMode, false];
     [_veh] call FADE_rangeRegisterEntityForHitFeedback;
     _spawned pushBack _veh;
     missionNamespace setVariable ["FADE_rangeSpawned", _spawned];
@@ -182,6 +221,8 @@ FADE_rangeEndSession = {
     params [["_player", objNull], ["_msg", "Range session ended."]];
     if (!isServer) exitWith {};
     if (!(missionNamespace getVariable ["FADE_rangeSessionActive", false])) exitWith {};
+    private _rangeTermHorn = call FADE_rangeTerminalObj;
+    if (!isNull _rangeTermHorn) then { ["stop", _rangeTermHorn] call FADE_cqbLoudspeakerBroadcast };
     private _starterPrev = missionNamespace getVariable ["FADE_rangeStarterUnit", objNull];
 
     private _tw = missionNamespace getVariable ["FADE_rangeTrialScript", scriptNull];
@@ -203,39 +244,119 @@ FADE_rangeEndSession = {
 
     private _starter = if (isNull _player) then { _starterPrev } else { _player };
     [_starter] call FADE_rangeShared_disableStarterFx;
-    [false, objNull, "", false, ""] call FADE_rangeShared_setSniperMirrorState;
+    [false] call FADE_rangeShared_setRangeHitTrack;
 
     if (_msg != "") then {
         if (!isNull _player) then { [_msg] remoteExec ["systemChat", _player] } else { [_msg] remoteExec ["systemChat", 0] };
     };
 };
 
+// Evenly space desired 2D distances between closest and farthest pool logics (<= _maxRangeM), then pick nearest unused firingRangePos for each — avoids clustering when many slots sit near the shooter.
+FADE_rangePickSlotsEvenAlongRange = {
+    params ["_player", "_poolObjs", "_maxRangeM", "_n"];
+    if (_n <= 0) exitWith { [] };
+    if (_poolObjs isEqualTo []) exitWith { [] };
+    private _pairs = _poolObjs apply { [_player distance2d _x, _x] };
+    _pairs sort true;
+    private _m = count _pairs;
+    _n = _n min _m;
+    private _dLo = (_pairs select 0) select 0;
+    private _dHi = (_pairs select (_m - 1)) select 0;
+    _dHi = (_dHi min _maxRangeM) max _dLo;
+    private _availIdx = [];
+    for "_i" from 0 to (_m - 1) do { _availIdx pushBack _i };
+    private _out = [];
+    for "_k" from 0 to (_n - 1) do {
+        private _want = if (_n == 1) then {
+            (_dLo + _dHi) * 0.5
+        } else {
+            _dLo + ((_dHi - _dLo) * (_k / (_n - 1)))
+        };
+        private _bestI = -1;
+        private _bestErr = 1e15;
+        {
+            private _idx = _x;
+            private _d = (_pairs select _idx) select 0;
+            private _err = abs (_d - _want);
+            if (_err < _bestErr) then {
+                _bestErr = _err;
+                _bestI = _idx;
+            };
+        } forEach _availIdx;
+        if (_bestI < 0) exitWith {};
+        _out pushBack ((_pairs select _bestI) select 1);
+        _availIdx = _availIdx select { _x != _bestI };
+    };
+    _out
+};
+
 FADE_rangeStartSession = {
     params ["_player", "_enemyType", "_humanCount", "_vehCount", "_vehTypes", "_maxRangeM", "_trace", "_hitTrack", "_mode"];
     if (!isServer) exitWith {};
+    if (isNull _player) exitWith {};
     if (missionNamespace getVariable ["FADE_rangeSessionActive", false]) exitWith { ["Range already active."] remoteExec ["systemChat", _player] };
-    if (missionNamespace getVariable ["FADE_sniperRangeActive", false]) exitWith { ["Sniper range already active. End it first."] remoteExec ["systemChat", _player] };
 
-    private _humanPos = + (missionNamespace getVariable ["FADE_rangeHumanPositions", []]);
-    private _vehPos = + (missionNamespace getVariable ["FADE_rangeVehiclePositions", []]);
-    if (_humanPos isEqualTo [] && {_vehPos isEqualTo []}) exitWith { ["No range positions found in Eden."] remoteExec ["systemChat", _player] };
+    private _firingAll = +(missionNamespace getVariable ["FADE_rangeFiringPositions", []]);
 
     _humanCount = ((round _humanCount) max 0) min 40;
     _vehCount = ((round _vehCount) max 0) min 10;
     _maxRangeM = ((round _maxRangeM) max 100) min 300;
+
     private _allowedVeh = [_vehTypes] call FADE_rangeSelectVehicleClasses;
     if (_vehCount > 0 && {_allowedVeh isEqualTo []}) then {
         ["No enabled vehicle type class is valid in current modset."] remoteExec ["systemChat", _player];
         _vehCount = 0;
     };
 
-    private _humanPool = _humanPos select { (_player distance2d _x) <= _maxRangeM };
-    private _vehPool = _vehPos select { (_player distance2d _x) <= _maxRangeM };
-    if ((_humanCount > 0 && {_humanPool isEqualTo []}) && (_vehCount > 0 && {_vehPool isEqualTo []})) exitWith {
-        [format ["No lanes within %1m.", _maxRangeM]] remoteExec ["systemChat", _player];
+    if (_humanCount == 0 && {_vehCount == 0}) exitWith {
+        ["Set at least one human or vehicle target count."] remoteExec ["systemChat", _player];
+    };
+
+    private _poolInRange = _firingAll select { (_player distance2d _x) <= _maxRangeM };
+    private _need = _humanCount + _vehCount;
+    if (_need > 0 && { count _poolInRange == 0}) exitWith {
+        ["No firingRangePos_* within your max range. Move closer or raise the distance slider."] remoteExec ["systemChat", _player];
+    };
+
+    private _avail = count _poolInRange;
+    private _hCap = _humanCount min _avail;
+    private _vCap = _vehCount min ((_avail - _hCap) max 0);
+    if (_humanCount > _hCap || {_vehCount > _vCap}) then {
+        [format [
+            "Only %1 firingRangePos slot(s) within %2 m — spawning %3 human(s), %4 vehicle(s).",
+            _avail, _maxRangeM, _hCap, _vCap
+        ]] remoteExec ["systemChat", _player];
+    };
+    _humanCount = _hCap;
+    _vehCount = _vCap;
+
+    private _needSlots = _humanCount + _vehCount;
+    private _planHumanAtl = [];
+    private _planVehAtl = [];
+    if (_mode == "firing" && {_needSlots > 0}) then {
+        private _picked = [_player, _poolInRange, _maxRangeM, _needSlots] call FADE_rangePickSlotsEvenAlongRange;
+        private _byD = _picked apply { [_player distance2d _x, _x] };
+        _byD sort true;
+        private _sortedPick = _byD apply { _x select 1 };
+        {
+            if (_forEachIndex < _humanCount) then {
+                _planHumanAtl pushBack _x;
+            } else {
+                _planVehAtl pushBack _x;
+            };
+        } forEach _sortedPick;
+    };
+
+    if (_mode == "firing" && {_humanCount > 0} && {_planHumanAtl isEqualTo []}) exitWith {
+        ["Could not assign human targets to firingRangePos slots."] remoteExec ["systemChat", _player];
+    };
+    if (_mode == "firing" && {_vehCount > 0} && {_planVehAtl isEqualTo []}) exitWith {
+        ["Could not assign vehicle targets to firingRangePos slots."] remoteExec ["systemChat", _player];
     };
 
     missionNamespace setVariable ["FADE_rangeSessionActive", true, true];
+    // String function name required (code block remoteExec is not supported / errors as "expected String").
+    [] remoteExec ["FADE_rangeClient_onSessionStarted", _player];
     missionNamespace setVariable ["FADE_rangeSessionMode", _mode, true];
     missionNamespace setVariable ["FADE_rangeStarterUnit", _player];
     missionNamespace setVariable ["FADE_rangeStarterUid", getPlayerUID _player, true];
@@ -243,7 +364,7 @@ FADE_rangeStartSession = {
     missionNamespace setVariable ["FADE_rangeSpawnedMen", []];
     missionNamespace setVariable ["FADE_rangeEnemyGroups", []];
 
-    [true, _player, getPlayerUID _player, _hitTrack, _mode] call FADE_rangeShared_setSniperMirrorState;
+    [_hitTrack] call FADE_rangeShared_setRangeHitTrack;
     [_player, _trace] call FADE_rangeShared_enableStarterFx;
 
     private _starterKh = _player addEventHandler ["Killed", {
@@ -252,50 +373,53 @@ FADE_rangeStartSession = {
     }];
     missionNamespace setVariable ["FADE_rangeStarterKilledEh", [_player, _starterKh]];
 
+    private _rangeTermHorn = call FADE_rangeTerminalObj;
+    if (!isNull _rangeTermHorn) then { ["start", _rangeTermHorn] call FADE_cqbLoudspeakerBroadcast };
+
     if (_mode == "firing") then {
-        private _hp = +_humanPool;
-        for "_i" from 1 to (_humanCount min (count _hp)) do {
-            if (_hp isEqualTo []) exitWith {};
-            private _ix = floor random (count _hp);
-            private _pick = _hp deleteAt _ix;
-            [_player, _pick, _enemyType] call FADE_rangeSpawnHumanAt;
+        if (_humanCount > 0) then {
+            { [_player, _x, _enemyType] call FADE_rangeSpawnHumanAt } forEach _planHumanAtl;
         };
-        private _vp = +_vehPool;
-        for "_j" from 1 to (_vehCount min (count _vp)) do {
-            if (_vp isEqualTo []) exitWith {};
-            private _ix = floor random (count _vp);
-            private _pick = _vp deleteAt _ix;
-            [_pick, _allowedVeh] call FADE_rangeSpawnVehicleAt;
+        if (_vehCount > 0) then {
+            { [_x, _allowedVeh] call FADE_rangeSpawnVehicleAt } forEach _planVehAtl;
         };
         [format ["Range started: %1 human, %2 vehicle targets.", _humanCount, _vehCount]] remoteExec ["systemChat", _player];
     } else {
-        private _trial = [_player, _enemyType, +_humanPool, +_vehPool, +_allowedVeh, _humanCount, _vehCount] spawn {
-            params ["_player", "_enemyType", "_humanPool", "_vehPool", "_allowedVeh", "_humanCount", "_vehCount"];
-            private _stages = [75,150,225,300,375,450];
+        // Time trial: same even spacing along distance band; stages sorted near→far.
+        private _nTrial = _humanCount + _vehCount;
+        private _trialRaw = [_player, _poolInRange, _maxRangeM, _nTrial] call FADE_rangePickSlotsEvenAlongRange;
+        private _trialD = _trialRaw apply { [_player distance2d _x, _x] };
+        _trialD sort true;
+        private _trialPositions = _trialD apply { _x select 1 };
+        private _trial = [_player, _enemyType, +_allowedVeh, _humanCount, _vehCount, _trialPositions] spawn {
+            params ["_player", "_enemyType", "_allowedVeh", "_humanCount", "_vehCount", "_trialPositions"];
             private _times = [];
             private _notes = [];
             private _t0 = diag_tickTime;
-            for "_si" from 0 to 5 do {
+            {
                 if (!(missionNamespace getVariable ["FADE_rangeSessionActive", false])) exitWith {};
+                private _si = _forEachIndex;
                 missionNamespace setVariable ["FADE_sniperLastHitNote", ""];
-                private _wantVeh = (_vehCount > 0 && {count _vehPool > 0} && {_si mod 2 == 1});
+                private _wantVeh = _si >= _humanCount;
+                private _posObj = _x;
                 private _spawnedRef = objNull;
+                private _noSpawn = false;
                 private _tickStart = diag_tickTime;
                 if (_wantVeh) then {
-                    private _p = selectRandom _vehPool;
-                    [_p, _allowedVeh] call FADE_rangeSpawnVehicleAt;
-                    _spawnedRef = (missionNamespace getVariable ["FADE_rangeSpawned", []]) select -1;
-                } else {
-                    if (_humanPool isEqualTo []) then { _humanPool = +(missionNamespace getVariable ["FADE_rangeHumanPositions", []]) };
-                    if !(_humanPool isEqualTo []) then {
-                        private _p = selectRandom _humanPool;
-                        [_player, _p, _enemyType] call FADE_rangeSpawnHumanAt;
+                    if (_allowedVeh isEqualTo []) then {
+                        _noSpawn = true;
+                    } else {
+                        [_posObj, _allowedVeh] call FADE_rangeSpawnVehicleAt;
                         _spawnedRef = (missionNamespace getVariable ["FADE_rangeSpawned", []]) select -1;
                     };
+                } else {
+                    [_player, _posObj, _enemyType] call FADE_rangeSpawnHumanAt;
+                    _spawnedRef = (missionNamespace getVariable ["FADE_rangeSpawned", []]) select -1;
                 };
                 waitUntil {
                     sleep 0.12;
                     !(missionNamespace getVariable ["FADE_rangeSessionActive", false]) || {
+                        if (_noSpawn) exitWith { true };
                         if (_spawnedRef isEqualType grpNull) then {
                             count units _spawnedRef == 0 || {!alive (leader _spawnedRef)}
                         } else {
@@ -313,7 +437,7 @@ FADE_rangeStartSession = {
                 if (_n == "") then { _n = if (_wantVeh) then { "Vehicle hit" } else { "Target down" } };
                 _notes pushBack _n;
                 [] call FADE_rangeCleanupSpawned;
-            };
+            } forEach _trialPositions;
             if (!(missionNamespace getVariable ["FADE_rangeSessionActive", false])) exitWith {};
             private _total = diag_tickTime - _t0;
             private _lines = [];
@@ -321,7 +445,12 @@ FADE_rangeStartSession = {
             _lines pushBack format ["<t color='#cccccc'>Total time: <t color='#ffffff'>%1 s</t></t>", str ((round (_total * 100)) / 100)];
             {
                 private _idx = _forEachIndex + 1;
-                _lines pushBack format ["<t color='#9fb8d4'>Stage %1 (~%2m): <t color='#ffffff'>%3 s</t> - %4</t>", _idx, _stages select _forEachIndex, str ((round ((_x) * 100)) / 100), _notes select _forEachIndex];
+                private _pos = _trialPositions select _forEachIndex;
+                private _distM = round (_player distance2d _pos);
+                _lines pushBack format [
+                    "<t color='#9fb8d4'>Target %1 (~%2m): <t color='#ffffff'>%3 s</t> - %4</t>",
+                    _idx, _distM, str ((round ((_x) * 100)) / 100), _notes select _forEachIndex
+                ];
             } forEach _times;
             [(_lines joinString "<br/><br/>")] remoteExec ["FADE_sniperClient_showTrialHint", _player];
             missionNamespace setVariable ["FADE_rangeLastResult", format ["Range trial done - %1 s total.", str ((round (_total * 100)) / 100)], true];
@@ -332,22 +461,13 @@ FADE_rangeStartSession = {
             };
         };
         missionNamespace setVariable ["FADE_rangeTrialScript", _trial];
-        ["Range time trial started."] remoteExec ["systemChat", _player];
+        [
+            format [
+                "Range time trial: %1 target(s) — humans first, then vehicles; distance increases each target (within your max range).",
+                _nTrial
+            ]
+        ] remoteExec ["systemChat", _player];
     };
-};
-
-FADE_rangeSlotStatePayload = {
-    private _out = [];
-    {
-        _x params ["_slotName", "_logicObj", "_weaponObj"];
-        private _state = "";
-        if (!isNull _weaponObj) then {
-            _state = getText (configFile >> "CfgVehicles" >> (typeOf _weaponObj) >> "displayName");
-            if (_state == "") then { _state = typeOf _weaponObj };
-        };
-        _out pushBack [_slotName, _state];
-    } forEach (missionNamespace getVariable ["FADE_rangeGunSlots", []]);
-    _out
 };
 
 // Land vehicle classes allowed for range friendly spawn (same filter as Vehicle GUI land tab).
@@ -392,25 +512,30 @@ FADE_rangeBuildFriendlyLandListForClient = {
         _rows pushBack [format ["'%1' > %2", _factionDn, _name], _cls];
     } forEach (call FADE_rangeGetSpawnableFriendlyLandClasses);
     _rows sort true;
+    private _seen = createHashMap;
+    { _seen set [_x select 1, true] } forEach _rows;
+    {
+        _x params [["_label", ""], ["_cls", ""]];
+        if (_cls == "" || {!isClass (configFile >> "CfgVehicles" >> _cls)}) then { continue };
+        if (_seen getOrDefault [_cls, false]) then { continue };
+        _seen set [_cls, true];
+        if (_label == "") then {
+            private _dn = getText (configFile >> "CfgVehicles" >> _cls >> "displayName");
+            _label = if (_dn != "") then { _dn } else { _cls };
+        };
+        _rows pushBack [format ["Equipment > %1", _label], _cls];
+    } forEach (missionNamespace getVariable ["FADE_rangeAtWeaponDefinitions", []]);
+    _rows sort true;
     _rows
 };
 
 FADE_rangePublishAtStateTo = {
     params [["_player", objNull]];
     if (!isServer) exitWith {};
-    private _defs = missionNamespace getVariable ["FADE_rangeAtWeaponDefinitions", []];
-    private _weaponList = [];
-    {
-        _x params [["_label", ""], ["_cls", ""]];
-        if (_cls != "" && {isClass (configFile >> "CfgVehicles" >> _cls)}) then {
-            private _dn = getText (configFile >> "CfgVehicles" >> _cls >> "displayName");
-            if (_label == "") then { _label = if (_dn != "") then { _dn } else { _cls } };
-            _weaponList pushBack [_label, _cls];
-        };
-    } forEach _defs;
+    if (isNull _player) exitWith {};
     [
-        _weaponList,
-        call FADE_rangeSlotStatePayload,
+        [],
+        [],
         call FADE_rangeBuildFriendlyLandListForClient,
         call FADE_rangeFriendlyVehSlotStatePayload
     ] remoteExec ["FADE_rangeClient_setAtWeaponState", _player];
@@ -422,63 +547,37 @@ FADE_rangeRequestAtWeaponState = {
     [_player] call FADE_rangePublishAtStateTo;
 };
 
-FADE_rangeSpawnAtWeaponAtSlot = {
-    params [["_slotName", ""], ["_weaponClass", ""], ["_player", objNull], ["_maxRangeM", 200]];
-    if (!isServer) exitWith {};
-    if (_slotName == "" || {_weaponClass == ""}) exitWith {};
-    _maxRangeM = ((round _maxRangeM) max 100) min 300;
-    if (!isClass (configFile >> "CfgVehicles" >> _weaponClass)) exitWith {
-        ["AT weapon class is invalid in this modset."] remoteExec ["systemChat", _player];
-    };
-    private _slots = missionNamespace getVariable ["FADE_rangeGunSlots", []];
-    private _i = _slots findIf { (_x select 0) == _slotName };
-    if (_i < 0) exitWith {};
-    private _entry = _slots select _i;
-    _entry params ["_sn", "_logicObj", "_existing"];
-    if (isNull _logicObj) exitWith {
-        [format ["AT slot %1 has no Eden logic.", _slotName]] remoteExec ["systemChat", _player];
-    };
-    if ((_player distance2d _logicObj) > _maxRangeM) exitWith {
-        [format ["AT slot is beyond your max spawn distance (%1 m). Move closer or increase the slider.", _maxRangeM]] remoteExec ["systemChat", _player];
-    };
-    if (!isNull _existing) then { deleteVehicle _existing };
-    private _w = createVehicle [_weaponClass, getPosATL _logicObj, [], 0, "NONE"];
-    _w setPosATL (getPosATL _logicObj);
-    _w setDir (getDir _logicObj);
-    _slots set [_i, [_sn, _logicObj, _w]];
-    missionNamespace setVariable ["FADE_rangeGunSlots", _slots];
-    [_player] call FADE_rangePublishAtStateTo;
-};
-
-FADE_rangeDespawnAtWeaponSlot = {
-    params [["_slotName", ""], ["_player", objNull]];
-    if (!isServer) exitWith {};
-    if (_slotName == "") exitWith {};
-    private _slots = missionNamespace getVariable ["FADE_rangeGunSlots", []];
-    private _i = _slots findIf { (_x select 0) == _slotName };
-    if (_i < 0) exitWith {};
-    private _entry = _slots select _i;
-    _entry params ["_sn", "_logicObj", "_existing"];
-    if (!isNull _existing) then { deleteVehicle _existing };
-    _slots set [_i, [_sn, _logicObj, objNull]];
-    missionNamespace setVariable ["FADE_rangeGunSlots", _slots];
-    [_player] call FADE_rangePublishAtStateTo;
-};
-
 // Spawn friendly land vehicle at rangeFriendlyVehPos_* (same placement rules as FADE_spawnLandVehicle at VEH_*).
 FADE_rangeSpawnFriendlyLandAtSlot = {
     params [["_slotName", ""], ["_vehicleClass", ""], ["_player", objNull], ["_maxRangeM", 200]];
     if (!isServer) exitWith {};
     if (_slotName == "" || {_vehicleClass == ""}) exitWith {};
     _maxRangeM = ((round _maxRangeM) max 100) min 300;
-    if (!(_vehicleClass in (call FADE_rangeGetSpawnableFriendlyLandClasses))) exitWith {
-        ["That vehicle is not in the land spawn list for this scenario."] remoteExec ["systemChat", _player];
-    };
     if (!isClass (configFile >> "CfgVehicles" >> _vehicleClass)) exitWith {
         ["Unknown vehicle class."] remoteExec ["systemChat", _player];
     };
-    if (_vehicleClass isKindOf "Air" || {!(_vehicleClass isKindOf "LandVehicle")}) exitWith {
-        ["Only ground vehicles can spawn at range slots."] remoteExec ["systemChat", _player];
+    private _landClasses = call FADE_rangeGetSpawnableFriendlyLandClasses;
+    private _extraClasses = [];
+    {
+        _x params ["", "_c"];
+        if (_c != "" && {isClass (configFile >> "CfgVehicles" >> _c)} && {!(_c in _extraClasses)}) then { _extraClasses pushBack _c };
+    } forEach (missionNamespace getVariable ["FADE_rangeAtWeaponDefinitions", []]);
+    private _inLand = _vehicleClass in _landClasses;
+    private _inExtra = _vehicleClass in _extraClasses;
+    if (!_inLand && {!_inExtra}) exitWith {
+        ["That vehicle is not in the spawn list for this scenario."] remoteExec ["systemChat", _player];
+    };
+    if (_vehicleClass isKindOf "Air") exitWith {
+        ["Only ground equipment can spawn at range slots."] remoteExec ["systemChat", _player];
+    };
+    if (_inLand) then {
+        if (!(_vehicleClass isKindOf "LandVehicle")) exitWith {
+            ["Only ground vehicles can spawn at range slots."] remoteExec ["systemChat", _player];
+        };
+    } else {
+        if (_vehicleClass isKindOf "Man") exitWith {
+            ["Infantry units cannot spawn at equipment slots."] remoteExec ["systemChat", _player];
+        };
     };
     private _slots = missionNamespace getVariable ["FADE_rangeFriendlyVehSlots", []];
     private _i = _slots findIf { (_x select 0) == _slotName };
@@ -498,13 +597,33 @@ FADE_rangeSpawnFriendlyLandAtSlot = {
     };
     private _center = getPosATL _logicObj;
     private _dir = getDir _logicObj;
-    private _blacklist = [];
-    { private _p = getPosATL _x; _blacklist pushBack [_p select 0, _p select 1] } forEach (nearestObjects [_center, ["LandVehicle", "Air"], 30]);
-    private _pos = [_center, 2, 15, 3, 1, 0.5, 0, _blacklist, _center] call BIS_fnc_findSafePos;
-    if (count _pos < 2) exitWith {
+    // Match FADE_spawnLandVehicle (initServer): blacklist entries are [x, y, clearanceRadius], not raw [x,y].
+    private _minDist = 3;
+    private _maxDist = 20;
+    private _objClear = 3;
+    private _vehicleClear = 9;
+    private _pos = [];
+    private _try = 0;
+    while { _try < 6 && {_pos isEqualTo []} } do {
+        private _searchMax = _maxDist + (_try * 5);
+        private _nearVeh = nearestObjects [_center, ["LandVehicle", "Air"], _searchMax + _vehicleClear];
+        private _blacklist = [];
+        {
+            if (!isNull _x && { alive _x }) then {
+                private _p = getPosATL _x;
+                _blacklist pushBack [_p select 0, _p select 1, _vehicleClear];
+            };
+        } forEach _nearVeh;
+        private _probe = [[_center, _minDist, _searchMax, _objClear, 1, 0.5, 0, _blacklist, _center], _center] call FADE_findSafePosArray;
+        private _blocking = nearestObjects [_probe, ["LandVehicle", "Air"], _vehicleClear] select { alive _x };
+        if (count _blocking == 0) then {
+            _pos = _probe;
+        };
+        _try = _try + 1;
+    };
+    if (_pos isEqualTo []) exitWith {
         ["No clear spot at this slot. Despawn nearby vehicles."] remoteExec ["systemChat", _player];
     };
-    if (count _pos < 3) then { _pos = [_pos select 0, _pos select 1, 0] };
     private _veh = createVehicle [_vehicleClass, _pos, [], 0, "NONE"];
     if (isNull _veh) exitWith {
         [format ["Spawn failed: %1.", _vehicleClass]] remoteExec ["systemChat", _player];
@@ -544,13 +663,14 @@ FADE_rangeDespawnFriendlyLandAtSlot = {
 publicVariable "FADE_rangeStartSession";
 publicVariable "FADE_rangeEndSession";
 publicVariable "FADE_rangeRequestAtWeaponState";
-publicVariable "FADE_rangeSpawnAtWeaponAtSlot";
-publicVariable "FADE_rangeDespawnAtWeaponSlot";
 publicVariable "FADE_rangeSpawnFriendlyLandAtSlot";
 publicVariable "FADE_rangeDespawnFriendlyLandAtSlot";
 publicVariable "FADE_rangeSessionActive";
 publicVariable "FADE_rangeSessionMode";
+publicVariable "FADE_rangeFiringPosCount";
 publicVariable "FADE_rangeHumanPosCount";
+publicVariable "FADE_rangeHumanUseBounds";
+publicVariable "FADE_rangeHumanSpawnBounds";
 publicVariable "FADE_rangeVehPosCount";
 publicVariable "FADE_rangeGunPosCount";
 publicVariable "FADE_rangeFriendlyVehPosCount";

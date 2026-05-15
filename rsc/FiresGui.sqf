@@ -13,6 +13,11 @@ FAC_firesGui_buildPieceTooltip = {
     params ["_class"];
     if (_class == "") exitWith { "" };
     if (!isClass (configFile >> "CfgVehicles" >> _class)) exitWith { format ["Class not in CfgVehicles: %1", _class] };
+    if (isNil "FAC_vehicleGui_buildVehicleTooltip") exitWith {
+        private _dn = getText (configFile >> "CfgVehicles" >> _class >> "displayName");
+        if (_dn == "") then { _dn = _class };
+        _dn
+    };
     [_class] call FAC_vehicleGui_buildVehicleTooltip
 };
 
@@ -21,6 +26,43 @@ FAC_firesGui_getAvailableDefs = {
     FAC_fires_artilleryDefinitions select {
         isClass (configFile >> "CfgVehicles" >> (_x select 2))
     }
+};
+
+FAC_firesGui_refreshDrillPanel = {
+    private _display = findDisplay 60700;
+    if (isNull _display) exitWith {};
+    private _st = _display displayCtrl 60739;
+    if (isNull _st) exitWith {};
+    _st ctrlSetText (missionNamespace getVariable ["FAC_fires_drill_activeSummary", ""]);
+};
+
+FAC_firesGui_populateDrillCombos = {
+    private _display = findDisplay 60700;
+    if (isNull _display) exitWith {};
+    private _cbT = _display displayCtrl 60733;
+    private _cbB = _display displayCtrl 60737;
+    if (!isNull _cbT) then {
+        lbClear _cbT;
+        private _defs = missionNamespace getVariable ["FADE_firesDrillTargetDefinitions", []];
+        if (_defs isEqualTo []) then {
+            _defs = [["Drill vehicle", "C_Offroad_01_F"]];
+        };
+        {
+            _x params ["_label", "_cls"];
+            if (_label == "") then { _label = _cls };
+            private _i = _cbT lbAdd _label;
+            _cbT lbSetData [_i, _cls];
+        } forEach _defs;
+        if (lbSize _cbT > 0) then { _cbT lbSetCurSel 0 };
+    };
+    if (!isNull _cbB) then {
+        lbClear _cbB;
+        private _i0 = _cbB lbAdd "Along pit direction";
+        _cbB lbSetData [_i0, "0"];
+        private _i1 = _cbB lbAdd "Random azimuth";
+        _cbB lbSetData [_i1, "1"];
+        _cbB lbSetCurSel 0;
+    };
 };
 
 FAC_firesGui_updateDroneStatus = {
@@ -45,6 +87,92 @@ FAC_firesGui_getSlotDisplayName = {
     private _i = _names find _slotName;
     if (_i >= 0 && {count _disp > _i}) exitWith { _disp select _i };
     _slotName
+};
+
+// 0 = range (spawn / ammo / preview); 1 = timed drill sub-screen (header tabs, VehicleGui-style).
+FAC_firesGui_applyPage = {
+    params ["_display", "_page"];
+    if (isNull _display) exitWith {};
+    missionNamespace setVariable ["FAC_firesGui_page", _page];
+
+    private _d = _display;
+    private _move = {
+        params ["_idc", "_show", "_pos"];
+        private _c = _d displayCtrl _idc;
+        if (isNull _c) exitWith {};
+        _c ctrlShow _show;
+        if (count _pos == 4) then { _c ctrlSetPosition _pos };
+        _c ctrlCommit 0;
+    };
+
+    private _hide = {
+        private _c = _d displayCtrl _this;
+        if (isNull _c) exitWith {};
+        _c ctrlShow false;
+        _c ctrlCommit 0;
+    };
+
+    private _tabR = _d displayCtrl 60740;
+    private _tabD = _d displayCtrl 60741;
+    if (!isNull _tabR && {!isNull _tabD}) then {
+        if (_page == 0) then {
+            _tabR ctrlSetBackgroundColor [0.22, 0.48, 0.78, 1];
+            _tabD ctrlSetBackgroundColor [0.14, 0.16, 0.22, 1];
+        } else {
+            _tabR ctrlSetBackgroundColor [0.14, 0.16, 0.22, 1];
+            _tabD ctrlSetBackgroundColor [0.22, 0.48, 0.78, 1];
+        };
+        _tabR ctrlCommit 0;
+        _tabD ctrlCommit 0;
+    };
+
+    if (_page == 0) then {
+        { _x call _hide } forEach [60746, 60747, 60748, 60731, 60732, 60733, 60737, 60735, 60736, 60738, 60752];
+
+        [60743, true, [0.04, 0.108, 0.395, 0.022]] call _move;
+        [60703, true, [0.04, 0.133, 0.395, 0.34]] call _move;
+        [60744, true, [0.04, 0.481, 0.395, 0.022]] call _move;
+        [60701, true, [0.04, 0.506, 0.395, 0.285]] call _move;
+        [60739, true, [0.04, 0.798, 0.395, 0.036]] call _move;
+        [60706, true, [0.04, 0.842, 0.192, 0.046]] call _move;
+        [60707, true, [0.243, 0.842, 0.192, 0.046]] call _move;
+
+        [60704, true, [0.455, 0.108, 0.505, 0.24]] call _move;
+        [60753, true, [0.455, 0.358, 0.505, 0.022]] call _move;
+        [60705, true, [0.455, 0.382, 0.505, 0.056]] call _move;
+        [60754, true, [0.455, 0.444, 0.505, 0.022]] call _move;
+        [60710, true, [0.455, 0.468, 0.505, 0.225]] call _move;
+        [60712, true, [0.455, 0.701, 0.505, 0.022]] call _move;
+        [60711, true, [0.455, 0.726, 0.505, 0.026]] call _move;
+        [60713, true, [0.455, 0.756, 0.247, 0.038]] call _move;
+        [60708, true, [0.713, 0.756, 0.247, 0.038]] call _move;
+        [60714, true, [0.455, 0.802, 0.505, 0.042]] call _move;
+        [60724, true, [0.455, 0.850, 0.505, 0.028]] call _move;
+        [60721, true, [0.455, 0.882, 0.247, 0.034]] call _move;
+        [60722, true, [0.713, 0.882, 0.247, 0.034]] call _move;
+    } else {
+        { _x call _hide } forEach [60743, 60703, 60704, 60753, 60705, 60754, 60710, 60711, 60712, 60713, 60708, 60714, 60724, 60721, 60722, 60706, 60707];
+
+        [60744, true, [0.04, 0.108, 0.44, 0.022]] call _move;
+        [60701, true, [0.04, 0.133, 0.44, 0.24]] call _move;
+
+        [60746, true, [0.04, 0.382, 0.44, 0.024]] call _move;
+        [60747, true, [0.04, 0.412, 0.09, 0.022]] call _move;
+        [60731, true, [0.135, 0.408, 0.11, 0.032]] call _move;
+        [60748, true, [0.255, 0.412, 0.09, 0.022]] call _move;
+        [60732, true, [0.35, 0.408, 0.11, 0.032]] call _move;
+        [60733, true, [0.04, 0.448, 0.44, 0.034]] call _move;
+
+        [60738, true, [0.04, 0.490, 0.44, 0.022]] call _move;
+        [60737, true, [0.04, 0.515, 0.44, 0.034]] call _move;
+
+        [60735, true, [0.04, 0.558, 0.205, 0.042]] call _move;
+        [60736, true, [0.255, 0.558, 0.205, 0.042]] call _move;
+
+        [60739, true, [0.04, 0.612, 0.92, 0.285]] call _move;
+
+        [60752, true, [0.51, 0.108, 0.455, 0.485]] call _move;
+    };
 };
 
 FAC_firesGui_updateAmmoPanel = {
@@ -108,20 +236,34 @@ FAC_firesGui_fnc = {
             missionNamespace setVariable ["FAC_firesGui_lastStateSig", ""];
             [player] remoteExec ["FADE_fires_requestState", 2];
             [player] remoteExec ["FADE_firesFoS_requestSync", 2];
+            [player] remoteExec ["FADE_fires_drillRequestSummary", 2];
             ["refreshUi", [true]] call FAC_firesGui_fnc;
+            call FAC_firesGui_populateDrillCombos;
+            call FAC_firesGui_refreshDrillPanel;
             call FAC_firesGui_updateDroneStatus;
         };
 
         case "headerRefresh": {
             [player] remoteExec ["FADE_fires_requestState", 2];
             [player] remoteExec ["FADE_firesFoS_requestSync", 2];
+            [player] remoteExec ["FADE_fires_drillRequestSummary", 2];
             [] spawn {
                 sleep 0.35;
                 if (!isNull (findDisplay 60700)) then {
+                    private _pg = missionNamespace getVariable ["FAC_firesGui_page", 0];
                     ["refreshUi", [true]] call FAC_firesGui_fnc;
+                    call FAC_firesGui_refreshDrillPanel;
                     call FAC_firesGui_updateDroneStatus;
+                    ["setPage", [_pg]] call FAC_firesGui_fnc;
                 };
             };
+        };
+
+        case "setPage": {
+            private _display = findDisplay 60700;
+            if (isNull _display) exitWith {};
+            private _p = _params param [0, 0];
+            [_display, _p] call FAC_firesGui_applyPage;
         };
 
         case "refreshUi": {
@@ -193,7 +335,9 @@ FAC_firesGui_fnc = {
 
             ["selChanged", []] call FAC_firesGui_fnc;
             call FAC_firesGui_updateAmmoPanel;
+            call FAC_firesGui_refreshDrillPanel;
             call FAC_firesGui_updateDroneStatus;
+            [_display, missionNamespace getVariable ["FAC_firesGui_page", 0]] call FAC_firesGui_applyPage;
         };
 
         case "selChanged": {
@@ -204,6 +348,7 @@ FAC_firesGui_fnc = {
             private _pieceLb = _display displayCtrl 60703;
             private _idx = lbCurSel _pieceLb;
             if (_idx < 0) exitWith {
+                if ((missionNamespace getVariable ["FAC_firesGui_page", 0]) == 1) exitWith {};
                 _pic ctrlSetText "";
                 [_det, ""] call FAC_firesGui_setDetailsList;
             };
@@ -355,6 +500,49 @@ FAC_firesGui_fnc = {
             [] spawn {
                 sleep 0.5;
                 if (!isNull (findDisplay 60700)) then { call FAC_firesGui_updateDroneStatus };
+            };
+        };
+
+        case "drillStart": {
+            private _display = findDisplay 60700;
+            if (isNull _display) exitWith {};
+            private _slotLb = _display displayCtrl 60701;
+            private _is = lbCurSel _slotLb;
+            if (_is < 0) exitWith { systemChat "FIRES drill: select a slot first."; };
+            private _slotName = _slotLb lbData _is;
+            private _minT = ctrlText (_display displayCtrl 60731);
+            private _maxT = ctrlText (_display displayCtrl 60732);
+            private _ti = lbCurSel (_display displayCtrl 60733);
+            if (_ti < 0) then { _ti = 0 };
+            private _bi = lbCurSel (_display displayCtrl 60737);
+            if (_bi < 0) then { _bi = 0 };
+            [_slotName, _minT, _maxT, _ti, _bi, player] remoteExec ["FADE_fires_drillStart", 2];
+            systemChat "FIRES drill: start requested.";
+            [] spawn {
+                sleep 0.4;
+                if (!isNull (findDisplay 60700)) then {
+                    [player] remoteExec ["FADE_fires_drillRequestSummary", 2];
+                    sleep 0.15;
+                    call FAC_firesGui_refreshDrillPanel;
+                };
+            };
+        };
+
+        case "drillEnd": {
+            private _display = findDisplay 60700;
+            if (isNull _display) exitWith {};
+            private _slotLb = _display displayCtrl 60701;
+            private _is = lbCurSel _slotLb;
+            if (_is < 0) exitWith { systemChat "FIRES drill: select a slot to end its drill."; };
+            private _slotName = _slotLb lbData _is;
+            [_slotName, player] remoteExec ["FADE_fires_drillCancel", 2];
+            [] spawn {
+                sleep 0.35;
+                if (!isNull (findDisplay 60700)) then {
+                    [player] remoteExec ["FADE_fires_drillRequestSummary", 2];
+                    sleep 0.15;
+                    call FAC_firesGui_refreshDrillPanel;
+                };
             };
         };
     };

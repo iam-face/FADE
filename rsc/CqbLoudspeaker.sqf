@@ -3,20 +3,26 @@
 // =============================================================================
 // Server calls: [_mode] remoteExec ["FAC_cqbLoudspeaker_clientPlay", 0]
 //   _mode: "start" | "stop"  → CfgSounds FAC_cqbLoudspeakerHorn
+// Optional emitter: [_mode, terminalObj] remoteExec ["FAC_cqbLoudspeaker_clientPlay", 0]
+//   Same horn file/vol/pitch/maxDistance; 3D origin 5 m above _emitter (firing/sniper/FIRES terminals).
 // Sound: Sig_CTB_MSL_SFX_Amb - \Sig_CTB_MSL_SFX_Amb\Sounds\Alarm\alarm_2.ogg
 // Origin: 5 m above Eden object cqbLoudspeaker (speaker at top of mesh).
 // Same pattern as jukebox: playSound3D on each machine with hasInterface.
 // =============================================================================
 
 FAC_cqbLoudspeaker_clientPlay = {
-    params [["_mode", ""]];
+    params [["_mode", ""], ["_emitter", objNull]];
     if (!hasInterface) exitWith {};
 
     private _ls = objNull;
-    if (!isNil "cqbLoudspeaker") then { _ls = cqbLoudspeaker };
-    if (isNull _ls) then { _ls = missionNamespace getVariable ["cqbLoudspeaker", objNull] };
-    if (isNull _ls) then { _ls = missionNamespace getVariable ["FADE_cqbBoard", objNull] };
-    if (isNull _ls) exitWith { systemChat "CQB AUDIO: loudspeaker object not found."; };
+    if (!isNull _emitter) then {
+        _ls = _emitter;
+    } else {
+        if (!isNil "cqbLoudspeaker") then { _ls = cqbLoudspeaker };
+        if (isNull _ls) then { _ls = missionNamespace getVariable ["cqbLoudspeaker", objNull] };
+        if (isNull _ls) then { _ls = missionNamespace getVariable ["FADE_cqbBoard", objNull] };
+        if (isNull _ls) exitWith { systemChat "CQB AUDIO: loudspeaker object not found."; };
+    };
 
     if (!((toLower _mode) in ["start", "stop"])) exitWith {};
 

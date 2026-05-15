@@ -1,8 +1,8 @@
-# FADE [Face's Dynamic Environment]
+# FADE (Face’s Dynamic Environment)
 
-**Sandbox for Combat Team Bravo (CTB)**. No Zeus required. In-game boards and GUIs drive scenario options and dynamic missions so players can run and tailor sessions quickly. Built for **rotary piloting**, **joint fires**, and **infantry training** in **ARMA 3** multiplayer (listen or dedicated server).
+**Beta 3** — sandbox for broad community use. No Zeus required. In-game boards and GUIs drive scenario options and dynamic missions so players can run and tailor sessions quickly. Built for **rotary piloting**, **joint fires**, and **infantry training** in **Arma 3** multiplayer (listen or dedicated server).
 
-**Map:** Sefrou Ramal (Tunis).
+**Map:** Altis (this repository folder: `FAC_FADE.Altis`). **Slots:** up to **31** players (`description.ext` / `mission.sqm`).
 
 ---
 
@@ -11,32 +11,37 @@
 
 | Feature                        | Description                                                                                                                                                                                                                                                       |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Scenario Management**        | Weather, time of day, friendly/enemy/civilian factions, gear/loadout limits, time compression. Enemy AI: patrols, skill, routing, AAA level, AO strength. Server applies and broadcasts.                                                                            |
-| **Missions**                   | **17** dynamic types — see [Mission types](#mission-types). **[G]** = one global mission at a time; **[S]** = per-player singles (up to **3** concurrent). Locations ≥2 km apart. **terminalMedical** adds a medical dummy GUI (injuries + heal; ACE + KAM), independent of the Medical Training mission. |
+| **Scenario management**        | Weather, time of day, friendly/enemy/civilian factions, gear/loadout limits, time compression. Enemy AI: patrols, skill, routing, AAA level, AO strength. Server applies and broadcasts. Lobby params can restrict **Missions** / **Scenario** GUIs to group leaders (`description.ext` **Params**). |
+| **Missions**                   | **16** dynamic types — see [Mission types](#mission-types). **[G]** = one global mission at a time (**11** types); **[S]** = per-player singles, up to **3** concurrent (**5** types: Troop Insert/Extract, Cargo, Mine Clearing, CASEVAC). Locations are kept apart in logic. |
 | **Vehicles**                   | Spawn/despawn aircraft at helipads and land vehicles at defined points. Lists from `CfgVehicles`; optional limits via Scenario GUI. Pylon/loadout action for pilots.                                                                                              |
 | **Jukebox**                    | **Radio_1**–**Radio_4** objects and **Ctrl+'** (personal source): track list, play/stop, now-playing. 3D sound for clients; server sync and JIP replay.                                                                                                           |
-| **Ambient Civilians**          | Proximity spawn in `CIV_T_`* zones; road vehicles at `ROAD_SP_*`. Toggle on/off in Scenario GUI.                                                                                                                                                                  |
-| **Loadouts**                   | Custom loadout dialog at loadout boxes; **Save my loadout** (session restore on respawn); ACE Arsenal when ACE loaded; presets where implemented.                                                                                                                 |
-| **CQB Shoothouse**             | **cqbBoard** + **CQB_POS_***: enemy type (targets or real), density, civilians. Start/End drill spawns/cleans at positions.                                                                                                                                       |
-| **Teleporting**                | **Fast Travel** on **teleportBoard_1**…**teleportBoard_8**: Base, Medical, Pads 3–5, Firing Range, CQB, Vehicle Pad 2, Locker Room, SDE's Pub (destinations: `rsc/TeleportGui.sqf` / `initPlayerLocal`; optional detail in **`.cursor/agent-docs/AGENTS_EDEN.md`** locally). |
-| **Ambient Enemy Patrols & AA** | Optional patrols and garrisons; AAA level: None, Light, Medium, Heavy, MANPADS. Enemy retreat behaviour at ~50% casualties (server-side).                                                                                                                         |
-| **CTB Doctrine Documentation** | In-game briefing and diary (map): Scenario Brief, **Notes** with Joint Fires — 9-line, 5-line, CFF, RATEL, control measures, terminology, marking, LZ/EFM/EW.                                                                                                     |
-| **FIRES fall of shot**         | **terminalFires** GUI: place a captive observer UAV via map click (spawner gets **UAV terminal**; no briefing-screen video). Per firing-slot **firesScreenPos_*** props show a short impact-area RTT after qualifying indirect rounds when that screen is toggled **on** (`rsc/FiresFallOfShot.sqf`, **Config.sqf**). |
+| **Ambient civilians**          | Proximity spawn in **civ zones** built from map **named locations** (`rsc/FADE_civZonesFromLocations.sqf`, ≥ `FADE_civZoneMinDistFromBase` from HQ); road vehicles use active zones. `ROAD_SP_*` only for Intercept Convoy. Toggle in Scenario GUI. |
+| **Civilian talk**              | **Talk to civilian** on ambient foot civs: local fade + face-to-face snap + scripted camera, then GUI (only for the initiating player). Dialogue topics with coordinated `switchMove` anims (player/civilian; pointing for intel). Actionable tips (OPFOR / vehicle) append to map **Intel** diary (`Briefing.sqf` subject `FAC_Intel`). Scenario: **Everyone** / **Interpreters only**; Loadout: interpreter flag. `rsc/CivTalkGui.sqf`, `rsc/CivTalkServer.sqf`, `rsc/Config.sqf` (`FADE_civTalk*`). |
+| **Building intel**            | When a **virtual garrison** spawns, a small prop may appear in the building (random class from **`FADE_intelObjectClasses`** in `rsc/Config.sqf`). **Hold action** (default ~**5 s**) **Read intel** — server builds **1–3 lines** from **live** nearby OPFOR (vehicles, dismounts, pending garrisons, checkpoints, dynamic roadblocks) plus optional **Operation / Escape & Evasion** context; **group hint** and short-lived **map marker** when a vehicle contact line is included. Scenario toggle: **Who can read Intel?** (`Everyone` / `Specialists only`). In specialist-only mode, non-specialists can carry packages and process them at HQ (50 m) or hand to an Intel specialist. Role set in Loadout GUI. Tuning: `FADE_intel*` in `rsc/Config.sqf`; logic `rsc/FADE_IntelServer.sqf`, `rsc/FADE_IntelClient.sqf`. |
+| **Loadouts**                   | Custom loadout dialog at loadout boxes; **Save my loadout** (session restore on respawn); ACE Arsenal when ACE is loaded; presets where implemented.                                                                                                            |
+| **CQB shoothouse**             | **cqbBoard** + **CQB_POS_***: enemy type (targets or live), density, civilians. Start/End drill spawns/cleans at positions.                                                                                                                                        |
+| **Teleporting**                | **Fast Travel** on **teleportBoard_1**…**teleportBoard_8**: Base, Medical, Pads, Firing Range, CQB, Vehicle Pad 2, Locker Room, SDE’s Pub (destinations: `rsc/TeleportGui.sqf` / `initPlayerLocal`; Eden naming detail in **`.cursor/agent-docs/AGENTS_EDEN.md`** locally). |
+| **Firing / AT range**          | **terminalRange** action **Firing and AT range**: human and vehicle lanes, AT weapon slots where configured (`rsc/RangeGui.sqf`, `rsc/RangeServer.sqf`, `rsc/RangeShared.sqf`, `rsc/RangeDialog.hpp`).                                                              |
+| **Sniper range**               | **terminalSniper** action **Sniper range**: session logic on server (`rsc/SniperRangeServer.sqf`), client GUI (`rsc/SniperGui.sqf`, `rsc/SniperDialog.hpp`); projectile trace / impact feedback.                                                                  |
+| **Medical training**           | **terminalMedical** — **Medical training** action: dummy spawn, ACE + KAM injury presets, stabilise/heal (`rsc/MedicalTrainingGui.sqf`, `rsc/MedicalTrainingKAT.sqf`). **Not** a separate entry in the Missions GUI (training area only).                             |
+| **Ambient enemy patrols & AA** | Optional patrols and garrisons; AAA level: Off, AAA, AAA+MANPADS (dynamic airborne-triggered spawns). Enemy retreat behaviour at ~50% casualties (server-side).                                                                                                     |
+| **FAC doctrine (in-game)**     | Briefing and diary (map): Scenario Brief, **Notes** with joint fires — 5-line, CFF, RATEL, control measures, terminology, marking, LZ/EFM/EW (`rsc/Briefing.sqf`).                                                                                              |
+| **FIRES fall of shot**         | **terminalFires** GUI: place a captive observer UAV via map click (spawner gets **UAV terminal**; no briefing-screen video). Per firing-slot **firesScreenPos_*** props can show a short impact-area RTT after qualifying indirect rounds when that screen is toggled **on** (`rsc/FiresFallOfShot.sqf`, `rsc/Config.sqf`). |
 
 
 ---
 
 ## Mission types
 
-Script IDs and behaviour: `rsc/Missions.sqf`, `rsc/MissionsGui.sqf`, `initServer.sqf` (`FADE_globalMissionTypes`). **[G]** = global stream; **[S]** = single-player mission slot.
+Script IDs and behaviour: `rsc/Missions.sqf`, `rsc/MissionsGui.sqf`, `initServer.sqf` (`FADE_globalMissionTypes`, `FADE_singleMissionTypes`). **[G]** = global stream; **[S]** = single-player mission slot.
 
 ### Area of Operations (`AreaOfOperations`) — [G]
 
 - **Intent:** Large fight in a **2 km × 2 km** AO; **three sequential capture objectives** (OBJ1 → OBJ2 → OBJ3).
 - **Typical experience:** BLUFOR AI spawns on one edge and pushes; OPFOR on objectives with patrols; strength tiers (Low/Mid/High) change density; **BLUFOR reinforcement waves**; **OPFOR reinforcement** (and vehicle respawn on High); **50% counter-attack wave** when BLUFOR first captures an objective.
-- **Callouts:** AO centre from a `CIV_T_*` zone **≥ 2500 m** from base; **~30 min** timeout. Not the same as **Operation**.
+- **Callouts:** AO centre from a civ zone **≥ 2500 m** from base; **~30 min** timeout. Not the same as **Operation**.
 
-### Asset Retrieval (`AssetRetrieval`) — [S]
+### Asset Retrieval (`AssetRetrieval`) — [G]
 
 - **Intent:** Clear a small site, **scroll action** to secure the intel case, then **RTB** (within **150 m** of base with intel secured; **20 min** timeout in logic).
 - **Typical experience:** **Two enemy infantry groups** toward the site; fight, grab intel, return.
@@ -62,7 +67,7 @@ Script IDs and behaviour: `rsc/Missions.sqf`, `rsc/MissionsGui.sqf`, `initServer
 
 ### Clear Area (`ClearArea`) — [G]
 
-- **Intent:** **Medium assault** — enemy-held **town** (random `CIV_T_*` centre) **or** procedural **camp** (tents, barriers, etc.).
+- **Intent:** **Medium assault** — enemy-held **town** (random civ zone centre) **or** procedural **camp** (tents, barriers, etc.).
 - **Typical experience:** Patrols and garrison; **≥ 80%** enemy eliminated to win; **15 min** timeout.
 - **Callouts:** **Counter-attack QRF** when BLUFOR enters the zone.
 
@@ -71,6 +76,12 @@ Script IDs and behaviour: `rsc/Missions.sqf`, `rsc/MissionsGui.sqf`, `initServer
 - **Intent:** **Downed aircraft** + **one survivor**; find, land, load, RTB.
 - **Typical experience:** Wreck + survivor **moving toward nearest civ zone**; **OPFOR search patrols** toward crash then town; survivor **radios grid** at **1 km**, **green smoke** at **500 m**.
 - **Callouts:** **Global mission slot** (one global at a time). **Counter-attack QRF** on crash site (**500 m** detection).
+
+### Escape & Evasion (`EscapeEvasion`) — [G]
+
+- **Intent:** Selected players (**evadees**) start dispersed in a hostile civilian area **without GPS**; OPFOR hunting pressure, road QRF on contact, later a **search helicopter** (orbit-only). **Win** if **at least one** originally selected evadee who has **never fully died** meets the RTB / extraction rule (e.g. alive at base). Evadees who **die once** may respawn and join the rescue side; they no longer count toward that win. **Fail** only if **every** originally selected evadee has **fully died** at least once (**ACE unconscious does not count**).
+- **Typical experience:** Patrols and garrison in town; truck QRF; heli search pattern over the area. Started from Manage Missions with evadee selection (`rsc/EscapeEvasionPickGui.sqf`).
+- **Callouts:** Global slot; uses same broad counter-attack registration as other combat globals where applicable (`Missions.sqf` / server start path).
 
 ### Hostage (`Hostage`) — [G]
 
@@ -87,24 +98,18 @@ Script IDs and behaviour: `rsc/Missions.sqf`, `rsc/MissionsGui.sqf`, `initServer
 ### Intercept Convoy (`InterceptConvoy`) — [G]
 
 - **Intent:** **Interdiction** — stop enemy **road convoy** before end zone.
-- **Typical experience:** **3–6 vehicles** (soft/armour from enemy faction); route from **random roads** with **≥ 5000 m** straight-line separation (configurable); **“Eagle Eye”** friendly side chat when lead is **~35%** along route; **succeed** when **≥ 60%** of convoy vehicles **destroyed or immobilised**.
+- **Typical experience:** **3–6 vehicles** (soft/armour from enemy faction); route from **random roads** with **≥ 5000 m** straight-line separation (configurable); **“Eagle Eye”** friendly side chat when lead is **~35%** along route; **succeed** when **≥ 60%** of convoy vehicles **destroyed or immobilised**. Road route helper: `rsc/fn_FADE_interceptConvoyRoadRoute.sqf`.
 - **Callouts:** **Fails** if convoy **reaches end waypoint**; uses enemy retreat registration; **not** the same QRF system as counter-attack missions.
-
-### Medical Training (`MedicalTraining`) — [S]
-
-- **Intent:** **KAT/ACE medical drill** at **`MEDICAL_1`** (not a field mission).
-- **Typical experience:** **1–3** dummies, **random injury presets**; **uniform only**; stabilise/heal all; **fail** if more than **50%** die.
-- **Callouts:** Requires **ACE Medical + KAT** (and **KAT Surgery** for fracture presets per GUI text).
 
 ### Mine Clearing (`MineClearing`) — [S]
 
-- **Intent:** **EOD on roads** near a **`CIV_T_*`** anchor (**500 m**); each run is **either** **2–5** AP mines **or** **1–3** IEDs (not both). SMEAC states which.
+- **Intent:** **EOD on roads** near a **civ zone** anchor (**500 m**); each run is **either** **2–5** AP mines **or** **1–3** IEDs (not both). SMEAC states which.
 - **Typical experience:** Hazards **on the road network**, **≥ 20 m** apart; map marker at **approximate centre** of the cluster; clear all (mines disarmed; IEDs disarmed or destroyed). **No** random or proximity-scripted detonations.
 - **Callouts:** No OPFOR.
 
 ### Operation (`Operation`) — [G]
 
-- **Intent:** **Multi-zone clearance** — hold `CIV_T_*` zones until OPFOR cleared (**60 s** latch per zone).
+- **Intent:** **Multi-zone clearance** — hold civ zones until OPFOR cleared (**60 s** latch per zone).
 - **Typical experience:** Zone count from scenario (**`FADE_operationZoneCount`**); patrols, garrison, **vehicles between enemy-held zones**, **periodic resupply**, **QRF from nearest enemy-held zone** when zone is **contested** (BLUFOR + OPFOR; cooldowns in `rsc/Config.sqf`).
 - **Callouts:** Fleet caps, spawn distance from players, distance cleanup — see **`FADE_operation*`** in `rsc/Config.sqf`.
 
@@ -145,17 +150,28 @@ Script IDs and behaviour: `rsc/Missions.sqf`, `rsc/MissionsGui.sqf`, `initServer
 
 ## Production dedicated server
 
-Post-deploy testing, severity/status, and planned fixes are tracked in **`.cursor/agent-docs/PRODUCTION_SERVER_ISSUES.md`** when that file is present locally (see [Documentation](#documentation) above). Use it for triage on a **production dedicated server**, JIP vs initial join, and mod loadouts. Open items there include mission cleanup edge cases, IED behaviour, lobby parameters, pad rearm consistency, AI dialogue visibility on dedicated, CQB/target polish, and feature backlog - not an exhaustive list of mission behaviour; see the tracker for current state.
+Post-deploy testing, severity/status, and planned fixes are tracked in **`.cursor/agent-docs/PRODUCTION_SERVER_ISSUES.md`** when that file is present locally (see [Documentation](#documentation) above). Use it for triage on a **production dedicated server**, JIP vs initial join, and mod loadouts. Open items there include mission cleanup edge cases, IED behaviour, lobby parameters, pad rearm consistency, AI dialogue visibility on dedicated, CQB/target polish, and feature backlog — not an exhaustive list of mission behaviour; see the tracker for current state.
 
 ---
 
 ## Todo
 
-- Implement full `terminalRange` firing/AT range workflow.
-  - Reuse sniper session telemetry and projectile/hit feedback path where stable.
-  - Support human (`shootPos_*`) and vehicle (`shootVehPos_*`) target sessions with per-type vehicle toggles.
-  - Add FIRES-style AT weapon slot spawning at `rangeGunPos_1..6`.
+### Intel (`FADE_intel*` — `rsc/FADE_IntelServer.sqf`, `rsc/FADE_IntelClient.sqf`)
 
+- **v2 / polish:** Optional **diary** entry; **reliability** roll (deliberate misinformation); Eden-placed intel props; tie **marker TTL** / **scope** to scenario presets.
+
+### Escape & Evasion (`EscapeEvasion` — `rsc/Missions.sqf`, `rsc/EscapeEvasionPickGui.sqf`, `initServer.sqf` entry)
+
+- **Win / fail (distinct evadee roster):** Track the **set of players selected as evadees** at start. **Success:** **at least one** of them **never fully dies** (vanilla/ACE **dead**, not merely unconscious) and satisfies RTB / win geometry. Evadees who **die once** may respawn as **rescue**; they are **out** of the “never died” pool but the mission can still **complete** if another evadee never died and extracts (e.g. **5** evadees, **3** die once and join rescue, **2** never die and RTB → **complete**). **Fail:** **every** selected evadee has **fully died** at least **once**.
+- **Teleport placement:** After choosing dispersed positions, **validate dry land** (surface isWater / suitable ground); **re-roll** or offset if in water or unusable.
+- **Cleanup:** On **success**, **fail**, or **abort**, **delete or despawn all units and objects** spawned for this mission (patrols, QRF, heli, local garrison created for the run) so nothing is left for the next mission.
+- **Player information:** On teleport, **do not** show **grids**, **AO markers**, or **hunting area** to evadees (compass/map discipline); HQ / training overlay rules as designed.
+- **Win condition bug:** Align script logic with the **Escape & Evasion** mission blurb under [Mission types](#mission-types): do **not** require **all** evadees alive; do **not** mark complete on **wrong** RTB states (e.g. only rescuers at base while evadees still in field — define **X m** of base and **who** must be present).
+- **Spawn fairness:** Enforce **minimum distance** (and optionally **line-of-sight** or **building buffer**) between **evadee spawn** and **nearest OPFOR** so players cannot be killed before they can move (tune m values in `Config.sqf` or mission-local defines).
+- **Pressure after exfil from initial zone:** Once evadees leave the **starting urban bubble**, **reduce** scripted hunt density to **ambient** level **except**:
+  - **Dynamic roadblocks** and **garrisoned buildings** along **likely routes** / **main roads** back to base (spawn from road network + building scan).
+  - **Secondary routes** comparatively **lighter** so **route choice** is the evasion lesson.
+  
 ---
 
 *Implementation detail for assistants: **`.cursor/agent-docs/AGENTS.md`** and siblings in the same folder (local).*

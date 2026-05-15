@@ -1,39 +1,36 @@
 // =============================================================================
-// EnemyAAA.sqf - AAA spawning governed by Scenario GUI "Enemy AAA" level
+// EnemyAAA.sqf - dynamic AAA around airborne player aircraft
 // =============================================================================
-// Server-only. Level "None": no spawns. Light/Medium/Heavy: up to 5 AA units at
-// high ground near random civ zones (within 5 km, highest point, safe pos).
-// MANPADS: 25% chance per active civ zone, max 2 infantry with shoulder-launched
-// AA per zone, non-respawning; SAD waypoint at spawn.
+// Modes:
+// - Off
+// - AAA (3 static AA threats)
+// - AAA+MANPADS (mix of static + AA specialist + AT/RPG infantry threats)
+// Spawn trigger: player-controlled airborne Air vehicles only.
+// Spawn geometry: relative bearings [0, 120, 200], 1500-2000m (wider on retries if exclusions bite).
+// Exclusions: no spawn within 200m of any human player; none within 1500m of FADE_basePos / BASE_1.
+// Height bias: each point snaps to highest terrain in 500m around raw point.
 // =============================================================================
 
 if (!isServer) exitWith {};
 
-// FADE_aaa_applyLevel is call'd from initServer (scenario apply); spawn helpers must resolve
-// FADE_scaleOpforCount from missionNamespace — execVM-private locals are not in that scope.
-FADE_aaa_scaleOpforCountDefault = {
-    params ["_baseCount", ["_minCount", 1], ["_maxCount", -1]];
-    private _base = floor (_baseCount max 0);
-    if (_base <= 0) exitWith { 0 };
-    private _scaled = _base max _minCount;
-    if (_maxCount >= 0 && { _scaled > _maxCount }) then { _scaled = _maxCount };
-    _scaled
+FADE_aaa_fallbackStatic = "O_HMG_01_high_F";
+FADE_aaa_fallbackManpads = "O_Soldier_AA_F";
+FADE_aaa_clusters = createHashMap; // vehicleNetId -> hashMap(cluster state)
+
+FADE_aaa_normalizeLevel = {
+    params [["_lvl", "Off"]];
+    switch (toUpper _lvl) do {
+        case "NONE": { "Off" };
+        case "LIGHT";
+        case "MEDIUM";
+        case "HEAVY": { "AAA" };
+        case "MANPADS": { "AAA+MANPADS" };
+        case "AAA+MANPADS": { "AAA+MANPADS" };
+        case "AAA": { "AAA" };
+        default { "Off" };
+    };
 };
 
-// Storage for cleanup: static/vehicle AA and MANPADS groups
-FADE_aaa_units = [];           // static weapons + crew groups/objects
-FADE_aaa_vehicles = [];        // AA vehicles (for delete)
-FADE_aaa_manpadsZones = createHashMap;  // zoneId -> array of groups (for despawn per zone)
-FADE_aaa_manpadsGroups = [];   // all MANPADS groups (for full despawn)
-
-// Fallback classnames (vanilla East) when faction has no matching asset
-FADE_aaa_fallbackStatic = "O_HMG_01_high_F";
-FADE_aaa_fallbackVehicle = "O_APC_Tracked_02_AA_F";
-FADE_aaa_fallbackManpads = "O_Soldier_AA_F";
-
-// -----------------------------------------------------------------------------
-// Resolve AA classnames from Scenario GUI enemy faction (config-driven).
-// -----------------------------------------------------------------------------
 FADE_aaa_getStaticLightClass = {
     params [["_faction", ""]];
     if (_faction == "") then { _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"] };
@@ -46,29 +43,11 @@ FADE_aaa_getStaticLightClass = {
         if (getNumber (_cfg >> "side") != 0) then { continue };
         if (!(_class isKindOf "StaticWeapon")) then { continue };
         private _dn = toLower getText (_cfg >> "displayName");
-        if ((_dn find "hmg" < 0) && { _dn find "gmg" < 0 }) then { continue };
+        if ((_dn find "hmg" < 0) && { _dn find "gmg" < 0 } && { _dn find "aa" < 0 }) then { continue };
         if (getText (_cfg >> "faction") == _faction) exitWith { _out = _class };
         if (_out == "") then { _out = _class };
     } forEach ("true" configClasses (configFile >> "CfgVehicles"));
     if (_out == "") then { _fallback } else { _out }
-};
-
-FADE_aaa_getAAVehicleClass = {
-    params [["_faction", ""]];
-    if (_faction == "") then { _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"] };
-    private _fallback = missionNamespace getVariable ["FADE_aaa_fallbackVehicle", "O_APC_Tracked_02_AA_F"];
-    private _vehicles = [_faction] call FADE_getEnemyVehiclesForFaction;
-    if (_vehicles isEqualTo []) exitWith { _fallback };
-    private _aa = [];
-    {
-        private _cfg = configFile >> "CfgVehicles" >> _x;
-        if (!isClass _cfg) then { continue };
-        private _dn = toLower getText (_cfg >> "displayName");
-        private _threat = getArray (_cfg >> "threat");
-        private _airThreat = if (count _threat > 1) then { _threat select 1 } else { 0 };
-        if ((_dn find "aa" >= 0) || { _airThreat > 0 }) then { _aa pushBack _x };
-    } forEach _vehicles;
-    if (_aa isEqualTo []) then { _vehicles select 0 } else { _aa select (floor random count _aa) }
 };
 
 FADE_aaa_getManpadsUnitClass = {
@@ -84,282 +63,294 @@ FADE_aaa_getManpadsUnitClass = {
         private _weapons = getArray (_cfg >> "weapons");
         {
             private _w = toLower _x;
-            if ((_w find "titan" >= 0) || { _w find "stinger" >= 0 } || { _w find "igla" >= 0 } || { (_w find "launch_" >= 0) && { _w find "aa" >= 0 } }) exitWith {
+            if ((_w find "titan_aa" >= 0) || { _w find "stinger" >= 0 } || { _w find "igla" >= 0 } || { (_w find "launch_" >= 0) && { _w find "aa" >= 0 } }) exitWith {
                 _manpads pushBack _x;
             };
         } forEach _weapons;
     } forEach _units;
-    if (_manpads isEqualTo []) then { _fallback } else { _manpads select (floor random count _manpads) }
+    if (_manpads isEqualTo []) then { _fallback } else { _manpads select (floor random (count _manpads)) }
 };
 
-// -----------------------------------------------------------------------------
-// Despawn all AAA (static, vehicles, MANPADS). Call on scenario apply or level None.
-// -----------------------------------------------------------------------------
-FADE_aaa_despawnAll = {
-    // Groups first (so crew are removed from vehicles/statics), then objects
+FADE_aaa_getATUnitClass = {
+    params [["_faction", ""]];
+    if (_faction == "") then { _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"] };
+    private _units = [_faction, 0] call FADE_getUnitsForFaction;
+    private _fallbackUnits = missionNamespace getVariable ["FADE_enemyUnits", ["O_Soldier_LAT_F"]];
+    if (_units isEqualTo []) then { _units = +_fallbackUnits };
+    private _candidates = [];
     {
-        if (!isNull _x) then {
-            if (_x isEqualType grpNull) then {
-                { deleteVehicle _x } forEach units _x;
-                deleteGroup _x;
+        private _cfg = configFile >> "CfgVehicles" >> _x;
+        if (!isClass _cfg || { !(_x isKindOf "Man") }) then { continue };
+        private _weapons = getArray (_cfg >> "weapons");
+        private _isAT = false;
+        {
+            private _w = toLower _x;
+            if ((_w find "launch_" >= 0) && { (_w find "aa" < 0) && { _w find "stinger" < 0 } && { _w find "igla" < 0 } && { _w find "titan_aa" < 0 } }) exitWith {
+                _isAT = true;
+            };
+        } forEach _weapons;
+        if (_isAT) then { _candidates pushBack _x };
+    } forEach _units;
+    if (_candidates isEqualTo []) then { _fallbackUnits select 0 } else { _candidates select (floor random (count _candidates)) }
+};
+
+FADE_aaa_isVehicleAirborne = {
+    params ["_veh"];
+    if (isNull _veh || { !alive _veh }) exitWith { false };
+    if !(_veh isKindOf "Air") exitWith { false };
+    private _alt = (getPosATL _veh) select 2;
+    (_alt > 20) && { !isTouchingGround _veh }
+};
+
+FADE_aaa_getAirbornePlayerVehicles = {
+    private _out = [];
+    {
+        if (!isPlayer _x) then { continue };
+        if (!alive _x) then { continue };
+        private _veh = vehicle _x;
+        if (_veh == _x) then { continue };
+        if ([_veh] call FADE_aaa_isVehicleAirborne) then {
+            _out pushBackUnique _veh;
+        };
+    } forEach allPlayers;
+    _out
+};
+
+FADE_aaa_findHighestPointInRadius = {
+    params ["_center", ["_radius", 500]];
+    private _best = +_center;
+    if (count _best < 3) then { _best set [2, 0] };
+    private _bestH = getTerrainHeightASL _best;
+    for "_ring" from 1 to 3 do {
+        private _r = (_radius / 3) * _ring;
+        for "_a" from 0 to 330 step 30 do {
+            private _p = [(_center select 0) + ((sin _a) * _r), (_center select 1) + ((cos _a) * _r), 0];
+            if (surfaceIsWater _p) then { continue };
+            private _h = getTerrainHeightASL _p;
+            if (_h > _bestH) then {
+                _bestH = _h;
+                _best = _p;
             };
         };
-    } forEach FADE_aaa_units;
-    {
-        if (!isNull _x && { _x isEqualType objNull }) then {
-            deleteVehicle _x;
-        };
-    } forEach FADE_aaa_units;
-    FADE_aaa_units = [];
-
-    {
-        if (!isNull _x) then {
-            { deleteVehicle _x } forEach (crew _x);
-            deleteVehicle _x;
-        };
-    } forEach FADE_aaa_vehicles;
-    FADE_aaa_vehicles = [];
-
-    {
-        if (!isNull _x) then {
-            { deleteVehicle _x } forEach units _x;
-            deleteGroup _x;
-        };
-    } forEach FADE_aaa_manpadsGroups;
-    FADE_aaa_manpadsGroups = [];
-    FADE_aaa_manpadsZones = createHashMap;
+    };
+    if (surfaceIsWater _best) then { _best = +_center };
+    _best set [2, 0];
+    _best
 };
 
-// -----------------------------------------------------------------------------
-// Despawn MANPADS for one zone (when civ zone despawns).
-// -----------------------------------------------------------------------------
-FADE_aaa_despawnManpadsInZone = {
-    params ["_zoneId"];
-    private _groups = FADE_aaa_manpadsZones get _zoneId;
-    if (isNil "_groups" || { !(_groups isEqualType []) }) exitWith {};
-    {
-        if (!isNull _x) then {
-            { deleteVehicle _x } forEach units _x;
-            deleteGroup _x;
-            FADE_aaa_manpadsGroups = FADE_aaa_manpadsGroups - [_x];
-        };
-    } forEach _groups;
-    FADE_aaa_manpadsZones deleteAt _zoneId;
+// HQ / base centre for exclusion radius (same source as civ patrol logic).
+FADE_aaa_getBasePos = {
+    private _bp = missionNamespace getVariable ["FADE_basePos", []];
+    if (count _bp >= 2) exitWith { _bp };
+    private _o = missionNamespace getVariable ["BASE_1", objNull];
+    if (!isNull _o) exitWith { getPosATL _o };
+    []
 };
 
-// -----------------------------------------------------------------------------
-// Find a safe spawn position within _radius of _center (no water, clear of objects).
-// Uses BIS_fnc_findSafePos so not in building etc. Returns [x,y,z] or _center on fail.
-// -----------------------------------------------------------------------------
-FADE_aaa_findSafeSpawnInRadius = {
-    params ["_center", ["_radius", 500]];
-    if (count _center < 2) exitWith { _center };
-    private _flat = [_center, 20, _radius, 8, 1, 0.4, 0, [], _center] call BIS_fnc_findSafePos;
-    if (_flat isEqualType [] && { count _flat >= 2 }) then {
-        if (count _flat < 3) then { _flat set [2, 0] };
-        _flat
-    } else {
-        _center
+// True if _pos may host AAA/MANPADS: >=1500m from base, >=200m from every human player.
+FADE_aaa_spawnPosAllowed = {
+    params ["_pos"];
+    if (count _pos < 2) exitWith { false };
+    private _base = [] call FADE_aaa_getBasePos;
+    if (count _base >= 2 && { (_pos distance2D _base) < 1500 }) exitWith { false };
+    if ({ alive _x && { (_pos distance2D _x) < 200 } } count allPlayers > 0) exitWith { false };
+    true
+};
+
+FADE_aaa_pickSpawnPos = {
+    params ["_originVeh", "_bearingOffset"];
+    private _baseDir = getDir _originVeh;
+    private _result = [];
+    for "_attempt" from 0 to 39 do {
+        private _bearing = _bearingOffset;
+        private _dist = 1500 + random 500;
+        if (_attempt > 0) then { _bearing = _bearingOffset + (random 161) - 80 };
+        if (_attempt > 22) then { _dist = 1750 + random 750 };
+        if (_attempt > 32) then { _dist = 2000 + random 1000 };
+        private _raw = _originVeh getPos [_dist, _baseDir + _bearing];
+        private _peak = [_raw, 500] call FADE_aaa_findHighestPointInRadius;
+        private _safe = [_peak, 10, 60, 6, 0, 0.4, 0, [], _peak] call BIS_fnc_findSafePos;
+        private _cand = if (_safe isEqualType [] && { count _safe >= 2 }) then {
+            if (count _safe < 3) then { _safe set [2, 0] };
+            _safe
+        } else {
+            _peak
+        };
+        if ([_cand] call FADE_aaa_spawnPosAllowed) then {
+            _result = _cand;
+        };
+        if (count _result >= 2) exitWith {};
+    };
+    _result
+};
+
+FADE_aaa_applyGroupPolicy = {
+    params ["_grp"];
+    if (isNull _grp) exitWith {};
+    private _skill = missionNamespace getVariable ["FADE_enemySkill", 0.2];
+    private _routing = missionNamespace getVariable ["FADE_enemyRouting", 0];
+    { _x setSkill _skill } forEach units _grp;
+    _grp setVariable ["FADE_allowFleeing", _routing];
+    _grp allowFleeing _routing;
+    if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
+        { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
     };
 };
 
-// -----------------------------------------------------------------------------
-// Spawn one Light AA: static HMG + one gunner (scenario enemy units).
-// -----------------------------------------------------------------------------
-FADE_aaa_spawnLight = {
+FADE_aaa_spawnStaticThreat = {
     params ["_pos"];
-    private _se = missionNamespace getVariable ["FADE_sideEnemy", east];
     private _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
     private _staticClass = [_faction] call FADE_aaa_getStaticLightClass;
-    if (!isClass (configFile >> "CfgVehicles" >> _staticClass)) exitWith {};
+    if (!isClass (configFile >> "CfgVehicles" >> _staticClass)) exitWith { [[], []] };
     private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", ["O_Soldier_F"]];
-    if (_enemyUnits isEqualTo []) exitWith {};
-    private _gunnerClass = _enemyUnits select 0;
+    if (_enemyUnits isEqualTo []) exitWith { [[], []] };
+    private _sideEnemy = missionNamespace getVariable ["FADE_sideEnemy", east];
     private _static = createVehicle [_staticClass, _pos, [], 0, "NONE"];
-    if (isNull _static) exitWith {};
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    private _dir = if (!isNull _base) then { _pos getDir (getPosATL _base) } else { random 360 };
-    _static setDir _dir;
-    private _grp = createGroup _se;
-    private _gunner = _grp createUnit [_gunnerClass, _pos, [], 0, "NONE"];
+    if (isNull _static) exitWith { [[], []] };
+    _static setDir (random 360);
+    private _grp = createGroup _sideEnemy;
+    private _gunner = _grp createUnit [_enemyUnits select 0, _pos, [], 0, "NONE"];
     if (isNull _gunner) then {
         deleteVehicle _static;
         deleteGroup _grp;
+        [[], []]
     } else {
         _gunner moveInGunner _static;
-        _gunner setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.2]);
-        private _routing = missionNamespace getVariable ["FADE_enemyRouting", 0];
-        _grp setVariable ["FADE_allowFleeing", _routing];
-        _grp allowFleeing _routing;
-        FADE_aaa_units pushBack _static;
-        FADE_aaa_units pushBack _grp;
-        if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
-            { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
-        };
+        [_grp] call FADE_aaa_applyGroupPolicy;
+        [[_static], [_grp]]
     };
 };
 
-// -----------------------------------------------------------------------------
-// Spawn one Medium AA: emplaced vehicle (no waypoints). Crew from scenario enemy.
-// -----------------------------------------------------------------------------
-FADE_aaa_spawnMedium = {
-    params ["_pos"];
-    private _se = missionNamespace getVariable ["FADE_sideEnemy", east];
-    private _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
-    private _vehClass = [_faction] call FADE_aaa_getAAVehicleClass;
-    if (!isClass (configFile >> "CfgVehicles" >> _vehClass)) exitWith {};
-    private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", ["O_Soldier_F"]];
-    if (count _enemyUnits < 3) then { _enemyUnits = _enemyUnits + [_enemyUnits select 0] + [_enemyUnits select 0] };
-    private _veh = createVehicle [_vehClass, _pos, [], 0, "NONE"];
-    if (isNull _veh) exitWith {};
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    private _dir = if (!isNull _base) then { _pos getDir (getPosATL _base) } else { random 360 };
-    _veh setDir _dir;
-    private _grp = createGroup _se;
-    private _driver = _grp createUnit [(_enemyUnits select 0), _pos, [], 0, "NONE"];
-    private _gunner = _grp createUnit [(_enemyUnits select (1 min (count _enemyUnits - 1))), _pos, [], 0, "NONE"];
-    private _commander = _grp createUnit [(_enemyUnits select (2 min (count _enemyUnits - 1))), _pos, [], 0, "NONE"];
-    _driver moveInDriver _veh;
-    _gunner moveInGunner _veh;
-    _commander moveInCommander _veh;
-    { _x setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.2]) } forEach units _grp;
-    _grp allowFleeing (missionNamespace getVariable ["FADE_enemyRouting", 0]);
-    FADE_aaa_vehicles pushBack _veh;
-    FADE_aaa_units pushBack _grp;
-    if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
-        { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
+FADE_aaa_spawnInfantryThreat = {
+    params ["_pos", "_unitClass"];
+    if (!isClass (configFile >> "CfgVehicles" >> _unitClass)) exitWith { [[], []] };
+    private _sideEnemy = missionNamespace getVariable ["FADE_sideEnemy", east];
+    private _grp = createGroup _sideEnemy;
+    private _u = _grp createUnit [_unitClass, _pos, [], 0, "NONE"];
+    if (isNull _u) then {
+        deleteGroup _grp;
+        [[], []]
+    } else {
+        private _wp = _grp addWaypoint [_pos, 0];
+        _wp setWaypointType "SAD";
+        [_grp] call FADE_aaa_applyGroupPolicy;
+        [[], [_grp]]
     };
 };
 
-// -----------------------------------------------------------------------------
-// Spawn one Heavy AA: vehicle with SAD waypoint at spawn (roving).
-// -----------------------------------------------------------------------------
-FADE_aaa_spawnHeavy = {
-    params ["_pos"];
-    private _se = missionNamespace getVariable ["FADE_sideEnemy", east];
-    private _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
-    private _vehClass = [_faction] call FADE_aaa_getAAVehicleClass;
-    if (!isClass (configFile >> "CfgVehicles" >> _vehClass)) exitWith {};
-    private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", ["O_Soldier_F"]];
-    if (count _enemyUnits < 3) then { _enemyUnits = _enemyUnits + [_enemyUnits select 0] + [_enemyUnits select 0] };
-    private _veh = createVehicle [_vehClass, _pos, [], 0, "NONE"];
-    if (isNull _veh) exitWith {};
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    private _dir = if (!isNull _base) then { _pos getDir (getPosATL _base) } else { random 360 };
-    _veh setDir _dir;
-    private _grp = createGroup _se;
-    private _driver = _grp createUnit [(_enemyUnits select 0), _pos, [], 0, "NONE"];
-    private _gunner = _grp createUnit [(_enemyUnits select (1 min (count _enemyUnits - 1))), _pos, [], 0, "NONE"];
-    private _commander = _grp createUnit [(_enemyUnits select (2 min (count _enemyUnits - 1))), _pos, [], 0, "NONE"];
-    _driver moveInDriver _veh;
-    _gunner moveInGunner _veh;
-    _commander moveInCommander _veh;
-    { _x setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.2]) } forEach units _grp;
-    _grp allowFleeing (missionNamespace getVariable ["FADE_enemyRouting", 0]);
-    private _wp = _grp addWaypoint [_pos, 0];
-    _wp setWaypointType "SAD";
-    FADE_aaa_vehicles pushBack _veh;
-    FADE_aaa_units pushBack _grp;
-    if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
-        { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
-    };
-};
-
-// -----------------------------------------------------------------------------
-// Spawn up to 5 AA units (Light/Medium/Heavy): pick 5 random civ zones, for each
-// find safe pos within 500 m of civ center (no building/water), spawn one unit.
-// -----------------------------------------------------------------------------
-FADE_aaa_spawnAll = {
-    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", FADE_aaa_scaleOpforCountDefault];
-    private _level = missionNamespace getVariable ["FADE_enemyAAALevel", "None"];
-    if (_level == "None") exitWith {};
-
-    if (_level != "Light" && { _level != "Medium" } && { _level != "Heavy" }) exitWith {};
-
-    private _triggerNames = missionNamespace getVariable ["FADE_civTriggerNames", []];
-    if (_triggerNames isEqualTo []) exitWith {};
-
-    private _max = [5, 1] call _scaleOpforCount;
-    private _spawnFnc = switch (_level) do {
-        case "Light": { FADE_aaa_spawnLight };
-        case "Medium": { FADE_aaa_spawnMedium };
-        case "Heavy": { FADE_aaa_spawnHeavy };
-        default { {} };
-    };
-    if (_spawnFnc isEqualTo {}) exitWith {};
-
-    private _shuffled = _triggerNames call BIS_fnc_arrayShuffle;
-    private _toUse = _shuffled select [0, (_max min count _shuffled)];
+FADE_aaa_deleteCluster = {
+    params ["_cluster"];
+    if (isNil "_cluster") exitWith {};
+    private _groups = _cluster getOrDefault ["groups", []];
     {
-        private _trig = missionNamespace getVariable [_x, objNull];
-        if (!isNull _trig) then {
-            private _center = getPosATL _trig;
-            if (count _center >= 2) then {
-                private _spawnPos = [_center, 500] call FADE_aaa_findSafeSpawnInRadius;
-                [_spawnPos] call _spawnFnc;
+        if (!isNull _x) then {
+            { deleteVehicle _x } forEach units _x;
+            deleteGroup _x;
+        };
+    } forEach _groups;
+    private _objects = _cluster getOrDefault ["objects", []];
+    {
+        if (!isNull _x) then { deleteVehicle _x };
+    } forEach _objects;
+};
+
+FADE_aaa_despawnAll = {
+    {
+        [_y] call FADE_aaa_deleteCluster;
+    } forEach FADE_aaa_clusters;
+    FADE_aaa_clusters = createHashMap;
+};
+
+// Compatibility shim: AAA no longer ties into civ-zone activation.
+FADE_aaa_maybeSpawnManpadsInZone = {};
+FADE_aaa_despawnManpadsInZone = {};
+
+FADE_aaa_spawnClusterForVehicle = {
+    params ["_veh", "_mode"];
+    private _roles = if (_mode == "AAA+MANPADS") then {
+        (["static", "manpads", "at"] call BIS_fnc_arrayShuffle)
+    } else {
+        ["static", "static", "static"]
+    };
+    private _bearings = [0, 120, 200];
+    private _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
+    private _manpadsClass = [_faction] call FADE_aaa_getManpadsUnitClass;
+    private _atClass = [_faction] call FADE_aaa_getATUnitClass;
+    private _objects = [];
+    private _groups = [];
+    private _center = [0, 0, 0];
+    private _nSpawned = 0;
+    for "_i" from 0 to 2 do {
+        private _pos = [_veh, _bearings select _i] call FADE_aaa_pickSpawnPos;
+        if (count _pos < 2) then { continue };
+        _center = _center vectorAdd _pos;
+        _nSpawned = _nSpawned + 1;
+        private _role = _roles select _i;
+        private _spawned = switch (_role) do {
+            case "manpads": { [_pos, _manpadsClass] call FADE_aaa_spawnInfantryThreat };
+            case "at": { [_pos, _atClass] call FADE_aaa_spawnInfantryThreat };
+            default { [_pos] call FADE_aaa_spawnStaticThreat };
+        };
+        _objects append (_spawned select 0);
+        _groups append (_spawned select 1);
+    };
+    if (_nSpawned > 0) then {
+        _center = _center vectorMultiply (1 / _nSpawned);
+    } else {
+        _center = getPosATL _veh;
+    };
+    private _cluster = createHashMap;
+    _cluster set ["vehicle", _veh];
+    _cluster set ["spawnedAt", time];
+    _cluster set ["center", _center];
+    _cluster set ["objects", _objects];
+    _cluster set ["groups", _groups];
+    _cluster
+};
+
+FADE_aaa_applyLevel = {
+    private _lvl = missionNamespace getVariable ["FADE_enemyAAALevel", "Off"];
+    _lvl = [_lvl] call FADE_aaa_normalizeLevel;
+    missionNamespace setVariable ["FADE_enemyAAALevel", _lvl];
+    if (_lvl == "Off") then {
+        call FADE_aaa_despawnAll;
+    };
+};
+
+if (isNil "FADE_aaa_monitorStarted") then {
+    FADE_aaa_monitorStarted = true;
+    [] spawn {
+        while { true } do {
+            private _mode = [missionNamespace getVariable ["FADE_enemyAAALevel", "Off"]] call FADE_aaa_normalizeLevel;
+            if (_mode == "Off") then {
+                if ((count (keys FADE_aaa_clusters)) > 0) then { call FADE_aaa_despawnAll };
+                sleep 10;
+            } else {
+                private _activeVehicles = call FADE_aaa_getAirbornePlayerVehicles;
+                private _activeNetIds = _activeVehicles apply { netId _x };
+
+                {
+                    private _id = _x;
+                    private _cluster = FADE_aaa_clusters get _id;
+                    private _veh = _cluster getOrDefault ["vehicle", objNull];
+                    if (!(_id in _activeNetIds) || { !([_veh] call FADE_aaa_isVehicleAirborne) }) then {
+                        [_cluster] call FADE_aaa_deleteCluster;
+                        FADE_aaa_clusters deleteAt _id;
+                    };
+                } forEach (keys FADE_aaa_clusters);
+
+                {
+                    private _id = netId _x;
+                    if (isNil { FADE_aaa_clusters get _id }) then {
+                        private _cluster = [_x, _mode] call FADE_aaa_spawnClusterForVehicle;
+                        FADE_aaa_clusters set [_id, _cluster];
+                    };
+                } forEach _activeVehicles;
+
+                sleep 10;
             };
         };
-    } forEach _toUse;
-};
-
-// -----------------------------------------------------------------------------
-// Apply AAA level: despawn all, then spawn static/vehicle if Light/Medium/Heavy.
-// MANPADS are spawned per-zone when zone activates (FADE_aaa_maybeSpawnManpadsInZone).
-// -----------------------------------------------------------------------------
-FADE_aaa_applyLevel = {
-    call FADE_aaa_despawnAll;
-    private _level = missionNamespace getVariable ["FADE_enemyAAALevel", "None"];
-    if (_level in ["Light", "Medium", "Heavy"]) then {
-        call FADE_aaa_spawnAll;
     };
 };
 
-// -----------------------------------------------------------------------------
-// MANPADS: 25% chance to spawn in this (active) civ zone; max 2 units, non-respawning.
-// Give SAD waypoint at _center. Call from AmbientCivilians when zone activates.
-// -----------------------------------------------------------------------------
-FADE_aaa_maybeSpawnManpadsInZone = {
-    params ["_zoneId", "_center"];
-    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", FADE_aaa_scaleOpforCountDefault];
-    private _level = missionNamespace getVariable ["FADE_enemyAAALevel", "None"];
-    if (_level != "MANPADS") exitWith {};
-    if (!(isNil { FADE_aaa_manpadsZones get _zoneId })) exitWith {};  // already decided/spawned for this zone
-    if (random 1 > 0.25) exitWith {
-        FADE_aaa_manpadsZones set [_zoneId, []];  // mark as "no spawn" so we don't roll again
-    };
-
-    private _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
-    private _unitClass = [_faction] call FADE_aaa_getManpadsUnitClass;
-    if (!isClass (configFile >> "CfgVehicles" >> _unitClass)) then { _unitClass = missionNamespace getVariable ["FADE_aaa_fallbackManpads", "O_Soldier_AA_F"] };
-
-    private _count = [2, 1] call _scaleOpforCount;
-    private _groups = [];
-    private _grp = createGroup (missionNamespace getVariable ["FADE_sideEnemy", east]);
-    for "_i" from 0 to (_count - 1) do {
-        private _pos = [_center, 0, 30, 4, 1, 0.3, 0, [], _center] call BIS_fnc_findSafePos;
-        if (count _pos < 2) then { _pos = _center };
-        if (count _pos < 3) then { _pos set [2, 0] };
-        private _u = _grp createUnit [_unitClass, _pos, [], 0, "NONE"];
-        if (!isNull _u) then { _u setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.2]) };
-    };
-    if (count units _grp > 0) then {
-        { _x setSkill (missionNamespace getVariable ["FADE_enemySkill", 0.2]) } forEach units _grp;
-        _grp allowFleeing (missionNamespace getVariable ["FADE_enemyRouting", 0]);
-        private _wp = _grp addWaypoint [_center, 0];
-        _wp setWaypointType "SAD";
-        _groups pushBack _grp;
-        FADE_aaa_manpadsGroups pushBack _grp;
-        FADE_aaa_manpadsZones set [_zoneId, _groups];
-        if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
-            { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
-        };
-    } else {
-        deleteGroup _grp;
-        FADE_aaa_manpadsZones set [_zoneId, []];
-    };
-};
-
-// -----------------------------------------------------------------------------
-// Init: apply current level (e.g. after mission load or first run).
-// -----------------------------------------------------------------------------
 call FADE_aaa_applyLevel;

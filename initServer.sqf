@@ -17,6 +17,7 @@ if (!isServer) exitWith {};
 
 // Config - single source of truth (rsc\Config.sqf); load before DebugBIScpStub so FADE_debugBIScp applies
 call compile preprocessFileLineNumbers "rsc\Config.sqf";
+private _facProf0 = if (missionNamespace getVariable ["FADE_profileMissionLoad", false]) then { diag_tickTime } else { -1 };
 call compile preprocessFileLineNumbers "rsc\OperationNames.sqf";
 missionNamespace setVariable ["FADE_convoyMinRouteM", FADE_convoyMinRouteM];
 FADE_interceptConvoyRoadRoute = compile preprocessFileLineNumbers "rsc\fn_FADE_interceptConvoyRoadRoute.sqf";
@@ -84,6 +85,10 @@ publicVariable "FAC_param_scenarioGuiAccess";
 publicVariable "FAC_param_enableAceArsenalActions";
 missionNamespace setVariable ["FADE_teleportToPlayerMode", missionNamespace getVariable ["FADE_teleportToPlayerMode", 0], true];
 publicVariable "FADE_teleportToPlayerMode";
+missionNamespace setVariable ["FADE_civTalkInterpretersOnly", missionNamespace getVariable ["FADE_civTalkInterpretersOnly", false], true];
+publicVariable "FADE_civTalkInterpretersOnly";
+missionNamespace setVariable ["FADE_intelSpecialistsOnly", missionNamespace getVariable ["FADE_intelSpecialistsOnly", false], true];
+publicVariable "FADE_intelSpecialistsOnly";
 
 // Access helper: admin and Zeus can override leader-only restrictions.
 FADE_playerHasLeaderOverrideAccess = {
@@ -108,8 +113,8 @@ FADE_playerCanUseScenarioGui = {
     (leader group _player == _player) || { [_player] call FADE_playerHasLeaderOverrideAccess }
 };
 
-// Loadout GUI helpers on server: resolve CTB/std loadouts for squad-leader "apply to squadmate" (no dialog on server)
-call compile preprocessFileLineNumbers "rsc\LoadoutGui.sqf";
+// Loadout GUI helpers on server: preset/std resolution for squad-leader apply (full LoadoutGui is client-only — initPlayerLocal)
+call compile preprocessFileLineNumbers "rsc\LoadoutGuiServer.sqf";
 
 FAC_loadoutGui_serverRequestApplyToMember = {
     if (!isServer) exitWith {};
@@ -134,10 +139,10 @@ FAC_loadoutGui_serverRequestApplyToMember = {
     };
 
     private _limitBlu = missionNamespace getVariable ["FADE_limitGearToFriendlyFaction", false];
-    private _limitCtb = missionNamespace getVariable ["FADE_limitToCtbLoadouts", false];
+    private _limitPreset = missionNamespace getVariable ["FADE_limitToPresetLoadouts", false];
 
-    if (_limitCtb && { (_rowKey find "CTB:") != 0 }) exitWith {
-        ["Loadout: scenario allows CTB presets only."] remoteExec ["systemChat", _requester];
+    if (_limitPreset && { (_rowKey find "FAC:") != 0 }) exitWith {
+        ["Loadout: scenario allows preset loadouts only."] remoteExec ["systemChat", _requester];
     };
 
     private _loadout = [];
@@ -145,18 +150,18 @@ FAC_loadoutGui_serverRequestApplyToMember = {
     private _eng = false;
     private _exp = false;
 
-    if ((_rowKey find "CTB:") == 0) then {
-        if (!([] call FAC_loadoutGui_ensureCtbData)) exitWith {
-            ["Loadout: CTB data unavailable on server."] remoteExec ["systemChat", _requester];
+    if ((_rowKey find "FAC:") == 0) then {
+        if (!([] call FAC_loadoutGui_ensurePresetData)) exitWith {
+            ["Loadout: preset data unavailable on server."] remoteExec ["systemChat", _requester];
         };
-        private _raw = [_rowKey] call FAC_loadoutGui_getCtbLoadoutByKey;
-        _loadout = [_raw] call FAC_loadoutGui_resolveCtbLoadoutArray;
+        private _raw = [_rowKey] call FAC_loadoutGui_getPresetLoadoutByKey;
+        _loadout = [_raw] call FAC_loadoutGui_resolvePresetLoadoutArray;
         if ((count _loadout) < 10) exitWith {
-            ["Loadout: could not resolve that CTB preset on the server."] remoteExec ["systemChat", _requester];
+            ["Loadout: could not resolve that preset on the server."] remoteExec ["systemChat", _requester];
         };
         private _roleDn = "";
-        { if ((_x select 0) == _rowKey) exitWith { _roleDn = _x select 1 } } forEach ([] call FAC_loadoutGui_buildCtbEntries);
-        private _tr = [_roleDn] call FAC_loadoutGui_getCtbRoleTraits;
+        { if ((_x select 0) == _rowKey) exitWith { _roleDn = _x select 1 } } forEach ([] call FAC_loadoutGui_buildPresetEntries);
+        private _tr = [_roleDn] call FAC_loadoutGui_getPresetRoleTraits;
         _m = _tr select 0;
         _eng = _tr select 1;
         _exp = _tr select 2;
@@ -200,6 +205,8 @@ FADE_enemyVehiclesByFaction = createHashMap; // key faction -> array of vehicle 
 FADE_civVehiclesByFaction = createHashMap;   // key faction -> array; "" = generic civ vehicles
 private _heliPairs = [];  // [displayName, class] for sort
 private _landPairs = [];
+
+private _tCfgVeh0 = if (_facProf0 >= 0) then { diag_tickTime } else { -1 };
 
 {
     private _cfg = _x;
@@ -255,6 +262,10 @@ private _landPairs = [];
         FADE_enemyVehiclesByFaction set [_faction, _arr];
     };
 } forEach ("true" configClasses (configFile >> "CfgVehicles"));
+
+if (_tCfgVeh0 >= 0) then {
+    diag_log format ["[FAC profile] CfgVehicles scan+sort (server): %1 s", diag_tickTime - _tCfgVeh0];
+};
 
 // Sorted aircraft and land vehicle lists (classnames only)
 _heliPairs sort true;
@@ -325,6 +336,10 @@ missionNamespace setVariable ["FADE_filterUnitsArmed", FADE_filterUnitsArmed];
 missionNamespace setVariable ["FADE_filterEnemyUnitsArmed", FADE_filterEnemyUnitsArmed];
 missionNamespace setVariable ["FADE_filterFriendlyUnitsArmed", FADE_filterFriendlyUnitsArmed];
 
+// Cache for FADE_getUnitsForFaction / FADE_getCivVehiclesForFaction (invalidated on Scenario Apply)
+FADE_getUnitsForFaction_cache = createHashMap;
+FADE_getCivVehiclesForFaction_cache = createHashMap;
+
 // Friendly group callsigns for RATEL-style sideChat (e.g. "Bravo 1-2")
 FADE_friendlyCallsignPhonetics = ["Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel"];
 FADE_assignGroupCallsign = {
@@ -344,13 +359,20 @@ missionNamespace setVariable ["FADE_assignGroupCallsign", FADE_assignGroupCallsi
 // Returns array of unit classnames for given faction (Man only).
 // East/West/Independent: cache lookup (faction_side).
 // Civilian (side 3): CfgGroups + cache fallback, BOTH filtered by faction addon - avoids mod pollution.
+// missionNamespace FADE_getUnitsForFaction_cache: keyed "faction|sideNum" (invalidated on Scenario Apply).
 FADE_getUnitsForFaction = {
     params ["_faction", ["_sideNum", -1]];
     if (_faction == "") exitWith { [] };
     private _factionCfg = configFile >> "CfgFactionClasses" >> _faction;
     if (!isClass _factionCfg) exitWith { [] };
     if (_sideNum < 0) then { _sideNum = getNumber (_factionCfg >> "side") };
+    private _cacheKey = _faction + "|" + str _sideNum;
+    if (FADE_getUnitsForFaction_cache isEqualType createHashMap) then {
+        private _hit = FADE_getUnitsForFaction_cache getOrDefault [_cacheKey, nil];
+        if (!isNil "_hit") exitWith { +_hit };
+    };
 
+    private _result = [];
     if (_sideNum == 3) then {
         private _out = [];
         // 1) Try CfgGroups (faction-specific groups)
@@ -384,7 +406,7 @@ FADE_getUnitsForFaction = {
             };
             _out = [_cached, _faction, true] call FADE_civ_filterByFactionAddon;
         };
-        _out
+        _result = _out;
     } else {
         // For OPFOR/BLUFOR/INDFOR: try CfgGroups first (most reliable for modded factions),
         // then fall back to the CfgVehicles cache. Many modded units have a mismatched or empty
@@ -431,8 +453,12 @@ FADE_getUnitsForFaction = {
             _out = FADE_unitsByFactionSide getOrDefault [_faction + "_2", []];
         };
 
-        _out
+        _result = _out;
     };
+    if (FADE_getUnitsForFaction_cache isEqualType createHashMap) then {
+        FADE_getUnitsForFaction_cache set [_cacheKey, +_result];
+    };
+    _result
 };
 
 // Resolve scenario unit class arrays: authoritative order is CfgGroups/cache from current scenario faction keys,
@@ -477,6 +503,13 @@ FADE_normPos3 = {
     if (!(_p isEqualType []) || { count _p < 2 }) exitWith { [0, 0, 0] };
     if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
 };
+// True if horizontal position is over dry ground (not sea/lake). Use after BIS_fnc_findSafePos / random disk picks near coasts.
+FADE_surfaceIsDry = {
+    params ["_p"];
+    if (!(_p isEqualType []) || { count _p < 2 }) exitWith { false };
+    !surfaceIsWater [_p select 0, _p select 1]
+};
+missionNamespace setVariable ["FADE_surfaceIsDry", FADE_surfaceIsDry];
 // BIS_fnc_findSafePos can return a scalar; normalize to a 3-vector or fallback.
 FADE_findSafePosArray = {
     params ["_args", "_fallback"];
@@ -523,17 +556,18 @@ FADE_op_countEnemyMenInRadius = {
 missionNamespace setVariable ["FADE_op_countBluforPlayersInRadius", FADE_op_countBluforPlayersInRadius];
 missionNamespace setVariable ["FADE_op_countEnemyMenInRadius", FADE_op_countEnemyMenInRadius];
 
+call compile preprocessFileLineNumbers "rsc\FADE_VirtualGarrison.sqf";
+call compile preprocessFileLineNumbers "rsc\FADE_IntelServer.sqf";
+
 // BIS_fnc_taskCreate expects missionNamespace bis_fnc_tasksetparent (lowercase) on some builds.
-// Do not assign BIS_fnc_taskSetParent from CfgFunctions here: it can lazy-load fn_taskSetParent.sqf on
-// first invoke; if that file is missing (broken/mismatched install), taskCreate errors (see RPT).
+// Do not preprocessFile vanilla addon sqf from the mission: that often errors ("script not found")
+// even with a leading \; use the already-compiled CfgFunctions entry instead.
 FADE_ensureBisTaskSetParent = {
     private _existing = missionNamespace getVariable ["bis_fnc_tasksetparent", {}];
     if (!(_existing isEqualTo {})) exitWith {};
-    private _tspParent = compile preprocessFileLineNumbers "A3\functions_f\Tasks\fn_taskSetParent.sqf";
-    if (_tspParent isEqualTo {}) then {
-        _tspParent = compile preprocessFileLineNumbers "A3\Functions_F\Tasks\fn_taskSetParent.sqf";
-    };
-    if (_tspParent isEqualTo {}) then {
+    private _tspParent = missionNamespace getVariable ["BIS_fnc_taskSetParent", nil];
+    if (isNil "_tspParent") then { _tspParent = uiNamespace getVariable ["BIS_fnc_taskSetParent", nil]; };
+    if (isNil "_tspParent") then {
         _tspParent = {
             params ["_taskID", ["_parentTaskID", "", [""]], ["_parentTaskType", "", [""]]];
             true
@@ -603,9 +637,14 @@ FADE_getFriendlyVehicleClasses = {
 
 // Returns array of civilian vehicle classnames for faction.
 // CfgGroups first, then cache - BOTH filtered by faction addon.
+// FADE_getCivVehiclesForFaction_cache: keyed by faction (invalidated on Scenario Apply).
 FADE_getCivVehiclesForFaction = {
     params ["_faction"];
     if (_faction == "") exitWith { [] };
+    if (FADE_getCivVehiclesForFaction_cache isEqualType createHashMap) then {
+        private _hit = FADE_getCivVehiclesForFaction_cache getOrDefault [_faction, nil];
+        if (!isNil "_hit") exitWith { +_hit };
+    };
     private _out = [];
     {
         private _grpCfg = configFile >> "CfgGroups" >> _x >> _faction;
@@ -637,13 +676,17 @@ FADE_getCivVehiclesForFaction = {
     };
     private _seen = createHashMap;
     { _seen set [_x, true] } forEach _out;
-    keys _seen
+    private _final = keys _seen;
+    if (FADE_getCivVehiclesForFaction_cache isEqualType createHashMap) then {
+        FADE_getCivVehiclesForFaction_cache set [_faction, +_final];
+    };
+    _final
 };
 
 // Resolve OPFOR population setting into a concrete multiplier.
-// Auto mode scales by connected human players; manual modes map directly to fixed multipliers.
+// Auto: 0.5x (1–6 players), 1x (7–20), 1.5x (21+). Manual modes map to fixed multipliers.
 FADE_resolveOpforPopulationScale = {
-    params [["_setting", "Normal"]];
+    params [["_setting", "Auto"]];
     private _set = toLower (_setting + "");
     switch _set do {
         case "verylow": { [0.25, "Manual Very Low (0.25x)"] };
@@ -654,7 +697,7 @@ FADE_resolveOpforPopulationScale = {
         case "normal": { [1, "Manual Normal (1x)"] };
         default {
             private _players = count (allPlayers select { !isNull _x });
-            private _auto = if (_players <= 2) then { 0.5 } else { if (_players <= 10) then { 1 } else { if (_players <= 15) then { 1.5 } else { 2 } } };
+            private _auto = if (_players <= 6) then { 0.5 } else { if (_players <= 20) then { 1 } else { 1.5 } };
             [_auto, format ["Auto (%1 player%2 -> %3x)", _players, if (_players == 1) then { "" } else { "s" }, _auto]]
         };
     }
@@ -741,7 +784,7 @@ FADE_applyOpforLauncherPolicyToUnit = {
 };
 publicVariable "FADE_applyOpforLauncherPolicyToUnit";
 
-// Enemy group skill/routing/launcher policy from Scenario (Missions / AO / Operation / checkpoints / counter-attack).
+// Enemy group skill/routing/launcher policy from Scenario (Missions / AO / Operation / roadblocks / counter-attack).
 FAC_applyEnemyScenarioToGroup = {
     params ["_grp"];
     private _enemySide = missionNamespace getVariable ["FADE_sideEnemy", east];
@@ -756,7 +799,7 @@ FAC_applyEnemyScenarioToGroup = {
 };
 missionNamespace setVariable ["FAC_applyEnemyScenarioToGroup", FAC_applyEnemyScenarioToGroup];
 
-// OPFOR ambient air threat (P24): optional, hard-capped + cooldown; spawns only after OPFOR AI detects BLUFOR (knowsAbout), after a random delay (vectoring / scramble), flying toward players/base.
+// OPFOR ambient air threat (P24): optional, hard-capped + cooldown; spawns only after OPFOR AI detects BLUFOR (knowsAbout), after a random delay (vectoring / scramble), flying toward players/base. While all friendly players are within FADE_opforAir_hqSafeRadius of BASE_1, active assets despawn and new spawns / pending timers are suppressed.
 missionNamespace setVariable ["FADE_opforAir_active", []];
 missionNamespace setVariable ["FADE_opforAir_lastSpawnTime", -1e9];
 missionNamespace setVariable ["FADE_opforAir_pendingUntil", -1];
@@ -766,6 +809,8 @@ FADE_opforAir_knowsAboutThreshold = 1.45;
 // Random delay (seconds) after detection before spawn: min + random extra (comms + takeoff).
 FADE_opforAir_responseDelayMin = 40;
 FADE_opforAir_responseDelayExtra = 200;
+// While every friendly player is within this distance (2D) of BASE_1: despawn ambient OPFOR air and hold spawns/pending.
+FADE_opforAir_hqSafeRadius = 1000;
 
 FADE_opforAir_sideFromFactionCfg = {
     params ["_faction"];
@@ -1056,6 +1101,8 @@ FADE_opforAir_doSpawn = {
         };
     };
 
+    [_veh, _crewUnits] call FADE_ensureEnemyVehicleGunner;
+    if (!(_facApply isEqualTo {})) then { [_grp] call _facApply };
     _arr pushBack _veh;
     missionNamespace setVariable ["FADE_opforAir_active", _arr];
     missionNamespace setVariable ["FADE_opforAir_lastSpawnTime", time];
@@ -1065,6 +1112,27 @@ FADE_opforAir_doSpawn = {
 
 FADE_opforAir_trySpawn = {
     if (!isServer) exitWith {};
+    private _friendlySide = [missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]] call FADE_opforAir_sideFromFactionCfg;
+    private _players0 = playableUnits select { side _x == _friendlySide && { alive _x } && { isPlayer _x } };
+    private _base0 = missionNamespace getVariable ["BASE_1", objNull];
+    private _hqR = missionNamespace getVariable ["FADE_opforAir_hqSafeRadius", 1000];
+    private _atHqSuppressed = false;
+    if (!isNull _base0 && { count _players0 > 0 }) then {
+        private _bp0 = getPosATL _base0;
+        private _allAtHq = true;
+        {
+            if ((getPosATL _x) distance2D _bp0 > _hqR) exitWith { _allAtHq = false };
+        } forEach _players0;
+        if (_allAtHq) then {
+            private _arrH = missionNamespace getVariable ["FADE_opforAir_active", []];
+            _arrH = _arrH select { !isNull _x && { alive _x } };
+            missionNamespace setVariable ["FADE_opforAir_active", _arrH];
+            if (count _arrH > 0) then { call FADE_opforAir_despawnAll; };
+            missionNamespace setVariable ["FADE_opforAir_pendingUntil", -1];
+            _atHqSuppressed = true;
+        };
+    };
+    if (_atHqSuppressed) exitWith {};
     private _setting = missionNamespace getVariable ["FADE_opforAirSetting", "Off"];
     if (_setting == "Off") exitWith {};
     private _maxActive = if (_setting == "Low") then { 1 } else { 2 };
@@ -1075,7 +1143,6 @@ FADE_opforAir_trySpawn = {
     if (count _arr >= _maxActive) exitWith { missionNamespace setVariable ["FADE_opforAir_pendingUntil", -1]; };
     private _last = missionNamespace getVariable ["FADE_opforAir_lastSpawnTime", -1e9];
     if (time - _last < _cooldown) exitWith {};
-    private _friendlySide = [missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]] call FADE_opforAir_sideFromFactionCfg;
     private _hasPl = false;
     { if (side _x == _friendlySide && { alive _x } && { isPlayer _x }) exitWith { _hasPl = true } } forEach playableUnits;
     if (!_hasPl) exitWith { missionNamespace setVariable ["FADE_opforAir_pendingUntil", -1]; };
@@ -1106,7 +1173,9 @@ FADE_applyScenarioSettings = {
     // Scenario GUI sends one wrapped array so remoteExec always delivers a single _this (reliable with many args on dedicated servers).
     params ["_args"];
     if !(_args isEqualType []) exitWith {};
-    _args params ["_hour", "_weather", "_enemyFaction", "_friendlyFaction", "_civFaction", ["_limitGear", false], ["_ctbOnly", false], ["_player", objNull], ["_patrolsEnabled", false], ["_enemySkill", 0.2], ["_enemyRouting", 0], ["_enemyAAA", "None"], ["_civiliansEnabled", true], ["_aoStrength", "Medium"], ["_timeCompressionScale", 1], ["_opforPopulationSetting", "Normal"], ["_teleportToPlayerMode", 0], ["_opforLauncherSetting", "Normal"], ["_opforAirSetting", "Off"], ["_operationZoneCount", 6], ["_weatherParams", []]];
+    _args params ["_hour", "_weather", "_enemyFaction", "_friendlyFaction", "_civFaction", ["_limitGear", false], ["_presetOnly", false], ["_player", objNull], ["_patrolsEnabled", false], ["_enemySkill", 0.2], ["_enemyRouting", 0], ["_enemyAAA", "Off"], ["_civiliansEnabled", true], ["_aoStrength", "Medium"], ["_timeCompressionScale", 1], ["_opforPopulationSetting", "Auto"], ["_teleportToPlayerMode", 0], ["_opforLauncherSetting", "Normal"], ["_opforAirSetting", "Off"], ["_operationZoneCount", 6], ["_weatherParams", []], ["_civGlobalMaxAlive", 55], ["_civDensityScale", 1], ["_civTalkInterpretersOnly", false], ["_intelSpecialistsOnly", false]];
+    FADE_getUnitsForFaction_cache = createHashMap;
+    FADE_getCivVehiclesForFaction_cache = createHashMap;
     if (!([_player] call FADE_playerCanUseScenarioGui)) exitWith {
         if (!isNull _player) then {
             ["Scenario access denied by lobby settings."] remoteExec ["systemChat", _player];
@@ -1122,12 +1191,28 @@ FADE_applyScenarioSettings = {
     missionNamespace setVariable ["FADE_scenarioPatrols", _patrolsEnabled];
     missionNamespace setVariable ["FADE_enemySkill", (_enemySkill max 0) min 1];
     missionNamespace setVariable ["FADE_enemyRouting", (_enemyRouting max 0) min 1];
+    _enemyAAA = switch (toUpper _enemyAAA) do {
+        case "NONE": { "Off" };
+        case "LIGHT";
+        case "MEDIUM";
+        case "HEAVY": { "AAA" };
+        case "MANPADS";
+        case "AAA+MANPADS": { "AAA+MANPADS" };
+        case "AAA": { "AAA" };
+        default { "Off" };
+    };
     missionNamespace setVariable ["FADE_enemyAAALevel", _enemyAAA];
     missionNamespace setVariable ["FADE_civiliansEnabled", _civiliansEnabled];
+    _civGlobalMaxAlive = (round _civGlobalMaxAlive) max 0 min 300;
+    _civDensityScale = (_civDensityScale max 0.25) min 2.5;
+    missionNamespace setVariable ["FADE_civGlobalMaxAlive", _civGlobalMaxAlive];
+    missionNamespace setVariable ["FADE_civDensityScale", _civDensityScale];
     missionNamespace setVariable ["FADE_aoStrength", _aoStrength];
     missionNamespace setVariable ["FADE_timeCompressionScale", (_timeCompressionScale max 1) min 100, true];
     missionNamespace setVariable ["FADE_teleportToPlayerMode", (round _teleportToPlayerMode) max 0 min 1, true];
-    missionNamespace setVariable ["FADE_limitToCtbLoadouts", _ctbOnly];
+    missionNamespace setVariable ["FADE_civTalkInterpretersOnly", _civTalkInterpretersOnly, true];
+    missionNamespace setVariable ["FADE_intelSpecialistsOnly", _intelSpecialistsOnly, true];
+    missionNamespace setVariable ["FADE_limitToPresetLoadouts", _presetOnly];
     missionNamespace setVariable ["FADE_opforPopulationSetting", _opforPopulationSetting, true];
     missionNamespace setVariable ["FADE_opforLauncherSetting", _opforLauncherSetting, true];
     missionNamespace setVariable ["FADE_opforAirSetting", _opforAirSetting, true];
@@ -1228,8 +1313,10 @@ FADE_applyScenarioSettings = {
     };
     private _extras = [];
     if (_limitGear) then { _extras pushBack "BLUFOR gear limited to faction" };
-    if (_ctbOnly) then { _extras pushBack "CTB loadouts only" };
+    if (_presetOnly) then { _extras pushBack "Preset loadouts only" };
     if (((round _teleportToPlayerMode) max 0 min 1) > 0) then { _extras pushBack "Redeploy: squad leaders only" };
+    if (_civTalkInterpretersOnly) then { _extras pushBack "Civilian talk: interpreters only" };
+    if (_intelSpecialistsOnly) then { _extras pushBack "Intel read: specialists only" };
     private _tc = (_timeCompressionScale max 1) min 100;
     if (_tc != 1) then { _extras pushBack format ["Mission time %1×", _tc] };
     private _extraBlock = if (count _extras > 0) then {
@@ -1256,12 +1343,14 @@ FADE_applyScenarioSettings = {
         ];
     [_hintText] remoteExec ["FADE_showMissionHint", 0];
     // Sync scenario config to clients (factions + loadout flags) in one shot — avoids client listboxes / picks drifting from server
-    [_friendlyFaction, _limitGear, _ctbOnly, _enemyFaction, _civFaction] remoteExec ["FADE_syncScenarioConfig", 0, true];
+    [_friendlyFaction, _limitGear, _presetOnly, _enemyFaction, _civFaction, _civTalkInterpretersOnly, _intelSpecialistsOnly] remoteExec ["FADE_syncScenarioConfig", 0, true];
     publicVariable "FADE_friendlyUnits";
     publicVariable "FADE_enemyUnits";
     publicVariable "FADE_friendlyVehicleClasses";
-    publicVariable "FADE_limitToCtbLoadouts";
+    publicVariable "FADE_limitToPresetLoadouts";
     publicVariable "FADE_teleportToPlayerMode";
+    publicVariable "FADE_civTalkInterpretersOnly";
+    publicVariable "FADE_intelSpecialistsOnly";
     publicVariable "FADE_sideEnemy";
     publicVariable "FADE_sideFriendly";
     publicVariable "FADE_scenarioEnemySideNum";
@@ -1269,7 +1358,7 @@ FADE_applyScenarioSettings = {
     publicVariable "FADE_markerColorEnemy";
     publicVariable "FADE_markerColorFriendly";
 
-    // Reapply AAA level (despawn existing, spawn new if Light/Medium/Heavy)
+    // Reapply AAA level (dynamic airborne AAA manager)
     if (!isNil "FADE_aaa_applyLevel") then { call FADE_aaa_applyLevel };
 };
 FADE_sendScenarioConfigToClient = {
@@ -1277,11 +1366,14 @@ FADE_sendScenarioConfigToClient = {
     if (isNull _player) exitWith {};
     private _f = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"];
     private _l = missionNamespace getVariable ["FADE_limitGearToFriendlyFaction", false];
-    private _c = missionNamespace getVariable ["FADE_limitToCtbLoadouts", false];
+    private _c = missionNamespace getVariable ["FADE_limitToPresetLoadouts", false];
     private _e = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
     private _cv = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
-    [_f, _l, _c, _e, _cv] remoteExec ["FADE_syncScenarioConfig", _player];
+    private _cti = missionNamespace getVariable ["FADE_civTalkInterpretersOnly", false];
+    private _iso = missionNamespace getVariable ["FADE_intelSpecialistsOnly", false];
+    [_f, _l, _c, _e, _cv, _cti, _iso] remoteExec ["FADE_syncScenarioConfig", _player];
 };
+call compile preprocessFileLineNumbers "rsc\CivTalkServer.sqf";
 publicVariable "FADE_applyScenarioSettings";
 publicVariable "FADE_sendScenarioConfigToClient";
 publicVariable "FADE_getUnitsForFaction";
@@ -1293,6 +1385,7 @@ publicVariable "FADE_markerColorForSideNum";
 publicVariable "FADE_resolveScenarioFriendlyUnits";
 publicVariable "FADE_resolveScenarioEnemyUnits";
 publicVariable "FADE_normPos3";
+publicVariable "FADE_surfaceIsDry";
 publicVariable "FADE_findSafePosArray";
 publicVariable "FADE_jitterMarkerPos";
 publicVariable "FADE_op_countBluforPlayersInRadius";
@@ -1337,15 +1430,19 @@ missionNamespace setVariable ["FADE_civRoadVehicleClasses", _defCivVeh];
 missionNamespace setVariable ["FADE_civParkedVehicleClasses", _defCivVeh];
 missionNamespace setVariable ["FADE_currentMissionType", ""];
 missionNamespace setVariable ["FADE_currentMissionPlayer", objNull];
-missionNamespace setVariable ["FADE_limitToCtbLoadouts", missionNamespace getVariable ["FADE_limitToCtbLoadouts", false], true];
+missionNamespace setVariable ["FADE_limitToPresetLoadouts", missionNamespace getVariable ["FADE_limitToPresetLoadouts", false], true];
 missionNamespace setVariable ["FADE_timeCompressionScale", missionNamespace getVariable ["FADE_timeCompressionScale", 1], true];
 missionNamespace setVariable ["FADE_teleportToPlayerMode", missionNamespace getVariable ["FADE_teleportToPlayerMode", 0], true];
-missionNamespace setVariable ["FADE_opforPopulationSetting", missionNamespace getVariable ["FADE_opforPopulationSetting", "Normal"], true];
+missionNamespace setVariable ["FADE_civTalkInterpretersOnly", missionNamespace getVariable ["FADE_civTalkInterpretersOnly", false], true];
+missionNamespace setVariable ["FADE_intelSpecialistsOnly", missionNamespace getVariable ["FADE_intelSpecialistsOnly", false], true];
+missionNamespace setVariable ["FADE_opforPopulationSetting", missionNamespace getVariable ["FADE_opforPopulationSetting", "Auto"], true];
 missionNamespace setVariable ["FADE_opforLauncherSetting", missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"], true];
 missionNamespace setVariable ["FADE_opforAirSetting", missionNamespace getVariable ["FADE_opforAirSetting", "Off"], true];
-private _opforInit = [missionNamespace getVariable ["FADE_opforPopulationSetting", "Normal"]] call FADE_resolveOpforPopulationScale;
+private _opforInit = [missionNamespace getVariable ["FADE_opforPopulationSetting", "Auto"]] call FADE_resolveOpforPopulationScale;
 missionNamespace setVariable ["FADE_opforPopulationScale", _opforInit select 0, true];
 publicVariable "FADE_currentMissionType";
+publicVariable "FADE_civTalkInterpretersOnly";
+publicVariable "FADE_intelSpecialistsOnly";
 
 // OPFOR ambient air (P24): bounded spawns toward BLUFOR players / base.
 [] spawn {
@@ -1434,14 +1531,11 @@ if ((count _initWp) >= 9) then {
     [_initWeather] call FADE_applyWeatherPreset;
 };
 
-// Ambient civilians (CIV_T_* zones; ambient road traffic uses active zones — ROAD_SP_* only for Intercept Convoy)
-[] execVM "rsc\AmbientCivilians.sqf";
-
-// Enemy AAA (Light/Medium/Heavy at high ground near civ zones; MANPADS in active civ zones)
-[] execVM "rsc\EnemyAAA.sqf";
-// Enemy checkpoints at checkPointPos_* (FADE_enemyCheckpointsEnabled + Scenario Enemy Patrols; see Config.sqf)
-if (missionNamespace getVariable ["FADE_enemyCheckpointsEnabled", false]) then {
-    [] execVM "rsc\EnemyCheckpoints.sqf";
+// Ambient civilians and Enemy AAA run after FADE_basePos + dynamic civ zones (see below after BASE_1 / helipad resolution).
+call compile preprocessFileLineNumbers "rsc\RoadblockCommon.sqf";
+// Dynamic corridor roadblocks (FADE_dynamicRoadblocksEnabled + Scenario Enemy Patrols; see Config.sqf)
+if (missionNamespace getVariable ["FADE_dynamicRoadblocksEnabled", false]) then {
+    [] execVM "rsc\DynamicRoadblocks.sqf";
 };
 [] execVM "rsc\DummyUnits.sqf";
 
@@ -1733,6 +1827,9 @@ FADE_fires_spawnAmmoTruck = {
 
 [] call FAC_fires_publishState;
 
+// FIRES timed lane drills (rsc\FiresDrillServer.sqf)
+call compile preprocessFileLineNumbers "rsc\FiresDrillServer.sqf";
+
 // FIRES fall of shot: observer UAV RTT + per-slot impact screens (rsc\FiresFallOfShot.sqf)
 call compile preprocessFileLineNumbers "rsc\FiresFallOfShot.sqf";
 if (isNil "FAC_firesFoS_server_init") then {
@@ -1741,14 +1838,21 @@ if (isNil "FAC_firesFoS_server_init") then {
     [] call FAC_firesFoS_server_init;
 };
 
+// Cutscene test slice: server fan-out start/stop for RTT camera feed.
+call compile preprocessFileLineNumbers "rsc\CutsceneServer.sqf";
+
 // CQB Training Shoothouse - single board (cqbBoard) and position triggers (CQB_POS_*)
 FADE_cqbBoard = missionNamespace getVariable ["cqbBoard", objNull];
 // CQB loudspeaker (Eden object name cqbLoudspeaker) - 3D SFX via remoteExec to clients (FAC_cqbLoudspeaker_clientPlay)
 FADE_cqbLoudspeakerBroadcast = {
-    params [["_mode", ""]];
+    params [["_mode", ""], ["_emitter", objNull]];
     if (!isServer) exitWith {};
     if (_mode == "") exitWith {};
-    [_mode] remoteExec ["FAC_cqbLoudspeaker_clientPlay", 0];
+    if (!isNull _emitter) then {
+        [_mode, _emitter] remoteExec ["FAC_cqbLoudspeaker_clientPlay", 0];
+    } else {
+        [_mode] remoteExec ["FAC_cqbLoudspeaker_clientPlay", 0];
+    };
 };
 
 FADE_cqbPositions = (missionNamespace getVariable ["FADE_cqbPosNames", call {
@@ -1810,9 +1914,9 @@ private _applyBoardTextureMapWallByEdenName = {
 [missionNamespace getVariable ["baseBoard_3", objNull], "img\baseBoards.jpg"] call _applyBoardTexture;
 // HQ / canvases / admin / banner (non-interactable; Eden object names)
 [missionNamespace getVariable ["hqMainBoard", objNull], "img\hqMainBoard2.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["canvas_1", objNull], "img\flagCTB.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["canvas_1", objNull], "img\loadingb.jpg"] call _applyBoardTexture;
 [missionNamespace getVariable ["canvas_2", objNull], "img\flagAustralia.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["canvas_3", objNull], "img\flagCTB.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["canvas_3", objNull], "img\loadingb.jpg"] call _applyBoardTexture;
 [missionNamespace getVariable ["canvas_4", objNull], "img\missionsconfig.jpg"] call _applyBoardTexture;
 [missionNamespace getVariable ["whiteboardAdmin", objNull], "img\whiteboardAdmin.jpg"] call _applyBoardTextureMapWall;
 [missionNamespace getVariable ["bannerSDE", objNull], "img\bannerSDE.jpg"] call _applyBoardTexture;
@@ -1844,7 +1948,7 @@ private _loadoutMapTex = "img\whiteboardLoadouts.jpg";
     [_names, _p] call _apply;
 };
 // Music board next to jukebox (non-interactable)
-[missionNamespace getVariable ["musicBoard", objNull], "img\music.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["musicBoard", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
 // Jukebox radio props (non-interactable texture; actions on Radio_* in initPlayerLocal)
 [missionNamespace getVariable ["Radio_1", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
 [missionNamespace getVariable ["Radio_2", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
@@ -1867,9 +1971,11 @@ FADE_loadoutBox = FADE_loadoutBoxes param [0, objNull];
 FADE_loadoutBox2 = FADE_loadoutBoxes param [1, objNull];
 FADE_bSpPoints = [["B_SP_1","B_SP_2","B_SP_3"]] call FADE_collectEdenNames;
 
-// ACE Arsenal: init each loadout box if ACE is loaded
+// ACE Arsenal: init each loadout box if ACE is loaded; FIRES terminal as virtual box for range kit
 if (isClass (configFile >> "CfgPatches" >> "ace_arsenal")) then {
     { if (!isNull _x) then { [_x, true, true] call ace_arsenal_fnc_initBox } } forEach FADE_loadoutBoxes;
+    private _ft = missionNamespace getVariable ["FADE_firesTerminal", objNull];
+    if (!isNull _ft) then { [_ft, true, true] call ace_arsenal_fnc_initBox };
 };
 
 // FADE_heliClasses and FADE_landVehicleClasses already built in single-pass scan above
@@ -1903,7 +2009,15 @@ if (!isNull _baseObj) then {
     };
 };
 
-[] execVM "rsc\PadVehicleService.sqf";
+// Civ zone anchors from map named locations (CIV_T_1..n in missionNamespace; replaces Eden CIV_T_* triggers)
+call compile preprocessFileLineNumbers "rsc\FADE_civZonesFromLocations.sqf";
+call FADE_civZonesFromLocations_build;
+
+// Ambient civilians (scans CIV_T_* refs into FADE_civTriggerNames; road traffic uses active zones — ROAD_SP_* only for Intercept Convoy)
+0 spawn { execVM "rsc\AmbientCivilians.sqf"; };
+
+// Enemy AAA (dynamic around airborne player aircraft; Off/AAA/AAA+MANPADS)
+0 spawn { execVM "rsc\EnemyAAA.sqf"; };
 
 // Map bounds for mission spawns (min/max X and Y); playable area 0..30000 on current terrain
 FADE_mapMin = 0;
@@ -2004,6 +2118,176 @@ FADE_registerEnemyRetreat = {
 };
 
 // -----------------------------------------------------------------------------
+// Mission entity registry — track groups / vehicles / objects per task for abort + finish cleanup
+// (QRF trucks, virtual-garrison spawns, convoy vehicles, mission composition, etc.)
+// -----------------------------------------------------------------------------
+FADE_missionEnt_init = {
+    params ["_taskId"];
+    if (_taskId == "") exitWith {};
+    missionNamespace setVariable [format ["FADE_missionEnt_%1", _taskId], createHashMapFromArray [
+        ["groups", []],
+        ["groupRefs", []],
+        ["vehicles", []],
+        ["objects", []],
+        ["markers", []]
+    ]];
+    missionNamespace setVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], false];
+};
+
+FADE_missionEnt_get = {
+    params ["_taskId"];
+    if (_taskId == "") exitWith { createHashMap };
+    private _ent = missionNamespace getVariable [format ["FADE_missionEnt_%1", _taskId], createHashMap];
+    if (_ent isEqualType createHashMap) then { _ent } else { createHashMap }
+};
+
+FADE_missionEnt_bindGroups = {
+    params ["_taskId", "_groupsArr"];
+    if (_taskId == "" || { !(_groupsArr isEqualType []) }) exitWith {};
+    private _ent = [_taskId] call FADE_missionEnt_get;
+    if (count keys _ent == 0) then { [_taskId] call FADE_missionEnt_init; _ent = [_taskId] call FADE_missionEnt_get };
+    private _refs = +(_ent getOrDefault ["groupRefs", []]);
+    if (!(_groupsArr in _refs)) then {
+        _refs pushBack _groupsArr;
+        _ent set ["groupRefs", _refs];
+        missionNamespace setVariable [format ["FADE_missionEnt_%1", _taskId], _ent];
+    };
+};
+
+FADE_missionEnt_registerGroup = {
+    params ["_taskId", "_grp"];
+    if (_taskId == "" || { isNull _grp }) exitWith {};
+    private _ent = [_taskId] call FADE_missionEnt_get;
+    if (count keys _ent == 0) then { [_taskId] call FADE_missionEnt_init; _ent = [_taskId] call FADE_missionEnt_get };
+    private _grps = +(_ent getOrDefault ["groups", []]);
+    if (!(_grp in _grps)) then {
+        _grps pushBack _grp;
+        _ent set ["groups", _grps];
+        missionNamespace setVariable [format ["FADE_missionEnt_%1", _taskId], _ent];
+    };
+};
+
+FADE_missionEnt_registerVehicle = {
+    params ["_taskId", "_veh"];
+    if (_taskId == "" || { isNull _veh }) exitWith {};
+    private _ent = [_taskId] call FADE_missionEnt_get;
+    if (count keys _ent == 0) then { [_taskId] call FADE_missionEnt_init; _ent = [_taskId] call FADE_missionEnt_get };
+    private _vehs = +(_ent getOrDefault ["vehicles", []]);
+    if (!(_veh in _vehs)) then {
+        _vehs pushBack _veh;
+        _ent set ["vehicles", _vehs];
+        missionNamespace setVariable [format ["FADE_missionEnt_%1", _taskId], _ent];
+    };
+};
+
+FADE_missionEnt_registerObject = {
+    params ["_taskId", "_obj"];
+    if (_taskId == "" || { isNull _obj }) exitWith {};
+    private _ent = [_taskId] call FADE_missionEnt_get;
+    if (count keys _ent == 0) then { [_taskId] call FADE_missionEnt_init; _ent = [_taskId] call FADE_missionEnt_get };
+    private _objs = +(_ent getOrDefault ["objects", []]);
+    if (!(_obj in _objs)) then {
+        _objs pushBack _obj;
+        _ent set ["objects", _objs];
+        missionNamespace setVariable [format ["FADE_missionEnt_%1", _taskId], _ent];
+    };
+};
+
+FADE_missionEnt_registerMarker = {
+    params ["_taskId", "_markerName"];
+    if (_taskId == "" || { _markerName isEqualTo "" }) exitWith {};
+    private _ent = [_taskId] call FADE_missionEnt_get;
+    if (count keys _ent == 0) then { [_taskId] call FADE_missionEnt_init; _ent = [_taskId] call FADE_missionEnt_get };
+    private _marks = +(_ent getOrDefault ["markers", []]);
+    if (!(_markerName in _marks)) then {
+        _marks pushBack _markerName;
+        _ent set ["markers", _marks];
+        missionNamespace setVariable [format ["FADE_missionEnt_%1", _taskId], _ent];
+    };
+};
+
+// Delete all map markers for a mission task (registry, legacy vars, player vars, FADE_* sweep). Idempotent.
+FADE_cleanupMissionMarkers = {
+    params ["_taskId", ["_player", objNull]];
+    if (_taskId == "") exitWith {};
+
+    private _ent = missionNamespace getVariable [format ["FADE_missionEnt_%1", _taskId], createHashMap];
+    if (_ent isEqualType createHashMap) then {
+        { [_x] call FADE_deleteMarkerSafe } forEach (_ent getOrDefault ["markers", []]);
+    };
+
+    private _sdM = missionNamespace getVariable ["FADE_searchDestroyMarker_" + _taskId, ""];
+    if (_sdM != "") then { [_sdM] call FADE_deleteMarkerSafe };
+    missionNamespace setVariable ["FADE_searchDestroyMarker_" + _taskId, nil];
+
+    private _aoM = missionNamespace getVariable ["FADE_aoMarkers_" + _taskId, []];
+    if (_aoM isEqualType []) then {
+        { [_x] call FADE_deleteMarkerSafe } forEach _aoM;
+    };
+    missionNamespace setVariable ["FADE_aoMarkers_" + _taskId, nil];
+
+    {
+        if ((_x getVariable ["FADE_myMissionTaskId", ""]) == _taskId) then {
+            [_x getVariable ["FADE_myMissionMarker", ""]] call FADE_deleteMarkerSafe;
+            [_x getVariable ["FADE_myMissionMarkerEnd", ""]] call FADE_deleteMarkerSafe;
+            _x setVariable ["FADE_myMissionMarker", nil, true];
+            _x setVariable ["FADE_myMissionMarkerEnd", nil, true];
+        };
+    } forEach allPlayers;
+
+    if (!isNull _player) then {
+        [_player getVariable ["FADE_myMissionMarker", ""]] call FADE_deleteMarkerSafe;
+        [_player getVariable ["FADE_myMissionMarkerEnd", ""]] call FADE_deleteMarkerSafe;
+        _player setVariable ["FADE_myMissionMarker", nil, true];
+        _player setVariable ["FADE_myMissionMarkerEnd", nil, true];
+    };
+
+    {
+        if ((_x find "FADE_") == 0 && { _x find _taskId >= 0 }) then {
+            [_x] call FADE_deleteMarkerSafe;
+        };
+    } forEach allMapMarkers;
+};
+
+FADE_missionEnt_deleteGroupFull = {
+    params ["_grp"];
+    if (isNull _grp) exitWith {};
+    private _vehs = [];
+    {
+        if (!isNull _x) then {
+            private _v = vehicle _x;
+            if (!isNull _v && { _v != _x } && { !(_v in _vehs) }) then { _vehs pushBack _v };
+            deleteVehicle _x;
+        };
+    } forEach +units _grp;
+    {
+        if (!isNull _x) then {
+            { if (!isNull _x) then { deleteVehicle _x } } forEach crew _x;
+            if (alive _x) then { deleteVehicle _x };
+        };
+    } forEach _vehs;
+    if (!isNull _grp) then { deleteGroup _grp };
+};
+
+FADE_missionEnt_deleteVehicleFull = {
+    params ["_veh"];
+    if (isNull _veh) exitWith {};
+    private _cg = _veh getVariable ["FADE_eeQrfCargoGrp", grpNull];
+    if (isNull _cg) then { _cg = _veh getVariable ["FADE_opforAirCargoGrp", grpNull] };
+    if (!isNull _cg) then {
+        { if (!isNull _x) then { deleteVehicle _x } } forEach units _cg;
+        deleteGroup _cg;
+    };
+    { if (!isNull _x) then { deleteVehicle _x } } forEach crew _veh;
+    private _dg = group driver _veh;
+    if (!isNull _dg) then {
+        { if (!isNull _x) then { deleteVehicle _x } } forEach units _dg;
+        if (count units _dg == 0) then { deleteGroup _dg };
+    };
+    if (!isNull _veh) then { deleteVehicle _veh };
+};
+
+// -----------------------------------------------------------------------------
 // Counter-attack helpers - cargo capacity (cached per classname), RHS/vanilla fallbacks
 // -----------------------------------------------------------------------------
 // Returns emptyPositions "cargo" for a classname; caches in missionNamespace (spawn test once per class).
@@ -2042,8 +2326,84 @@ FADE_counterAttack_filterClassesByMinCargo = {
 };
 
 // -----------------------------------------------------------------------------
+// QRF hint: red flare in the air above friendly players near _center (or above _center if none in radius). Server only.
+// Params: [_centerATL, _radiusM]
+// -----------------------------------------------------------------------------
+FADE_qrfSpawnHintFlare = {
+    params [["_center", [0, 0, 0]], ["_radiusM", 500]];
+    if (!isServer) exitWith {};
+    if (count _center < 2) exitWith {};
+    private _cx = _center select 0;
+    private _cy = _center select 1;
+    private _sf = missionNamespace getVariable ["FADE_sideFriendly", west];
+    private _acc = [0, 0, 0];
+    private _n = 0;
+    {
+        if (isPlayer _x && { alive _x } && { side _x == _sf } && { (_x distance2D _center) <= _radiusM }) then {
+            private _p = getPosATL _x;
+            if (count _p < 3) then { _p = [(_p select 0), (_p select 1), 0] };
+            _acc = _acc vectorAdd _p;
+            _n = _n + 1;
+        };
+    } forEach allPlayers;
+    private _gx = _cx;
+    private _gy = _cy;
+    private _gz = if (count _center > 2) then { _center select 2 } else { 0 };
+    if (_n > 0) then {
+        private _avg = _acc vectorMultiply (1 / _n);
+        _gx = _avg select 0;
+        _gy = _avg select 1;
+        _gz = (_avg select 2) max _gz;
+    };
+    private _terrainAsl = getTerrainHeightASL [_gx, _gy];
+    private _flareAsl = [_gx, _gy, _terrainAsl + 95 + random 35];
+    private _flarePos = ASLToATL _flareAsl;
+    private _flare = createVehicle ["F_40mm_Red", _flarePos, [], 0, "FLY"];
+    if (isNull _flare) exitWith {};
+    _flare setVelocity [0, 0, -0.5];
+};
+missionNamespace setVariable ["FADE_qrfSpawnHintFlare", FADE_qrfSpawnHintFlare];
+
+// Server: ATL centroid of alive friendly-side players; else any alive player; else _fallback (2–3 elements).
+FADE_qrfFriendlyCentroidATL = {
+    params [["_fallback", [0, 0, 0]]];
+    if (count _fallback < 2) exitWith { [0, 0, 0] };
+    private _sf = missionNamespace getVariable ["FADE_sideFriendly", west];
+    private _acc = [0, 0, 0];
+    private _n = 0;
+    {
+        if (isPlayer _x && { alive _x } && { side _x == _sf }) then {
+            private _p = getPosATL _x;
+            if (count _p < 3) then { _p = [(_p select 0), (_p select 1), 0] };
+            _acc = _acc vectorAdd _p;
+            _n = _n + 1;
+        };
+    } forEach allPlayers;
+    if (_n > 0) exitWith {
+        private _avg = _acc vectorMultiply (1 / _n);
+        [(_avg select 0), (_avg select 1), (_avg select 2) max 0]
+    };
+    _acc = [0, 0, 0];
+    _n = 0;
+    {
+        if (isPlayer _x && { alive _x }) then {
+            private _p = getPosATL _x;
+            if (count _p < 3) then { _p = [(_p select 0), (_p select 1), 0] };
+            _acc = _acc vectorAdd _p;
+            _n = _n + 1;
+        };
+    } forEach allPlayers;
+    if (_n > 0) exitWith {
+        private _avg = _acc vectorMultiply (1 / _n);
+        [(_avg select 0), (_avg select 1), (_avg select 2) max 0]
+    };
+    if (count _fallback < 3) then { [(_fallback select 0), (_fallback select 1), 0] } else { +_fallback }
+};
+missionNamespace setVariable ["FADE_qrfFriendlyCentroidATL", FADE_qrfFriendlyCentroidATL];
+
+// -----------------------------------------------------------------------------
 // Counter-attack / QRF (HVT, Hostage, Clear Area, Search & Destroy, Troop Extract, CASEVAC, CSAR, Asset Retrieval, CAS) - reusable server spawn loop.
-// Stages truck-mounted infantry from the second-nearest CIV_T_* zone (by distance
+// Stages truck-mounted infantry from the second-nearest civ zone (by distance
 // to the objective); falls back to offset from nearest zone if only one trigger exists.
 // Params: [_taskId, _objectivePos, _basePos, _enemyUnits, _allGroups, _detectionRadius, _skipDetectionWait]
 //   _allGroups - reference array; new enemy groups are pushBack'd for mission cleanup.
@@ -2055,6 +2415,8 @@ FADE_counterAttack_filterClassesByMinCargo = {
 //   FADE_counterAttackRhsFallbacks (RHS GAZ/ZIL/Kamaz/Ural-style), then FADE_counterAttackVanillaFallbacks.
 // Poll interval: FADE_counterAttackPollInterval (default 10s) for zone/task checks (not per-frame).
 // Wave cap: 1–3 waves per mission instance (chosen at random when the counter-attack thread starts).
+// If no player remains inside the objective detection radius when a wave spawns, trucks hunt a friendly
+// player centroid; driver MOVE+SAD waypoints refresh every FADE_qrfHuntWaypointIntervalS (default 60).
 // Not registered with FADE_registerEnemyRetreat (QRF keeps pressure); cleaned with mission groups.
 // -----------------------------------------------------------------------------
 FADE_counterAttackStart = {
@@ -2115,7 +2477,7 @@ FADE_counterAttackStart = {
         sleep _firstDelaySec;
 
         private _waveFn = {
-            params ["_objectivePos", "_enemyUnits", "_allGroups", "_numTrucks", "_applyGrp", "_pollInterval"];
+            params ["_taskId", "_objectivePos", "_enemyUnits", "_allGroups", "_numTrucks", "_applyGrp", "_pollInterval", "_detectionRadius"];
             private _sideEnemy = missionNamespace getVariable ["FADE_sideEnemy", east];
             private _pairs = [];
             {
@@ -2153,7 +2515,7 @@ FADE_counterAttackStart = {
                     _stagingResolved = true;
                 } else {
                     private _cand = [_staging, 0, 400, 12, 1, 0.35, 0, [], _staging] call BIS_fnc_findSafePos;
-                    if (count _cand >= 2 && { _cand distance2D _baseQ > _minBase }) then {
+                    if ((_cand isEqualType []) && { count _cand >= 2 } && { _cand distance2D _baseQ > _minBase }) then {
                         _roadPos = [(_cand select 0), (_cand select 1), (_cand param [2, 0])];
                         _stagingResolved = true;
                     };
@@ -2172,8 +2534,24 @@ FADE_counterAttackStart = {
                 };
             };
             if (!_stagingResolved) exitWith {};
-            if (count _roadPos < 3) then { _roadPos = [(_roadPos select 0), (_roadPos select 1), 0] };
-            private _dir = [_roadPos, _objectivePos] call BIS_fnc_dirTo;
+            if ((_roadPos isEqualType []) && { count _roadPos >= 2 } && { count _roadPos < 3 }) then {
+                _roadPos = [(_roadPos select 0), (_roadPos select 1), 0];
+            };
+            private _flF = missionNamespace getVariable ["FADE_qrfSpawnHintFlare", {}];
+            if (!(_flF isEqualTo {})) then { [_objectivePos, _detectionRadius] call _flF };
+            private _anyPlayersInObjectiveZone = {
+                private _ok = false;
+                {
+                    if (isPlayer _x && { alive _x } && { (_x distance2D _objectivePos) < _detectionRadius }) exitWith { _ok = true };
+                } forEach allPlayers;
+                _ok
+            };
+            private _huntQrf = !(call _anyPlayersInObjectiveZone);
+            private _centF = missionNamespace getVariable ["FADE_qrfFriendlyCentroidATL", {}];
+            private _tgtMove = if (_huntQrf && {!(_centF isEqualTo {})}) then { [_objectivePos] call _centF } else { +_objectivePos };
+            if (count _tgtMove < 3) then { _tgtMove = [(_tgtMove select 0), (_tgtMove select 1), 0] };
+            private _dir = [_roadPos, _tgtMove] call BIS_fnc_dirTo;
+            private _huntIv = (missionNamespace getVariable ["FADE_qrfHuntWaypointIntervalS", 60]) max 15;
 
             private _vehClasses = missionNamespace getVariable ["FADE_enemyVehicles", []];
             if (_vehClasses isEqualTo []) then {
@@ -2227,9 +2605,25 @@ FADE_counterAttackStart = {
                     [_grp] call _applyGrp;
                     _grp setBehaviour "COMBAT";
                     _grp setCombatMode "RED";
-                    private _wp = _grp addWaypoint [_objectivePos, 0];
+                    private _wp = _grp addWaypoint [_tgtMove, 0];
                     _wp setWaypointType "SAD";
                     _allGroups pushBack _grp;
+                    if (_huntQrf) then {
+                        [_grp, _taskId, _objectivePos, _huntIv] spawn {
+                            params ["_grp", "_taskId", "_objectivePos", "_iv"];
+                            private _cf = missionNamespace getVariable ["FADE_qrfFriendlyCentroidATL", {}];
+                            private _td = { (_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"] };
+                            while { !(isNull _grp) && { count units _grp > 0 } && { !(call _td) } } do {
+                                sleep _iv;
+                                if (isNull _grp || { count units _grp == 0 } || { call _td }) exitWith {};
+                                private _p = if (!(_cf isEqualTo {})) then { [_objectivePos] call _cf } else { +_objectivePos };
+                                if (count _p < 3) then { _p = [(_p select 0), (_p select 1), 0] };
+                                while { count waypoints _grp > 0 } do { deleteWaypoint [_grp, 0] };
+                                private _w = _grp addWaypoint [_p, 0];
+                                _w setWaypointType "SAD";
+                            };
+                        };
+                    };
                 };
             };
 
@@ -2237,16 +2631,25 @@ FADE_counterAttackStart = {
             private _spawnedVehs = [];
             private _findGap = {
                 params ["_desired", "_vehs", "_fallback"];
+                private _fb = _fallback;
+                if (!(_fb isEqualType []) || { count _fb < 2 }) then {
+                    _fb = [(_objectivePos select 0), (_objectivePos select 1), 0];
+                };
+                if (count _fb < 3) then { _fb = [(_fb select 0), (_fb select 1), 0] };
+                private _des = _desired;
+                if (!(_des isEqualType []) || { count _des < 2 }) then { _des = +_fb };
+                if (count _des < 3) then { _des = [(_des select 0), (_des select 1), 0] };
                 private _best = [];
                 for "_try" from 0 to 8 do {
-                    private _cand = [_desired, 0, 18, 8, 1, 0.35, 0, [], _fallback] call BIS_fnc_findSafePos;
-                    if (count _cand < 2) then { _cand = _fallback };
+                    private _cand = [_des, 0, 18, 8, 1, 0.35, 0, [], _fb] call BIS_fnc_findSafePos;
+                    if (!(_cand isEqualType []) || { count _cand < 2 }) then { _cand = +_fb };
                     if (count _cand < 3) then { _cand = [(_cand select 0), (_cand select 1), 0] };
                     private _bad = false;
                     { if (!isNull _x && { alive _x } && { (_x distance2D _cand) < 14 }) exitWith { _bad = true } } forEach _vehs;
                     if (!_bad) exitWith { _best = _cand };
                 };
-                if (count _best < 2) then { _best = _fallback };
+                if (!(_best isEqualType []) || { count _best < 2 }) then { _best = +_fb };
+                if (count _best < 3) then { _best = [(_best select 0), (_best select 1), 0] };
                 _best
             };
             for "_vi" from 0 to (_numTrucks - 1) do {
@@ -2266,11 +2669,13 @@ FADE_counterAttackStart = {
                         0
                     ]
                 };
-                if (count _desired < 3) then { _desired = [(_desired select 0), (_desired select 1), 0] };
+                if ((_desired isEqualType []) && { count _desired >= 2 } && { count _desired < 3 }) then {
+                    _desired = [(_desired select 0), (_desired select 1), 0];
+                };
                 private _spawnPos = [_desired, _spawnedVehs, _roadPos] call _findGap;
                 if (_spawnPos distance2D _baseQ <= _minBase) then {
                     _spawnPos = [_roadPos, 0, 35, 10, 1, 0.35, 0, [], _roadPos] call BIS_fnc_findSafePos;
-                    if (count _spawnPos < 2 || { _spawnPos distance2D _baseQ <= _minBase }) then { continue };
+                    if (!(_spawnPos isEqualType []) || { count _spawnPos < 2 } || { _spawnPos distance2D _baseQ <= _minBase }) then { continue };
                 };
                 private _vehGrp = createGroup _sideEnemy;
                 private _veh = createVehicle [_vClass, _spawnPos, [], 0, "NONE"];
@@ -2280,6 +2685,7 @@ FADE_counterAttackStart = {
                 _veh setVelocity [(sin _dir) * 2, (cos _dir) * 2, 0];
                 _veh engineOn true;
                 _spawnedVehs pushBack _veh;
+                [_taskId, _veh] call FADE_missionEnt_registerVehicle;
                 private _driver = _vehGrp createUnit [selectRandom _enemyUnits, _spawnPos, [], 0, "NONE"];
                 if (!isNull _driver) then {
                     _driver moveInDriver _veh;
@@ -2293,14 +2699,34 @@ FADE_counterAttackStart = {
                 _vehGrp setBehaviour "AWARE";
                 _vehGrp setCombatMode "RED";
                 _vehGrp setSpeedMode "NORMAL";
-                private _wpM = _vehGrp addWaypoint [_objectivePos, 25];
+                private _wpM = _vehGrp addWaypoint [_tgtMove, 25];
                 _wpM setWaypointType "MOVE";
                 _wpM setWaypointSpeed "NORMAL";
-                private _wpS = _vehGrp addWaypoint [_objectivePos, 0];
+                private _wpS = _vehGrp addWaypoint [_tgtMove, 0];
                 _wpS setWaypointType "SAD";
                 _allGroups pushBack _vehGrp;
-                [_veh, _vehGrp, _enemyUnits, _applyGrp, _objectivePos, _pollInterval, _allGroups, _cargoStagger, _sideEnemy] spawn {
-                    params ["_veh", "_vehGrp", "_enemyUnits", "_applyGrp", "_objectivePos", "_pollInterval", "_allGroups", "_cargoStagger", "_sideEnemy"];
+                if (_huntQrf) then {
+                    [_vehGrp, _veh, _taskId, _objectivePos, _huntIv] spawn {
+                        params ["_vehGrp", "_veh", "_taskId", "_objectivePos", "_iv"];
+                        private _cf = missionNamespace getVariable ["FADE_qrfFriendlyCentroidATL", {}];
+                        private _td = { (_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"] };
+                        while { alive _veh && {!isNull _veh} && {!isNull _vehGrp} && { !(call _td) } } do {
+                            sleep _iv;
+                            if (!alive _veh || { isNull _veh } || { isNull _vehGrp }) exitWith {};
+                            private _p = if (!(_cf isEqualTo {})) then { [_objectivePos] call _cf } else { getPosATL _veh };
+                            if (count _p < 3) then { _p = [(_p select 0), (_p select 1), 0] };
+                            while { count waypoints _vehGrp > 0 } do { deleteWaypoint [_vehGrp, 0] };
+                            private _wM = _vehGrp addWaypoint [_p, 25];
+                            _wM setWaypointType "MOVE";
+                            _wM setWaypointSpeed "NORMAL";
+                            private _wS = _vehGrp addWaypoint [_p, 0];
+                            _wS setWaypointType "SAD";
+                        };
+                    };
+                };
+                [_veh, _vehGrp, _enemyUnits, _applyGrp, _objectivePos, _pollInterval, _allGroups, _cargoStagger, _sideEnemy, _huntQrf, _taskId] spawn {
+                    params ["_veh", "_vehGrp", "_enemyUnits", "_applyGrp", "_objectivePos", "_pollInterval", "_allGroups", "_cargoStagger", "_sideEnemy", "_huntQrf", "_taskId"];
+                    private _cf = missionNamespace getVariable ["FADE_qrfFriendlyCentroidATL", {}];
                     private _seats = (_veh emptyPositions "cargo") max 0;
                     if (_seats <= 0) exitWith {};
                     private _cargoGrp = createGroup _sideEnemy;
@@ -2311,9 +2737,20 @@ FADE_counterAttackStart = {
                     };
                     [_cargoGrp] call _applyGrp;
                     _allGroups pushBack _cargoGrp;
+                    [_veh, _enemyUnits] call FADE_ensureEnemyVehicleGunner;
+                    [_vehGrp] call _applyGrp;
                     waitUntil {
                         sleep _pollInterval;
-                        !alive _veh || { isNull _veh } || { (_veh distance2D _objectivePos) < 130 }
+                        if (!alive _veh || { isNull _veh }) then {
+                            true
+                        } else {
+                            if (_huntQrf) then {
+                                private _c = if (!(_cf isEqualTo {})) then { [_objectivePos] call _cf } else { +_objectivePos };
+                                (_veh distance2D _c) < 140
+                            } else {
+                                (_veh distance2D _objectivePos) < 130
+                            }
+                        };
                     };
                     if (!alive _veh || { isNull _veh }) exitWith {};
                     if (!isNull _cargoGrp && { count units _cargoGrp > 0 }) then {
@@ -2324,7 +2761,9 @@ FADE_counterAttackStart = {
                         sleep 4;
                         _cargoGrp setBehaviour "COMBAT";
                         _cargoGrp setCombatMode "RED";
-                        private _wp = _cargoGrp addWaypoint [_objectivePos, 0];
+                        private _drop = if (_huntQrf && {!(_cf isEqualTo {})}) then { [_objectivePos] call _cf } else { +_objectivePos };
+                        if (count _drop < 3) then { _drop = [(_drop select 0), (_drop select 1), 0] };
+                        private _wp = _cargoGrp addWaypoint [_drop, 0];
                         _wp setWaypointType "SAD";
                     };
                 };
@@ -2334,7 +2773,7 @@ FADE_counterAttackStart = {
         private _waveNum = 0;
         while { _waveNum < _maxWaves && { !(call _taskDone) } } do {
             _waveNum = _waveNum + 1;
-            [_objectivePos, _enemyUnits, _allGroups, _numTrucks, _applyGrp, _pollInterval] call _waveFn;
+            [_taskId, _objectivePos, _enemyUnits, _allGroups, _numTrucks, _applyGrp, _pollInterval, _detectionRadius] call _waveFn;
             if (call _taskDone) exitWith {};
             if (_waveNum >= _maxWaves) exitWith {};
             private _bw = _betMin + random (_betMax - _betMin);
@@ -2440,7 +2879,7 @@ FADE_findMissionPosIED = {
 };
 missionNamespace setVariable ["FADE_findMissionPosIED", FADE_findMissionPosIED];
 
-// Asset Retrieval / Mine Clearing: position within _radiusM of a random CIV_T_* center, at least _minDist from base.
+// Asset Retrieval / Mine Clearing: position within _radiusM of a random civ zone center, at least _minDist from base.
 // Params: [["_minDistOverride", -1], ["_radiusFromZone", 500]]
 FADE_findMissionPosAssetRetrieval = {
     params [["_minDistOverride", -1], ["_radiusFromZone", 500]];
@@ -2472,7 +2911,7 @@ FADE_findMissionPosAssetRetrieval = {
 };
 missionNamespace setVariable ["FADE_findMissionPosAssetRetrieval", FADE_findMissionPosAssetRetrieval];
 
-// Find a valid mission position: near a civ zone (CIV_T_*), within 2.5km of zone center,
+// Find a valid mission position: near a civ zone centre, within 2.5km of zone center,
 // at least _minDistOverride (or FADE_minDistFromBase) from base, clear ground, not on water.
 // Params: [["_minDistOverride", -1]] - if > 0, use instead of FADE_minDistFromBase (e.g. 1000 for enemy missions)
 FADE_findMissionPos = {
@@ -2845,6 +3284,12 @@ publicVariable "FADE_bSpPoints";
 publicVariable "FADE_mapMin";
 publicVariable "FADE_mapMax";
 
+missionNamespace setVariable ["FADE_clientInitReady", true, true];
+publicVariable "FADE_clientInitReady";
+if (_facProf0 >= 0) then {
+    diag_log format ["[FAC profile] initServer total (to client-ready + map PV): %1 s", diag_tickTime - _facProf0];
+};
+
 // -----------------------------------------------------------------------------
 // Update helipad markers to show vehicle on pad (aircraft only, not ground vehicles).
 // FADE_padMarkerOriginalText is populated above; do not reset it here.
@@ -3010,7 +3455,7 @@ FADE_deleteWrecksNearVehicleTerminal = {
 
 // -----------------------------------------------------------------------------
 // Full repair / refuel / rearm for a vehicle at base (server). Vehicle GUI.
-// Same effect order as rsc\PadVehicleService.sqf; distance rule matches despawn.
+// Distance rule matches despawn.
 // -----------------------------------------------------------------------------
 FADE_serviceVehicle = {
     params ["_veh", "_player"];
@@ -3270,6 +3715,65 @@ FADE_requestVehiclesAtBase = {
 };
 
 // -----------------------------------------------------------------------------
+// Enemy vehicles: fill primary gunner if defined and empty (promote cargo, else spawn)
+// Params: [_vehicle, optional _unitClassArray] — classes default from FADE_enemyUnits / fallback
+// -----------------------------------------------------------------------------
+FADE_ensureEnemyVehicleGunner = {
+    params ["_veh", ["_unitClasses", []]];
+    if (!isServer) exitWith {};
+    if (isNull _veh || !alive _veh) exitWith {};
+    if ((_veh emptyPositions "gunner") <= 0) exitWith {};
+    private _have = gunner _veh;
+    if (!isNull _have && { alive _have }) exitWith {};
+
+    private _classes = if (_unitClasses isEqualTo []) then {
+        private _eu = missionNamespace getVariable ["FADE_enemyUnits", []];
+        if (_eu isEqualTo []) then {
+            +(missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_F"]])
+        } else { +_eu }
+    } else { +_unitClasses };
+    if (_classes isEqualTo []) exitWith {};
+
+    private _cargoGuy = objNull;
+    {
+        if (!alive _x) then {} else {
+            if (vehicle _x == _veh) then {
+                private _ar = assignedVehicleRole _x;
+                if (_ar isEqualType [] && { count _ar > 0 && { (_ar select 0) == "Cargo" } }) then {
+                    _cargoGuy = _x;
+                };
+            };
+        };
+        if (!isNull _cargoGuy) exitWith {};
+    } forEach crew _veh;
+
+    if (!isNull _cargoGuy) then {
+        private _crewGrp = if (!isNull driver _veh) then { group driver _veh } else { grpNull };
+        if (!isNull _crewGrp && { group _cargoGuy != _crewGrp }) then {
+            [_cargoGuy] joinSilent _crewGrp;
+        };
+        _cargoGuy assignAsGunner _veh;
+        _cargoGuy moveInGunner _veh;
+    };
+
+    if (!isNull gunner _veh && { alive gunner _veh }) exitWith {};
+
+    private _grp = if (!isNull driver _veh) then { group driver _veh } else { grpNull };
+    private _side = if (!isNull _grp) then { side _grp } else { missionNamespace getVariable ["FADE_sideEnemy", east] };
+    if (isNull _grp) then { _grp = createGroup _side };
+    private _spawnAt = getPosATL _veh;
+    private _attempts = 0;
+    while { (_veh emptyPositions "gunner" > 0) && { _attempts < 4 } } do {
+        _attempts = _attempts + 1;
+        private _u = _grp createUnit [selectRandom _classes, _spawnAt, [], 0, "NONE"];
+        if (isNull _u) exitWith {};
+        _u assignAsGunner _veh;
+        _u moveInGunner _veh;
+        if (!isNull gunner _veh && { alive gunner _veh }) exitWith {};
+    };
+};
+
+// -----------------------------------------------------------------------------
 // Get cargo (passenger) seat count for a vehicle class
 // -----------------------------------------------------------------------------
 FADE_getCargoSeats = {
@@ -3504,8 +4008,11 @@ FADE_startEscapeEvasion = {
         };
     };
     if (count _zoneCenter < 2) exitWith {
-        ["<t size='1.2' color='#FF6666'>ESCAPE &amp; EVASION</t><br/><br/><t color='#E0E0E0'>No CIV_T_* zone is at least 4 km from base and clear of other missions. Add zones or abort other missions.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        ["<t size='1.2' color='#FF6666'>ESCAPE &amp; EVASION</t><br/><br/><t color='#E0E0E0'>No civ zone is at least 4 km from base and clear of other missions. Adjust HQ / zone rules or abort other missions.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
+    // Enemy patrols must be on (ambient patrols + dynamic roadblocks). Mirror Scenario GUI Apply.
+    missionNamespace setVariable ["FADE_scenarioPatrols", true, true];
+    missionNamespace setVariable ["FAC_scenarioGui_patrols", true, true];
     private _operationName = [] call FADE_generateOperationName;
     missionNamespace setVariable ["FADE_globalMission", ["EscapeEvasion", _player, _zoneCenter, _playerUid, _operationName]];
     missionNamespace setVariable ["FADE_currentMissionType", "EscapeEvasion"];
@@ -3590,13 +4097,13 @@ FADE_startMission = {
     };
     if (count _destPos < 2 && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" }) exitWith {
         private _msg = if (_missionType == "HVT" || { _missionType == "Hostage" } || { _missionType == "SearchDestroy" }) then {
-            "NO VALID URBAN AREA. PLACE CIV_T_* TRIGGERS IN TOWNS."
+            "NO VALID URBAN AREA NEAR A CIV ZONE. TRY AGAIN OR USE A MAP WITH MORE NAMED SETTLEMENTS."
         } else {
             if (_missionType == "AssetRetrieval" || { _missionType == "MineClearing" }) then {
-                "NO SPOT NEAR CIV ZONES (CIV_T_*) WITHIN 500 M, OR ZONES TOO CLOSE TO BASE."
+                "NO SPOT NEAR A CIV ZONE WITHIN 500 M, OR ZONES TOO CLOSE TO BASE."
             } else {
                 if (_missionType == "TroopExtract") then {
-                    "NO TROOP EXTRACT PICKUP SPOT NEAR CIV ZONES (CIV_T_*) WITHIN 500 M."
+                    "NO TROOP EXTRACT PICKUP SPOT NEAR A CIV ZONE WITHIN 500 M."
                 } else {
                     if (_needsLZ) then { "NO VALID LZ. CLEAR OF OBSTACLES REQUIRED. TRY AGAIN." } else { "NO VALID POSITION (or too close to other missions). TRY AGAIN." };
                 };
@@ -3850,12 +4357,16 @@ publicVariable "FADE_startMission";
 publicVariable "FADE_startEscapeEvasion";
 publicVariable "FADE_abortMission";
 publicVariable "FADE_getCargoSeats";
+publicVariable "FADE_ensureEnemyVehicleGunner";
 publicVariable "FADE_fires_spawnPiece";
 publicVariable "FADE_fires_despawnSlot";
 publicVariable "FADE_fires_rearmSlot";
 publicVariable "FADE_fires_requestState";
 publicVariable "FADE_fires_setAmmoAmount";
 publicVariable "FADE_fires_spawnAmmoTruck";
+publicVariable "FADE_fires_drillStart";
+publicVariable "FADE_fires_drillCancel";
+publicVariable "FADE_fires_drillRequestSummary";
 publicVariable "FADE_firesFoS_droneSpawnRequest";
 publicVariable "FADE_firesFoS_droneDespawnRequest";
 publicVariable "FADE_firesFoS_requestSync";
@@ -3871,6 +4382,8 @@ publicVariable "FADE_medTrain_healAll";
 publicVariable "FADE_medTrain_healPart";
 publicVariable "FADE_medTrain_setUnconscious";
 publicVariable "FADE_medTrain_deleteAll";
+publicVariable "FADE_cutscene_testCam_start";
+publicVariable "FADE_cutscene_testCam_stop";
 
 // Helper: clear active mission for a player (removes from Global or Single list).
 // Optional _taskIdGuard prevents stale mission threads from clearing a newer mission.
@@ -3902,6 +4415,133 @@ FADE_clearActiveMission = {
         };
         missionNamespace setVariable ["FADE_singleMissions", _singleList];
         publicVariable "FADE_singleMissions";
+    };
+};
+
+// Despawn all entities registered for a mission task (abort + mission-end). Idempotent.
+FADE_cleanupMissionEntities = {
+    params ["_taskId", ["_missionType", ""], ["_setAbortFlags", true]];
+    if (_taskId == "") exitWith {};
+    if (missionNamespace getVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], false]) exitWith {};
+    missionNamespace setVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], true];
+
+    private _vgX = missionNamespace getVariable ["FADE_vg_cancelPendingByOwner", {}];
+    if (!(_vgX isEqualTo {})) then {
+        [format ["mis:%1", _taskId]] call _vgX;
+        [format ["op:%1", _taskId]] call _vgX;
+    };
+
+    if (_setAbortFlags) then {
+        if (_missionType == "AreaOfOperations") then { missionNamespace setVariable ["FADE_aoAborted_" + _taskId, true] };
+        if (_missionType == "Operation") then { missionNamespace setVariable ["FADE_operationAborted_" + _taskId, true] };
+        if (_missionType == "SearchDestroy") then { missionNamespace setVariable ["FADE_sdAborted_" + _taskId, true] };
+        if (_missionType == "EscapeEvasion") then { missionNamespace setVariable ["FADE_eeAborted_" + _taskId, true] };
+        if (_missionType == "AssetRetrieval") then { missionNamespace setVariable ["FADE_assetAborted_" + _taskId, true] };
+    };
+
+    private _ent = missionNamespace getVariable [format ["FADE_missionEnt_%1", _taskId], createHashMap];
+    private _seenGrps = [];
+    {
+        if (_x isEqualType []) then {
+            { if (_x isEqualType grpNull && { !isNull _x } && { !(_x in _seenGrps) }) then { _seenGrps pushBack _x } } forEach _x;
+        };
+    } forEach (_ent getOrDefault ["groupRefs", []]);
+    {
+        if (_x isEqualType grpNull && { !isNull _x } && { !(_x in _seenGrps) }) then { _seenGrps pushBack _x };
+    } forEach (_ent getOrDefault ["groups", []]);
+    { [_x] call FADE_missionEnt_deleteGroupFull } forEach _seenGrps;
+    { if (!isNull _x) then { [_x] call FADE_missionEnt_deleteVehicleFull } } forEach (_ent getOrDefault ["vehicles", []]);
+    { if (!isNull _x) then { deleteVehicle _x } } forEach (_ent getOrDefault ["objects", []]);
+
+    private _aoEnt = missionNamespace getVariable ["FADE_aoEntities_" + _taskId, []];
+    if (_aoEnt isEqualType [] && { count _aoEnt >= 2 }) then {
+        [_taskId] call FADE_aoCleanupEntities;
+        missionNamespace setVariable ["FADE_aoEntities_" + _taskId, nil];
+    };
+    private _opEnt = missionNamespace getVariable ["FADE_operationEntities_" + _taskId, []];
+    if (_opEnt isEqualType [] && { count _opEnt >= 2 }) then {
+        { if (_x isEqualType grpNull) then { [_x] call FADE_missionEnt_deleteGroupFull } } forEach (_opEnt select 0);
+        if (count _opEnt >= 6) then {
+            { if (!isNull _x) then { [_x] call FADE_missionEnt_deleteVehicleFull } } forEach (_opEnt select 4);
+            { if (!isNull _x) then { deleteVehicle _x } } forEach (_opEnt select 5);
+        };
+        missionNamespace setVariable ["FADE_operationEntities_" + _taskId, nil];
+        missionNamespace setVariable ["FADE_operationCapState_" + _taskId, nil];
+        missionNamespace setVariable ["FADE_operationZoneCenters_" + _taskId, nil];
+        missionNamespace setVariable ["FADE_operationMakeVehFn_" + _taskId, nil];
+    };
+    private _sdEnt = missionNamespace getVariable ["FADE_searchDestroyEntities_" + _taskId, []];
+    if (_sdEnt isEqualType [] && { count _sdEnt >= 1 }) then {
+        private _slot0 = _sdEnt select 0;
+        if (_slot0 isEqualType []) then {
+            { [_x] call FADE_missionEnt_deleteGroupFull } forEach _slot0;
+            if (count _sdEnt >= 2) then {
+                private _sdObjs = _sdEnt select 1;
+                if (_sdObjs isEqualType []) then { { if (!isNull _x) then { deleteVehicle _x } } forEach _sdObjs };
+            };
+        } else {
+            { [_x] call FADE_missionEnt_deleteGroupFull } forEach _sdEnt;
+        };
+        missionNamespace setVariable ["FADE_searchDestroyEntities_" + _taskId, nil];
+    };
+    private _eeEnt = missionNamespace getVariable ["FADE_eeEntities_" + _taskId, []];
+    if (_eeEnt isEqualType [] && { count _eeEnt >= 1 }) then {
+        { [_x] call FADE_missionEnt_deleteGroupFull } forEach (_eeEnt select 0);
+        if (count _eeEnt >= 2) then {
+            private _ex = _eeEnt select 1;
+            if (_ex isEqualType []) then { { if (!isNull _x) then { deleteVehicle _x } } forEach _ex };
+        };
+    };
+    private _qv = missionNamespace getVariable ["FADE_eeQrfVehs_" + _taskId, []];
+    { if (!isNull _x) then { [_x] call FADE_missionEnt_deleteVehicleFull } } forEach _qv;
+    private _eeH = missionNamespace getVariable ["FADE_eeSearchHeli_" + _taskId, []];
+    if (_eeH isEqualType [] && { count _eeH >= 1 }) then {
+        private _hv = _eeH param [0, objNull];
+        private _hcg = _eeH param [2, grpNull];
+        if (!isNull _hcg) then {
+            { if (!isNull _x) then { deleteVehicle _x } } forEach units _hcg;
+            deleteGroup _hcg;
+        };
+        if (!isNull _hv) then { [_hv] call FADE_missionEnt_deleteVehicleFull };
+    };
+    missionNamespace setVariable ["FADE_eeEntities_" + _taskId, nil];
+    missionNamespace setVariable ["FADE_eeQrfVehs_" + _taskId, nil];
+    missionNamespace setVariable ["FADE_eeSearchHeli_" + _taskId, nil];
+    missionNamespace setVariable ["FADE_eeAborted_" + _taskId, nil];
+    missionNamespace setVariable ["FADE_dynRb_escapeZone", nil];
+    if (!(isNil "FADE_dynamicRoadblocks_despawnAll")) then { [] call FADE_dynamicRoadblocks_despawnAll };
+    private _arEnt = missionNamespace getVariable ["FADE_assetEntities_" + _taskId, []];
+    if (_arEnt isEqualType [] && { count _arEnt > 0 }) then {
+        private _grps = [];
+        if ((count _arEnt > 0) && { (_arEnt select 0) isEqualType grpNull }) then {
+            _grps = _arEnt;
+        } else {
+            private _slot0 = _arEnt param [0, []];
+            if (_slot0 isEqualType []) then { _grps = _slot0 };
+        };
+        { [_x] call FADE_missionEnt_deleteGroupFull } forEach _grps;
+        missionNamespace setVariable ["FADE_assetEntities_" + _taskId, nil];
+    };
+    { if (!isNull _x) then { deleteVehicle _x } } forEach (missionNamespace getVariable ["FADE_assetObjects_" + _taskId, []]);
+    missionNamespace setVariable ["FADE_assetObjects_" + _taskId, nil];
+    private _w = missionNamespace getVariable ["FADE_csarWreck_" + _taskId, objNull];
+    if (!isNull _w) then { deleteVehicle _w };
+    missionNamespace setVariable ["FADE_csarWreck_" + _taskId, nil];
+    [_taskId] call FADE_cleanupMissionMarkers;
+    missionNamespace setVariable [format ["FADE_missionEnt_%1", _taskId], nil];
+};
+
+// Mission-end despawn (default 60s delay). Markers removed immediately; entities after delay.
+FADE_missionEnt_scheduledCleanup = {
+    params ["_taskId", ["_delay", 60], ["_player", objNull]];
+    if (_taskId == "") exitWith {};
+    [_taskId, _delay, _player] spawn {
+        params ["_tid", "_d", "_player"];
+        [_tid, _player] call FADE_cleanupMissionMarkers;
+        if (_d > 0) then { sleep _d };
+        if !(missionNamespace getVariable [format ["FADE_missionEnt_cleaned_%1", _tid], false]) then {
+            [_tid, "", false] call FADE_cleanupMissionEntities;
+        };
     };
 };
 
@@ -3937,161 +4577,12 @@ FADE_abortMission = {
     private _global = missionNamespace getVariable ["FADE_globalMission", []];
     private _isGlobalOwner = count _global >= 2 && { [_global, _player] call FADE_isMissionEntryOwnedByPlayer };
     private _missionType = if (_isGlobalOwner) then { _global select 0 } else { _player getVariable ["FADE_myMission", ""] };
-    if (_taskId != "") then { [_taskId, "CANCELED"] call BIS_fnc_taskSetState };
-    [_markerName] call FADE_deleteMarkerSafe;
-    [_markerNameEnd] call FADE_deleteMarkerSafe;
-    private _aoMarkers = missionNamespace getVariable ["FADE_aoMarkers_" + _taskId, []];
-    { [_x] call FADE_deleteMarkerSafe } forEach _aoMarkers;
-    missionNamespace setVariable ["FADE_aoMarkers_" + _taskId, nil];
-    if (_missionType == "AreaOfOperations" && { _taskId != "" }) then {
-        missionNamespace setVariable ["FADE_aoAborted_" + _taskId, true];
-        [_taskId] call FADE_aoCleanupEntities;
-        missionNamespace setVariable ["FADE_aoEntities_" + _taskId, nil];
-    };
-    if (_missionType == "Operation" && { _taskId != "" }) then {
-        missionNamespace setVariable ["FADE_operationAborted_" + _taskId, true];
-        private _ent = missionNamespace getVariable ["FADE_operationEntities_" + _taskId, []];
-        if (count _ent >= 2) then {
-            private _grps = _ent select 0;
-            private _marks = _ent select 1;
-            {
-                private _g = _x;
-                if (!isNull _g) then {
-                    { private _u = _x; if (!isNull _u) then { deleteVehicle _u } } forEach units _g;
-                    deleteGroup _g;
-                };
-            } forEach _grps;
-            { [_x] call FADE_deleteMarkerSafe } forEach _marks;
-            if (count _ent >= 6) then {
-                private _vehs = _ent select 4;
-                private _barrels = _ent select 5;
-                { if (!isNull _x) then { deleteVehicle _x } } forEach _vehs;
-                { if (!isNull _x) then { deleteVehicle _x } } forEach _barrels;
-            };
-        };
-        missionNamespace setVariable ["FADE_operationEntities_" + _taskId, nil];
-        missionNamespace setVariable ["FADE_operationCapState_" + _taskId, nil];
-        missionNamespace setVariable ["FADE_operationZoneCenters_" + _taskId, nil];
-        missionNamespace setVariable ["FADE_operationMakeVehFn_" + _taskId, nil];
-    };
-    if (_missionType == "SearchDestroy" && { _taskId != "" }) then {
-        missionNamespace setVariable ["FADE_sdAborted_" + _taskId, true];
-        private _ent = missionNamespace getVariable ["FADE_searchDestroyEntities_" + _taskId, []];
-        if (count _ent >= 1) then {
-            private _slot0 = _ent select 0;
-            if (typeName _slot0 == "ARRAY") then {
-                {
-                    private _g = _x;
-                    if (!isNull _g) then {
-                        { private _u = _x; if (!isNull _u) then { deleteVehicle _u } } forEach units _g;
-                        deleteGroup _g;
-                    };
-                } forEach _slot0;
-                if (count _ent >= 2) then {
-                    private _sdObjs = _ent select 1;
-                    if (_sdObjs isEqualType []) then {
-                        { if (!isNull _x) then { deleteVehicle _x } } forEach _sdObjs;
-                    };
-                };
-            } else {
-                {
-                    private _g = _x;
-                    if (!isNull _g) then {
-                        { private _u = _x; if (!isNull _u) then { deleteVehicle _u } } forEach units _g;
-                        deleteGroup _g;
-                    };
-                } forEach _ent;
-            };
-        };
-        private _m = missionNamespace getVariable ["FADE_searchDestroyMarker_" + _taskId, ""];
-        if (_m != "") then { [_m] call FADE_deleteMarkerSafe };
-        missionNamespace setVariable ["FADE_searchDestroyEntities_" + _taskId, nil];
-        missionNamespace setVariable ["FADE_searchDestroyMarker_" + _taskId, nil];
-    };
-    if (_missionType == "EscapeEvasion" && { _taskId != "" }) then {
-        missionNamespace setVariable ["FADE_eeAborted_" + _taskId, true];
-        private _ent = missionNamespace getVariable ["FADE_eeEntities_" + _taskId, []];
-        if (_ent isEqualType [] && { count _ent >= 1 }) then {
-            private _grps = _ent select 0;
-            {
-                private _g = _x;
-                if (!isNull _g) then {
-                    { if (!isNull _x) then { deleteVehicle _x } } forEach units _g;
-                    deleteGroup _g;
-                };
-            } forEach _grps;
-        };
-        private _qv = missionNamespace getVariable ["FADE_eeQrfVehs_" + _taskId, []];
-        {
-            private _v = _x;
-            if (!isNull _v) then {
-                private _cg = _v getVariable ["FADE_eeQrfCargoGrp", grpNull];
-                if (!isNull _cg) then {
-                    { if (!isNull _x) then { deleteVehicle _x } } forEach units _cg;
-                    deleteGroup _cg;
-                };
-                { if (!isNull _x) then { deleteVehicle _x } } forEach crew _v;
-                private _dg = group driver _v;
-                if (!isNull _dg) then {
-                    { if (!isNull _x) then { deleteVehicle _x } } forEach units _dg;
-                    deleteGroup _dg;
-                };
-                deleteVehicle _v;
-            };
-        } forEach _qv;
-        private _eeH = missionNamespace getVariable ["FADE_eeSearchHeli_" + _taskId, []];
-        if (_eeH isEqualType [] && { count _eeH >= 1 }) then {
-            private _hv = _eeH param [0, objNull];
-            private _hcg = _eeH param [2, grpNull];
-            if (!isNull _hcg) then {
-                { if (!isNull _x) then { deleteVehicle _x } } forEach units _hcg;
-                deleteGroup _hcg;
-            };
-            if (!isNull _hv) then {
-                { if (!isNull _x) then { deleteVehicle _x } } forEach crew _hv;
-                private _hdg = group driver _hv;
-                if (!isNull _hdg) then {
-                    { if (!isNull _x) then { deleteVehicle _x } } forEach units _hdg;
-                    deleteGroup _hdg;
-                };
-                deleteVehicle _hv;
-            };
-        };
-        missionNamespace setVariable ["FADE_eeEntities_" + _taskId, nil];
-        missionNamespace setVariable ["FADE_eeQrfVehs_" + _taskId, nil];
-        missionNamespace setVariable ["FADE_eeSearchHeli_" + _taskId, nil];
-        missionNamespace setVariable ["FADE_eeAborted_" + _taskId, nil];
-    };
-    if (_missionType == "AssetRetrieval" && { _taskId != "" }) then {
-        missionNamespace setVariable ["FADE_assetAborted_" + _taskId, true];
-        private _ent = missionNamespace getVariable ["FADE_assetEntities_" + _taskId, []];
-        private _grps = [];
-        if (_ent isEqualType []) then {
-            if ((count _ent > 0) && { (_ent select 0) isEqualType grpNull }) then {
-                // Current shape: direct group array from Missions.sqf
-                _grps = _ent;
-            } else {
-                // Backward-compat: nested payload where slot 0 holds group array
-                private _slot0 = _ent param [0, []];
-                if (_slot0 isEqualType []) then { _grps = _slot0 };
-            };
-        };
-        {
-            private _g = _x;
-            if (!isNull _g) then {
-                { private _u = _x; if (!isNull _u) then { deleteVehicle _u } } forEach units _g;
-                deleteGroup _g;
-            };
-        } forEach _grps;
-        private _objs = missionNamespace getVariable ["FADE_assetObjects_" + _taskId, []];
-        { if (!isNull _x) then { deleteVehicle _x } } forEach _objs;
-        missionNamespace setVariable ["FADE_assetEntities_" + _taskId, nil];
-        missionNamespace setVariable ["FADE_assetObjects_" + _taskId, nil];
-    };
-    if (_missionType == "CSAR" && { _taskId != "" }) then {
-        private _w = missionNamespace getVariable ["FADE_csarWreck_" + _taskId, objNull];
-        if (!isNull _w) then { deleteVehicle _w };
-        missionNamespace setVariable ["FADE_csarWreck_" + _taskId, nil];
+    if (_taskId != "") then {
+        [_taskId, "CANCELED"] call BIS_fnc_taskSetState;
+        [_taskId, _missionType, true] call FADE_cleanupMissionEntities;
+    } else {
+        [_markerName] call FADE_deleteMarkerSafe;
+        [_markerNameEnd] call FADE_deleteMarkerSafe;
     };
     [_player] call FADE_clearActiveMission;
     ["<t size='1.2' color='#B0B0B0'>MISSION ABORTED</t><br/><br/><t color='#E0E0E0'>Mission cancelled.</t>"] remoteExec ["FADE_showMissionHint", _player];
@@ -4099,9 +4590,24 @@ FADE_abortMission = {
 
 // Asset Retrieval: secure intel from addAction (server).
 FADE_assetIntelTakeServer = {
-    params ["_taskId", "_intelObj"];
+    params ["_taskId", "_intelObj", ["_player", objNull]];
     if (!isServer) exitWith {};
     missionNamespace setVariable ["FADE_assetIntelTaken_" + _taskId, true];
+    private _logDiary = missionNamespace getVariable ["FADE_intelDiaryLog", true];
+    if (
+        _logDiary &&
+        { !isNull _player } &&
+        { isPlayer _player } &&
+        { alive _player }
+    ) then {
+        private _grid = if (!isNull _intelObj) then { mapGridPosition _intelObj } else { "unknown" };
+        private _whenStr = format ["Mission +%1 min", floor (time / 60) max 0];
+        private _body = format [
+            "Secured intel package from Asset Retrieval objective (approx. grid %1). Return to base per task to finish.",
+            _grid
+        ];
+        ["Asset retrieval", _whenStr, _body, "Package secured"] remoteExec ["FADE_intel_clientAppendIntelDiary", _player];
+    };
     if (!isNull _intelObj) then { deleteVehicle _intelObj };
 };
 publicVariable "FADE_assetIntelTakeServer";
@@ -4461,3 +4967,24 @@ FAC_missionTestSuite_execServer = {
     };
 };
 publicVariable "FAC_missionTestSuite_execServer";
+
+// -----------------------------------------------------------------------------
+// Editor-placed NPC (Eden variable name baseNPC_1): display name via CfgIdentities
+// FAC_baseNPC_wordsman (description.ext); invulnerable; no move/path; stand only.
+// initServer runs after object Init — no wait loop required.
+// -----------------------------------------------------------------------------
+if (!isNil "baseNPC_1" && {!isNull baseNPC_1}) then {
+    private _npc = baseNPC_1;
+    if (_npc isKindOf "Man") then {
+        _npc setIdentity "FAC_baseNPC_wordsman";
+        _npc allowDamage false;
+        _npc disableAI "MOVE";
+        _npc disableAI "PATH";
+        _npc setUnitPos "UP";
+        doStop _npc;
+    } else {
+        diag_log "[initServer] baseNPC_1 is not a Man unit — skipping NPC init";
+    };
+} else {
+    diag_log "[initServer] baseNPC_1 not found — skipping NPC init";
+};

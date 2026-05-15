@@ -166,8 +166,7 @@ FADE_firesFoS_droneSpawnRequest = {
 
     private _x = _pos select 0;
     private _y = _pos select 1;
-    private _agl = if (count _pos > 2) then { _pos select 2 } else { 0 };
-    private _aslZ = (getTerrainHeightASL [_x, _y]) + 120 max 80;
+    private _aslZ = (getTerrainHeightASL [_x, _y]) + 500;
     private _spawnASL = [_x, _y, _aslZ];
     private _spawnATL = ASLtoATL _spawnASL;
 
@@ -196,7 +195,7 @@ FADE_firesFoS_droneSpawnRequest = {
         _x disableAI "AIMINGERROR";
     } forEach crew _drone;
     { _drone enableDirectionStabilization [false, _x] } forEach allTurrets _drone;
-    _drone flyInHeight 120;
+    _drone flyInHeight 500;
     _drone lock 0;
 
     missionNamespace setVariable ["FAC_firesFoS_rangeDrone", _drone];
@@ -630,9 +629,7 @@ FAC_firesFoS_fnc_clientImpactFeed = {
 
     private _idxList = [] call FAC_firesFoS_fnc_textureIndicesImpact;
 
-    private _camH = round (missionNamespace getVariable ["FADE_firesImpactCamHeightM", 90]);
-    if (_camH < 25) then { _camH = 90 };
-    private _camPosASL = _impactASL vectorAdd [0, 0, _camH];
+    private _camPosASL = _impactASL vectorAdd [100, 100, 250];
     private _cam = "camera" camCreate [0, 0, 0];
     uiNamespace setVariable [format ["FAC_firesFoS_impCam%1", _slotIdx], _cam];
 

@@ -19,6 +19,7 @@ FAC_fires_artilleryDefinitions = [
     ["MLRS", "H12 Rocket Launcher (SOG)", "dcx_b_fia_static_h12"],
 
     ["Field", "M119A2 (RHS)", "RHS_M119_D"],
+    ["Field", "M119A3 (TBD)", "tbd_m119"],
     ["Field", "M101 105mm (SOG)", "vn_b_army_static_m101_02"],
     ["Field", "2A18M (D-30A) (RHS)", "rhs_D30_msv"],
     ["Field", "10.5cm leFH18 (SPE)", "SPE_leFH18"],

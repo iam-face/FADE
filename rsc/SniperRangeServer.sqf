@@ -1,6 +1,6 @@
 // =============================================================================
 // SniperRangeServer.sqf — server-only (included from initServer via compile)
-// terminalSniper + sniperRangeTarget_* logic objects; one active session (MP).
+// terminalSniper + sniperRangeTarget_* logic objects; one sniper session at a time (MP). Firing range may run in parallel.
 // =============================================================================
 
 if (!isServer) exitWith {};
@@ -27,6 +27,48 @@ while { _sp <= 7 } do {
 };
 missionNamespace setVariable ["FADE_sniperTrialPosCount", count FADE_sniperTrialPosLogics, true];
 
+// Time trial: horizontal distance from sniperPos_* logic to count as "at position" (m).
+FADE_sniperTrialNodeRadiusM = 2.5;
+
+// Human enemies ("enemies" mode): random idle/gesture anim, rotated every 30s (server switchMove).
+FADE_sniperRangeEnemyIdleAnims = [
+    "Acts_B_briefings",
+    "Acts_B_hub01_briefing",
+    "Acts_B_m06_briefing",
+    "Acts_C_in1_briefing",
+    "Acts_Dance_02",
+    "Acts_MillerCamp",
+    "Acts_millerCamp_B",
+    "Acts_millerCamp_C",
+    "Acts_millerCamp_D",
+    "Acts_SupportTeam_Front_Move",
+    "Acts_SupportTeam_Left_Move",
+    "Acts_SupportTeam_Right_Move",
+    "Acts_welcomeOnHUB01_AIWalk_4",
+    "Acts_welcomeOnHUB01_PlayerWalk_3",
+    "Acts_welcomeOnHUB02_PlayerWalk_2"
+];
+
+FADE_sniperStartEnemyAnimCycle = {
+    params [["_unit", objNull]];
+    if (!isServer) exitWith {};
+    if (isNull _unit) exitWith {};
+    [_unit] spawn {
+        params ["_u"];
+        private _anims = missionNamespace getVariable ["FADE_sniperRangeEnemyIdleAnims", FADE_sniperRangeEnemyIdleAnims];
+        if (_anims isEqualTo []) exitWith {};
+        while {
+            alive _u &&
+            { !(isNull _u) } &&
+            { missionNamespace getVariable ["FADE_sniperRangeActive", false] }
+        } do {
+            _u switchMove (selectRandom _anims);
+            sleep 30;
+        };
+        if (!isNull _u && { alive _u }) then { _u switchMove "" };
+    };
+};
+
 FADE_sniperRangeActive = false;
 FADE_sniperSpawned = [];
 FADE_sniperEnemyGroups = [];
@@ -37,6 +79,34 @@ FADE_sniperTrialScript = scriptNull;
 FADE_sniperHitTrack = false;
 missionNamespace setVariable ["FADE_sniperTrialRequiredPos", -1];
 missionNamespace setVariable ["FADE_sniperLastResult", "", true];
+
+// Sniper range and firing/AT range may be active together; separate starters + victim tags route hit feedback.
+FADE_sniper_ballisticsAnyActive = {
+    (missionNamespace getVariable ["FADE_sniperRangeActive", false]) ||
+    { missionNamespace getVariable ["FADE_rangeSessionActive", false] }
+};
+
+// Hit / HitPart: resolve instigator against sniper starter, then range starter (concurrent MP).
+FADE_sniperResolveFirerForBallisticsHit = {
+    params [["_hitArgs", []], ["_victim", objNull]];
+    if (!(_hitArgs isEqualType []) || { isNull _victim }) exitWith { objNull };
+    private _snS = missionNamespace getVariable ["FADE_sniperStarterUnit", objNull];
+    private _rgS = missionNamespace getVariable ["FADE_rangeStarterUnit", objNull];
+    private _firer = objNull;
+    if (!isNull _snS) then { _firer = [_hitArgs, _snS, _victim] call FADE_sniperResolveFirerFromDamageArray };
+    if (isNull _firer && {!isNull _rgS}) then { _firer = [_hitArgs, _rgS, _victim] call FADE_sniperResolveFirerFromDamageArray };
+    _firer
+};
+
+// Victim belongs to sniper lanes or firing range; only the matching session starter gets scored / feedback.
+FADE_sniper_ballisticsVictimFirerPaired = {
+    params [["_victim", objNull], ["_firer", objNull]];
+    if (isNull _victim || { isNull _firer }) exitWith { false };
+    private _vk = _victim getVariable ["FADE_sniperVictimSessionKind", "sniper"];
+    if (_vk == "sniper") exitWith { _firer == missionNamespace getVariable ["FADE_sniperStarterUnit", objNull] };
+    if (_vk == "range") exitWith { _firer == missionNamespace getVariable ["FADE_rangeStarterUnit", objNull] };
+    false
+};
 
 FADE_sniperFacingToPlayer = {
     params ["_posATL", "_player", "_isHuman"];
@@ -211,6 +281,19 @@ FADE_sniperHitPosFromHitPartArgs = {
     _asl
 };
 
+// Time trial: unobstructed segment from firing node (~standing eye) to lane (~target chest), terrain + objects.
+FADE_sniperTrialClearLosNodeToLane = {
+    params ["_nodeObj", "_laneObj", ["_ignoreObj", objNull]];
+    if (isNull _nodeObj || { isNull _laneObj }) exitWith { false };
+    private _from = (getPosASL _nodeObj) vectorAdd [0, 0, 1.65];
+    private _to = (getPosASL _laneObj) vectorAdd [0, 0, 0.95];
+    if !([_from] call FADE_sniperAslIsFinite) exitWith { false };
+    if !([_to] call FADE_sniperAslIsFinite) exitWith { false };
+    if (terrainIntersectASL [_from, _to]) exitWith { false };
+    if (lineIntersects [_from, _to, _ignoreObj, objNull]) exitWith { false };
+    true
+};
+
 // Firer = starter or crew on starter's vehicle (Hit / HitPart argument layouts vary by entity type)
 FADE_sniperResolveFirerFromDamageArray = {
     if (!(_this isEqualType []) || { count _this < 3 }) exitWith { objNull };
@@ -300,20 +383,37 @@ FADE_sniperProcessImpact = {
     };
     if !(_ammoCls isEqualType "") then { _ammoCls = "" };
     if (!isServer) exitWith {};
-    if (!(missionNamespace getVariable ["FADE_sniperRangeActive", false])) exitWith {};
+    if (!([] call FADE_sniper_ballisticsAnyActive)) exitWith {};
     if (isNull _victimObj || { isNull _shooterObj }) exitWith {};
+    private _victimSessionKind = _victimObj getVariable ["FADE_sniperVictimSessionKind", "sniper"];
+    if !([_victimObj, _shooterObj] call FADE_sniper_ballisticsVictimFirerPaired) exitWith {};
     if (_victimObj getVariable ["FADE_sniperTrialNodeLock", false]) exitWith {};
 
-    // Live OPFOR mode: any valid hit from the session shooter should be lethal (no unconscious survivors).
+    // Live OPFOR: any hit from the session shooter counts as a kill (no unconscious / bleedout).
+    // Sniper range: always when session is enemies. Firing / AT range: only time trial (continuous firing may use damage normally).
+    private _sessEnemy = _victimObj getVariable ["FADE_sniperVictimEnemyType", missionNamespace getVariable ["FADE_sniperSessionEnemyType", "targets"]];
+    private _rangeMode = missionNamespace getVariable ["FADE_rangeSessionMode", ""];
+    private _instantKillEnemies = (_sessEnemy == "enemies") && {
+        if (_victimSessionKind == "sniper") then { true } else {
+            _victimSessionKind == "range" && {_rangeMode == "trial"}
+        };
+    };
     if (
-        (missionNamespace getVariable ["FADE_sniperSessionEnemyType", "targets"]) == "enemies" &&
+        _instantKillEnemies &&
         { _victimObj isKindOf "CAManBase" } &&
         { alive _victimObj }
     ) then {
         _victimObj setDamage 1;
     };
 
-    if (!(missionNamespace getVariable ["FADE_sniperHitTrack", false])) exitWith {};
+    private _hitT = false;
+    if (_victimSessionKind == "sniper" && {_shooterObj == missionNamespace getVariable ["FADE_sniperStarterUnit", objNull]}) then {
+        _hitT = missionNamespace getVariable ["FADE_sniperHitTrack", false];
+    };
+    if (_victimSessionKind == "range" && {_shooterObj == missionNamespace getVariable ["FADE_rangeStarterUnit", objNull]}) then {
+        _hitT = missionNamespace getVariable ["FADE_rangeHitTrack", false];
+    };
+    if (!_hitT) exitWith {};
     private _now = diag_tickTime;
     private _last = _victimObj getVariable ["FADE_sniperImpactDebounce", -100];
     if (_now - _last < 0.15) exitWith {};
@@ -332,10 +432,14 @@ FADE_sniperProcessImpact = {
     // Keep immediate and summary note minimal during stabilization: distance + body part only.
     private _lastHit = format ["%1 — %2", _distImpStr, _part];
     missionNamespace setVariable ["FADE_sniperLastHitNote", _lastHit];
-    private _sess = missionNamespace getVariable ["FADE_sniperSessionMode", ""];
+    private _victimSessionMode = _victimObj getVariable ["FADE_sniperVictimSessionMode", missionNamespace getVariable ["FADE_sniperSessionMode", ""]];
+    private _title = if (_victimSessionKind == "range") then {
+        if (_victimSessionMode == "trial") then { "FIRING RANGE (TRIAL) — hit" } else { "FIRING / AT RANGE — hit" };
+    } else {
+        if (_victimSessionMode == "trial") then { "SNIPER TIME TRIAL — hit" } else { "SNIPER RANGE — hit" };
+    };
     private _lastHitSafe = [_lastHit] call FADE_sniperHintSafeText;
-    if (_sess == "firing" || { _sess == "trial" }) then {
-        private _title = if (_sess == "trial") then { "SNIPER TIME TRIAL — hit" } else { "SNIPER RANGE — hit" };
+    if (_victimSessionMode == "firing" || { _victimSessionMode == "trial" }) then {
         private _hintHtml =
             "<t size='1.05' color='#a8e6cf'>" + _title + "</t><br/><br/>" +
             "<t color='#ffffff'>" + _lastHitSafe + "</t>";
@@ -352,10 +456,11 @@ FADE_sniperTrialWrongPosFeedback = {
     if (diag_tickTime - (missionNamespace getVariable ["FADE_sniperTrialPosWarnT", -100]) <= 2) exitWith {};
     missionNamespace setVariable ["FADE_sniperTrialPosWarnT", diag_tickTime];
     private _need = missionNamespace getVariable ["FADE_sniperTrialRequiredPos", -1];
+    private _rad = missionNamespace getVariable ["FADE_sniperTrialNodeRadiusM", 2.5];
     private _body = if (_need >= 0) then {
-        "Hit not counted, you are at the wrong position!<br/>Move to position " + str _need + " (within 1 m)."
+        format ["Hit not counted, you are at the wrong position!<br/>Move to position %1 (within %2 m).", _need, _rad]
     } else {
-        "Hit not counted, you are at the wrong position!<br/>Move to the correct firing position (within 1 m)."
+        format ["Hit not counted, you are at the wrong position!<br/>Move to the correct firing position (within %1 m).", _rad]
     };
     private _html = "<t size='1.05' color='#ffb3b3'>SNIPER TIME TRIAL</t><br/><br/><t color='#ffffff'>" + _body + "</t>";
     [_html] remoteExec ["FADE_sniperClient_showTrialHint", _p];
@@ -367,8 +472,7 @@ FADE_sniperEhHit = {
     _victim = _this select 0;
     _hitThis = _this select 1;
     if (isNull _victim || {!(_hitThis isEqualType [])}) exitWith {};
-    if (!(missionNamespace getVariable ["FADE_sniperRangeActive", false])) exitWith {};
-    private _starter = missionNamespace getVariable ["FADE_sniperStarterUnit", objNull];
+    if (!([] call FADE_sniper_ballisticsAnyActive)) exitWith {};
     private _firer = objNull;
     if (count _hitThis > 0) then {
         private _a0 = _hitThis select 0;
@@ -378,8 +482,9 @@ FADE_sniperEhHit = {
         private _a1 = _hitThis select 1;
         if (_a1 isEqualType objNull && {!isNull _a1}) then { _firer = _a1 };
     };
-    if (isNull _firer) then { _firer = [_hitThis, _starter, _victim] call FADE_sniperResolveFirerFromDamageArray };
-    if (isNull _firer || { _firer != _starter }) exitWith {};
+    if (isNull _firer) then { _firer = [_hitThis, _victim] call FADE_sniperResolveFirerForBallisticsHit };
+    if (isNull _firer) exitWith {};
+    if !([_victim, _firer] call FADE_sniper_ballisticsVictimFirerPaired) exitWith {};
     if (_victim getVariable ["FADE_sniperTrialNodeLock", false]) exitWith { [] call FADE_sniperTrialWrongPosFeedback };
     private _pos = getPosASL _victim vectorAdd [0, 0, 0.45];
     // Hit almost always fires before HitPart; defer so HitPart can place the marker at the real impact.
@@ -390,7 +495,7 @@ FADE_sniperEhHit = {
         private _pos = _this param [2, []];
         private _sel = _this param [3, ""];
         sleep 0.22;
-        if (!(missionNamespace getVariable ["FADE_sniperRangeActive", false])) exitWith {};
+        if (!([] call FADE_sniper_ballisticsAnyActive)) exitWith {};
         if (isNull _victim || { isNull _firer }) exitWith {};
         if (_victim getVariable ["FADE_sniperHitPartRecent", false]) exitWith {};
         [_victim, _firer, _pos, _sel, ""] call FADE_sniperProcessImpact;
@@ -403,15 +508,15 @@ FADE_sniperEhHitPart = {
     _victimEnt = _this select 0;
     _hpRaw = _this select 1;
     if (isNull _victimEnt) exitWith {};
-    if (!(missionNamespace getVariable ["FADE_sniperRangeActive", false])) exitWith {};
-    private _starter = missionNamespace getVariable ["FADE_sniperStarterUnit", objNull];
+    if (!([] call FADE_sniper_ballisticsAnyActive)) exitWith {};
     private _hp = [_hpRaw] call FADE_sniperNormalizeHitPartArgs;
     if (count _hp < 1) exitWith {};
     private _p0 = _hp param [0, false];
     private _victim = if ((_p0 isEqualType objNull) && {!isNull _p0}) then { _p0 } else { _victimEnt };
     if (isNull _victim) exitWith {};
-    private _shooter = [_hp, _starter, _victim] call FADE_sniperResolveFirerFromDamageArray;
-    if (isNull _shooter || { _shooter != _starter }) exitWith {};
+    private _shooter = [_hp, _victim] call FADE_sniperResolveFirerForBallisticsHit;
+    if (isNull _shooter) exitWith {};
+    if !([_victim, _shooter] call FADE_sniper_ballisticsVictimFirerPaired) exitWith {};
     if (_victim getVariable ["FADE_sniperTrialNodeLock", false]) exitWith { [] call FADE_sniperTrialWrongPosFeedback };
     private _pos = [_hp, _victim] call FADE_sniperHitPosFromHitPartArgs;
     if ((count _pos < 3) || {!([_pos] call FADE_sniperAslIsFinite)}) then {
@@ -502,6 +607,10 @@ FADE_sniperEndSession = {
     if (!isServer) exitWith {};
     if (!(missionNamespace getVariable ["FADE_sniperRangeActive", false])) exitWith {};
 
+    private _sniperTermHorn = missionNamespace getVariable ["FADE_sniperTerminal", objNull];
+    if (isNull _sniperTermHorn) then { _sniperTermHorn = missionNamespace getVariable ["terminalSniper", objNull] };
+    if (!isNull _sniperTermHorn) then { ["stop", _sniperTermHorn] call FADE_cqbLoudspeakerBroadcast };
+
     private _tw = missionNamespace getVariable ["FADE_sniperTrialScript", scriptNull];
     if (!isNull _tw && {!scriptDone _tw}) then { terminate _tw };
     missionNamespace setVariable ["FADE_sniperTrialScript", scriptNull];
@@ -543,7 +652,7 @@ FADE_sniperEndSession = {
     };
 };
 
-// Params: _player, _enemyType ("targets"|"enemies"), _targetCount (1..40), _maxRangeM (100..1000), _trace (bool), _hitTrack (bool), _mode ("firing"|"trial")
+// Params: _player, _enemyType ("targets"|"enemies"), _targetCount (1..40), _maxRangeM (100..600), _trace (bool), _hitTrack (bool), _mode ("firing"|"trial")
 // Session-scoped spawn (trial script runs async; must not rely on StartSession locals).
 FADE_sniper_spawnAtPos = {
     params ["_player", "_posObj", "_isHuman", ["_trialLocked", false]];
@@ -560,6 +669,9 @@ FADE_sniper_spawnAtPos = {
         private _target = createVehicle [_targetClass, _pos, [], 0, "NONE"];
         _target setPosATL _pos;
         _target setDir _dir;
+        _target setVariable ["FADE_sniperVictimEnemyType", _enemyType, false];
+        _target setVariable ["FADE_sniperVictimSessionKind", "sniper", false];
+        _target setVariable ["FADE_sniperVictimSessionMode", missionNamespace getVariable ["FADE_sniperSessionMode", "firing"], false];
         _spawned pushBack _target;
         missionNamespace setVariable ["FADE_sniperSpawned", _spawned];
         [_target] call FADE_sniperRegisterSteelTarget;
@@ -573,6 +685,9 @@ FADE_sniper_spawnAtPos = {
         private _u = _grp createUnit [_unitClass, _pos, [], 0, "NONE"];
         _u setPosATL _pos;
         _u setDir _dir;
+        _u setVariable ["FADE_sniperVictimEnemyType", _enemyType, false];
+        _u setVariable ["FADE_sniperVictimSessionKind", "sniper", false];
+        _u setVariable ["FADE_sniperVictimSessionMode", missionNamespace getVariable ["FADE_sniperSessionMode", "firing"], false];
         {
             _u disableAI _x;
         } forEach [
@@ -591,6 +706,7 @@ FADE_sniper_spawnAtPos = {
             _u allowDamage false;
             _u setVariable ["FADE_sniperTrialNodeLock", true, true];
         };
+        [_u] call FADE_sniperStartEnemyAnimCycle;
         _spawned pushBack _grp;
         _enemyGroups pushBack _grp;
         missionNamespace setVariable ["FADE_sniperSpawned", _spawned];
@@ -611,7 +727,7 @@ FADE_sniperStartSession = {
     _targetCount = round _targetCount;
     _targetCount = (_targetCount max 1) min 40;
     _maxRangeM = round _maxRangeM;
-    _maxRangeM = (_maxRangeM max 100) min 1000;
+    _maxRangeM = (_maxRangeM max 100) min 600;
 
     private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_F"]]];
     _enemyUnits = [_enemyUnits] call FADE_filterUnitsArmed;
@@ -679,6 +795,10 @@ FADE_sniperStartSession = {
     }];
     missionNamespace setVariable ["FADE_sniperStarterKilledEh", [_player, _starterKh]];
 
+    private _sniperTermHorn = missionNamespace getVariable ["FADE_sniperTerminal", objNull];
+    if (isNull _sniperTermHorn) then { _sniperTermHorn = missionNamespace getVariable ["terminalSniper", objNull] };
+    if (!isNull _sniperTermHorn) then { ["start", _sniperTermHorn] call FADE_cqbLoudspeakerBroadcast };
+
     if (_trace) then {
         [true] remoteExec ["FADE_sniperClient_setProjectileTrace", _player];
     };
@@ -691,7 +811,7 @@ FADE_sniperStartSession = {
         private _trial = [_player, _enemyType, +_rangePool, _targetCount, _maxRangeM, +(missionNamespace getVariable ["FADE_sniperTrialPosLogics", []])] spawn {
             params ["_player", "_enemyType", "_eligibleLanes", "_nTargets", "_maxRangeM", "_allNodes"];
             _nTargets = (_nTargets max 1) min 40;
-            _maxRangeM = (_maxRangeM max 100) min 1000;
+            _maxRangeM = (_maxRangeM max 100) min 600;
             private _distances = [];
             private _step = _maxRangeM / _nTargets;
             for "_iStep" from 1 to _nTargets do {
@@ -716,6 +836,14 @@ FADE_sniperStartSession = {
                 };
             };
 
+            private _fncScoreLanesByWantDist = {
+                params ["_lanes", "_wantDist", "_playerObj"];
+                private _scored = [];
+                { _scored pushBack [abs ((_playerObj distance2d _x) - _wantDist), _x] } forEach _lanes;
+                _scored sort true;
+                _scored
+            };
+
             for "_i" from 0 to ((count _distances) - 1) do {
                 if (!(missionNamespace getVariable ["FADE_sniperRangeActive", false])) exitWith {};
                 private _nodeEntry = if (_i < count _nodesShuffled) then {
@@ -729,17 +857,37 @@ FADE_sniperStartSession = {
 
                 private _want = _distances select _i;
                 if (_remaining isEqualTo []) then { _remaining = +_pool };
-                private _bestIdx = -1;
-                private _bestDelta = 1e9;
-                for "_ix" from 0 to ((count _remaining) - 1) do {
-                    private _lane = _remaining select _ix;
-                    private _delta = abs ((_player distance2d _lane) - _want);
-                    if (_delta < _bestDelta) then {
-                        _bestDelta = _delta;
-                        _bestIdx = _ix;
+                private _scoredRem = [_remaining, _want, _player] call _fncScoreLanesByWantDist;
+                private _posObj = objNull;
+                private _sj = 0;
+                while { _sj < count _scoredRem && { isNull _posObj } } do {
+                    (_scoredRem select _sj) params ["_delta", "_lane"];
+                    if ([_nodeObj, _lane, _player] call FADE_sniperTrialClearLosNodeToLane) then {
+                        _posObj = _lane;
+                    };
+                    _sj = _sj + 1;
+                };
+                if (isNull _posObj) then {
+                    private _scoredPool = [_pool, _want, _player] call _fncScoreLanesByWantDist;
+                    _sj = 0;
+                    while { _sj < count _scoredPool && { isNull _posObj } } do {
+                        (_scoredPool select _sj) params ["_delta", "_lane"];
+                        if ([_nodeObj, _lane, _player] call FADE_sniperTrialClearLosNodeToLane) then {
+                            _posObj = _lane;
+                        };
+                        _sj = _sj + 1;
                     };
                 };
-                private _posObj = if (_bestIdx >= 0) then { _remaining deleteAt _bestIdx } else { selectRandom _pool };
+                if (isNull _posObj) then {
+                    if (_scoredRem isEqualTo []) then {
+                        _posObj = selectRandom _pool;
+                    } else {
+                        _posObj = (_scoredRem select 0) select 1;
+                    };
+                    [format ["Time trial: no clear line of sight from position %1 — using best-range lane (may be obscured).", _nodeLabel]] remoteExec ["systemChat", _player];
+                };
+                private _ri = _remaining find _posObj;
+                if (_ri >= 0) then { _remaining deleteAt _ri };
                 missionNamespace setVariable ["FADE_sniperLastHitNote", ""];
                 private _tickStart = diag_tickTime;
                 [_player, _posObj, _enemyType == "enemies", true] call FADE_sniper_spawnAtPos;
@@ -758,10 +906,11 @@ FADE_sniperStartSession = {
                     [_hMove] remoteExec ["FADE_sniperClient_showTrialHint", _player];
                 };
 
+                private _trialRad = missionNamespace getVariable ["FADE_sniperTrialNodeRadiusM", 2.5];
                 waitUntil {
                     sleep 0.12;
                     !(missionNamespace getVariable ["FADE_sniperRangeActive", false]) ||
-                    { (_player distance2d _nodeObj) <= 1 }
+                    { (_player distance2d _nodeObj) <= _trialRad }
                 };
                 if (!(missionNamespace getVariable ["FADE_sniperRangeActive", false])) exitWith {};
 
@@ -839,7 +988,8 @@ FADE_sniperStartSession = {
             };
         };
         missionNamespace setVariable ["FADE_sniperTrialScript", _trial];
-        [format ["Sniper time trial started — %1 targets, max %2m. Use shuffled sniperPos_1..7 (1m).", _targetCount, _maxRangeM]] remoteExec ["systemChat", _player];
+        private _nr = missionNamespace getVariable ["FADE_sniperTrialNodeRadiusM", 2.5];
+        [format ["Sniper time trial started — %1 targets, max %2m. Positions sniperPos_1..7 (within %3m).", _targetCount, _maxRangeM, _nr]] remoteExec ["systemChat", _player];
     };
 };
 
@@ -850,8 +1000,12 @@ FADE_sniperServer_impactSphereFromClient = {
     _pos = _this select 0;
     _uid = _this select 1;
     if (!isServer) exitWith {};
-    if (!(missionNamespace getVariable ["FADE_sniperRangeActive", false])) exitWith {};
-    if (_uid != missionNamespace getVariable ["FADE_sniperStarterUid", ""]) exitWith {};
+    private _snA = missionNamespace getVariable ["FADE_sniperRangeActive", false];
+    private _rgA = missionNamespace getVariable ["FADE_rangeSessionActive", false];
+    if (!(_snA || _rgA)) exitWith {};
+    private _okS = _snA && {_uid == missionNamespace getVariable ["FADE_sniperStarterUid", ""]};
+    private _okR = _rgA && {_uid == missionNamespace getVariable ["FADE_rangeStarterUid", ""]};
+    if (!(_okS || _okR)) exitWith {};
     if !([_pos] call FADE_sniperAslIsFinite) exitWith {};
     [_pos, objNull] call FADE_sniperSpawnImpactSphere;
 };

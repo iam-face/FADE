@@ -6,7 +6,7 @@
 // =============================================================================
 
 FAC_vehicleGui_IDD = 60001;
-FAC_vehicleGui_spawnContentIdcs = [61101, 61102, 61103, 61104, 61105, 61106, 61107, 61112, 61113, 61114, 61115, 61116, 61117];
+FAC_vehicleGui_spawnContentIdcs = [61101, 61102, 61103, 61104, 61105, 61106, 61107, 61112, 61113, 61114, 61115, 61116, 61117, 61118];
 FAC_vehicleGui_manageContentIdcs = [61200, 61201, 61202, 61205, 61206, 61210, 61211, 61220, 61221, 61222, 61223, 61224, 61225, 61226, 61227, 61228, 61229, 61230, 61232, 61240, 61241, 61242];
 
 FAC_vehicleGui_syncHeaderTabs = {
@@ -51,6 +51,21 @@ FAC_vehicleGui_syncSpawnCategoryButtons = {
     } else {
         _bAir ctrlSetBackgroundColor _inact;
         _bLand ctrlSetBackgroundColor _act;
+    };
+};
+
+// Aircraft-only: whitelist toggle (61118); hidden on Land Vehicles tab.
+FAC_vehicleGui_syncWhitelistSpawnControl = {
+    private _d = findDisplay FAC_vehicleGui_IDD;
+    if (isNull _d) exitWith {};
+    private _b = _d displayCtrl 61118;
+    if (isNull _b) exitWith {};
+    private _cat = missionNamespace getVariable ["FAC_vehicleGui_spawnCategory", "aircraft"];
+    private _show = _cat == "aircraft";
+    _b ctrlShow _show;
+    if (_show) then {
+        private _on = missionNamespace getVariable ["FAC_vehicleGui_whitelistAircraft", true];
+        _b ctrlSetText format ["Aircraft whitelist: %1", if (_on) then {"ON"} else {"OFF"}];
     };
 };
 
@@ -332,6 +347,9 @@ FAC_vehicleGui_fnc = {
             missionNamespace setVariable ["FAC_vehicleGui_deleteWreckPending", -99];
             missionNamespace setVariable ["FAC_vehicleGui_deleteWreckConfirmGen", 0];
             [] call FAC_vehicleGui_resetDeleteWreckButton;
+            if (isNil "FAC_vehicleGui_whitelistAircraft") then {
+                missionNamespace setVariable ["FAC_vehicleGui_whitelistAircraft", true];
+            };
             // Tab visibility first (config has manage controls show=0; setTab enforces spawn vs manage).
             missionNamespace setVariable ["FAC_vehicleGui_spawnCategory", "aircraft"];
             ["setTab", ["new"]] call FAC_vehicleGui_fnc;
@@ -402,6 +420,7 @@ FAC_vehicleGui_fnc = {
             [] call FAC_vehicleGui_syncHeaderTabs;
             if (_isNew) then {
                 [] call FAC_vehicleGui_syncSpawnCategoryButtons;
+                [] call FAC_vehicleGui_syncWhitelistSpawnControl;
                 ["spawnRefreshPads", []] call FAC_vehicleGui_fnc;
             } else {
                 ["refreshSpawned", []] call FAC_vehicleGui_fnc;
@@ -414,6 +433,12 @@ FAC_vehicleGui_fnc = {
             if !(_cat in ["aircraft", "land"]) then { _cat = "aircraft" };
             missionNamespace setVariable ["FAC_vehicleGui_spawnCategory", _cat];
             [] call FAC_vehicleGui_syncSpawnCategoryButtons;
+            ["spawnCategoryChanged", []] call FAC_vehicleGui_fnc;
+        };
+
+        case "spawnWhitelistClick": {
+            private _cur = missionNamespace getVariable ["FAC_vehicleGui_whitelistAircraft", true];
+            missionNamespace setVariable ["FAC_vehicleGui_whitelistAircraft", !_cur];
             ["spawnCategoryChanged", []] call FAC_vehicleGui_fnc;
         };
 
@@ -718,6 +743,13 @@ FAC_vehicleGui_fnc = {
                     _fullList = _fullList select { (_x select 0) in _allowed };
                 };
             };
+            if (_cat == "aircraft") then {
+                private _wlOn = missionNamespace getVariable ["FAC_vehicleGui_whitelistAircraft", true];
+                private _wl = missionNamespace getVariable ["FADE_aircraftSpawnWhitelist", []];
+                if (_wlOn && { count _wl > 0 }) then {
+                    _fullList = _fullList select { (_x select 0) in _wl };
+                };
+            };
             missionNamespace setVariable ["FAC_vehicleGui_fullList", _fullList];
 
             private _factionIds = [];
@@ -738,6 +770,7 @@ FAC_vehicleGui_fnc = {
             private _searchEdit = _display displayCtrl 61102;
             _searchEdit ctrlSetText "";
 
+            [] call FAC_vehicleGui_syncWhitelistSpawnControl;
             ["spawnFilterChanged", []] call FAC_vehicleGui_fnc;
         };
 
@@ -838,6 +871,16 @@ FAC_vehicleGui_fnc = {
             } else {
                 private _iAuto = _padLb lbAdd "Auto — first clear VEH slot";
                 _padLb lbSetData [_iAuto, "-1"];
+                private _vehPts = missionNamespace getVariable ["FADE_vehiclePoints", []];
+                {
+                    private _ptObj = _x;
+                    private _eden = vehicleVarName _ptObj;
+                    private _disp = [_eden, _forEachIndex] call FAC_vehicleGui_spawnLocationDisplayName;
+                    private _occ = [_ptObj, 9] call FAC_vehicleGui_isHelipadOccupied;
+                    private _suffix = if (_occ) then { " — OCCUPIED" } else { " — empty" };
+                    private _row = _padLb lbAdd (_disp + _suffix);
+                    _padLb lbSetData [_row, str _forEachIndex];
+                } forEach _vehPts;
             };
 
             private _match = -1;

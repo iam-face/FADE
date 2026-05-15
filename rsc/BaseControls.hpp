@@ -14,6 +14,7 @@ class RscText {
     text = "";
     font = "PuristaMedium";
     sizeEx = 0.04;
+    lineSpacing = 1;
 };
 
 class RscButton {
@@ -143,6 +144,24 @@ class RscCombo {
     colorSelectBackground2[] = {1, 1, 1, 0.5};
     font = "PuristaMedium";
     sizeEx = 0.04;
+    wholeHeight = 0.35;
+    maxHistoryDelay = 0;
+    shadow = 0;
+    arrowEmpty = "\a3\ui_f\data\gui\cfg\scrollbar\arrowempty_ca.paa";
+    arrowFull = "\a3\ui_f\data\gui\cfg\scrollbar\arrowfull_ca.paa";
+    soundSelect[] = {"", 0, 0};
+    soundExpand[] = {"", 0, 0};
+    soundCollapse[] = {"", 0, 0};
+    class ComboScrollBar {
+        color[] = {1, 1, 1, 0.6};
+        colorActive[] = {1, 1, 1, 1};
+        colorDisabled[] = {1, 1, 1, 0.3};
+        thumb = "\a3\ui_f\data\gui\cfg\scrollbar\thumb_ca.paa";
+        arrowFull = "\a3\ui_f\data\gui\cfg\scrollbar\arrowfull_ca.paa";
+        arrowEmpty = "\a3\ui_f\data\gui\cfg\scrollbar\arrowempty_ca.paa";
+        border = 0;
+        size = 0;
+    };
 };
 
 class RscXSliderH {
