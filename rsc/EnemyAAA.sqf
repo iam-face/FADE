@@ -31,23 +31,38 @@ FADE_aaa_normalizeLevel = {
     };
 };
 
+// Returns a static weapon classname for the given enemy faction. Prefers, in order:
+//   1) Faction-tagged static whose displayName matches the heuristic (HMG / GMG / AA).
+//   2) Any faction-tagged static (side-correct).
+//   3) Heuristic-matched static of any side-correct faction (cross-faction borrow).
+//   4) FADE_aaa_fallbackStatic as a last resort (CSAT HMG, only when no side-correct static exists).
+// This avoids silently picking a CSAT turret when the chosen OPFOR faction has none whose
+// displayName mentions HMG/GMG/AA — a previous bug where mod factions defaulted to CSAT.
 FADE_aaa_getStaticLightClass = {
     params [["_faction", ""]];
     if (_faction == "") then { _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"] };
     private _fallback = missionNamespace getVariable ["FADE_aaa_fallbackStatic", "O_HMG_01_high_F"];
-    private _out = "";
+    private _wantSide = [_faction, 0] call (missionNamespace getVariable ["FADE_getFactionSideNum", { 0 }]);
+    private _factionHeuristic = "";
+    private _factionAny = "";
+    private _otherHeuristic = "";
     {
         private _cfg = _x;
         private _class = configName _cfg;
         if (getNumber (_cfg >> "scope") < 2) then { continue };
-        if (getNumber (_cfg >> "side") != 0) then { continue };
+        if (getNumber (_cfg >> "side") != _wantSide) then { continue };
         if (!(_class isKindOf "StaticWeapon")) then { continue };
         private _dn = toLower getText (_cfg >> "displayName");
-        if ((_dn find "hmg" < 0) && { _dn find "gmg" < 0 } && { _dn find "aa" < 0 }) then { continue };
-        if (getText (_cfg >> "faction") == _faction) exitWith { _out = _class };
-        if (_out == "") then { _out = _class };
+        private _matchesHeuristic = (_dn find "hmg" >= 0) || { _dn find "gmg" >= 0 } || { _dn find "aa" >= 0 };
+        private _isFaction = getText (_cfg >> "faction") == _faction;
+        if (_isFaction && _matchesHeuristic) exitWith { _factionHeuristic = _class };
+        if (_isFaction && _factionAny == "") then { _factionAny = _class };
+        if (_matchesHeuristic && _otherHeuristic == "") then { _otherHeuristic = _class };
     } forEach ("true" configClasses (configFile >> "CfgVehicles"));
-    if (_out == "") then { _fallback } else { _out }
+    if (_factionHeuristic != "") exitWith { _factionHeuristic };
+    if (_factionAny != "") exitWith { _factionAny };
+    if (_otherHeuristic != "") exitWith { _otherHeuristic };
+    _fallback
 };
 
 FADE_aaa_getManpadsUnitClass = {

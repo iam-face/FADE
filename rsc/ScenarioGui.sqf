@@ -103,6 +103,17 @@ FAC_scenarioGui_adminResetCleanupButtons = {
     } forEach FAC_scenarioGui_adminCleanupButtonDefs;
 };
 
+FAC_scenarioGui_syncAdminTabAccess = {
+    private _d = findDisplay FAC_scenarioGui_IDD;
+    if (isNull _d) exitWith {};
+    private _canAdmin = ["FAC_playerCanUseScenarioAdmin"] call FAC_lobbyParams_callAccess;
+    private _bA = _d displayCtrl 60812;
+    if (!isNull _bA) then { _bA ctrlShow _canAdmin };
+    if (!_canAdmin && { missionNamespace getVariable ["FAC_scenarioGui_tab", "scenario"] == "admin" }) then {
+        ["setTab", ["scenario"]] call FAC_scenarioGui_fnc;
+    };
+};
+
 FAC_scenarioGui_syncHeaderTabs = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
@@ -483,6 +494,9 @@ FAC_scenarioGui_fnc = {
 
     switch _action do {
         case "open": {
+            if !(["FAC_playerCanUseScenarioGui"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Scenario GUI access denied by lobby settings.";
+            };
             if (!createDialog "RscDisplayScenario") then {
                 systemChat "SCENARIO GUI: RESOURCE NOT FOUND.";
             };
@@ -490,10 +504,14 @@ FAC_scenarioGui_fnc = {
 
         case "setTab": {
             _params params [["_tab", "scenario"]];
+            if (_tab == "admin" && { !(["FAC_playerCanUseScenarioAdmin"] call FAC_lobbyParams_callAccess) }) exitWith {
+                systemChat "Scenario Admin tab access denied by lobby settings.";
+            };
             if !(_tab in ["scenario", "weather", "factions", "admin"]) then { _tab = "scenario" };
             missionNamespace setVariable ["FAC_scenarioGui_tab", _tab];
             [_tab] call FAC_scenarioGui_setTabVisibility;
             [] call FAC_scenarioGui_syncHeaderTabs;
+            [] call FAC_scenarioGui_syncAdminTabAccess;
             if (_tab == "factions") then {
                 private _d = findDisplay FAC_scenarioGui_IDD;
                 if (!isNull _d) then {
@@ -547,6 +565,9 @@ FAC_scenarioGui_fnc = {
             missionNamespace setVariable ["FAC_scenarioGui_launcher", missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"]];
             missionNamespace setVariable ["FAC_scenarioGui_opforPop", missionNamespace getVariable ["FADE_opforPopulationSetting", "Auto"]];
             missionNamespace setVariable ["FAC_scenarioGui_opforAir", missionNamespace getVariable ["FADE_opforAirSetting", "Off"]];
+            private _aoLobby = missionNamespace getVariable ["FADE_aoStrength", "Mid"];
+            if (_aoLobby == "Mid") then { _aoLobby = "Medium" };
+            missionNamespace setVariable ["FAC_scenarioGui_aoStrength", _aoLobby];
 
             [] call FAC_scenarioGui_updateTimeDisplay;
 
@@ -684,6 +705,7 @@ FAC_scenarioGui_fnc = {
             [] call FAC_scenarioGui_syncLauncherBtns;
             [] call FAC_scenarioGui_syncOpforPopBtns;
             [] call FAC_scenarioGui_syncOpforAirBtns;
+            [] call FAC_scenarioGui_syncAdminTabAccess;
 
             ["setTab", ["scenario"]] call FAC_scenarioGui_fnc;
         };
@@ -825,8 +847,14 @@ FAC_scenarioGui_fnc = {
         };
 
         case "adminCleanup": {
-            if (isNull (findDisplay FAC_scenarioGui_IDD)) exitWith {};
+            if !(["FAC_playerCanUseScenarioAdmin"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Scenario Admin access denied by lobby settings.";
+            };
             private _cleanupAction = (_params param [0, ""]) + "";
+            if (_cleanupAction in ["makeZeus", "removeMyZeus"] && { !(["FAC_playerCanUseDebugTools"] call FAC_lobbyParams_callAccess) }) exitWith {
+                systemChat "Debug tools disabled by lobby settings (Zeus self-assign).";
+            };
+            if (isNull (findDisplay FAC_scenarioGui_IDD)) exitWith {};
             if (_cleanupAction == "") exitWith {};
             private _display = findDisplay FAC_scenarioGui_IDD;
             private _state = missionNamespace getVariable ["FAC_scenario_adminPending", ["", -99]];

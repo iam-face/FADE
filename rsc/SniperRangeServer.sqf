@@ -639,7 +639,9 @@ FADE_sniperEndSession = {
     private _starter = _player;
     if (isNull _starter) then { _starter = missionNamespace getVariable ["FADE_sniperLastStarterForFx", objNull] };
     if (!isNull _starter) then {
-        [] remoteExec ["FADE_sniperClient_clearRangeFx", _starter];
+        [false, _starter] remoteExec ["FADE_sniperClient_setProjectileTrace", 0, _starter];
+        [] remoteExec ["FADE_sniperClient_stopTraceProximityMonitor", _starter];
+        [_starter] remoteExec ["FADE_sniperClient_clearRangeFx", _starter];
     };
     missionNamespace setVariable ["FADE_sniperLastStarterForFx", objNull];
 
@@ -800,7 +802,12 @@ FADE_sniperStartSession = {
     if (!isNull _sniperTermHorn) then { ["start", _sniperTermHorn] call FADE_cqbLoudspeakerBroadcast };
 
     if (_trace) then {
-        [true] remoteExec ["FADE_sniperClient_setProjectileTrace", _player];
+        [true, _player] remoteExec ["FADE_sniperClient_setProjectileTrace", 0, _player];
+        private _termPos = [];
+        if (!isNull _sniperTermHorn) then { _termPos = getPosATL _sniperTermHorn };
+        if (count _termPos >= 2) then {
+            [_termPos, _player] remoteExec ["FADE_sniperClient_startTraceProximityMonitor", _player];
+        };
     };
     [true] remoteExec ["FADE_sniperClient_setProjectileImpactMarkers", _player];
 

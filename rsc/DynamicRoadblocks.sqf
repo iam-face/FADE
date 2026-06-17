@@ -414,7 +414,7 @@ private _tryPickSpawn = {
     private _picked = [];
     {
         private _p = _x;
-        if (count _p < 2) then { };
+        if (!(_p isEqualType []) || { count _p < 2 }) then { continue };
         if ((_p distance2D _base) >= _minBase) then {
             private _aheadOk = true;
             if (_useAheadFilter && { count _anchorAhead >= 2 }) then {
@@ -443,8 +443,8 @@ private _tryPickAggressive = {
     private _picked = [];
     {
         private _p = _x;
-        if (count _p < 2) then { };
-        if ((_p distance2D _base) < _aggMinFromBase) then { };
+        if (!(_p isEqualType []) || { count _p < 2 }) then { continue };
+        if ((_p distance2D _base) < _aggMinFromBase) then { continue };
         private _okDist = false;
         {
             private _d = _p distance2D (getPosATL _x);

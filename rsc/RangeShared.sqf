@@ -12,11 +12,17 @@ FADE_rangeShared_setRangeHitTrack = {
 FADE_rangeShared_enableStarterFx = {
     params [["_starter", objNull], ["_trace", false]];
     if (isNull _starter) exitWith {};
-    [_trace] remoteExec ["FADE_rangeClient_enableSniperFxForRange", _starter];
+    private _term = call FADE_rangeTerminalObj;
+    private _termPos = if (!isNull _term) then { getPosATL _term } else { [] };
+    [_trace, _termPos] remoteExec ["FADE_rangeClient_enableSniperFxForRange", _starter];
 };
 
 FADE_rangeShared_disableStarterFx = {
     params [["_starter", objNull]];
     if (isNull _starter) exitWith {};
+    if (!isNull _starter) then {
+        [false, _starter] remoteExec ["FADE_sniperClient_setProjectileTrace", 0, _starter];
+        [] remoteExec ["FADE_sniperClient_stopTraceProximityMonitor", _starter];
+    };
     [] remoteExec ["FADE_rangeClient_disableSniperFxForRange", _starter];
 };

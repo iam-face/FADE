@@ -1062,12 +1062,14 @@ FADE_civ_setupRoadCarRadio = {
     _veh setVariable ["FADE_civCarRadioSong", _song, false];
     _veh setVariable ["FADE_civCarRadioPending", true, false];
     _veh setVariable ["FADE_civCarRadioStarted", false, false];
+    _veh setVariable ["FADE_civCarRadioSuppressed", false, false];
+    _veh setVariable ["FADE_civCarRadioOwned", true, false];
     _veh setVariable ["FADE_civCarRadioSourceKey", "", false];
     _veh addEventHandler ["Deleted", {
         params ["_veh"];
         if (_veh getVariable ["FADE_civCarRadioStarted", false]) then {
             private _key = _veh getVariable ["FADE_civCarRadioSourceKey", ""];
-            if (_key != "") then { ["", _key] remoteExec ["FAC_jukebox_clientPlay", 0]; };
+            if (_key != "") then { ["", _key, objNull] remoteExec ["FAC_jukebox_serverPlay", 2]; };
         };
     }];
 };
@@ -1083,6 +1085,7 @@ FADE_civ_tickCarRadios = {
     {
         private _v = _x;
         if (isNull _v || {!alive _v}) then { continue };
+        if (_v getVariable ["FADE_civCarRadioSuppressed", false]) then { continue };
         if (!(_v getVariable ["FADE_civCarRadioPending", false])) then { continue };
         if (_v getVariable ["FADE_civCarRadioStarted", false]) then { continue };
         private _pos = getPosATL _v;
@@ -1102,7 +1105,7 @@ FADE_civ_tickCarRadios = {
             _key = format ["vehicle:%1", _nid];
             _v setVariable ["FADE_civCarRadioSourceKey", _key, false];
         };
-        [_song, _key, _vol, _aud] remoteExec ["FAC_jukebox_clientPlay", 0];
+        [_song, _key, objNull, _vol, _aud] remoteExec ["FAC_jukebox_serverPlay", 2];
     } forEach FADE_roadVehicles;
 };
 

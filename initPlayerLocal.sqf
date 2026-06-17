@@ -23,41 +23,47 @@ call compile preprocessFileLineNumbers "rsc\FADE_IntelClient.sqf";
 // Debug: optional BIS campaign function stubs - default off in Config (see rsc\DebugBIScpStub.sqf)
 call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";
 
+if (isNil "FADE_baseNpc_clientSetIdentity") then {
+    call compile preprocessFileLineNumbers "rsc\BaseNpcTalk.sqf";
+};
+if (isNil "FAC_baseNpc_registered_pvh") then {
+    FAC_baseNpc_registered_pvh = "FADE_baseNpc_registered" addPublicVariableEventHandler {
+        if (!hasInterface) exitWith {};
+        [] spawn { sleep 0.5; [] call FADE_baseNpc_clientEnsureInteract };
+    };
+};
+
 // Mission-start client visual baseline.
 setViewDistance 1500;
 setTerrainGrid 25;
 
 // Lobby params mirrored client-side for UI/action gating.
-private _params = if (!isNil "paramsArray" && { paramsArray isEqualType [] }) then { paramsArray } else { [] };
-missionNamespace setVariable ["FAC_param_missionsGuiAccess", _params param [0, missionNamespace getVariable ["FAC_param_missionsGuiAccess", 0]]];
-missionNamespace setVariable ["FAC_param_scenarioGuiAccess", _params param [1, missionNamespace getVariable ["FAC_param_scenarioGuiAccess", 0]]];
-missionNamespace setVariable ["FAC_param_enableAceArsenalActions", _params param [2, missionNamespace getVariable ["FAC_param_enableAceArsenalActions", 1]]];
-
-FAC_playerHasLeaderOverrideAccess = {
-    if (isNull player) exitWith { false };
-    (serverCommandAvailable "#kick") || { !isNull (getAssignedCuratorLogic player) }
-};
-FAC_playerCanUseMissionsGui = {
-    private _mode = missionNamespace getVariable ["FAC_param_missionsGuiAccess", 0];
-    if (_mode <= 0) exitWith { true };
-    (leader group player == player) || { call FAC_playerHasLeaderOverrideAccess }
-};
-FAC_playerCanUseScenarioGui = {
-    private _mode = missionNamespace getVariable ["FAC_param_scenarioGuiAccess", 0];
-    if (_mode <= 0) exitWith { true };
-    (leader group player == player) || { call FAC_playerHasLeaderOverrideAccess }
-};
-FAC_playerCanTeleportToPlayers = {
-    private _mode = missionNamespace getVariable ["FADE_teleportToPlayerMode", 0];
-    if (_mode <= 0) exitWith { true };
-    (leader group player == player) || { call FAC_playerHasLeaderOverrideAccess }
-};
+call compile preprocessFileLineNumbers "rsc\FAC_LobbyParams.sqf";
 
 // -----------------------------------------------------------------------------
 // Mission hints  - formatted hint (remoteExec from server: one player, or 0 = all clients with interface)
 // -----------------------------------------------------------------------------
 FADE_showMissionHint = {
     if (count _this > 0) then { hint parseText (_this select 0) };
+};
+
+// Per-player local pickup marker for Troop Insert (visible only on this client).
+// Server remoteExecs these to the owning player so other players don't see the marker.
+FAC_troopInsertClient_createPickupMarker = {
+    params [["_mkrName", ""], ["_pos", [0, 0, 0]], ["_label", "Squad link-up"], ["_color", "ColorWEST"]];
+    if (!hasInterface) exitWith {};
+    if (_mkrName isEqualTo "") exitWith {};
+    if (getMarkerColor _mkrName != "") then { deleteMarkerLocal _mkrName };
+    private _m = createMarkerLocal [_mkrName, _pos];
+    _m setMarkerTypeLocal "mil_pickup";
+    _m setMarkerColorLocal _color;
+    _m setMarkerTextLocal _label;
+};
+FAC_troopInsertClient_deletePickupMarker = {
+    params [["_mkrName", ""]];
+    if (!hasInterface) exitWith {};
+    if (_mkrName isEqualTo "") exitWith {};
+    if (getMarkerColor _mkrName != "") then { deleteMarkerLocal _mkrName };
 };
 
 // initServer still sends the starter name as arg 2 for compatibility; subtitle uses mission type from synced state.
@@ -329,15 +335,27 @@ call compile preprocessFileLineNumbers "rsc\CqbLoudspeaker.sqf";
 call compile preprocessFileLineNumbers "rsc\CutsceneClient.sqf";
 
 call FAC_ensureJukeboxGui;
+call FAC_ensureCivTalkGui;
 
-// JIP / late connect: add Talk action on already-spawned ambient civilians (spawn-time remoteExec only hits clients present then).
+// JIP / late connect: add Talk action on already-spawned ambient civilians + base NPC (netId may arrive after CivTalkGui loads).
 [] spawn {
-    sleep 2;
     if (!hasInterface) exitWith {};
-    call FAC_ensureCivTalkGui;
-    private _fn = missionNamespace getVariable ["FADE_civTalk_addLocalAction", {}];
-    if (!(_fn isEqualType {})) exitWith {};
-    { if (alive _x && {_x getVariable ["FADE_ambientCiv", false]}) then { [_x] call _fn } } forEach allUnits;
+    private _delays = [1, 2, 4, 8, 15];
+    {
+        sleep _x;
+        call FAC_ensureCivTalkGui;
+        private _fn = missionNamespace getVariable ["FADE_civTalk_addLocalAction", {}];
+        if (_fn isEqualType {}) then {
+            {
+                if (alive _x && {
+                    _x getVariable ["FADE_ambientCiv", false] || { _x getVariable ["FADE_baseNpcTalk", false] }
+                }) then { [_x] call _fn };
+            } forEach allUnits;
+        };
+        private _refresh = missionNamespace getVariable ["FADE_civTalk_refreshBaseNpcAction", {}];
+        if (_refresh isEqualType {}) then { [] call _refresh };
+        if (!isNil "FADE_baseNpc_clientEnsureInteract") then { [] call FADE_baseNpc_clientEnsureInteract };
+    } forEach _delays;
 };
 
 FAC_addScenarioActionToTerminal = {
@@ -346,7 +364,7 @@ FAC_addScenarioActionToTerminal = {
     _obj addAction [
         "<t color='#87CEEB'>Manage Scenario</t>",
         {
-            if !(call FAC_playerCanUseScenarioGui) exitWith {
+            if !(["FAC_playerCanUseScenarioGui"] call FAC_lobbyParams_callAccess) exitWith {
                 systemChat "Scenario GUI is restricted to group leaders (admin/Zeus override).";
             };
             [] spawn { call FAC_ensureScenarioGui; sleep 0.2; ["open", []] call FAC_scenarioGui_fnc };
@@ -399,7 +417,12 @@ if (!isNull _vehicleGuiObj) then {
     removeAllActions _vehicleGuiObj;
     _vehicleGuiObj addAction [
         "<t color='#00FF00'>Manage Vehicles</t>",
-        { [] spawn { call FAC_ensureVehicleGui; sleep 0.2; ["open", []] call FAC_vehicleGui_fnc } },
+        {
+            if !(["FAC_playerCanUseVehicleGui"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Vehicle GUI access denied by lobby settings.";
+            };
+            [] spawn { call FAC_ensureVehicleGui; sleep 0.2; ["open", []] call FAC_vehicleGui_fnc };
+        },
         [],
         5,
         false,
@@ -488,7 +511,7 @@ if (!isNull _missionBoard) then {
     _missionBoard addAction [
         "<t color='#FFD700'>Manage Missions</t>",
         {
-            if !(call FAC_playerCanUseMissionsGui) exitWith {
+            if !(["FAC_playerCanUseMissionsGui"] call FAC_lobbyParams_callAccess) exitWith {
                 systemChat "Missions GUI is restricted to group leaders (admin/Zeus override).";
             };
             [] spawn { call FAC_ensureMissionsGui; sleep 0.2; ["open", []] call FAC_missionsGui_fnc };
@@ -504,7 +527,7 @@ if (!isNull _missionBoard) then {
     _missionBoard addAction [
         "<t color='#87CEEB'>Manage Scenario</t>",
         {
-            if !(call FAC_playerCanUseScenarioGui) exitWith {
+            if !(["FAC_playerCanUseScenarioGui"] call FAC_lobbyParams_callAccess) exitWith {
                 systemChat "Scenario GUI is restricted to group leaders (admin/Zeus override).";
             };
             [] spawn { call FAC_ensureScenarioGui; sleep 0.2; ["open", []] call FAC_scenarioGui_fnc };
@@ -624,7 +647,12 @@ private _teleportBoardMap = [
         removeAllActions _box;
         _box addAction [
             "<t color='#00BFFF'>Manage My Loadout</t>",
-            { [] spawn { call FAC_ensureLoadoutGui; sleep 0.2; ["open", []] call FAC_loadoutGui_fnc } },
+            {
+                if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
+                    systemChat "Loadout GUI access denied by lobby settings.";
+                };
+                [] spawn { call FAC_ensureLoadoutGui; sleep 0.2; ["open", []] call FAC_loadoutGui_fnc };
+            },
             [],
             6,
             false,
@@ -636,6 +664,9 @@ private _teleportBoardMap = [
         _box addAction [
             "<t color='#98FB98'>Save my loadout</t>",
             {
+                if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
+                    systemChat "Loadout GUI access denied by lobby settings.";
+                };
                 call FAC_ensureLoadoutGui;
                 [player] call FAC_loadoutGui_saveRespawnLoadoutSnapshot;
                 systemChat "Loadout saved - will be restored on respawn.";
@@ -649,7 +680,7 @@ private _teleportBoardMap = [
             3
         ];
         if (isClass (configFile >> "CfgPatches" >> "ace_arsenal")) then {
-            if ((missionNamespace getVariable ["FAC_param_enableAceArsenalActions", 1]) > 0) then {
+            if ((missionNamespace getVariable ["FAC_param_enableAceArsenalActions", 1]) > 0 && { ["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess }) then {
                 _box addAction [
                     "<t color='#FF8C00'>Open ACE Arsenal</t>",
                     { [(_this select 0), (_this select 1)] call ace_arsenal_fnc_openBox },  // target, caller
@@ -676,6 +707,9 @@ private _teleportBoardMap = [
             "<t color='#FF69B4'>Jukebox</t>",
             {
                 params ["_target", "_caller", "_actionId", "_args"];
+                if !(["FAC_playerCanUseJukebox"] call FAC_lobbyParams_callAccess) exitWith {
+                    systemChat "Jukebox access denied by lobby settings.";
+                };
                 missionNamespace setVariable ["FAC_jukebox_guiSource", _args select 0];
                 [] spawn { call FAC_ensureJukeboxGui; sleep 0.2; ["open", []] call FAC_jukeboxGui_fnc };
             },
@@ -758,8 +792,10 @@ hint parseText _welcomeText;
 [] spawn {
     if (!hasInterface) exitWith {};
     waitUntil { sleep 0.5; count (missionNamespace getVariable ["FADE_basePos", []]) >= 2 };
+    if ((missionNamespace getVariable ["FAC_param_hqAutoHeal", 1]) <= 0) exitWith {};
     private _radius = 50;
     private _interval = missionNamespace getVariable ["FADE_hqHealIntervalSec", 40];
+    if (_interval <= 0) exitWith {};
     if (_interval < 15) then { _interval = 15 };
     while { true } do {
         sleep _interval;
@@ -828,7 +864,7 @@ player addEventHandler ["GetOutMan", {
         params ["_display", "_key", "_shift", "_ctrl", "_alt"];
         // CTRL+; (DIK_SEMICOLON = 0x27)  - open Missions GUI from anywhere
         if (_key == 0x27 && { _ctrl }) exitWith {
-            if !(call FAC_playerCanUseMissionsGui) exitWith {
+            if !(["FAC_playerCanUseMissionsGui"] call FAC_lobbyParams_callAccess) exitWith {
                 systemChat "Missions GUI is restricted to group leaders (admin/Zeus override).";
                 true
             };

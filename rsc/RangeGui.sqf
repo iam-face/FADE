@@ -6,6 +6,15 @@
 // =============================================================================
 FAC_rangeGui_IDD = 60920;
 
+FAC_rangeGui_getSlotDisplayName = {
+    params ["_slotName"];
+    private _names = missionNamespace getVariable ["FADE_rangeFriendlyVehPosNames", []];
+    private _disp = missionNamespace getVariable ["FADE_rangeFriendlyVehPosDisplayNames", []];
+    private _i = _names find _slotName;
+    if (_i >= 0 && { count _disp > _i }) exitWith { _disp select _i };
+    _slotName
+};
+
 FAC_rangeGui_tabRangeIdcs = [
     60962, 60923, 60970, 60934, 60935, 60966, 60967, 60928, 60929, 60968, 60930, 60931, 60969, 60932, 60933,
     60971, 60936, 60937, 60973, 60939, 60940, 60941, 60942, 60943, 60963, 60964, 60924, 60925, 60965, 60926, 60927,
@@ -147,7 +156,8 @@ FAC_rangeGui_fnc = {
         private _slotState = missionNamespace getVariable ["FADE_rangeFriendlySlotStateClient", []];
         {
             _x params ["_slot", "_state"];
-            private _line = if (_state == "") then { format ["%1 — empty", _slot] } else { format ["%1 — %2", _slot, _state] };
+            private _label = [_slot] call FAC_rangeGui_getSlotDisplayName;
+            private _line = if (_state == "") then { format ["%1 — empty", _label] } else { format ["%1 — %2", _label, _state] };
             private _i = _sl lbAdd _line;
             _sl lbSetData [_i, _slot];
         } forEach _slotState;
@@ -166,25 +176,32 @@ FAC_rangeGui_fnc = {
     private _refreshInteractivity = {
         private _d = findDisplay 60920; if (isNull _d) exitWith {};
         private _active = missionNamespace getVariable ["FADE_rangeSessionActive", false];
-        private _canEdit = !_active;
-        {
-            (_d displayCtrl _x) ctrlEnable _canEdit;
-        } forEach [
-            60924, 60925, 60926, 60927, 60928, 60929, 60931, 60933, 60934, 60935, 60937, 60939, 60940, 60941, 60942, 60983,
-            60951, 60952, 60993
-        ];
+        // Range tab: lock session settings while active; keep End session (60938) enabled.
+        private _rangeIdcs = +FAC_rangeGui_tabRangeIdcs;
+        _rangeIdcs = _rangeIdcs - [60938];
+        { (_d displayCtrl _x) ctrlEnable (!_active) } forEach _rangeIdcs;
+        if (_active) then { (_d displayCtrl 60938) ctrlEnable true };
+        // Equipment tab: always editable (spawn/despawn pads during an active session).
     };
     private _refreshInfo = {
         private _d = findDisplay 60920; if (isNull _d) exitWith {};
         private _fp = missionNamespace getVariable ["FADE_rangeFiringPosCount", 0];
         private _fc = missionNamespace getVariable ["FADE_rangeFriendlyVehPosCount", 0];
-        (_d displayCtrl 60948) ctrlSetStructuredText parseText (
+        private _tab = missionNamespace getVariable ["FAC_rangeGui_tab", "range"];
+        private _body = if (_tab == "equipment") then {
             format [
-                "<t size='0.85' color='#c8d8e8'>Session pool: <t color='#ffffff'>%1</t> firingRangePos_* (pop-ups, OPFOR, session vehicles). Equipment pads: <t color='#ffffff'>%2</t> rangeFriendlyVehPos_* (all equipment including AT classes from the list). " +
+                "<t size='0.85' color='#c8d8e8'>Equipment pads: <t color='#ffffff'>%1</t> friendly equipment positions — spawn/despawn stays available during an active range session. Range session settings are on the Range tab (locked while active).</t>",
+                _fc
+            ]
+        } else {
+            format [
+                "<t size='0.85' color='#c8d8e8'>Session pool: <t color='#ffffff'>%1</t> firing range positions (pop-ups, OPFOR, session vehicles). Equipment pads: <t color='#ffffff'>%2</t> friendly equipment positions (Equipment tab; usable while session active). " +
+                "Projectile trace and impact markers: visible to all players; trace and new impact spheres auto-off &gt;100 m from terminal. " +
                 "Targets face <t color='#ffffff'>terminalRange</t>. Max range 100–300 m (session + equipment).</t>",
                 _fp, _fc
             ]
-        );
+        };
+        (_d displayCtrl 60948) ctrlSetStructuredText parseText _body;
     };
 
     if (_action == "open") exitWith {

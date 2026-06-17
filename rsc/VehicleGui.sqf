@@ -324,6 +324,9 @@ FAC_vehicleGui_fnc = {
 
     switch _action do {
         case "open": {
+            if !(["FAC_playerCanUseVehicleGui"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Vehicle GUI access denied by lobby settings.";
+            };
             private _hasAircraft = !(isNil "FADE_heliClasses") && { count FADE_heliClasses > 0 };
             private _hasLand = !(isNil "FADE_landVehicleClasses") && { count FADE_landVehicleClasses > 0 };
             if (!_hasAircraft && !_hasLand) then {
@@ -922,6 +925,9 @@ FAC_vehicleGui_fnc = {
         };
 
         case "spawn": {
+            if !(["FAC_playerCanUseVehicleGui"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Vehicle GUI access denied by lobby settings.";
+            };
             private _display = findDisplay FAC_vehicleGui_IDD;
             if (isNull _display) exitWith {};
             private _cat = missionNamespace getVariable ["FAC_vehicleGui_spawnCategory", "aircraft"];

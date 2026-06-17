@@ -62,11 +62,35 @@ private _staggerDisembark = {
         params ["_uList", "_v", "_d"];
         {
             if (!isNull _x && { alive _x } && { vehicle _x == _v }) then {
+                unassignVehicle _x;
+                _x setUnitPos "AUTO";
                 _x moveOut _v;
+                if (vehicle _x == _v) then {
+                    private _exitPos = _v modelToWorld [2.5 + random 1.5, (random 4) - 2, 0];
+                    _x setPosATL _exitPos;
+                };
                 sleep _d;
             };
         } forEach _uList;
     };
+};
+
+// CASEVAC / CSAR: wounded or unconscious AI cannot reliably orderGetIn — force cargo placement.
+private _forceBoardUnit = {
+    params ["_unit", "_veh"];
+    if (isNull _unit || { !alive _unit } || { vehicle _unit == _veh }) exitWith {};
+    unassignVehicle _unit;
+    _unit setUnitPos "AUTO";
+    _unit disableAI "PATH";
+    _unit moveInCargo [_veh, -1];
+    _unit enableAI "PATH";
+};
+
+private _aliveInVehicle = {
+    params ["_group", "_veh"];
+    private _alive = (units _group) select { alive _x };
+    if (count _alive == 0) exitWith { true };
+    ({ vehicle _x == _veh } count _alive) == (count _alive)
 };
 
 // TroopInsert: fail if strictly >50% killed before LZ; no % casualty fail after insert. TroopExtract: >50% anytime en route.
@@ -87,6 +111,7 @@ private _dropRadius = if (_missionType == "TroopInsert") then { 500 } else { 50 
 private _timeout = 600;
 private _startTime = time;
 private _smokeSpawned = false;
+private _useForceBoard = _missionType in ["CASEVAC", "CSAR"];
 // Find player-occupied vehicles near the pickup, sorted nearest-first.
 // _requireGround true is used for boarding checks (landed/ground vehicle only).
 private _findPickupVehicles = {
@@ -141,7 +166,7 @@ private _phase4 = {};
 private _phase4b = {};
 
 _phase1 = {
-    params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", "_markerName", "_pickupRadius", "_dropRadius", "_timeout", "_cleanup", "_startTime", "_smokeSpawned", "_initialCount", "_enemyGroups", "_checkCasualties", "_setTaskFinalState", "_staggerDisembark", "_fnFindPickupVehicles", "_fnPhase1", "_fnPhase2", "_fnPhase3", "_fnPhase4", "_fnPhase4b"];
+    params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", "_markerName", "_pickupRadius", "_dropRadius", "_timeout", "_cleanup", "_startTime", "_smokeSpawned", "_initialCount", "_enemyGroups", "_checkCasualties", "_setTaskFinalState", "_staggerDisembark", "_fnFindPickupVehicles", "_fnPhase1", "_fnPhase2", "_fnPhase3", "_fnPhase4", "_fnPhase4b", "_useForceBoard", "_fnForceBoardUnit", "_fnAliveInVehicle"];
     private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
     sleep 1;
     if (isNull _player) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c } };
@@ -197,10 +222,18 @@ _phase1 = {
     } forEach _candidateVehs;
     if (!isNull _veh) then {
         private _cargoSeats = (_veh emptyPositions "cargo") max 0;
-        private _unitsToBoard = (units _group) select [0, _cargoSeats];
-        private _totalCount = count units _group;
-        { _x assignAsCargo _veh } forEach _unitsToBoard;
-        _unitsToBoard orderGetIn true;
+        private _aliveUnits = (units _group) select { alive _x };
+        private _unitsToBoard = _aliveUnits select [0, _cargoSeats min count _aliveUnits];
+        private _totalCount = count _aliveUnits;
+        if (_useForceBoard) then {
+            {
+                [_x, _veh] call _fnForceBoardUnit;
+                sleep 0.12;
+            } forEach _unitsToBoard;
+        } else {
+            { _x assignAsCargo _veh } forEach _unitsToBoard;
+            _unitsToBoard orderGetIn true;
+        };
         private _leader = leader _group;
         if (!isNull _leader && { alive _leader }) then {
             if (_cargoSeats == 0) then {
@@ -215,17 +248,17 @@ _phase1 = {
         };
         if (count _unitsToBoard > 0) then {
             if (isClass (missionConfigFile >> "CfgSounds" >> "FADE_embarkStart")) then { ["FADE_embarkStart"] remoteExec ["playSound", _player] };
-            [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _veh, _unitsToBoard, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase2;
+            [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _veh, _unitsToBoard, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b, _useForceBoard, _fnForceBoardUnit, _fnAliveInVehicle] spawn _fnPhase2;
         } else {
-            [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnFindPickupVehicles, _fnPhase1, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase1;
+            [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnFindPickupVehicles, _fnPhase1, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b, _useForceBoard, _fnForceBoardUnit, _fnAliveInVehicle] spawn _fnPhase1;
         };
     } else {
-        [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnFindPickupVehicles, _fnPhase1, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase1;
+        [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnFindPickupVehicles, _fnPhase1, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b, _useForceBoard, _fnForceBoardUnit, _fnAliveInVehicle] spawn _fnPhase1;
     };
 };
 
 _phase2 = {
-    params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", "_markerName", "_veh", "_unitsToBoard", "_dropRadius", "_timeout", "_cleanup", "_startTime", "_initialCount", "_enemyGroups", "_checkCasualties", "_setTaskFinalState", "_staggerDisembark", "_fnPhase2", "_fnPhase3", "_fnPhase4", "_fnPhase4b"];
+    params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", "_markerName", "_veh", "_unitsToBoard", "_dropRadius", "_timeout", "_cleanup", "_startTime", "_initialCount", "_enemyGroups", "_checkCasualties", "_setTaskFinalState", "_staggerDisembark", "_fnPhase2", "_fnPhase3", "_fnPhase4", "_fnPhase4b", "_useForceBoard", "_fnForceBoardUnit", "_fnAliveInVehicle"];
     private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
     sleep 0.5;
     if ((_taskId call BIS_fnc_taskState) in ["CANCELED","FAILED"]) exitWith { [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c } };
@@ -235,15 +268,31 @@ _phase2 = {
         [_taskId, "FAILED", _player, "MISSION FAILED. EXCESSIVE CASUALTIES."] call _setTaskFinalState;
         [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c };
     };
-    if (({ vehicle _x == _veh } count _unitsToBoard) == count _unitsToBoard) then {
+    if (_useForceBoard) then {
+        private _notIn = (units _group) select { alive _x && { vehicle _x != _veh } };
+        private _seats = (_veh emptyPositions "cargo") max 0;
+        if (_seats > 0 && { count _notIn > 0 }) then {
+            {
+                [_x, _veh] call _fnForceBoardUnit;
+                sleep 0.12;
+            } forEach (_notIn select [0, _seats min count _notIn]);
+        };
+    };
+    private _allAboard = if (_useForceBoard) then {
+        [_group, _veh] call _fnAliveInVehicle
+    } else {
+        ({ vehicle _x == _veh } count _unitsToBoard) == (count _unitsToBoard)
+    };
+    if (_allAboard) then {
         if (_missionType in ["TroopExtract", "CASEVAC", "CSAR"]) then {
             [_taskId, _dropPos] call BIS_fnc_taskSetDestination;
         };
         private _leader = leader _group;
-        private _totalSquad = count units _group;
+        private _totalSquad = { alive _x } count units _group;
         if (!isNull _leader && { alive _leader }) then {
-            if (count _unitsToBoard < _totalSquad) then {
-                [_leader, format ["This is %1. Only %2 aboard - not enough seats for everyone. Proceeding to LZ. Over.", _callsign, count _unitsToBoard]] call FADE_aiSideChat;
+            private _aboard = { vehicle _x == _veh } count (units _group);
+            if (_aboard < _totalSquad) then {
+                [_leader, format ["This is %1. Only %2 aboard - not enough seats for everyone. Proceeding to LZ. Over.", _callsign, _aboard]] call FADE_aiSideChat;
             } else {
                 [_leader, format ["This is %1. All aboard. Ready for liftoff. Over.", _callsign]] call FADE_aiSideChat;
             };
@@ -251,7 +300,7 @@ _phase2 = {
         if (isClass (missionConfigFile >> "CfgSounds" >> "FADE_embarkDone")) then { ["FADE_embarkDone"] remoteExec ["playSound", _player] };
         [_missionType, _group, _player, _dropPos, _taskId, _markerName, _veh, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _fnPhase3, _fnPhase4, _fnPhase4b, _staggerDisembark] spawn _fnPhase3;
     } else {
-        [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _veh, _unitsToBoard, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b] spawn _fnPhase2;
+        [_missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _veh, _unitsToBoard, _dropRadius, _timeout, _cleanup, _startTime, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark, _fnPhase2, _fnPhase3, _fnPhase4, _fnPhase4b, _useForceBoard, _fnForceBoardUnit, _fnAliveInVehicle] spawn _fnPhase2;
     };
 };
 
@@ -337,6 +386,19 @@ _phase4 = {
             [_group, _markerName, _player, _cleanup, _enemyGroups, _taskId] spawn { params ["_group", "_markerName", "_player", "_cleanup", "_enemyGroups", "_tid"]; sleep 60; [_group, _markerName, _player, _enemyGroups, _tid] call _cleanup };
         };
     } else {
+        if (time - _exitStart > 15) then {
+            {
+                if (!isNull _x && { alive _x } && { vehicle _x == _veh }) then {
+                    unassignVehicle _x;
+                    _x setUnitPos "AUTO";
+                    _x moveOut _veh;
+                    if (vehicle _x == _veh) then {
+                        private _exitPos = _veh modelToWorld [2.5 + random 1.5, (random 4) - 2, 0];
+                        _x setPosATL _exitPos;
+                    };
+                };
+            } forEach (units _group);
+        };
         if (time - _exitStart > 30) then {
             [_group, _markerName, _player, _enemyGroups, _cleanup, _taskId] spawn { params ["_g","_m","_p","_e","_c","_tid"]; sleep 0; [_g,_m,_p,_e,_tid] call _c };
         } else {
@@ -364,5 +426,5 @@ _phase4b = {
 // Start phase 1 (spawn = fresh scheduler entry, minimal stack)
 [
     _missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark,
-    _findPickupVehicles, _phase1, _phase2, _phase3, _phase4, _phase4b
+    _findPickupVehicles, _phase1, _phase2, _phase3, _phase4, _phase4b, _useForceBoard, _forceBoardUnit, _aliveInVehicle
 ] spawn _phase1;

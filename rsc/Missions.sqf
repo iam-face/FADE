@@ -18,7 +18,12 @@
 
 // Params from FADE_missionParams (set by FADE_startMission / FADE_startEscapeEvasion before compile)
 if (isNil "FADE_missionParams" || { count FADE_missionParams < 3 }) exitWith {};
-FADE_missionParams params ["_missionType", "_destPos", ["_player", objNull], ["_evadeePlayers", []]];
+FADE_missionParams params ["_missionType", "_destPos", ["_player", objNull], ["_evadeePlayers", []], ["_fromMapClick", false]];
+private _mapAnchor = missionNamespace getVariable ["FADE_missionMapAnchor", []];
+if (!([_mapAnchor] call FADE_fnc_isValidMapClickPos)) then {
+    _mapAnchor = if (_fromMapClick) then { +_destPos } else { [] };
+    _fromMapClick = [_mapAnchor] call FADE_fnc_isValidMapClickPos;
+};
 if (!isServer) exitWith {};
 
 // Validate mission type (Global + Single types)
@@ -174,68 +179,68 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
     ];
     private _topoBodyCol = if (_bodyColorHex isEqualTo "") then { "#B0B0B0" } else { _bodyColorHex };
     private _bodyCol = if (_bodyColorHex isEqualTo "") then { "#A0A0A0" } else { _bodyColorHex };
-    private _estQual = if (_opforCountFactor < 1) then { " (intel estimate leans minus)" } else { " (intel estimate leans plus)" };
+    private _estQual = if (_opforCountFactor < 1) then { " (estimate may be low)" } else { " (estimate may be high)" };
     private _n = _estimatedOpforCount max 0;
     private _echelon = switch (true) do {
-        case (_n <= 0): { "no confirmed dismounts pre-contact" };
-        case (_n <= 3): { "contact / fire team (minus)" };
-        case (_n <= 8): { "fire team to squad (minus)" };
-        case (_n <= 15): { "squad (minus) to squad" };
-        case (_n <= 28): { "squad to platoon (minus)" };
-        case (_n <= 50): { "platoon (minus) to platoon" };
-        case (_n <= 85): { "platoon to company (minus)" };
-        case (_n <= 140): { "company (minus) to company" };
-        default { "company (+) toward battalion-level footprint" };
+        case (_n <= 0): { "none confirmed" };
+        case (_n <= 3): { "fire team or less" };
+        case (_n <= 8): { "fire team to squad" };
+        case (_n <= 15): { "squad" };
+        case (_n <= 28): { "squad to platoon" };
+        case (_n <= 50): { "platoon" };
+        case (_n <= 85): { "platoon to company" };
+        case (_n <= 140): { "company" };
+        default { "company or larger" };
     };
     private _launcherSet = missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"];
     private _atLine = switch (_launcherSet) do {
-        case "None": { "Anti-armour: reporting suggests light handheld threat only; dedicated AT teams unlikely." };
-        case "Minimal": { "Anti-armour: limited; occasional RPG-class weapons possible among dismounts." };
-        case "Reduced": { "Anti-armour: present but assessed below full table of equipment." };
-        default { "Anti-armour: expect RPG / light AT teams in the infantry mix." };
+        case "None": { "Anti-armour threat is light; dedicated AT teams unlikely." };
+        case "Minimal": { "Limited anti-armour; occasional RPG-class weapons possible." };
+        case "Reduced": { "Anti-armour present but below full table of equipment." };
+        default { "Expect RPG / light AT teams in the infantry mix." };
     };
     private _airSet = missionNamespace getVariable ["FADE_opforAirSetting", "Off"];
     private _airLine = if (_airSet isEqualTo "Off") then {
-        "Hostile rotary-wing: low likelihood in current reporting; not a standing assumption for planning."
+        "Hostile air is unlikely."
     } else {
-        "Hostile rotary-wing: may be taskable against detected friendly activity — maintain awareness and stand-off where practical."
+        "Hostile rotary-wing may respond to detected friendly activity."
     };
     private _commsLine = if (_missionType in ["HVT", "Hostage", "ClearArea", "SearchDestroy", "CASEVAC", "CSAR", "Operation", "AreaOfOperations", "AssetRetrieval", "AssetRetrievalVeh", "InterceptConvoy", "EscapeEvasion"]) then {
-        "Comms / QRF: long-range nets assessed; reinforcement after sustained contact is plausible."
+        "Reinforcement (QRF) is possible after sustained contact."
     } else {
-        "Comms / QRF: assessed as local / tactical; large coordinated QRF less likely."
+        "Reinforcement is unlikely; expect local contacts only."
     };
     private _specBlock = [_atLine, _airLine, _commsLine] joinString "<br/>";
     private _mlcoa = switch (_missionType) do {
-        case "TroopInsert": { "MLCOA: local security reacts to noise; minor harassing fire possible en route to LZ." };
-        case "TroopExtract": { "MLCOA: pick-up zone may be probed; enemy tries to delay embarkation, not decisive engagement." };
-        case "CASEVAC": { "MLCOA: enemy in vicinity of the casualty site maintains pressure while you load." };
-        case "CSAR": { "MLCOA: search teams sweep toward the survivor; defend in place until extraction." };
-        case "Cargo": { "MLCOA: sporadic contacts on approach; garrison remains defensive around the drop site." };
-        case "CAS": { "MLCOA: enemy continues pressure on friendly positions; seeks cover when engaged from the air." };
-        case "HVT": { "MLCOA: guards fix and protect the HVT; outer patrols try to canalise you into kill zones." };
-        case "Hostage": { "MLCOA: captors barricade structures; attempt to shield hostages while returning fire." };
-        case "ClearArea": { "MLCOA: garrison fights for the town or camp; withdraws in fragments once cohesion breaks." };
-        case "SearchDestroy": { "MLCOA: objective and adjacent building garrisons stay internal; outer guards and patrols reinforce toward gunfire." };
-        case "InterceptConvoy": { "MLCOA: escorts suppress flanks and push through; vehicles button up and run the route." };
-        case "MineClearing": { "MLCOA: explosive hazard on routes — minimal manoeuvre; treat area as contaminated until cleared." };
-        case "AssetRetrieval": { "MLCOA: house team holds the objective; outer patrols counter-attack toward the building." };
-        case "AssetRetrievalVeh": { "MLCOA: dismounted security holds the road/vehicle site; patrols screen approaches; expect to suppress OPFOR before moving the recovery vehicle." };
-        case "AreaOfOperations": { "MLCOA: objective garrisons defend in place; patrols and QRF may shift between objectives." };
-        case "Operation": { "MLCOA: zone garrisons hold built-up areas; vehicles may move between zones; contested areas may draw reinforcement." };
-        case "EscapeEvasion": { "MLCOA: dismounted patrols sweep the built-up area at low tempo; road QRF vectors on confirmed contact." };
-        default { "MLCOA: on contact, enemy likely to defend key ground, adjust disposition on flanks, or break contact once cohesion is lost." };
+        case "TroopInsert": { "Likely action: local security reacts to noise; minor harassing fire possible en route to LZ." };
+        case "TroopExtract": { "Likely action: enemy may probe the pickup zone and try to delay embarkation." };
+        case "CASEVAC": { "Likely action: enemy near the casualty site maintains pressure while you load." };
+        case "CSAR": { "Likely action: search teams sweep toward the survivor; defend until extraction." };
+        case "Cargo": { "Likely action: sporadic contacts on approach; garrison stays defensive at the drop site." };
+        case "CAS": { "Likely action: enemy continues pressure on friendly positions and seeks cover when engaged from the air." };
+        case "HVT": { "Likely action: guards protect the HVT; outer patrols try to canalise you into kill zones." };
+        case "Hostage": { "Likely action: captors barricade structures and use hostages as cover while returning fire." };
+        case "ClearArea": { "Likely action: garrison fights for the town; withdraws in fragments once cohesion breaks." };
+        case "SearchDestroy": { "Likely action: garrisoned buildings hold ammo caches inside; outer guards and patrols reinforce toward gunfire." };
+        case "InterceptConvoy": { "Likely action: escorts suppress flanks and push through; vehicles button up and run the route." };
+        case "MineClearing": { "Likely action: minimal manoeuvre; treat the area as contaminated until cleared." };
+        case "AssetRetrieval": { "Likely action: house team holds the objective; outer patrols counter-attack toward the building." };
+        case "AssetRetrievalVeh": { "Likely action: dismounted security holds the road site; patrols screen approaches." };
+        case "AreaOfOperations": { "Likely action: objective garrisons defend in place; patrols and QRF may shift between objectives." };
+        case "Operation": { "Likely action: zone garrisons hold built-up areas; vehicles may move between zones." };
+        case "EscapeEvasion": { "Likely action: dismounted patrols sweep the area; road QRF vectors on confirmed contact." };
+        default { "Likely action: defend key ground on contact, adjust on flanks, or break contact once cohesion is lost." };
     };
-    private _mdcoa = "MDCOA: rapid multi-axis reinforcement (ground and air) if the enemy retains capacity — lower probability, but not discounted.";
+    private _mdcoa = "Possible reinforcement: multi-axis ground or air QRF if the enemy still has capacity.";
     private _civOn = missionNamespace getVariable ["FADE_civiliansEnabled", true];
     private _civLine = if (_civOn) then {
-        "Civilian: local population presence expected in the TAOR; unknown individuals may observe or report — exercise pattern awareness."
+        "Civilians may be present; unknown individuals may observe or report activity."
     } else {
-        "Civilian: local population presence not expected in the TAOR (sparse to absent per latest reporting)."
+        "Civilian presence is not expected in the area."
     };
     if (_missionType == "EscapeEvasion") exitWith {
         format [
-            "<t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='%11'>Faction: %1.</t><br/><t align='left' color='%11'>Strength: ~%2 personnel; echelon brackets %3%4.</t><br/><t align='left' color='%11'>Equipment &amp; nets: %5</t><br/><t align='left' color='%11'>%6</t><br/><t align='left' color='%11'>%7</t><br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/><t align='left' color='%11'>Faction: %8 | committed strength %9 players.</t><br/><br/><t align='left' color='#FFD166'>CIVILIAN</t><br/><t align='left' color='%11'>%10</t>",
+            "<t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='%11'>%1 — ~%2 troops (%3%4).</t><br/><t align='left' color='%11'>%5</t><br/><t align='left' color='%11'>%6</t><br/><t align='left' color='%11'>%7</t><br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/><t align='left' color='%11'>%8 — %9 players committed.</t><br/><br/><t align='left' color='#FFD166'>CIVILIAN</t><br/><t align='left' color='%11'>%10</t>",
             _enemyFactionDisplay,
             _n,
             _echelon,
@@ -250,7 +255,7 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
         ]
     };
     format [
-        "<t align='left' color='#FFD166'>TOPOGRAPHY</t><br/><t align='left' color='%13'>Grid %1 | Area %2</t><br/><br/><t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='%14'>Faction: %3.</t><br/><t align='left' color='%14'>Strength: ~%4 personnel; echelon brackets %5%6.</t><br/><t align='left' color='%14'>Equipment &amp; nets: %7</t><br/><t align='left' color='%14'>%8</t><br/><t align='left' color='%14'>%9</t><br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/><t align='left' color='%14'>Faction: %10 | committed strength %11 players.</t><br/><br/><t align='left' color='#FFD166'>CIVILIAN</t><br/><t align='left' color='%14'>%12</t>",
+        "<t align='left' color='#FFD166'>LOCATION</t><br/><t align='left' color='%13'>Grid %1 — %2</t><br/><br/><t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='%14'>%3 — ~%4 troops (%5%6).</t><br/><t align='left' color='%14'>%7</t><br/><t align='left' color='%14'>%8</t><br/><t align='left' color='%14'>%9</t><br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/><t align='left' color='%14'>%10 — %11 players committed.</t><br/><br/><t align='left' color='#FFD166'>CIVILIAN</t><br/><t align='left' color='%14'>%12</t>",
         _topographyGrid,
         _topographyArea,
         _enemyFactionDisplay,
@@ -344,13 +349,13 @@ private _defaultSituationHintHtml = if (_intelFormatter isEqualTo {}) then {
         "#FFFFFF"
     ] call _intelFormatter
 };
-private _defaultExecutionHtml = "<t align='left' color='#C0C0C0'>Method: follow task markers, clear objective sequence, and report phase transitions over net.</t>";
-private _defaultAdminHtml = format ["<t align='left' color='#FFFFFF'>Zero Alpha (%1)</t>", _zeroAlphaDisplayName];
-private _defaultCommandHtml = format ["<t align='left' color='#FFFFFF'>Command &amp; Signal: %1</t>", _acreChannelSummary];
+private _defaultExecutionHtml = "<t align='left' color='#C0C0C0'>Follow map markers and task updates. Report phase changes on radio.</t>";
+private _defaultAdminHtml = format ["<t align='left' color='#FFFFFF'>Mission lead: Zero Alpha (%1)</t>", _zeroAlphaDisplayName];
+private _defaultCommandHtml = format ["<t align='left' color='#FFFFFF'>Radio: %1</t>", _acreChannelSummary];
 private _defaultSituationTaskText = _defaultSituationHtml;
-private _defaultExecutionTaskText = "Execute task marker sequence and report objective status through each mission phase.";
-private _defaultAdminTaskText = format ["Zero Alpha (%1).", _zeroAlphaDisplayName];
-private _defaultCommandTaskText = format ["ACRE channels: %1", _acreChannelSummary];
+private _defaultExecutionTaskText = "<t align='left' color='#C0C0C0'>Follow map markers and task updates. Report phase changes on radio.</t>";
+private _defaultAdminTaskText = format ["<t align='left' color='#FFFFFF'>Mission lead: Zero Alpha (%1).</t>", _zeroAlphaDisplayName];
+private _defaultCommandTaskText = format ["<t align='left' color='#FFFFFF'>Radio: %1.</t>", _acreChannelSummary];
 // Full SMEAC text for BI Task only (FADE_buildMissionTaskSmeacText). Assigned intro: FADE_showMissionAssignedIntro (typeText + Task hint).
 missionNamespace setVariable ["FADE_buildMissionTaskSmeacText", {
     params [
@@ -363,17 +368,17 @@ missionNamespace setVariable ["FADE_buildMissionTaskSmeacText", {
         ["_omitAppendedTopography", false]
     ];
     private _br = "<br/>";
-    if (_situationText isEqualTo "") then { _situationText = "Situation pending." };
-    if (_executionText isEqualTo "") then { _executionText = "Execution details pending." };
-    if (_adminText isEqualTo "") then { _adminText = "Admin / logistics details pending." };
-    if (_commandText isEqualTo "") then { _commandText = "Command / signal details pending." };
+    if (_situationText isEqualTo "") then { _situationText = "No intel available." };
+    if (_executionText isEqualTo "") then { _executionText = "Follow map markers and task updates." };
+    if (_adminText isEqualTo "") then { _adminText = "Mission lead: Zero Alpha." };
+    if (_commandText isEqualTo "") then { _commandText = "Use assigned radio channels." };
     private _topoData = [_pos] call (missionNamespace getVariable ["FADE_getTopographySummary", { ["UNKNOWN", "Unknown area"] }]);
     private _grid = _topoData param [0, "UNKNOWN"];
     private _areaName = _topoData param [1, "Unknown area"];
-    private _sitHasTopo = (_situationText find "TOPOGRAPHY") >= 0;
-    if (_sitHasTopo) exitWith {
+    private _sitHasLocation = ((_situationText find "LOCATION") >= 0) || { (_situationText find "TOPOGRAPHY") >= 0 };
+    if (_sitHasLocation) exitWith {
         format [
-            "<t align='left' color='#FFD166'>SITUATION</t>%1%2%1%1<t align='left' color='#FFD166'>MISSION</t>%1<t align='left'>%3</t>%1%1<t align='left' color='#FFD166'>EXECUTION</t>%1<t align='left'>%4</t>%1%1<t align='left' color='#FFD166'>ADMIN / LOGISTICS</t>%1<t align='left'>%5</t>%1%1<t align='left' color='#FFD166'>COMMAND / SIGNAL</t>%1<t align='left'>%6</t>",
+            "<t align='left' color='#FFD166'>SITUATION</t>%1%2%1%1<t align='left' color='#FFD166'>MISSION</t>%1%3%1%1<t align='left' color='#FFD166'>EXECUTION</t>%1%4%1%1<t align='left' color='#FFD166'>ADMIN</t>%1%5%1%1<t align='left' color='#FFD166'>COMMAND</t>%1%6",
             _br,
             _situationText,
             _missionText,
@@ -384,7 +389,7 @@ missionNamespace setVariable ["FADE_buildMissionTaskSmeacText", {
     };
     if (_omitAppendedTopography) exitWith {
         format [
-            "<t align='left' color='#FFD166'>SITUATION</t>%1<t align='left'>%2</t>%1%1<t align='left' color='#FFD166'>MISSION</t>%1<t align='left'>%3</t>%1%1<t align='left' color='#FFD166'>EXECUTION</t>%1<t align='left'>%4</t>%1%1<t align='left' color='#FFD166'>ADMIN / LOGISTICS</t>%1<t align='left'>%5</t>%1%1<t align='left' color='#FFD166'>COMMAND / SIGNAL</t>%1<t align='left'>%6</t>",
+            "<t align='left' color='#FFD166'>SITUATION</t>%1%2%1%1<t align='left' color='#FFD166'>MISSION</t>%1%3%1%1<t align='left' color='#FFD166'>EXECUTION</t>%1%4%1%1<t align='left' color='#FFD166'>ADMIN</t>%1%5%1%1<t align='left' color='#FFD166'>COMMAND</t>%1%6",
             _br,
             _situationText,
             _missionText,
@@ -394,7 +399,7 @@ missionNamespace setVariable ["FADE_buildMissionTaskSmeacText", {
         ]
     };
     format [
-        "<t align='left' color='#FFD166'>SITUATION</t>%1<t align='left'>%2</t>%1<t align='left'>Topography: Grid %3 | Area: %8</t>%1%1<t align='left' color='#FFD166'>MISSION</t>%1<t align='left'>%4</t>%1%1<t align='left' color='#FFD166'>EXECUTION</t>%1<t align='left'>%5</t>%1%1<t align='left' color='#FFD166'>ADMIN / LOGISTICS</t>%1<t align='left'>%6</t>%1%1<t align='left' color='#FFD166'>COMMAND / SIGNAL</t>%1<t align='left'>%7</t>",
+        "<t align='left' color='#FFD166'>SITUATION</t>%1%2%1<t align='left' color='#B0B0B0'>Grid %3 — %8</t>%1%1<t align='left' color='#FFD166'>MISSION</t>%1%4%1%1<t align='left' color='#FFD166'>EXECUTION</t>%1%5%1%1<t align='left' color='#FFD166'>ADMIN</t>%1%6%1%1<t align='left' color='#FFD166'>COMMAND</t>%1%7",
         _br,
         _situationText,
         _grid,
@@ -524,56 +529,23 @@ if (_missionType == "AreaOfOperations") exitWith {
 // Inline call compile shared scope with Missions.sqf and broke _allGroups / retreat registration (RPT: foreach Bool).
 // -----------------------------------------------------------------------------
 if (_missionType == "Operation") exitWith {
-    [_player, _taskId, _basePos, _enemyUnits, _operationNameUpper, _operationName] spawn {
-        params ["_player", "_taskId", "_basePos", "_enemyUnits", "_operationNameUpper", "_operationName"];
-        FADE_operationParams = [_player, _taskId, _basePos, _enemyUnits, _operationNameUpper, _operationName];
+    [_player, _mapAnchor, _taskId, _basePos, _enemyUnits, _operationNameUpper, _operationName, _fromMapClick] spawn {
+        params ["_player", "_mapAnchor", "_taskId", "_basePos", "_enemyUnits", "_operationNameUpper", "_operationName", "_fromMapClick"];
+        if (!_fromMapClick) then { _mapAnchor = [] };
+        FADE_operationParams = [_player, _mapAnchor, _taskId, _basePos, _enemyUnits, _operationNameUpper, _operationName];
         call compile preprocessFileLineNumbers "rsc\OperationMission.sqf";
     };
 };
 
 // -----------------------------------------------------------------------------
-// 1. TROOP INSERT -- Spawn friendly AI at B_SP_*, create task to insert at M_LOC_*
+// 1. TROOP INSERT — multi-participant (TroopInsertPickGui + FADE_startTroopInsert)
 // -----------------------------------------------------------------------------
 if (_missionType == "TroopInsert") exitWith {
-    if (count FADE_bSpPoints == 0) exitWith {
+    if (isNil "FADE_troopInsertParams") exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No spawn points. Configure B_SP_1/2/3 in Eden.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        ["<t size='1.2' color='#FFAA00'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Use START to open the participant list (include yourself).</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
-    private _spawnTrigger = selectRandom FADE_bSpPoints;
-    if (isNull _spawnTrigger) exitWith {
-        [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No spawn points. Configure B_SP_1/2/3 in Eden.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
-    private _spawnPos = position _spawnTrigger;
-
-    private _group = [_spawnPos, _sideFriendly, _unitClasses] call BIS_fnc_spawnGroup;
-    [_group] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
-    [_group] call FADE_attachNightStrobes;
-    _group setBehaviour "SAFE";
-    _group setCombatMode "GREEN";
-
-    [_player, _taskId, "Insert the squad at the marked LZ.", "Troop Insert", _destPos, "move"] call _fnc_createMissionTask;
-
-    // Create marker for players
-    private _markerName = "FADE_insert_" + _taskId;
-    _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    private _marker = createMarker [_markerName, [_destPos, 100] call _mkrJitter];
-    [_taskId, _markerName] call FADE_missionEnt_registerMarker;
-    _marker setMarkerType "mil_pickup";
-    _marker setMarkerColor _markerFriendly;
-    _marker setMarkerText _operationName;
-
-    private _grid = mapGridPosition _destPos;
-    private _brief = format ["TROOP INSERT%1%1LZ (approx.): Grid %2%1%1Insert the friendly squad at the marked LZ. Land, dismount, and secure the immediate area. See your Tasks panel for objectives and extraction details.", toString [10], _grid] + _briefGuiTail;
-    _player setVariable ["FADE_myMissionBrief", _brief, true];
-    [format ["<t color='#FFFFFF'>LZ Grid: %1</t><br/><br/><t color='#FFFFFF'>RTB. Pick up squad at base. Proceed to LZ. Land to disembark.</t>", _grid]] call _showAssignedHint;
-    [_player, "Troop Insert"] call FADE_notifyOthersMissionStarted;
-
-    [_missionType, _group, _player, _spawnPos, _destPos, _taskId, _markerName] spawn {
-        params ["_missionType", "_group", "_player", "_spawnPos", "_destPos", "_taskId", "_markerName"];
-        FADE_transportParams = [_missionType, _group, _player, _spawnPos, _destPos, _taskId, _markerName];
-        call compile preprocessFileLineNumbers "rsc\TroopTransport.sqf";
-    };
+    call compile preprocessFileLineNumbers "rsc\TroopInsertMission.sqf";
 };
 
 // -----------------------------------------------------------------------------
@@ -581,6 +553,10 @@ if (_missionType == "TroopInsert") exitWith {
 // 50% chance: 1-5 enemy groups 500-2000m from pickup, moving to engage; else quiet pickup (SAFE)
 // -----------------------------------------------------------------------------
 if (_missionType == "TroopExtract") exitWith {
+    if (_fromMapClick && { [_mapAnchor] call FADE_fnc_isValidMapClickPos }) then {
+        _destPos = +_mapAnchor;
+        if (count _destPos < 3) then { _destPos set [2, 0] };
+    };
     // Pickup group: 2-10 units regardless of player's vehicle
     private _pickupCount = 2 + floor random 9;
     private _pickupClasses = (_friendlyUnits select [0, _pickupCount min count _friendlyUnits]);
@@ -667,7 +643,8 @@ if (_missionType == "TroopExtract") exitWith {
 // 2b. CASEVAC -- Troop extract; squad has KIA and ACE injuries before pickup
 // -----------------------------------------------------------------------------
 if (_missionType == "CASEVAC") exitWith {
-    private _pickupCount = 2 + floor random 9;
+    private _maxPax = _unitCount max 2;
+    private _pickupCount = ((2 + floor random 9) min _maxPax) max 2;
     private _pickupClasses = (_friendlyUnits select [0, _pickupCount min count _friendlyUnits]);
     for "_i" from (count _pickupClasses) to (_pickupCount - 1) do { _pickupClasses pushBack (_friendlyUnits select 0) };
 
@@ -740,7 +717,9 @@ if (_missionType == "CASEVAC") exitWith {
         _group setFormation "STAG COLUMN";
     };
 
-    [_player, _taskId, "CASEVAC: extract casualties and return to base.", "CASEVAC", _destPos, "move"] call _fnc_createMissionTask;
+    [_player, _taskId, "CASEVAC: extract casualties and return to base.", "CASEVAC", _destPos, "move", "", format [
+        "<t align='left' color='#C0C0C0'>1. Fly to the pickup marker and land.<br/>2. Load all wounded — they may need to be carried or assisted aboard.<br/>3. RTB and land at base to complete the mission.</t>"
+    ]] call _fnc_createMissionTask;
 
     private _markerName = "FADE_casevac_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
@@ -798,8 +777,10 @@ if (_missionType == "CSAR") exitWith {
     if (count _csarWreckOk == 0) then { _csarWreckOk = ["Land_Wreck_Heli_Attack_01_F"] };
     private _wreck = objNull;
     private _usedFactionHeli = false;
+    private _csarAircraftClass = "";
     if (count _factionHelis > 0) then {
         private _heliClass = selectRandom _factionHelis;
+        _csarAircraftClass = _heliClass;
         _wreck = createVehicle [_heliClass, _wpPos, [], 0, "NONE"];
         _wreck setPosATL _wpPos;
         _wreck setDir (random 360);
@@ -810,6 +791,7 @@ if (_missionType == "CSAR") exitWith {
         _usedFactionHeli = true;
     } else {
         private _wreckClass = selectRandom _csarWreckOk;
+        _csarAircraftClass = _wreckClass;
         _wreck = createVehicle [_wreckClass, _wpPos, [], 0, "NONE"];
         _wreck setPosATL _wpPos;
         _wreck setDir (random 360);
@@ -1000,9 +982,17 @@ if (_missionType == "CSAR") exitWith {
     _marker setMarkerText _operationName;
 
     private _grid = mapGridPosition _destPos;
-    private _brief = format ["CSAR%1%1Crash / survivor area (approx.): Grid %2%1%1Search for and recover isolated personnel at the crash site. Extract survivors as directed; follow Tasks for approach and RTB procedures.", toString [10], _grid] + _briefGuiTail;
+    private _aircraftCfg = configFile >> "CfgVehicles" >> _csarAircraftClass;
+    private _aircraftName = if (isClass _aircraftCfg) then { getText (_aircraftCfg >> "displayName") } else { _csarAircraftClass };
+    if (_aircraftName == "") then { _aircraftName = _csarAircraftClass };
+    private _brief = format [
+        "CSAR%1%1Aircraft: %2%1Crash / survivor area (approx.): Grid %3%1%1Search for and recover isolated personnel from the crash site. Survivors may have fled toward nearby towns seeking assistance — widen your search beyond the wreck. When you are close, survivors may mark their position with smoke.%1%1Extract survivors as directed; follow Tasks for approach and RTB procedures.",
+        toString [10],
+        _aircraftName,
+        _grid
+    ] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
-    [format ["<t color='#FFFFFF'>CSAR Grid: %1</t><br/><br/><t color='#FFFFFF'>Survivor at crash site.</t>", _grid]] call _showAssignedHint;
+    [format ["<t color='#FFFFFF'>CSAR Grid: %1</t><br/><br/><t color='#FFFFFF'>Aircraft: %2</t><br/><t color='#FFFFFF'>Survivor may not be at the wreck — search nearby towns.</t>", _grid, _aircraftName]] call _showAssignedHint;
     [_player, "CSAR"] call FADE_notifyOthersMissionStarted;
 
     [_taskId, _enemyGroups] call FADE_missionEnt_bindGroups;
@@ -1111,7 +1101,26 @@ if (_missionType == "AssetRetrieval") exitWith {
 
     // Branch 2 (33%): recover enemy vehicle and return it near base.
     if (_assetBranch == 2) exitWith {
-        private _vehicleClass = "RHS_UAZ_MSV_01";
+        // Prefer RHS UAZ (themed recovery target) but degrade gracefully so the branch
+        // doesn't dead-end when only vanilla content is loaded. Pick the first class that
+        // actually exists in CfgVehicles, falling back through CSAT/AAF/NATO unarmed offroads.
+        private _assetCandidates = [
+            "RHS_UAZ_MSV_01",
+            "rhsgref_BRDM2_msv",
+            "O_LSV_02_unarmed_F",
+            "O_T_LSV_02_unarmed_black_F",
+            "I_C_Offroad_02_unarmed_F",
+            "C_Offroad_01_F",
+            "B_LSV_01_unarmed_F"
+        ];
+        private _vehicleClass = "";
+        {
+            if (isClass (configFile >> "CfgVehicles" >> _x)) exitWith { _vehicleClass = _x };
+        } forEach _assetCandidates;
+        if (_vehicleClass == "") exitWith {
+            [_player] call FADE_clearActiveMission;
+            ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No recovery vehicle class available for this scenario.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        };
         private _vehicleCfg = configFile >> "CfgVehicles" >> _vehicleClass;
         private _vehicleName = if (isClass _vehicleCfg) then { getText (_vehicleCfg >> "displayName") } else { _vehicleClass };
         if (_vehicleName == "") then { _vehicleName = _vehicleClass };
@@ -1170,26 +1179,29 @@ if (_missionType == "AssetRetrieval") exitWith {
         };
 
         private _zones = +(missionNamespace getVariable ["FADE_civTriggerNames", []]);
-        _zones = _zones call BIS_fnc_arrayShuffle;
-        private _zonesEligible = [];
-        {
-            private _trig = missionNamespace getVariable [_x, objNull];
-            if (!isNull _trig) then {
-                private _zc = getPosATL _trig;
-                if (count _zc >= 2 && { (_zc distance _basePos) >= 1500 }) then {
-                    _zonesEligible pushBack _x;
-                };
-            };
-        } forEach _zones;
-
+        private _zonesEligible = [_zones, _mapAnchor, 1500] call FADE_fnc_assetZonesNearMapClick;
         private _assetVehicle = objNull;
         private _center = +_destPos;
-        if (count _zonesEligible > 0) then {
+        if (_fromMapClick && { count _mapAnchor >= 2 }) then {
+            private _roadsNear = _mapAnchor nearRoads 500;
+            if (count _roadsNear > 0) then {
+                private _spawnRes = [_mapAnchor, _vehicleClass] call _spawnRoadVehicleInZone;
+                private _vehTry = _spawnRes param [0, objNull];
+                private _posTry = _spawnRes param [1, []];
+                if (!isNull _vehTry) then {
+                    _assetVehicle = _vehTry;
+                    [_taskId, _assetVehicle] call FADE_missionEnt_registerVehicle;
+                    _center = _posTry;
+                };
+            };
+        };
+
+        if (isNull _assetVehicle && { count _zonesEligible > 0 }) then {
             private _maxPasses = 10;
             private _pass = 0;
             while { isNull _assetVehicle && { _pass < _maxPasses } } do {
                 _pass = _pass + 1;
-                _zonesEligible = _zonesEligible call BIS_fnc_arrayShuffle;
+                if (!_fromMapClick) then { _zonesEligible = _zonesEligible call BIS_fnc_arrayShuffle };
                 {
                     if (!isNull _assetVehicle) exitWith {};
                     private _trig = missionNamespace getVariable [_x, objNull];
@@ -1385,24 +1397,32 @@ if (_missionType == "AssetRetrieval") exitWith {
     private _houseBps = [];
     private _center = +_destPos;
     private _zones = +(missionNamespace getVariable ["FADE_civTriggerNames", []]);
-    _zones = _zones call BIS_fnc_arrayShuffle;
-    private _zonesEligible = [];
-    {
-        private _trig = missionNamespace getVariable [_x, objNull];
-        if (!isNull _trig) then {
-            private _zc = getPosATL _trig;
-            if (count _zc >= 2 && { (_zc distance _basePos) >= 1500 }) then {
-                _zonesEligible pushBack _x;
-            };
-        };
-    } forEach _zones;
+    private _zonesEligible = [_zones, _mapAnchor, 1500] call FADE_fnc_assetZonesNearMapClick;
 
-    if (count _zonesEligible > 0) then {
+    if (_fromMapClick && { count _mapAnchor >= 2 }) then {
+        private _buildingsNear = nearestObjects [_mapAnchor, ["House", "Building"], 500];
+        private _suitableNear = [];
+        {
+            private _bps = _x buildingPos -1;
+            if (count _bps >= 6 && { [getPosATL _x] call _dryPos }) then {
+                _suitableNear pushBack [_x, _bps];
+            };
+        } forEach _buildingsNear;
+        if (count _suitableNear > 0) then {
+            _suitableNear = [_suitableNear, [], { (getPosATL (_x select 0)) distance2D _mapAnchor }, "ASCEND"] call BIS_fnc_sortBy;
+            private _pick = _suitableNear select 0;
+            _house = _pick param [0, objNull];
+            _houseBps = _pick param [1, []];
+            _center = getPosATL _house;
+        };
+    };
+
+    if (isNull _house && { count _zonesEligible > 0 }) then {
         private _maxPasses = 12;
         private _pass = 0;
         while { isNull _house && { _pass < _maxPasses } } do {
             _pass = _pass + 1;
-            _zonesEligible = _zonesEligible call BIS_fnc_arrayShuffle;
+            if (!_fromMapClick) then { _zonesEligible = _zonesEligible call BIS_fnc_arrayShuffle };
             {
                 if (!isNull _house) exitWith {};
                 private _trig = missionNamespace getVariable [_x, objNull];
@@ -1422,7 +1442,12 @@ if (_missionType == "AssetRetrieval") exitWith {
                 } forEach _buildings;
 
                 if (count _suitable > 0) exitWith {
-                    private _pick = selectRandom _suitable;
+                    private _pick = if (_fromMapClick) then {
+                        private _sorted = [_suitable, [], { (getPosATL (_x select 0)) distance2D _mapAnchor }, "ASCEND"] call BIS_fnc_sortBy;
+                        _sorted select 0
+                    } else {
+                        selectRandom _suitable
+                    };
                     _house = _pick param [0, objNull];
                     _houseBps = _pick param [1, []];
                     _center = getPosATL _house;
@@ -2221,20 +2246,29 @@ if (_missionType == "HVT") exitWith {
     private _minDistHVT = 1000;
 
     private _targetBuilding = objNull;
-    private _attempt = 0;
-    while { _attempt < 15 } do {
-        _attempt = _attempt + 1;
-        if (_attempt > 1) then {
-            _destPos = [_minDistHVT] call FADE_findMissionPosUrban;
-            if (count _destPos >= 2) then { _destPos = [(_destPos select 0), (_destPos select 1), (_destPos param [2, 0])] };
-        };
-        if (count _destPos < 2) exitWith {};
-        private _buildings = nearestObjects [_destPos, ["House", "Building"], _buildRadius];
+    private _hvtSearchCenter = if (_fromMapClick && { count _mapAnchor >= 2 }) then { +_mapAnchor } else { +_destPos };
+    if (_fromMapClick) then {
+        private _buildings = nearestObjects [_hvtSearchCenter, ["House", "Building"], _buildRadius];
         {
             private _bps = _x buildingPos -1;
             if (count _bps >= _hvtMinSlots) exitWith { _targetBuilding = _x };
         } forEach _buildings;
-        if (!isNull _targetBuilding) exitWith {};
+    } else {
+        private _attempt = 0;
+        while { _attempt < 15 } do {
+            _attempt = _attempt + 1;
+            if (_attempt > 1) then {
+                _destPos = [_minDistHVT] call FADE_findMissionPosUrban;
+                if (count _destPos >= 2) then { _destPos = [(_destPos select 0), (_destPos select 1), (_destPos param [2, 0])] };
+            };
+            if (count _destPos < 2) exitWith {};
+            private _buildings = nearestObjects [_destPos, ["House", "Building"], _buildRadius];
+            {
+                private _bps = _x buildingPos -1;
+                if (count _bps >= _hvtMinSlots) exitWith { _targetBuilding = _x };
+            } forEach _buildings;
+            if (!isNull _targetBuilding) exitWith {};
+        };
     };
 
     if (isNull _targetBuilding) exitWith {
@@ -2494,19 +2528,30 @@ if (_missionType == "Hostage") exitWith {
     private _maxAttempts = 50;
 
     private _suitableBuildings = [];
-    private _attempt = 0;
-    while { _attempt < _maxAttempts } do {
-        _attempt = _attempt + 1;
-        _destPos = [_minDistHostage] call FADE_findMissionPosUrbanNearCenter;
-        if (count _destPos >= 2) then {
-            private _buildings = nearestObjects [_destPos, ["House", "Building"], _buildRadius];
-            _suitableBuildings = _buildings select { count (_x buildingPos -1) >= _minSlotsPerBuilding };
-            if (count _suitableBuildings >= _minSuitableBuildings) exitWith {};
+    private _hostageSearchCenter = if (_fromMapClick && { count _mapAnchor >= 2 }) then { +_mapAnchor } else { +_destPos };
+    if (_fromMapClick) then {
+        private _buildings = nearestObjects [_hostageSearchCenter, ["House", "Building"], _buildRadius];
+        _suitableBuildings = _buildings select { count (_x buildingPos -1) >= _minSlotsPerBuilding };
+    } else {
+        private _attempt = 0;
+        while { _attempt < _maxAttempts && { count _suitableBuildings < _minSuitableBuildings } } do {
+            _attempt = _attempt + 1;
+            _destPos = [_minDistHostage] call FADE_findMissionPosUrbanNearCenter;
+            if (count _destPos >= 2) then {
+                private _buildings = nearestObjects [_destPos, ["House", "Building"], _buildRadius];
+                _suitableBuildings = _buildings select { count (_x buildingPos -1) >= _minSlotsPerBuilding };
+            };
         };
     };
     if (count _suitableBuildings < _minSuitableBuildings) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No urban area with at least 2 suitable buildings (5+ positions each) near a civ zone. Try again or use a denser map.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        private _mapSuffix = if (_fromMapClick) then {
+            " NO SUITABLE BUILDINGS NEAR YOUR MAP CLICK — TRY A BUILT-UP AREA OR USE RANDOM."
+        } else { "" };
+        [format [
+            "<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No urban area with at least 2 suitable buildings (5+ positions each) near a civ zone.%1</t>",
+            _mapSuffix
+        ]] remoteExec ["FADE_showMissionHint", _player];
     };
 
     private _hostageCount = 1 + floor random 3;
@@ -2754,17 +2799,22 @@ if (_missionType == "ClearArea") exitWith {
     };
     // Use only classnames from our list (no createUnit with side default that could spawn CSAT)
     private _baseClassCA = _enemyUnitsCA select 0;
-    private _useTown = random 1 > 0.5;
+    private _useTown = if (_fromMapClick) then { true } else { random 1 > 0.5 };
     private _center = _destPos;
     private _campObjects = [];
     // Must exist before camp branch: stationary spawns push into _allGroups (was after town/camp block - undefined variable)
     private _allGroups = [];
     if (_useTown) then {
-        private _civZones = missionNamespace getVariable ["FADE_civTriggerNames", []];
-        if (count _civZones > 0) then {
-            private _zoneName = selectRandom _civZones;
-            private _trig = missionNamespace getVariable [_zoneName, objNull];
-            if (!isNull _trig) then { _center = getPosATL _trig };
+        if ([_mapAnchor] call FADE_fnc_isValidMapClickPos) then {
+            _center = +_mapAnchor;
+            if (count _center < 3) then { _center set [2, 0] };
+        } else {
+            private _civZones = missionNamespace getVariable ["FADE_civTriggerNames", []];
+            if (count _civZones > 0) then {
+                private _zoneName = selectRandom _civZones;
+                private _trig = missionNamespace getVariable [_zoneName, objNull];
+                if (!isNull _trig) then { _center = getPosATL _trig };
+            };
         };
     } else {
         _center = [_destPos, 0, 400, 100, 1, 0.3, 0, [], _destPos] call BIS_fnc_findSafePos;
@@ -3078,19 +3128,29 @@ if (_missionType == "SearchDestroy") exitWith {
     };
     private _center = [];
     private _picked = [];
-    private _maxAttempts = 50;
-    private _attempt = 0;
-    while { _attempt < _maxAttempts } do {
-        _attempt = _attempt + 1;
-        private _tryPos = [_minDistUrban] call FADE_findMissionPosUrbanNearCenter;
-        private _res = [_tryPos, _areaRadius] call _trySdPickBuildings;
+    if (_fromMapClick) then {
+        private _sdSearchCenter = if (count _mapAnchor >= 2) then { +_mapAnchor } else { +_destPos };
+        private _res = [_sdSearchCenter, _areaRadius] call _trySdPickBuildings;
         _res params ["_cPos", "_bList"];
-        if (count _bList >= 3) exitWith {
+        if (count _bList >= 3) then {
             _center = _cPos;
             _picked = _bList;
         };
+    } else {
+        private _maxAttempts = 50;
+        private _attempt = 0;
+        while { _attempt < _maxAttempts } do {
+            _attempt = _attempt + 1;
+            private _tryPos = [_minDistUrban] call FADE_findMissionPosUrbanNearCenter;
+            private _res = [_tryPos, _areaRadius] call _trySdPickBuildings;
+            _res params ["_cPos", "_bList"];
+            if (count _bList >= 3) exitWith {
+                _center = _cPos;
+                _picked = _bList;
+            };
+        };
     };
-    if (count _picked < 3) then {
+    if (count _picked < 3 && { !_fromMapClick }) then {
         private _zones = +(missionNamespace getVariable ["FADE_civTriggerNames", []]);
         _zones = _zones call BIS_fnc_arrayShuffle;
         {
@@ -3113,11 +3173,17 @@ if (_missionType == "SearchDestroy") exitWith {
 
     if (count _picked < 3) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No town with three enterable buildings near a civ zone. Try again or use a denser map.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        private _sdErr = if (_fromMapClick) then {
+            "No town with three enterable buildings near your map click (searched up to whole map). Try a built-up area or use Random."
+        } else {
+            "No town with three enterable buildings near a civ zone. Try again or use a denser map."
+        };
+        [format ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>%1</t>", _sdErr]] remoteExec ["FADE_showMissionHint", _player];
     };
 
     private _allGroups = [];
     private _garrisonCount = 0;
+    private _sdCacheBuildings = [];
     private _misOwnSd = format ["mis:%1", _taskId];
     private _vgSd = missionNamespace getVariable ["FADE_vg_register", {}];
     {
@@ -3136,12 +3202,15 @@ if (_missionType == "SearchDestroy") exitWith {
             };
         };
         if (count _slotATL > 0) then {
+            private _garrisonedForCache = false;
             if (!(_vgSd isEqualTo {})) then {
                 private _st = createHashMap;
                 _st set ["owner", _misOwnSd];
                 _st set ["groupsRef", _allGroups];
-                [_building, _slotATL, +_enemyUnitsSd, _st] call _vgSd;
+                private _vgId = [_building, _slotATL, +_enemyUnitsSd, _st] call _vgSd;
+                _garrisonedForCache = _vgId >= 0;
             } else {
+                private _spawnedUnits = 0;
                 {
                     private _pos = +_x;
                     private _cls = selectRandom _enemyUnitsSd;
@@ -3153,9 +3222,12 @@ if (_missionType == "SearchDestroy") exitWith {
                         _u setUnitPos "MIDDLE";
                         [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
                         _allGroups pushBack _grp;
+                        _spawnedUnits = _spawnedUnits + 1;
                     } else { deleteGroup _grp };
                 } forEach _slotATL;
+                _garrisonedForCache = _spawnedUnits > 0;
             };
+            if (_garrisonedForCache) then { _sdCacheBuildings pushBackUnique _building };
         };
     } forEach _picked;
 
@@ -3260,11 +3332,14 @@ if (_missionType == "SearchDestroy") exitWith {
         };
     };
 
-    // GM ammo pile props (one per garrisoned building, one building position each) — Global Mobilization CfgVehicles; skipped if not loaded
+    // GM ammo pile props: only buildings successfully registered/spawned as target garrisons can contain a cache.
     private _sdAmmoClasses = [
         "gm_ammobox_pile_small_03_empty",
         "gm_ammobox_pile_small_02_empty",
-        "gm_ammobox_pile_large_02_empty"
+        "gm_ammobox_pile_large_02_empty",
+        "Box_East_Ammo_F",
+        "Box_NATO_Ammo_F",
+        "Box_IND_Ammo_F"
     ];
     private _sdAmmoClassesOk = _sdAmmoClasses select { isClass (configFile >> "CfgVehicles" >> _x) };
     private _sdAmmoObjs = [];
@@ -3285,7 +3360,7 @@ if (_missionType == "SearchDestroy") exitWith {
                     };
                 };
             };
-        } forEach _picked;
+        } forEach _sdCacheBuildings;
     };
 
     private _sdCleanupObjs = _sdAmmoObjs + _sdBarrelObjs + _sdVgHintObjs;
@@ -3337,8 +3412,17 @@ if (_missionType == "SearchDestroy") exitWith {
     missionNamespace setVariable ["FADE_sdAborted_" + _taskId, false];
 
     private _markerName = "FADE_sd_" + _taskId;
+    private _zoneMarkerName = _markerName + "_zone";
     missionNamespace setVariable ["FADE_searchDestroyMarker_" + _taskId, _markerName];
+    missionNamespace setVariable ["FADE_searchDestroyZoneMarker_" + _taskId, _zoneMarkerName];
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
+    private _zoneMarker = createMarker [_zoneMarkerName, _center];
+    [_taskId, _zoneMarkerName] call FADE_missionEnt_registerMarker;
+    _zoneMarker setMarkerShape "ELLIPSE";
+    _zoneMarker setMarkerSize [_areaRadius, _areaRadius];
+    _zoneMarker setMarkerBrush "Border";
+    _zoneMarker setMarkerColor _markerEnemy;
+    _zoneMarker setMarkerAlpha 0.45;
     private _marker = createMarker [_markerName, [_center, 100] call _mkrJitter];
     [_taskId, _markerName] call FADE_missionEnt_registerMarker;
     _marker setMarkerType "mil_objective";
@@ -3346,10 +3430,68 @@ if (_missionType == "SearchDestroy") exitWith {
     _marker setMarkerText _operationName;
 
     private _grid = mapGridPosition _center;
-    [_player, _taskId, "Clear all marked objectives and hostile forces in the built-up area.", "Search & Destroy", _center, "attack"] call _fnc_createMissionTask;
-    private _brief = format ["SEARCH & DESTROY%1%1Town / objective area (approx.): Grid %2%1%1Locate and eliminate hardened enemy positions. Clear marked structures and surrounding hostiles according to task clearance criteria.", toString [10], _grid] + _briefGuiTail;
+    private _cacheCount = count _sdAmmoObjs;
+    private _destroyPct = (missionNamespace getVariable ["FADE_searchDestroyCacheDestroyPct", 100]) max 0 min 100;
+    private _requiredDestroy = if (_cacheCount > 0) then {
+        ceil (_cacheCount * (_destroyPct / 100)) max 1
+    } else {
+        0
+    };
+    private _cacheObjectiveLine = if (_cacheCount > 0) then {
+        format [
+            "Intel: %1 enemy ammo caches in the zone. Destroy at least %2 (%3%%) to complete.",
+            _cacheCount,
+            _requiredDestroy,
+            _destroyPct
+        ]
+    } else {
+        format ["Intel: %1 suspected cache sites in the zone. Clear all defenders to complete.", count _picked]
+    };
+    private _sdExec = if (_cacheCount > 0) then {
+        format [
+            "<t align='left' color='#C0C0C0'>1. Search the marked zone (%1 m radius).<br/>2. Burning barrels mark buildings with enemy ammo caches.<br/>3. Locate and destroy at least %2 of %3 caches (%4%% required).<br/>4. Eliminate all defenders in the zone.</t>",
+            _areaRadius,
+            _requiredDestroy,
+            _cacheCount,
+            _destroyPct
+        ]
+    } else {
+        format [
+            "<t align='left' color='#C0C0C0'>1. Search the marked zone (%1 m radius).<br/>2. Burning barrels mark suspected cache buildings.<br/>3. Clear all defenders in the zone.</t>",
+            _areaRadius
+        ]
+    };
+    private _missionDesc = if (_cacheCount > 0) then {
+        format [
+            "Search the marked zone (%1 m radius). Destroy at least %2 of %3 ammo caches (%4%%) and eliminate all defenders.",
+            _areaRadius,
+            _requiredDestroy,
+            _cacheCount,
+            _destroyPct
+        ]
+    } else {
+        format ["Search the marked zone (%1 m radius) and eliminate all defenders.", _areaRadius]
+    };
+    [_player, _taskId, _missionDesc, "Search & Destroy", _center, "attack", "", _sdExec] call _fnc_createMissionTask;
+    private _brief = format [
+        "SEARCH & DESTROY%1%1Search zone (approx.): Grid %2 — %3 m radius%1%1%4%1Burning barrels outside buildings mark cache sites.",
+        toString [10],
+        _grid,
+        _areaRadius,
+        _cacheObjectiveLine
+    ] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
-    [format ["<t color='#FFFFFF'>Grid: %1</t><br/><br/><t color='#FFFFFF'>Clear marked objectives and surrounding hostiles.</t>", _grid]] call _showAssignedHint;
+    private _hintCaches = if (_cacheCount > 0) then {
+        format ["<t color='#FFFFFF'>Ammo caches: %1 (destroy %2 — %3%%)</t><br/>", _cacheCount, _requiredDestroy, _destroyPct]
+    } else {
+        ""
+    };
+    private _hintObjective = if (_cacheCount > 0) then {
+        format ["<t color='#FFFFFF'>Destroy at least %1 of %2 caches, then clear all defenders.</t>", _requiredDestroy, _cacheCount]
+    } else {
+        "<t color='#FFFFFF'>Clear all defenders inside the marked zone.</t>"
+    };
+    [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFFFFF'>Search radius: %2 m</t><br/>%3%4", _grid, _areaRadius, _hintCaches, _hintObjective]] call _showAssignedHint;
     [_player, "Search & Destroy"] call FADE_notifyOthersMissionStarted;
 
     private _sdDetect = (_areaRadius + 120) max 280;
@@ -3357,10 +3499,14 @@ if (_missionType == "SearchDestroy") exitWith {
     [_taskId, _center, _basePos, _enemyUnitsSd, _allGroups, _sdDetect] call FADE_counterAttackStart;
 
     private _sdTimeout = 900;
-    [_taskId, _allGroups, _initialCount, _markerName, _player, _sdTimeout, _sdCleanupObjs, _misOwnSd] spawn {
-        params ["_taskId", "_allGroups", "_initialCount", "_markerName", "_player", "_timeout", "_sdCleanupObjs", "_misOwnSd"];
+    [_taskId, _allGroups, _initialCount, _markerName, _player, _sdTimeout, _sdCleanupObjs, _misOwnSd, _sdAmmoObjs, _requiredDestroy] spawn {
+        params ["_taskId", "_allGroups", "_initialCount", "_markerName", "_player", "_timeout", "_sdCleanupObjs", "_misOwnSd", "_sdAmmoObjs", "_requiredDestroy"];
         private _start = time;
         private _vgPendF = missionNamespace getVariable ["FADE_vg_pendingMenForOwner", {}];
+        private _fnc_cacheDestroyed = {
+            params ["_obj"];
+            isNull _obj || { !alive _obj } || { damage _obj >= 0.95 }
+        };
         waitUntil {
             sleep 0.5;
             if (missionNamespace getVariable ["FADE_sdAborted_" + _taskId, false]) exitWith { true };
@@ -3369,7 +3515,14 @@ if (_missionType == "SearchDestroy") exitWith {
             private _alive = 0;
             { _alive = _alive + ({ alive _x } count units _x) } forEach _allGroups;
             private _pend = if (!(_vgPendF isEqualTo {})) then { [_misOwnSd] call _vgPendF } else { 0 };
-            if (_alive == 0 && _pend == 0) exitWith {
+            private _enemiesCleared = (_alive == 0) && { _pend == 0 };
+            private _destroyed = { [_x] call _fnc_cacheDestroyed } count _sdAmmoObjs;
+            private _cachesCleared = if (count _sdAmmoObjs > 0) then {
+                _destroyed >= _requiredDestroy
+            } else {
+                true
+            };
+            if (_enemiesCleared && _cachesCleared) exitWith {
                 [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
                 true
             };
@@ -3423,14 +3576,12 @@ if (_missionType == "EscapeEvasion") exitWith {
         {
             if (_garCount >= _garCap) exitWith {};
             private _pos = _x;
-            if (count _pos < 2) then { };
-            if (count _pos >= 2) then {
-                if (count _pos < 3) then { _pos = [(_pos select 0), (_pos select 1), 0] };
-                if ([_pos] call _dryPos) then {
-                    _slotEe pushBack _pos;
-                    _garCount = _garCount + 1;
-                    _spawnedB = _spawnedB + 1;
-                };
+            if (!(_pos isEqualType []) || { count _pos < 2 }) then { continue };
+            if (count _pos < 3) then { _pos = [(_pos select 0), (_pos select 1), 0] };
+            if ([_pos] call _dryPos) then {
+                _slotEe pushBack _pos;
+                _garCount = _garCount + 1;
+                _spawnedB = _spawnedB + 1;
             };
         } forEach _bps;
         if (_spawnedB > 0) then {
@@ -4081,7 +4232,11 @@ if (_missionType == "InterceptConvoy") exitWith {
     if (isNil "FADE_interceptConvoyRoadRoute") then {
         FADE_interceptConvoyRoadRoute = compile preprocessFileLineNumbers "rsc\fn_FADE_interceptConvoyRoadRoute.sqf";
     };
-    private _route = [_basePos] call FADE_interceptConvoyRoadRoute;
+    private _route = if ([_mapAnchor] call FADE_fnc_isValidMapClickPos) then {
+        [_basePos, -1, _mapAnchor] call FADE_interceptConvoyRoadRoute
+    } else {
+        [_basePos] call FADE_interceptConvoyRoadRoute
+    };
     if (_route isEqualTo []) exitWith {
         private _minRm = round (missionNamespace getVariable ["FADE_convoyMinRouteM", 5000]);
         [_player] call FADE_clearActiveMission;
@@ -4355,7 +4510,7 @@ if (_missionType == "MineClearing") exitWith {
     private _useMines = random 1 < 0.5;
     private _need = if (_useMines) then { 2 + (floor random 4) } else { 1 + (floor random 3) };
     private _minSep = 20;
-    private _anchor = +_destPos;
+    private _anchor = if (_fromMapClick && { [_mapAnchor] call FADE_fnc_isValidMapClickPos }) then { +_mapAnchor } else { +_destPos };
     if (count _anchor < 3) then { _anchor set [2, 0] };
 
     private _sepOkFn = {
