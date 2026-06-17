@@ -4,13 +4,15 @@
 // =============================================================================
 
 // Vanilla ballistics / penetration trace — BIS_fnc_traceBullets (functions_f_mark / engine). Strength 0 = off.
+// [_enabled, _unit]: server broadcasts to all clients (0, _unit) so observers see the same shooter trace.
 FADE_sniperClient_setProjectileTrace = {
-    params [["_enabled", false]];
+    params [["_enabled", false], ["_unit", objNull]];
     if (!hasInterface) exitWith {};
     if (isNil "BIS_fnc_traceBullets") exitWith {
         if (_enabled) then { systemChat "Sniper range: BIS_fnc_traceBullets not loaded (vanilla Functions)."; };
     };
-    private _u = player;
+    private _u = _unit;
+    if (isNull _u) then { _u = player };
     private _col = [1, 0.4, 0.12, 0.85];
     if (_enabled) then {
         [_u, 1, _col] call BIS_fnc_traceBullets;
@@ -19,9 +21,47 @@ FADE_sniperClient_setProjectileTrace = {
     };
 };
 
+// Auto-disable trace + impact marker tracking when session starter moves >100 m from the range terminal.
+FADE_sniperClient_stopTraceProximityMonitor = {
+    if (!hasInterface) exitWith {};
+    missionNamespace setVariable ["FADE_sniperTraceProxActive", false];
+};
+
+FADE_sniperClient_startTraceProximityMonitor = {
+    params [["_termPos", []], ["_shooter", objNull]];
+    if (!hasInterface) exitWith {};
+    if (isNull _shooter || { _shooter != player }) exitWith {};
+    if (!(_termPos isEqualType []) || { count _termPos < 2 }) exitWith {};
+    missionNamespace setVariable ["FADE_sniperTraceProxActive", false];
+    [] call FADE_sniperClient_stopTraceProximityMonitor;
+    missionNamespace setVariable ["FADE_sniperTraceProxActive", true];
+    missionNamespace setVariable ["FADE_sniperTraceProxWarned", false];
+    [_termPos, _shooter] spawn {
+        params ["_termPos", "_shooter"];
+        private _term2d = [_termPos select 0, _termPos select 1];
+        while { missionNamespace getVariable ["FADE_sniperTraceProxActive", false] } do {
+            if (isNull _shooter || { !alive _shooter } || { _shooter != player }) exitWith {
+                missionNamespace setVariable ["FADE_sniperTraceProxActive", false];
+            };
+            if ((_shooter distance2D _term2d) > 100) then {
+                [false, _shooter] remoteExec ["FADE_sniperClient_setProjectileTrace", 0, _shooter];
+                [false] call FADE_sniperClient_setProjectileImpactMarkers;
+                missionNamespace setVariable ["FADE_sniperTraceProxActive", false];
+                if !(missionNamespace getVariable ["FADE_sniperTraceProxWarned", false]) then {
+                    missionNamespace setVariable ["FADE_sniperTraceProxWarned", true];
+                    systemChat "Range ballistics FX disabled (trace and impact markers) — you left the terminal area (>100 m).";
+                };
+            };
+            sleep 2;
+        };
+    };
+};
+
 FADE_sniperClient_clearRangeFx = {
-    [false] call FADE_sniperClient_setProjectileTrace;
+    params [["_unit", objNull]];
+    [false, _unit] call FADE_sniperClient_setProjectileTrace;
     [false] call FADE_sniperClient_setProjectileImpactMarkers;
+    [] call FADE_sniperClient_stopTraceProximityMonitor;
 };
 
 // Client-only finite ASL check (mirror server helper; SniperRangeServer is not compiled on clients)
@@ -50,12 +90,14 @@ FADE_sniperClient_trackProjectileImpact = {
     private _stillMine = (_snA && {_uid == missionNamespace getVariable ["FADE_sniperStarterUid", ""]}) ||
         {_rgA && {_uid == missionNamespace getVariable ["FADE_rangeStarterUid", ""]}};
     if (!_stillMine) exitWith {};
+    if !(missionNamespace getVariable ["FADE_sniperImpactMarkersClientEnabled", false]) exitWith {};
     if (getPlayerUID player != _uid) exitWith {};
     if !([_last] call FADE_sniperClient_aslIsFinite) exitWith {};
     [_last, _uid] remoteExecCall ["FADE_sniperServer_impactSphereFromClient", 2];
 };
 
 FADE_sniperClient_onFiredForImpact = {
+    if !(missionNamespace getVariable ["FADE_sniperImpactMarkersClientEnabled", false]) exitWith {};
     private _uid = getPlayerUID player;
     private _snA = missionNamespace getVariable ["FADE_sniperRangeActive", false];
     private _rgA = missionNamespace getVariable ["FADE_rangeSessionActive", false];
@@ -71,6 +113,7 @@ FADE_sniperClient_onFiredForImpact = {
 FADE_sniperClient_setProjectileImpactMarkers = {
     params [["_on", false]];
     if (!hasInterface) exitWith {};
+    missionNamespace setVariable ["FADE_sniperImpactMarkersClientEnabled", _on];
     private _u = player;
     private _eh = _u getVariable ["FADE_sniperFiredImpactEh", -1];
     if (_eh >= 0) then {
@@ -189,11 +232,11 @@ FAC_sniperGui_fnc = {
             "",
             "Time trial — uses target count + max range (near→far lanes). Each stage picks a lane with clear line of sight from the required sniperPos (terrain + objects); if none, falls back with a chat note. Shuffled sniperPos_1..7: within 2.5m you get 'At position N, engage target!' then damage is enabled.",
             "",
-            "Impact marker (~5 s, everyone sees): starter's machine tracks each projectile to its last ASL, then server spawns Config FADE_sniperImpactMarkerClass (hits, misses, terrain).",
+            "Impact marker (~5 s, everyone sees): while within 100 m of the terminal, starter's machine tracks each projectile to its last ASL, then server spawns Config FADE_sniperImpactMarkerClass (hits, misses, terrain).",
             "",
             "Hit feedback on: structured hint (same fields as end-of-trial summary line) for firing range and time trial. Uses Hit + HitPart (layouts differ by target type).",
             "",
-            "Projectile trace (shooter): vanilla BIS_fnc_traceBullets — ballistics / penetration path.",
+            "Projectile trace: BIS_fnc_traceBullets on all clients for the session shooter (all players should see the path). Trace and impact marker tracking auto-disable if you move >100 m from the terminal.",
             "",
             "Sniper range and firing/AT range can run at the same time (separate shooters and targets)."
         ];

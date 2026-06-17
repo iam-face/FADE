@@ -482,6 +482,15 @@ FADE_rangeGetSpawnableFriendlyLandClasses = {
     _classes
 };
 
+FADE_rangeFriendlySlotDisplay = {
+    params ["_slotName"];
+    private _names = missionNamespace getVariable ["FADE_rangeFriendlyVehPosNames", []];
+    private _disp = missionNamespace getVariable ["FADE_rangeFriendlyVehPosDisplayNames", []];
+    private _i = _names find _slotName;
+    if (_i >= 0 && { count _disp > _i }) exitWith { _disp select _i };
+    _slotName
+};
+
 FADE_rangeFriendlyVehSlotStatePayload = {
     private _out = [];
     {
@@ -547,7 +556,7 @@ FADE_rangeRequestAtWeaponState = {
     [_player] call FADE_rangePublishAtStateTo;
 };
 
-// Spawn friendly land vehicle at rangeFriendlyVehPos_* (same placement rules as FADE_spawnLandVehicle at VEH_*).
+// Spawn friendly land vehicle / equipment at rangeFriendlyVehPos_* (exact Eden logic position + heading).
 FADE_rangeSpawnFriendlyLandAtSlot = {
     params [["_slotName", ""], ["_vehicleClass", ""], ["_player", objNull], ["_maxRangeM", 200]];
     if (!isServer) exitWith {};
@@ -595,35 +604,8 @@ FADE_rangeSpawnFriendlyLandAtSlot = {
         { if (isPlayer _x) then { moveOut _x } else { _existing deleteVehicleCrew _x } } forEach _crew;
         deleteVehicle _existing;
     };
-    private _center = getPosATL _logicObj;
+    private _pos = getPosATL _logicObj;
     private _dir = getDir _logicObj;
-    // Match FADE_spawnLandVehicle (initServer): blacklist entries are [x, y, clearanceRadius], not raw [x,y].
-    private _minDist = 3;
-    private _maxDist = 20;
-    private _objClear = 3;
-    private _vehicleClear = 9;
-    private _pos = [];
-    private _try = 0;
-    while { _try < 6 && {_pos isEqualTo []} } do {
-        private _searchMax = _maxDist + (_try * 5);
-        private _nearVeh = nearestObjects [_center, ["LandVehicle", "Air"], _searchMax + _vehicleClear];
-        private _blacklist = [];
-        {
-            if (!isNull _x && { alive _x }) then {
-                private _p = getPosATL _x;
-                _blacklist pushBack [_p select 0, _p select 1, _vehicleClear];
-            };
-        } forEach _nearVeh;
-        private _probe = [[_center, _minDist, _searchMax, _objClear, 1, 0.5, 0, _blacklist, _center], _center] call FADE_findSafePosArray;
-        private _blocking = nearestObjects [_probe, ["LandVehicle", "Air"], _vehicleClear] select { alive _x };
-        if (count _blocking == 0) then {
-            _pos = _probe;
-        };
-        _try = _try + 1;
-    };
-    if (_pos isEqualTo []) exitWith {
-        ["No clear spot at this slot. Despawn nearby vehicles."] remoteExec ["systemChat", _player];
-    };
     private _veh = createVehicle [_vehicleClass, _pos, [], 0, "NONE"];
     if (isNull _veh) exitWith {
         [format ["Spawn failed: %1.", _vehicleClass]] remoteExec ["systemChat", _player];
@@ -636,7 +618,7 @@ FADE_rangeSpawnFriendlyLandAtSlot = {
     missionNamespace setVariable ["FADE_rangeFriendlyVehSlots", _slots];
     private _dn = getText (configFile >> "CfgVehicles" >> _vehicleClass >> "displayName");
     if (_dn == "") then { _dn = _vehicleClass };
-    [format ["%1 spawned at %2.", _dn, _slotName]] remoteExec ["systemChat", _player];
+    [format ["%1 spawned at %2.", _dn, [_slotName] call FADE_rangeFriendlySlotDisplay]] remoteExec ["systemChat", _player];
     [_player] call FADE_rangePublishAtStateTo;
 };
 

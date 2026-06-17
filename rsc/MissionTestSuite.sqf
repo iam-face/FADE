@@ -35,6 +35,24 @@ FAC_missionTestSuite_runServer = {
     _ok = !isNil "FADE_basePos" && { count FADE_basePos >= 2 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_basePos %1", FADE_basePos select [0, 2]]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_basePos"; };
 
+    private _baseNpcReplies = missionNamespace getVariable ["FADE_baseNpcTalkReplies", []];
+    _ok = _baseNpcReplies isEqualType [] && { count _baseNpcReplies >= 9 };
+    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_baseNpcTalkReplies (%1)", count _baseNpcReplies]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_baseNpcTalkReplies"; };
+    private _bnMarker = missionNamespace getVariable ["FADE_baseNpcPosMarkerName", "BaseNPCPos"];
+    private _bnPosObj = missionNamespace getVariable [_bnMarker, objNull];
+    _ok = !isNull _bnPosObj;
+    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): Eden %1 spawn marker", _bnMarker]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): Eden %1 missing (save mission.sqm)", _bnMarker]; };
+    private _baseNpcObj = missionNamespace getVariable ["FADE_baseNpc_unit", objNull];
+    if (!isNull _baseNpcObj) then {
+        _ok = _baseNpcObj getVariable ["FADE_baseNpcTalk", false];
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_baseNpc_unit FADE_baseNpcTalk"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_baseNpc_unit FADE_baseNpcTalk"; };
+        private _bnNet = missionNamespace getVariable ["FADE_baseNpcTalk_netId", ""];
+        _ok = _bnNet isEqualType "" && { _bnNet != "" };
+        if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_baseNpcTalk_netId %1", _bnNet]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_baseNpcTalk_netId"; };
+    } else {
+        diag_log "[FAC TestSuite] SKIP (server): FADE_baseNpc_unit not spawned yet";
+    };
+
     private _helis = missionNamespace getVariable ["FADE_heliClasses", []];
     _ok = _helis isEqualType [] && { count _helis > 0 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_heliClasses (%1)", count _helis]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_heliClasses"; };
@@ -76,6 +94,18 @@ FAC_missionTestSuite_runServer = {
     private _mpos = [] call FADE_findMissionPos;
     _ok = count _mpos >= 2 && { !(_mpos isEqualTo []) };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_findMissionPos %1", _mpos select [0, 2]]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_findMissionPos"; };
+
+    private _anchorTest = if (count _mpos >= 2) then { +_mpos } else { +FADE_basePos };
+    private _anchorPos = [_anchorTest, 700, 2500] call FADE_findMissionPosNearAnchor;
+    _ok = count _anchorPos >= 2 && { (_anchorPos distance2D _anchorTest) <= 2550 };
+    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_findMissionPosNearAnchor %1 (<= 2500m from anchor)", _anchorPos select [0, 2]]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_findMissionPosNearAnchor"; };
+
+    private _tiers = missionNamespace getVariable ["FADE_missionMapClickRadiusTiers", []];
+    _ok = count _tiers >= 6 && { (_tiers select 0) == 250 } && { (_tiers select 5) == -1 };
+    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_missionMapClickRadiusTiers %1", _tiers]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_missionMapClickRadiusTiers"; };
+
+    _ok = (missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 0]) == 20;
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_missionMapPickTimeoutSec"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_missionMapPickTimeoutSec"; };
 
     private _bp = missionNamespace getVariable ["FADE_basePos", [0, 0, 0]];
     private _lz = [_bp] call FADE_findSafeLZ;
@@ -298,6 +328,7 @@ FAC_missionTestSuite_runClient = {
 
     diag_log "[FAC TestSuite] ========== CLIENT SUITE START ==========";
     systemChat "[FAC TestSuite] Client: starting (functions + data)...";
+    if (!isNil "FAC_ensureMissionsGui") then { [] call FAC_ensureMissionsGui };
 
     private _fncNames = [
         "FADE_showMissionHint",
@@ -305,10 +336,19 @@ FAC_missionTestSuite_runClient = {
         "FADE_aiSideChat_exec",
         "FAC_playerCanUseMissionsGui",
         "FAC_playerCanUseScenarioGui",
+        "FAC_playerCanUseVehicleGui",
+        "FAC_playerCanUseLoadoutGui",
+        "FAC_playerCanUseScenarioAdmin",
+        "FAC_playerCanUseJukebox",
+        "FAC_playerCanUseDebugTools",
         "FAC_playerCanTeleportToPlayers",
+        "FAC_lobbyParams_callAccess",
+        "FAC_lobbyParams_serverDenyUnless",
+        "FAC_ensureLobbyParams",
         "FAC_guiScheduleHeaderRefresh",
         "FAC_vehicleGui_fnc",
         "FAC_missionsGui_fnc",
+        "FAC_missionLocationPickGui_fnc",
         "FAC_scenarioGui_fnc",
         "FAC_loadoutGui_fnc",
         "FAC_jukeboxGui_fnc",

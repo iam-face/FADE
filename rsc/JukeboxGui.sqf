@@ -151,6 +151,16 @@ FAC_jukebox_fnc_resolveEmitterClient = {
     objNull
 };
 
+FAC_jukebox_fnc_sourceHasLocalAudio = {
+    params ["_sourceKey"];
+    if (_sourceKey == "") exitWith { false };
+    private _list = missionNamespace getVariable ["FAC_jukebox_clientAudioList", []];
+    if (({ (_x select 0) == _sourceKey } count _list) > 0) exitWith { true };
+    private _em = [_sourceKey] call FAC_jukebox_fnc_resolveEmitterClient;
+    if (!isNull _em && { !isNull (_em getVariable ["FAC_jukeboxActiveSnd", objNull]) }) exitWith { true };
+    false
+};
+
 FAC_jukebox_fnc_getSongForSource = {
     params ["_key"];
     if (_key == "") exitWith {""};
@@ -224,6 +234,13 @@ FAC_jukebox_clientPlay_execOne = {
     [_sourceKey] call FAC_jukebox_fnc_clientClearSourceAudio;
 
     if (_song != "") then {
+        private _active = missionNamespace getVariable ["FAC_jukebox_activeSources", []];
+        private _match = _active select { (_x select 0) == _sourceKey && { (_x select 1) == _song } };
+        private _listNow = missionNamespace getVariable ["FAC_jukebox_clientAudioList", []];
+        private _already = _listNow select { (_x select 0) == _sourceKey };
+        if (count _match > 0 && { count _already > 0 }) exitWith {
+            [format ["SKIP client duplicate: %1 @ %2", _song, _sourceKey]] call FAC_jukebox_dbg;
+        };
         sleep 0.06;
         private _emitter = [_sourceKey] call FAC_jukebox_fnc_resolveEmitterClient;
         if (isNull _emitter) then {
@@ -355,6 +372,16 @@ FAC_jukebox_clientStopAll = {
         };
     } forEach allPlayers;
 
+    if (!isNil "FADE_roadVehicles") then {
+        {
+            if (!isNull _x) then {
+                private _key = _x getVariable ["FADE_civCarRadioSourceKey", ""];
+                if (_key != "") then { [_key] call FAC_jukebox_fnc_clientClearSourceAudio };
+                _x setVariable ["FAC_jukeboxActiveSnd", nil, false];
+            };
+        } forEach FADE_roadVehicles;
+    };
+
     if (!isNull (findDisplay 60400)) then {
         ["updateNowPlaying", []] call FAC_jukeboxGui_fnc;
         ["updateButtons", []] call FAC_jukeboxGui_fnc;
@@ -374,6 +401,9 @@ FAC_jukeboxGui_fnc = {
         case "open": {
             if ((missionNamespace getVariable ["FAC_jukebox_guiSource", ""]) == "") exitWith {
                 systemChat "Jukebox: open from a radio prop or Vehicle loudspeaker (in a vehicle).";
+            };
+            if !(["FAC_playerCanUseJukebox"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Jukebox access denied by lobby settings.";
             };
             if (!createDialog "RscDisplayJukebox") then {
                 ["RESOURCE NOT FOUND."] call FAC_jukebox_dbg;
@@ -472,6 +502,9 @@ FAC_jukeboxGui_fnc = {
         };
 
         case "play": {
+            if !(["FAC_playerCanUseJukebox"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Jukebox access denied by lobby settings.";
+            };
             private _disp = findDisplay 60400;
             if (isNull _disp) exitWith {};
             private _lb  = _disp displayCtrl 60402;
@@ -498,11 +531,13 @@ FAC_jukeboxGui_fnc = {
             private _key = missionNamespace getVariable ["FAC_jukebox_guiSource", ""];
             if (_key == "") exitWith { ["No source (re-open the jukebox)."] call FAC_jukebox_dbg };
             ["Stop → server"] call FAC_jukebox_dbg;
-            [_key] spawn {
-                params ["_k"];
-                [_k] call FAC_jukebox_fnc_clientClearSourceAudio;
-            };
             ["", _key, player] remoteExec ["FAC_jukebox_serverPlay", 2];
+            [_key] call FAC_jukebox_fnc_clientClearSourceAudio;
+            systemChat "Jukebox stopped at this source.";
+            if (!isNull (findDisplay 60400)) then {
+                ["updateNowPlaying", []] call FAC_jukeboxGui_fnc;
+                ["updateButtons", []] call FAC_jukeboxGui_fnc;
+            };
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
 
@@ -530,8 +565,9 @@ FAC_jukeboxGui_fnc = {
             private _lb = _disp displayCtrl 60402;
             private _src = missionNamespace getVariable ["FAC_jukebox_guiSource", ""];
             private _np = [_src] call FAC_jukebox_fnc_getSongForSource;
-            (_disp displayCtrl 60404) ctrlEnable ((lbCurSel _lb >= 0) && (_np == ""));
-            (_disp displayCtrl 60405) ctrlEnable (_np != "");
+            private _localAudio = [_src] call FAC_jukebox_fnc_sourceHasLocalAudio;
+            (_disp displayCtrl 60404) ctrlEnable ((lbCurSel _lb >= 0) && { _np == "" } && { !_localAudio });
+            (_disp displayCtrl 60405) ctrlEnable ((_np != "") || { _localAudio });
         };
 
     };
@@ -550,10 +586,13 @@ FAC_jukebox_fnc_addVehicleLoudspeakerAction = {
     _aid = _u addAction [
         "Vehicle loudspeaker...",
         {
+            if !(["FAC_playerCanUseJukebox"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Jukebox access denied by lobby settings.";
+            };
             private _veh = vehicle player;
             if (_veh isEqualTo player) exitWith {};
             missionNamespace setVariable ["FAC_jukebox_guiSource", format ["vehicle:%1", netId _veh]];
-            [] spawn { sleep 0.2; ["open", []] call FAC_jukeboxGui_fnc };
+            [] spawn { call FAC_ensureJukeboxGui; sleep 0.2; ["open", []] call FAC_jukeboxGui_fnc };
         },
         [],
         5,
@@ -571,10 +610,13 @@ FAC_jukebox_fnc_addVehicleLoudspeakerAction = {
             "Vehicle loudspeaker...",
             "",
             {
+                if !(["FAC_playerCanUseJukebox"] call FAC_lobbyParams_callAccess) exitWith {
+                    systemChat "Jukebox access denied by lobby settings.";
+                };
                 private _veh = vehicle player;
                 if (_veh isEqualTo player) exitWith {};
                 missionNamespace setVariable ["FAC_jukebox_guiSource", format ["vehicle:%1", netId _veh]];
-                [] spawn { sleep 0.2; ["open", []] call FAC_jukeboxGui_fnc };
+                [] spawn { call FAC_ensureJukeboxGui; sleep 0.2; ["open", []] call FAC_jukeboxGui_fnc };
             },
             { !((vehicle player) isEqualTo player) }
         ] call ace_interact_menu_fnc_createAction;

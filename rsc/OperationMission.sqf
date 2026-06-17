@@ -8,12 +8,15 @@
 // cargo run between enemy-held zones; periodic resupply vehicles per zone; QRF
 // from nearest enemy-held zone when zone is contested (BLUFOR + OPFOR present).
 // If no BLUFOR remain in that zone when the QRF spawns, vehicles hunt the friendly player centroid (waypoints every FADE_qrfHuntWaypointIntervalS).
-// Params: FADE_operationParams = [_player, _taskId, _basePos, _enemyUnits, _operationNameUpper, _operationName]
+// Params: FADE_operationParams = [_player, _mapAnchor, _taskId, _basePos, _enemyUnits, _operationNameUpper, _operationName]
 // =============================================================================
 if (!isServer) exitWith {};
-if (isNil "FADE_operationParams" || { count FADE_operationParams < 5 }) exitWith {};
+if (isNil "FADE_operationParams" || { count FADE_operationParams < 6 }) exitWith {};
 
-FADE_operationParams params ["_player", "_taskId", "_basePos", "_enemyUnits", ["_operationNameUpper", "OPERATION"], ["_operationName", "Operation"]];
+FADE_operationParams params ["_player", ["_mapAnchor", []], "_taskId", "_basePos", "_enemyUnits", ["_operationNameUpper", "OPERATION"], ["_operationName", "Operation"]];
+if (!([_mapAnchor] call FADE_fnc_isValidMapClickPos)) then {
+    _mapAnchor = missionNamespace getVariable ["FADE_missionMapAnchor", []];
+};
 private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", { params [["_p", [0, 0, 0]]]; [_p] call FADE_normPos3 }];
 
 _enemyUnits = [_enemyUnits] call FADE_resolveScenarioEnemyUnits;
@@ -63,10 +66,17 @@ if (count _zoneCandidates == 0) exitWith {
     ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No civ zones far enough from base.</t>"] remoteExec ["FADE_showMissionHint", _player];
 };
 
+private _useMapAnchor = [_mapAnchor] call FADE_fnc_isValidMapClickPos;
 private _wantN = missionNamespace getVariable ["FADE_operationZoneCount", 6];
 _wantN = (round _wantN) max 2 min 10;
+if (_useMapAnchor) then {
+    private _snapped = missionNamespace getVariable ["FADE_missionMapClickSnappedZoneCenter", []];
+    if (count _snapped >= 2) then { _mapAnchor = +_snapped };
+    _zoneCandidates = [_zoneCandidates, [], { ([_x] call FADE_normPos3) distance2D _mapAnchor }, "ASCEND"] call BIS_fnc_sortBy;
+} else {
+    _zoneCandidates = _zoneCandidates call BIS_fnc_arrayShuffle;
+};
 _wantN = _wantN min count _zoneCandidates;
-_zoneCandidates = _zoneCandidates call BIS_fnc_arrayShuffle;
 private _zones = _zoneCandidates select [0, _wantN];
 private _maxFleet = missionNamespace getVariable ["FADE_operationMaxFleetVehicles", 10];
 private _spawnMinDistPl = missionNamespace getVariable ["FADE_operationSpawnMinDistPlayers", 1000];
@@ -75,12 +85,16 @@ private _cleanupDist = missionNamespace getVariable ["FADE_operationCleanupDistP
 private _playersOpSort = [];
 { if (alive _x && { isPlayer _x }) then { _playersOpSort pushBack _x } } forEach allPlayers;
 if (count _playersOpSort == 0) then { _playersOpSort = [_player] };
-_zones = [_zones, [], {
-    private _c = [_x] call FADE_normPos3;
-    private _m = 1e15;
-    { _m = _m min (_c distance2D _x) } forEach _playersOpSort;
-    _m
-}, "ASCEND"] call BIS_fnc_sortBy;
+if (_useMapAnchor) then {
+    _zones = [_zones, [], { ([_x] call FADE_normPos3) distance2D _mapAnchor }, "ASCEND"] call BIS_fnc_sortBy;
+} else {
+    _zones = [_zones, [], {
+        private _c = [_x] call FADE_normPos3;
+        private _m = 1e15;
+        { _m = _m min (_c distance2D _x) } forEach _playersOpSort;
+        _m
+    }, "ASCEND"] call BIS_fnc_sortBy;
+};
 private _operationCenter = [0, 0, 0];
 if (count _zones > 0) then {
     private _sx = 0;
@@ -802,9 +816,43 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, 0];
     [_taskId, 60, _player] call FADE_missionEnt_scheduledCleanup;
 };
 
-[_player, _taskId, _zones, _zoneRadius, _enemyUnits, _facApply] spawn {
-    params ["_player", "_taskId", "_zones", "_zoneRadius", "_enemyUnits", "_facApply"];
+[_player, _taskId, _zones, _zoneRadius, _enemyUnits, _facApply, _spawnMinDistPl] spawn {
+    params ["_player", "_taskId", "_zones", "_zoneRadius", "_enemyUnits", "_facApply", "_spawnMinDistPl"];
     scriptName "FADE_op_qrf";
+    // QRF runs in a separate scheduled scope; redefine helpers here because
+    // _fnc_opFindSpawnPos / _spawnMinDistPl from the main script body are not visible inside this spawn.
+    private _fncPlayersQ = { private _pl = []; { if (alive _x && { isPlayer _x }) then { _pl pushBack _x } } forEach allPlayers; _pl };
+    private _fncFindSpawn = {
+        params ["_zoneCenter", "_zr", "_minD"];
+        private _players = [] call _fncPlayersQ;
+        if (count _players == 0) exitWith {
+            [[_zoneCenter, 0, _zr * 0.85, 10, 1, 0.4, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray
+        };
+        private _zc = [_zoneCenter] call FADE_normPos3;
+        private _try = 0;
+        private _r = [];
+        while { _try < 45 && count _r < 2 } do {
+            _try = _try + 1;
+            private _angle = random 360;
+            private _dist = random (_zr * 0.95);
+            private _sp = [(_zc select 0) + _dist * cos _angle, (_zc select 1) + _dist * sin _angle, 0];
+            _sp = [[_sp, 0, 25, 3, 1, 0.4, 0, [], _sp], _zc] call FADE_findSafePosArray;
+            if (count _sp < 2) then { _sp = _zc };
+            if (count _sp < 3) then { _sp = [(_sp select 0), (_sp select 1), 0] };
+            private _ok = true;
+            { if (_sp distance2D _x < _minD) then { _ok = false } } forEach _players;
+            if (_ok) then { _r = _sp };
+        };
+        if (count _r >= 2) exitWith { _r };
+        private _nearestP = _players select 0;
+        private _minPd = 1e15;
+        { if (_zc distance2D _x < _minPd) then { _minPd = _zc distance2D _x; _nearestP = _x } } forEach _players;
+        private _dirAway = _nearestP getDir _zc;
+        private _sp = _nearestP getPos [_minD + _zr + 50, _dirAway];
+        _sp = [[_sp, 0, 50, 5, 1, 0.4, 0, [], _sp], _zc] call FADE_findSafePosArray;
+        if (count _sp < 2) then { _sp = _zc };
+        _sp
+    };
     private _qrfCd = missionNamespace getVariable ["FADE_operationQrfCooldown", 180];
     while {
         !(missionNamespace getVariable ["FADE_operationAborted_" + _taskId, false])
@@ -838,9 +886,9 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, 0];
                     if (!(_flOp isEqualTo {})) then { [_zoneCenter, _zoneRadius] call _flOp };
                     private _from = _zones select _bestJ;
                     private _nVeh = 1 + floor random 3;
-                    [_from, _zoneCenter, _enemyUnits, _facApply, _taskId, _nVeh, _zoneRadius] call {
-                        params ["_fromCenter", "_toCenter", "_enemyUnits", "_facApply", "_taskId", "_nVehs", "_zoneRadius"];
-                        private _sp = [_fromCenter, _zoneRadius, _spawnMinDistPl] call _fnc_opFindSpawnPos;
+                    [_from, _zoneCenter, _enemyUnits, _facApply, _taskId, _nVeh, _zoneRadius, _spawnMinDistPl, _fncFindSpawn] call {
+                        params ["_fromCenter", "_toCenter", "_enemyUnits", "_facApply", "_taskId", "_nVehs", "_zoneRadius", "_spawnMinDistPl", "_fncFindSpawn"];
+                        private _sp = [_fromCenter, _zoneRadius, _spawnMinDistPl] call _fncFindSpawn;
                         private _to3 = [_toCenter] call {
                             params ["_p"];
                             if (count _p < 2) exitWith { [0, 0, 0] };

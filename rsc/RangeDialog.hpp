@@ -53,7 +53,7 @@ class RscDisplayRange: RscDisplayEmpty {
         class SessionBtn: RscButton { idc = 60938; text = "Start session"; x = 0.04; y = 0.836; w = 0.92; h = 0.040; sizeEx = 0.030; colorBackground[] = {0.22, 0.48, 0.78, 1}; colorBackgroundActive[] = {0.28, 0.55, 0.88, 1}; action = "['session', []] call (missionNamespace getVariable ['FAC_rangeGui_fnc', {}]);"; };
 
         // ----- Equipment tab: one class list + pads (rangeFriendlyVehPos_* only) -----
-        class FrFriendlyHdr: RscText { idc = 60993; text = "Range equipment (pads: rangeFriendlyVehPos_*)"; x = 0.04; y = 0.105; w = 0.92; h = 0.022; sizeEx = 0.024; colorText[] = {0.85, 0.9, 1, 1}; };
+        class FrFriendlyHdr: RscText { idc = 60993; text = "Range equipment pads"; x = 0.04; y = 0.105; w = 0.92; h = 0.022; sizeEx = 0.024; colorText[] = {0.85, 0.9, 1, 1}; };
         class FrSearchLabel: RscText { idc = 60982; text = "Search"; x = 0.04; y = 0.132; w = 0.10; h = 0.020; sizeEx = 0.022; colorText[] = {0.65, 0.68, 0.75, 1}; };
         class FrSearchEdit: RscEdit { idc = 60983; x = 0.14; y = 0.130; w = 0.82; h = 0.034; sizeEx = 0.026; colorBackground[] = {0.02, 0.03, 0.05, 0.95}; colorText[] = {0.95, 0.95, 0.95, 1}; onKeyUp = "['friendlySearchChanged', []] call (missionNamespace getVariable ['FAC_rangeGui_fnc', {}]);"; };
         class FrVehListLabel: RscText { idc = 60989; text = "Vehicle / equipment class"; x = 0.04; y = 0.172; w = 0.40; h = 0.020; sizeEx = 0.022; colorText[] = {0.65, 0.68, 0.75, 1}; };

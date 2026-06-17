@@ -431,7 +431,7 @@ FAC_teleportGui_fnc = {
             };
         };
         case "openPlayers": {
-            if (!(call FAC_playerCanTeleportToPlayers)) exitWith {
+            if (!(["FAC_playerCanTeleportToPlayers"] call FAC_lobbyParams_callAccess)) exitWith {
                 systemChat "Teleport to player is SL-only (admin/Zeus override).";
             };
             if (!isNull (findDisplay 60600)) then { closeDialog 0; };
@@ -476,7 +476,7 @@ FAC_teleportGui_fnc = {
             ["open", [FAC_teleportGui_destBaseKey]] call FAC_teleportGui_fnc;
         };
         case "teleportPlayer": {
-            if (!(call FAC_playerCanTeleportToPlayers)) exitWith {
+            if (!(["FAC_playerCanTeleportToPlayers"] call FAC_lobbyParams_callAccess)) exitWith {
                 systemChat "Teleport to player is SL-only (admin/Zeus override).";
             };
             private _display = findDisplay 60610;

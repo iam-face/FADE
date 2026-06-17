@@ -44,8 +44,9 @@ All AI and player radio traffic in FADE follows FAC RATEL. Use this format so co
 // -----------------------------------------------------------------------------
 _facNotes pushBack ["Area of Operations and Artillery", "
 <font color='#FFD700' size='14'>AO MISSION AND FIRES SUPPORT</font><br/><br/>
-The <font color='#90EE90'>Area of Operations</font> mission (Manage Missions, <font color='#90EE90'>[G] Global</font>) creates a 2 km x 2 km zone with three capture points. BLUFOR assault from one side; mission strength uses <font color='#90EE90'>FADE_aoStrength</font> from mission <font color='#90EE90'>Config</font> (not the Scenario GUI). Capture all three objectives to complete (30-minute timeout).<br/><br/>
-<font color='#87CEEB'>Player-directed artillery</font> (fire missions requested by players, with AI gun line and FAC-style acknowledgements) is planned; when implemented it will follow the Call for Fire (CFF) and artillery procedures in these Notes.
+The <font color='#90EE90'>Area of Operations</font> mission (Manage Missions, <font color='#90EE90'>[G] Global</font>) creates a 2 km x 2 km zone with three capture objectives. BLUFOR assaults from one edge toward OBJ 1, OBJ 2 and OBJ 3; OPFOR hold the objectives, receive reinforcements, and may counter-attack after a capture. Mission strength uses <font color='#90EE90'>FADE_aoStrength</font> from lobby / startup settings rather than a live Scenario GUI slider. Hold all three objectives to complete before the 30-minute timeout.<br/><br/>
+<font color='#87CEEB'>FIRES range</font><br/>
+Use <font color='#90EE90'>terminalFires</font> at Joon's Fires Range to spawn / rearm / despawn approved indirect-fire pieces, place an observer UAV by map click, and run timed grid / elevation drills. Qualifying indirect rounds can show short fall-of-shot camera feeds on enabled <font color='#90EE90'>firesScreenPos_*</font> screens. The CFF / GPO material in these Notes is doctrine for player-run training; FADE does not yet simulate a full AI GPO readback net for live player fire missions.
 "];
 
 // -----------------------------------------------------------------------------
@@ -442,53 +443,99 @@ reverse _sortedFacNotes;
 player createDiarySubject ["FAC_Briefing", "Scenario Brief"];
 
 // -----------------------------------------------------------------------------
-// Scenario Brief: How It Works
+// Scenario Brief: Scenario and Server (created first; diary shows newest first)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Briefing", ["How It Works", "
-<font color='#FFD700' size='14'>CONDUCT OF OPERATIONS</font><br/><br/>
+player createDiaryRecord ["FAC_Briefing", ["Scenario and Server", "
+<font color='#FFD700' size='14'>SCENARIO SETTINGS AND SERVER RULES</font><br/><br/>
 
-<font color='#90EE90'>Face's Dynamic Environment (FADE)</font> is a multiplayer sandbox centred on <font color='#90EE90'>rotary-wing training</font> (insert, extract, CAS, sling load, night flying) with optional ground play, joint-fires practice, and combined-arms taskings. There is no scripted campaign: spawn kit and vehicles, tune the scenario, then start dynamic missions. Objective locations are generated on the map (missions stay spread apart; many types keep a minimum distance from base).<br/><br/>
+<font color='#87CEEB'>MANAGE SCENARIO</font><br/>
+Rhodesy's office opens <font color='#90EE90'>Manage Scenario</font>. The GUI is split into scenario, weather, factions and admin areas. Apply sends settings to the server for everyone.<br/><br/>
 
-<font color='#87CEEB'>INTERACTIONS AT BASE</font><br/>
-- <font color='#00FF00'>Manage Vehicles</font> (vehicle board)  - Spawn or despawn aircraft at helipads and land vehicles at the vehicle points. Lists come from loaded mods (CfgVehicles). Fixed-wing is restricted from some pads; use alternate helipads as labelled. Pilots get a pylon / loadout action on spawned aircraft when supported.<br/><br/>
-- <font color='#FFD700'>Manage Missions</font> and <font color='#87CEEB'>Manage Scenario</font> (scenario laptop)  - Same object, two actions. Missions: pick a type, read the in-GUI description, start or abort. Scenario: environment, factions, AI options, and limits (see below). <font color='#90EE90'>Apply</font> sends settings to the server for everyone.<br/><br/>
-- <font color='#87CEEB'>CQB Training</font> (optional board)  - Configure shoothouse drills (targets or live AI, density, civilians) and start/end from the GUI.<br/><br/>
-- <font color='#87CEEB'>Fast Travel</font> (teleport boards)  - Jump to listed locations: Base HQ, Sultan's CQB Killhouse, Joon's Fires Range, Juko's Locker Room, Bean's Medical Area, helipads (two groups), firing range, SDE's Pub, cargo slingload point, Specialist Area (see in-game list; Eden anchors use names like <font color='#90EE90'>teleportBase</font>).<br/><br/>
-- <font color='#87CEEB'>Loadout boxes</font>  - <font color='#90EE90'>Manage My Loadout</font> (presets and faction gear), <font color='#90EE90'>Save my loadout</font> (updates what you respawn with; your mission spawn gear is captured automatically until you save), and <font color='#90EE90'>ACE Arsenal</font> when ACE3 is loaded.<br/><br/>
-- <font color='#87CEEB'>Jukebox</font>  - Use jukebox radio props for 3D music at that location, or the <font color='#FFD700'>Vehicle loudspeaker...</font> scroll action while inside a vehicle (same tracks; 3D sound attached to the vehicle). Stop-all is <font color='#FFD700'>Manage Scenario</font> → Admin only.<br/><br/>
-- <font color='#87CEEB'>Locker room</font> (optional <font color='#90EE90'>LOCKER_1</font>)  - Flavour interaction when placed in Eden.<br/><br/>
+<font color='#87CEEB'>ENVIRONMENT AND LIMITS</font><br/>
+Set time of day, time compression, weather preset / weather sliders, gear limits, preset-loadout limits, civilians enabled, civilian density / max alive, and faction picks for friendly, enemy and civilian spawns.<br/><br/>
 
-<font color='#87CEEB'>KEYBOARD</font><br/>
-<font color='#FFD700'>Ctrl+;</font> opens <font color='#90EE90'>Manage Missions</font> from anywhere. Open the Jukebox from a radio prop or from <font color='#FFD700'>Vehicle loudspeaker...</font> when in a vehicle.<br/><br/>
+<font color='#87CEEB'>ENEMY OPTIONS</font><br/>
+Enemy controls include patrols, AI skill, routing / retreat behaviour, AAA level (<font color='#90EE90'>Off</font>, <font color='#90EE90'>AAA</font>, <font color='#90EE90'>AAA+MANPADS</font>), OPFOR AT prevalence, OPFOR population scaling, OPFOR air, and Operation zone count. Area of Operations strength comes from lobby / startup settings, not a live Scenario GUI slider.<br/><br/>
 
-<font color='#87CEEB'>MANAGE SCENARIO (SUMMARY)</font><br/>
-Time of day (set by hour), weather preset (clear through storm), <font color='#90EE90'>Limit Gear to Chosen BLUFOR Faction</font>, <font color='#90EE90'>Limit to Preset Loadouts</font>, and friendly / enemy / civilian factions. Enemy side: patrols on/off, AI skill, routing, AAA level (<font color='#90EE90'>Off</font>, <font color='#90EE90'>AAA</font>, <font color='#90EE90'>AAA+MANPADS</font>), <font color='#90EE90'>OPFOR AT</font> (launcher prevalence), and OPFOR population scaling. Area of Operations difficulty is set in mission <font color='#90EE90'>Config</font> (<font color='#90EE90'>FADE_aoStrength</font>), not in this GUI. Toggle <font color='#90EE90'>Civilians enabled</font> for ambient civs and traffic in marked zones.<br/><br/>
+<font color='#87CEEB'>CIVILIANS AND INTEL</font><br/>
+Ambient civilians and traffic use civilian zones. If civilian talk is enabled, use <font color='#90EE90'>Talk to civilian</font> on foot civilians or the base NPC to open dialogue. Actionable civilian tips append timestamped reports to <font color='#FFD700'>Intel</font>. Building intel props can appear with virtual garrisons; <font color='#90EE90'>Read intel</font> may reveal live OPFOR, vehicles, garrisons, checkpoints or mission context. Scenario policies can restrict civilian talk to interpreters and intel reading to specialists.<br/><br/>
+
+<font color='#87CEEB'>LOBBY PARAMETERS</font><br/>
+The host can gate Missions, Scenario, Vehicle, Loadout, Fast Travel to player, Scenario Admin, jukebox, ACE Arsenal, civilian talk, intel reading, debug tools and HQ auto-heal through lobby parameters. Group leaders and admin / Zeus usually override leader-only locks. If an action says access denied, the server settings are blocking that feature.<br/><br/>
+
+<font color='#87CEEB'>ADMIN AND CLEANUP</font><br/>
+The Admin area handles server-side cleanup such as aborting active missions, despawning civilians or OPFOR, teleporting all to base, Zeus controls, and stop-all jukebox. Use cleanup deliberately on live sessions.
+"]];
+
+// -----------------------------------------------------------------------------
+// Scenario Brief: Missions
+// -----------------------------------------------------------------------------
+player createDiaryRecord ["FAC_Briefing", ["Missions", "
+<font color='#FFD700' size='14'>DYNAMIC MISSIONS</font><br/><br/>
 
 <font color='#87CEEB'>MISSION STREAMS</font><br/>
-In <font color='#FFD700'>Manage Missions</font>, types marked <font color='#90EE90'>[G] Global</font> are large, shared missions: <font color='#FF6666'>only one</font> global mission runs at a time for the whole server. Types marked <font color='#90EE90'>[S] Single</font> are smaller tasks: up to <font color='#FF6666'>three</font> may run at once, each started by a different player. You may only run <font color='#FF6666'>one</font> mission yourself at a time (global or single); finish or abort before starting another.<br/><br/>
+In <font color='#FFD700'>Manage Missions</font>, <font color='#90EE90'>[G] Global</font> missions are shared server-wide operations. Only one global mission may run at once. <font color='#90EE90'>[S] Single</font> missions are smaller per-player tasks; up to three may run at once, started by different players. You may only personally run one mission at a time, global or single.<br/><br/>
 
-<font color='#87CEEB'>MISSION TYPES</font><br/>
-<font color='#87CEEB'>Global [G]</font><br/>
-- <font color='#90EE90'>Area of Operations</font>  - 2 km square AO, three objectives; BLUFOR vs OPFOR; optional AI JTAC calls. 30-minute limit.<br/>
-- <font color='#90EE90'>CAS / Fire Support</font>  - Support friendly AI at an objective; fails if all friendlies are lost.<br/>
-- <font color='#90EE90'>Clear Area</font>  - Town or camp; clear about 80% of enemies within the time limit.<br/>
-- <font color='#90EE90'>Hostage</font>  - Rescue hostages from urban buildings; return survivors near base; fail if too many die.<br/>
-- <font color='#90EE90'>HVT</font>  - High-value target in an urban site; kill or capture and return to base.<br/>
-- <font color='#90EE90'>Intercept Convoy</font>  - Destroy the convoy before it reaches its end point.<br/>
-- <font color='#90EE90'>Operation</font>  - Capture several civ zones at once; each zone is captured once OPFOR in the ellipse are eliminated (stays captured until OPFOR return); evaluation every 60 s.<br/>
-- <font color='#90EE90'>Search &amp; Destroy</font>  - Three garrisoned buildings in a town plus patrols; eliminate all hostiles.<br/><br/>
-- <font color='#90EE90'>Asset Retrieval</font>  - Intel: secure the case at the site (scroll action), then RTB; or vehicle recovery: clear the road site, drive/tow the OPFOR vehicle to base (see task SMEAC).<br/>
-- <font color='#90EE90'>CSAR</font>  - One survivor at a downed helo wreck; extract and RTB (global slot).<br/>
-- <font color='#90EE90'>Escape &amp; Evasion</font>  - Starter picks evadees (must include self); they are dispersed without GPS in a hostile area; RTB all alive within 1000 m of base. No task markers. Nearby OPFOR are cleared on insert; remaining dismounts patrol the town (SAFE / limited). After an evadee has moved far enough from the hostile area, OPFOR may orbit a search helicopter over the town (not directly tasked on players).<br/><br/>
-<font color='#87CEEB'>Single [S]</font><br/>
-- <font color='#90EE90'>Troop Insert</font> / <font color='#90EE90'>Troop Extract</font>  - AI squad transport to or from base.<br/>
-- <font color='#90EE90'>CASEVAC</font>  - Like Troop Extract, but the squad has KIA and ACE injuries before pickup.<br/>
-- <font color='#90EE90'>Cargo / Resupply</font>  - Sling-load cargo from <font color='#90EE90'>CargoPoint_1</font>; fly to the spawned camp and land to complete.<br/>
-- <font color='#90EE90'>Medical training</font>  - <font color='#90EE90'>terminalMedical</font> at the Medical Training Area: GUI to spawn dummies and apply KAT presets (bleeding, airway, blood volume, deep penetrating chest, cardiac rhythms, fractures). Requires ACE Medical + KAT. <font color='#C0C0C0'>Uncon</font> in notes means unconscious.<br/>
-- <font color='#90EE90'>Mine Clearing</font>  - EOD on roads near civil zones: either 2–5 mines or 1–3 IEDs (one type per mission), spaced along the route; SMEAC states which.<br/><br/>
+<font color='#87CEEB'>STARTING A MISSION</font><br/>
+Most missions open a location overlay: choose <font color='#90EE90'>Random location</font> or <font color='#90EE90'>Map click</font>. Map click has a 20 s timer. Some mission types snap to nearby civilian zones; others search outward from the click for a valid site. Troop Insert map click chooses the first insert LZ only; later recurring insert positions still follow mission rules. Escape &amp; Evasion uses an evadee picker instead of a location picker and the starter must be included.<br/><br/>
 
-<font color='#87CEEB'>RESPAWN AND BRIEFING</font><br/>
-Respawn is enabled; after death, use the respawn menu as configured. You respawn with your mission spawn loadout unless you use <font color='#90EE90'>Save my loadout</font> at a loadout box to replace it. Use the map: <font color='#FFD700'>Scenario Brief</font> for this guide; open <font color='#FFD700'>FADE Notes</font> for RATEL, 5-line CAS, CFF, joint-fires and combined-arms reference, and the <font color='#FFD700'>KAT — …</font> medical quick-reference topics (same diary subject). Open <font color='#FFD700'>Intel</font> for timestamped HUMINT, building intel, and mission intel you collect in the field.
+<font color='#87CEEB'>GLOBAL [G]</font><br/>
+- <font color='#90EE90'>Area of Operations</font>  - 2 km square AO with three objectives. BLUFOR assaults OBJ 1 through OBJ 3; OPFOR defend, reinforce and may counter-attack. 30-minute limit.<br/>
+- <font color='#90EE90'>Asset Retrieval</font>  - Clear a site, then either secure an intel package by scroll action and RTB, or recover an OPFOR vehicle to within 1000 m of base.<br/>
+- <font color='#90EE90'>CAS / Fire Support</font>  - Support friendly AI under attack. Friendlies can radio a 5-line CCA call; succeed when OPFOR is reduced below the task threshold, fail if all friendlies are lost.<br/>
+- <font color='#90EE90'>Clear Area</font>  - Clear an enemy-held town or procedural camp; about 80 percent of enemies must be eliminated before timeout.<br/>
+- <font color='#90EE90'>CSAR</font>  - Downed helicopter survivor moves near the crash area, radios at 1 km and marks with smoke / IR near 500 m. Extract and RTB.<br/>
+- <font color='#90EE90'>Escape &amp; Evasion</font>  - Selected evadees start dispersed without GPS in a hostile civilian area. Current rule: any selected evadee death fails the mission; all living selected evadees must reach within 1000 m of base to succeed. No task destination markers for evadees.<br/>
+- <font color='#90EE90'>Hostage</font>  - Rescue civilians held in urban buildings and return survivors near base; too many hostage deaths fail the mission.<br/>
+- <font color='#90EE90'>HVT</font>  - Locate a high-value target in an urban building. Kill or capture; captured HVTs must be brought back near base.<br/>
+- <font color='#90EE90'>Intercept Convoy</font>  - Stop a moving road convoy before it reaches the end zone. At least 60 percent of convoy vehicles must be destroyed or immobilised.<br/>
+- <font color='#90EE90'>Operation</font>  - Multi-zone fight across civilian zones. Zones capture once OPFOR are cleared, then can be contested again if OPFOR return; evaluation runs about every 60 s.<br/>
+- <font color='#90EE90'>Search &amp; Destroy</font>  - Search a marked 250 m town zone for ammo caches in garrisoned buildings. Burning barrels mark cache buildings; task text states cache count and required destroy percentage.<br/><br/>
+
+<font color='#87CEEB'>SINGLE [S]</font><br/>
+- <font color='#90EE90'>Cargo / Resupply</font>  - Sling-load or deliver supplies from CargoPoint_1 to a friendly camp and land to complete. Non-combat logistics task.<br/>
+- <font color='#90EE90'>CASEVAC</font>  - Evacuate wounded survivors from the field. ACE / KAT injuries apply when available; the pickup may draw enemy pressure.<br/>
+- <font color='#90EE90'>Mine Clearing</font>  - EOD task on roads near a civilian zone: either 2-5 mines or 1-3 IEDs, one hazard type per mission. Clear all hazards to complete.<br/>
+- <font color='#90EE90'>Troop Extract</font>  - Pick up an AI ground team and return them to base; enemy groups may be moving toward the LZ.<br/>
+- <font color='#90EE90'>Troop Insert</font>  - Pick up an AI squad at base spawn points, fly to the selected or generated LZ, land and dismount them safely.<br/><br/>
+
+<font color='#87CEEB'>TASKS AND SMEAC</font><br/>
+Mission start generates a task and SMEAC-style hint. Use the Tasks panel and map markers for grids, routes, return distances, completion thresholds and abort state; the Missions GUI only gives a short live summary.
+"]];
+
+// -----------------------------------------------------------------------------
+// Scenario Brief: Base and Travel
+// -----------------------------------------------------------------------------
+player createDiaryRecord ["FAC_Briefing", ["Base and Travel", "
+<font color='#FFD700' size='14'>BASE FACILITIES AND SHORTCUTS</font><br/><br/>
+
+<font color='#87CEEB'>RHODESY'S OFFICE</font><br/>
+Use the mission board for <font color='#FFD700'>Manage Missions</font> and <font color='#87CEEB'>Manage Scenario</font>. Scenario Admin actions live under Manage Scenario when server settings allow them.<br/><br/>
+
+<font color='#87CEEB'>VEHICLES</font><br/>
+Use <font color='#00FF00'>Manage Vehicles</font> at the vehicle terminal / board to spawn or despawn aircraft at helipads and land vehicles at vehicle points. Lists are built from loaded mod CfgVehicles. Fixed-wing is restricted from some pads. Pilots can use pylon / loadout actions on supported spawned aircraft.<br/><br/>
+
+<font color='#87CEEB'>GEAR AND LOADOUTS</font><br/>
+MB's gear room and loadout boxes provide <font color='#90EE90'>Manage My Loadout</font>, <font color='#90EE90'>Save my loadout</font>, ACE Arsenal when enabled, role flags such as interpreter / intel specialist, and preset or faction gear. Your initial mission gear is captured for respawn until you save a replacement.<br/><br/>
+
+<font color='#87CEEB'>TRAINING TERMINALS</font><br/>
+- <font color='#90EE90'>terminalMedical</font>: spawn dummies and apply KAT presets (bleeding, airway, blood volume, deep penetrating chest, cardiac rhythms, fractures). This is not a Missions GUI entry.<br/>
+- <font color='#90EE90'>terminalFires</font>: spawn FIRES pieces, place observer UAV, rearm, run timed drills and use fall-of-shot screens.<br/>
+- <font color='#90EE90'>terminalRange</font>: Firing and AT range lanes for human and vehicle targets.<br/>
+- <font color='#90EE90'>terminalSniper</font>: Sniper range session with trace / impact feedback.<br/>
+- <font color='#90EE90'>cqbBoard</font>: CQB shoothouse drills with targets or live AI, density and civilian options.<br/><br/>
+
+<font color='#87CEEB'>FAST TRAVEL</font><br/>
+Use teleport boards or <font color='#FFD700'>Ctrl+Shift+apostrophe</font> from anywhere. Destinations include Base HQ, Cargo Slingload, Sultan's CQB Killhouse, Joon's Fires Range, Juko's Locker Room, Bean's Medical Area, Officer Area, Pads 1 and 2, Pads 3, 4 and 5, Firing Range, Sniper Range, SDE's Pub and Specialist Area. Server settings may also allow teleport-to-player.<br/><br/>
+
+<font color='#87CEEB'>JUKEBOX AND SOCIAL AREAS</font><br/>
+Radio_1 through Radio_4 open the jukebox for 3D music at that source. In vehicles, use <font color='#FFD700'>Vehicle loudspeaker...</font> for attached 3D music. SDE's Pub, Juko's Locker Room, C3 Quiet Area and other base locations are flavour / training spaces as placed in Eden.<br/><br/>
+
+<font color='#87CEEB'>KEYBOARD</font><br/>
+<font color='#FFD700'>Ctrl+;</font> opens Manage Missions from anywhere. <font color='#FFD700'>Ctrl+Shift+apostrophe</font> opens Fast Travel from anywhere.<br/><br/>
+
+<font color='#87CEEB'>RESPAWN AND HQ HEAL</font><br/>
+Respawn is enabled. After death, use the configured respawn menu. When HQ auto-heal is enabled by the host, players near BASE_1 are periodically healed.
 "]];
 
 // -----------------------------------------------------------------------------
@@ -498,11 +545,14 @@ player createDiaryRecord ["FAC_Briefing", ["Overview", "
 <font color='#FFD700' size='14'>FACE'S DYNAMIC ENVIRONMENT (FADE)  - SITUATION</font><br/><br/>
 
 <font color='#87CEEB'>NATURE</font><br/>
-This is a <font color='#90EE90'>multiplayer dynamic sandbox</font> built for broad community training, with emphasis on <font color='#B0D0FF'>helicopter operations</font> (insert, extract, CAS, resupply, formation and terrain flying). The same session can include <font color='#B0D0FF'>joint fires</font> practice (CAS talk-on, AO AI JTAC when enabled), <font color='#B0D0FF'>dismounted and urban tasks</font> (HVT, hostage, clear area, CQB drills), and <font color='#B0D0FF'>combined arms</font> (convoy intercept, large AO fights). Objectives and enemy layouts are generated per mission; scenario settings (weather, factions, AI, AAA, civilians) apply to the whole server once applied.<br/><br/>
+FADE Beta 4 is a multiplayer dynamic sandbox on <font color='#90EE90'>Altis</font>. It is built for broad community training with emphasis on <font color='#B0D0FF'>helicopter operations</font> (insert, extract, CAS, resupply, sling-load, formation and terrain flying), plus <font color='#B0D0FF'>joint fires</font> practice, <font color='#B0D0FF'>dismounted / urban tasks</font>, medical drills, CQB, ranges and combined-arms scenarios. No Zeus is required for normal play.<br/><br/>
 
-<font color='#87CEEB'>LOCATION</font><br/>
-Your base is the main FOB (<font color='#90EE90'>BASE_1</font>). Boards and laptops there open the vehicle, mission, and scenario GUIs; loadout boxes, teleport boards, optional CQB and jukebox props, and keyboard shortcuts support the same workflow without Zeus. Aircraft use marked helipads; ground vehicles use marked spawn points. <font color='#90EE90'>KAT medical drills</font> use the <font color='#90EE90'>Medical training</font> terminal at the Medical Training Area.<br/><br/>
+<font color='#87CEEB'>HOW TO USE IT</font><br/>
+Spawn vehicles and gear at base, configure the theatre in <font color='#FFD700'>Manage Scenario</font>, then start dynamic missions from <font color='#FFD700'>Manage Missions</font> or <font color='#FFD700'>Ctrl+;</font>. Missions generate tasks, map markers and SMEAC-style hints. Scenario settings such as weather, factions, civilians, AI, AAA and access gates apply to the whole server once applied.<br/><br/>
 
-<font color='#87CEEB'>INTENT</font><br/>
-Spawn what you need, configure the theatre in <font color='#FFD700'>Manage Scenario</font>, then start missions from <font color='#FFD700'>Manage Missions</font> (or <font color='#FFD700'>Ctrl+;</font>). Global missions are one-at-a-time shared operations (AO, CAS, HVT, hostage, clear area, convoy, CSAR, and others); single missions include troop transport, cargo, and mine/IED clearance (EOD). KAT medical practice is via the <font color='#90EE90'>Medical training</font> terminal, not Manage Missions. Open <font color='#FFD700'>How It Works</font> below for the full checklist, <font color='#FFD700'>FADE Notes</font> for RATEL, 5-line CAS, CFF, joint and combined-arms fires, and marking, <font color='#FFD700'>Intel</font> for HUMINT and other intel you log, and <font color='#FFD700'>KAT — …</font> topics for KAM medical quick reference.
+<font color='#87CEEB'>WHAT TO READ</font><br/>
+Use this <font color='#FFD700'>Scenario Brief</font> for player workflow. Use <font color='#FFD700'>FADE Notes</font> for RATEL, 5-line CAS, CFF, control measures, marking, LZ / EZ procedure, KAT medical references and rotary pilot standards. Use <font color='#FFD700'>Intel</font> for timestamped HUMINT, building intel and mission intel collected during play.<br/><br/>
+
+<font color='#87CEEB'>MISSION MODEL</font><br/>
+Global missions are shared server-wide operations; singles are smaller per-player taskings. Objective locations and enemy layouts are generated at runtime and usually respect distance rules from base and other active tasks. Follow the task and SMEAC for the current run rather than relying on old memory.
 "]];

@@ -5,15 +5,26 @@
 // Idempotent: safe to call multiple times.
 // =============================================================================
 
+FAC_ensureLobbyParams = {
+    if !(missionNamespace getVariable ["FAC_lobbyParams_installed", false]) then {
+        call compile preprocessFileLineNumbers "rsc\FAC_LobbyParams.sqf";
+    } else {
+        call FAC_lobbyParams_read;
+    };
+};
+
 FAC_ensureLoadoutGui = {
+    call FAC_ensureLobbyParams;
     if (missionNamespace getVariable ["FAC_clientGui_loadout", false]) exitWith {};
     call compile preprocessFileLineNumbers "rsc\LoadoutGui.sqf";
     missionNamespace setVariable ["FAC_clientGui_loadout", true];
 };
 
 FAC_ensureVehicleGui = {
+    call FAC_ensureLobbyParams;
     if (missionNamespace getVariable ["FAC_clientGui_vehicle", false]) exitWith {};
     call compile preprocessFileLineNumbers "rsc\VehicleGui.sqf";
+    missionNamespace setVariable ["FAC_vehicleGui_fnc", FAC_vehicleGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_vehicle", true];
 };
 
@@ -24,6 +35,7 @@ FAC_ensureFiresGui = {
     call compile preprocessFileLineNumbers "rsc\FiresArtilleryList.sqf";
     call compile preprocessFileLineNumbers "rsc\FiresFallOfShot.sqf";
     call compile preprocessFileLineNumbers "rsc\FiresGui.sqf";
+    missionNamespace setVariable ["FAC_firesGui_fnc", FAC_firesGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_fires", true];
 };
 
@@ -31,17 +43,24 @@ FAC_ensureMedicalTrainingGui = {
     if (missionNamespace getVariable ["FAC_clientGui_medical", false]) exitWith {};
     call compile preprocessFileLineNumbers "rsc\MedicalTrainingKAT_fractureLocal.sqf";
     call compile preprocessFileLineNumbers "rsc\MedicalTrainingGui.sqf";
+    missionNamespace setVariable ["FAC_medicalTrainingGui_fnc", FAC_medicalTrainingGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_medical", true];
 };
 
 FAC_ensureMissionsGui = {
+    call FAC_ensureLobbyParams;
     if (missionNamespace getVariable ["FAC_clientGui_missions", false]) exitWith {};
     call compile preprocessFileLineNumbers "rsc\MissionsGui.sqf";
     call compile preprocessFileLineNumbers "rsc\EscapeEvasionPickGui.sqf";
+    call compile preprocessFileLineNumbers "rsc\TroopInsertPickGui.sqf";
+    call compile preprocessFileLineNumbers "rsc\MissionLocationPickGui.sqf";
+    call compile preprocessFileLineNumbers "rsc\MissionMapPick.sqf";
+    missionNamespace setVariable ["FAC_missionsGui_fnc", FAC_missionsGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_missions", true];
 };
 
 FAC_ensureScenarioGui = {
+    call FAC_ensureLobbyParams;
     if (missionNamespace getVariable ["FAC_clientGui_scenario", false]) exitWith {};
     call compile preprocessFileLineNumbers "rsc\ScenarioGui.sqf";
     missionNamespace setVariable ["FAC_scenarioGui_fnc", FAC_scenarioGui_fnc];
@@ -52,9 +71,12 @@ FAC_ensureCivTalkGui = {
     if (missionNamespace getVariable ["FAC_clientGui_civtalk", false]) exitWith {};
     call compile preprocessFileLineNumbers "rsc\CivTalkGui.sqf";
     missionNamespace setVariable ["FAC_clientGui_civtalk", true];
+    private _refresh = missionNamespace getVariable ["FADE_civTalk_refreshBaseNpcAction", {}];
+    if (_refresh isEqualType {}) then { [] call _refresh };
 };
 
 FAC_ensureJukeboxGui = {
+    call FAC_ensureLobbyParams;
     if (missionNamespace getVariable ["FAC_clientGui_jukebox", false]) exitWith {};
     call compile preprocessFileLineNumbers "rsc\JukeboxGui.sqf";
     missionNamespace setVariable ["FAC_jukeboxGui_fnc", FAC_jukeboxGui_fnc];
@@ -69,6 +91,7 @@ FAC_ensureJukeboxGui = {
 FAC_ensureCQBGui = {
     if (missionNamespace getVariable ["FAC_clientGui_cqb", false]) exitWith {};
     call compile preprocessFileLineNumbers "rsc\CQBGui.sqf";
+    missionNamespace setVariable ["FAC_cqbGui_fnc", FAC_cqbGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_cqb", true];
 };
 
@@ -83,6 +106,7 @@ FAC_ensureSniperGui = {
     if (isNil "FADE_sniperClient_clearRangeFx") exitWith {
         diag_log "[FAC] SniperGui.sqf did not define FADE_sniperClient_clearRangeFx (syntax/compile error). Sniper/range ballistics UI helpers unavailable.";
     };
+    missionNamespace setVariable ["FAC_sniperGui_fnc", FAC_sniperGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_sniper", true];
 };
 
@@ -97,10 +121,15 @@ FAC_ensureRangeGui = {
 
 // Client: trace + impact markers reuse SniperGui.sqf (compile before remoteExec from server).
 FADE_rangeClient_enableSniperFxForRange = {
-    params [["_trace", false]];
+    params [["_trace", false], ["_termPos", []]];
     if (!hasInterface) exitWith {};
     call FAC_ensureSniperGui;
-    if (_trace) then { [true] call FADE_sniperClient_setProjectileTrace };
+    if (_trace) then {
+        [true, player] remoteExec ["FADE_sniperClient_setProjectileTrace", 0, player];
+        if (_termPos isEqualType [] && { count _termPos >= 2 }) then {
+            [_termPos, player] call FADE_sniperClient_startTraceProximityMonitor;
+        };
+    };
     [true] call FADE_sniperClient_setProjectileImpactMarkers;
 };
 
@@ -125,6 +154,7 @@ FADE_rangeClient_onSessionStarted = {
 };
 
 FAC_ensureTeleportGui = {
+    call FAC_ensureLobbyParams;
     if (missionNamespace getVariable ["FAC_clientGui_teleport", false]) exitWith {};
     call compile preprocessFileLineNumbers "rsc\TeleportGui.sqf";
     missionNamespace setVariable ["FAC_clientGui_teleport", true];

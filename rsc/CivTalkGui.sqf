@@ -168,6 +168,15 @@ if (hasInterface) then {
                 if (!isNull _bR) then { _bR ctrlSetText ""; _bR ctrlEnable false };
                 if (!isNull _bD) then { _bD ctrlSetText "Back"; _bD ctrlEnable true };
             };
+            case "baseNpc": {
+                private _hello = missionNamespace getVariable ["FADE_baseNpcTalkBtnHello", "Hello"];
+                private _mission = missionNamespace getVariable ["FADE_baseNpcTalkBtnMission", "Will you come on the mission with us?"];
+                private _bye = missionNamespace getVariable ["FADE_baseNpcTalkBtnGoodbye", "Goodbye"];
+                if (!isNull _bU) then { _bU ctrlSetText _hello; _bU ctrlEnable true };
+                if (!isNull _bL) then { _bL ctrlSetText _mission; _bL ctrlEnable true };
+                if (!isNull _bR) then { _bR ctrlSetText ""; _bR ctrlEnable false };
+                if (!isNull _bD) then { _bD ctrlSetText _bye; _bD ctrlEnable true };
+            };
             default {
                 uinamespace setVariable ["FAC_civTalk_menuPage", "root"];
                 [] call FADE_civTalk_clientMenuApplyLabels;
@@ -348,11 +357,12 @@ if (hasInterface) then {
 
     // Server sends stance after snapping civ; local only: fade → move → camera → fade in → dialog.
     FADE_civTalk_clientBeginCutscene = {
-        params ["_pATL", "_pDir", "_positive", "_netId", ["_langOk", true]];
+        params ["_pATL", "_pDir", "_positive", "_netId", ["_langOk", true], ["_sessionKind", "ambient"]];
         if (!hasInterface) exitWith {};
         uinamespace setVariable ["FAC_civTalk_netId", _netId];
         uinamespace setVariable ["FAC_civTalk_positive", _positive];
         uinamespace setVariable ["FAC_civTalk_langOk", _langOk];
+        uinamespace setVariable ["FAC_civTalk_sessionKind", _sessionKind];
         uinamespace setVariable ["FAC_civTalk_replyId", 0];
         uinamespace setVariable ["FAC_civTalk_teardownDone", false];
         if (!isNull (findDisplay FAC_civTalkGui_IDD)) exitWith {};
@@ -385,7 +395,7 @@ if (hasInterface) then {
     };
 
     FADE_civTalk_clientSetReply = {
-        params [["_text", ""], ["_ui", []]];
+        params [["_text", ""], ["_ui", []], ["_autoClose", false]];
         if (!hasInterface) exitWith {};
         disableSerialization;
         private _d = findDisplay FAC_civTalkGui_IDD;
@@ -397,6 +407,14 @@ if (hasInterface) then {
         if (count _ui >= 5) then {
             uinamespace setVariable ["FAC_civTalk_sessionUi", _ui];
             [] call FADE_civTalk_clientMenuApplyLabels;
+        };
+        if (_autoClose) then {
+            private _delay = missionNamespace getVariable ["FADE_baseNpcTalkGoodbyeCloseDelay", 2.5];
+            [_delay max 0.5] spawn {
+                params ["_delay"];
+                sleep _delay;
+                if (!isNull (findDisplay FAC_civTalkGui_IDD)) then { closeDialog 0 };
+            };
         };
     };
 
@@ -432,16 +450,29 @@ if (hasInterface) then {
         params [["_unit", objNull]];
         if (!hasInterface) exitWith {};
         if (isNull _unit || {!alive _unit}) exitWith {};
-        if !(_unit getVariable ["FADE_ambientCiv", false]) exitWith {};
+        private _baseNetId = missionNamespace getVariable ["FADE_baseNpcTalk_netId", ""];
+        private _isBaseNpc = _unit getVariable ["FADE_baseNpcTalk", false]
+            || { _baseNetId != "" && { netId _unit == _baseNetId } };
+        private _isAmbientCiv = _unit getVariable ["FADE_ambientCiv", false];
+        if (!_isBaseNpc && {!_isAmbientCiv}) exitWith {};
         if (_unit getVariable ["FADE_civTalk_actAdded_local", false]) exitWith {};
         _unit setVariable ["FADE_civTalk_actAdded_local", true];
         private _maxD = missionNamespace getVariable ["FADE_civTalkMaxDistM", 6];
-        private _cond = format [
-            "alive _target && {_target distance player < %1} && {missionNamespace getVariable ['FADE_civiliansEnabled', true]}",
-            (_maxD + 1)
-        ];
+        private _actionText = if (_isBaseNpc) then {
+            missionNamespace getVariable ["FADE_baseNpcTalkActionText", "Talk to S Wordsman"]
+        } else {
+            "Talk to civilian"
+        };
+        private _cond = if (_isBaseNpc) then {
+            format ["alive _target && {_target distance player < %1}", (_maxD + 1)]
+        } else {
+            format [
+                "alive _target && {_target distance player < %1} && {missionNamespace getVariable ['FADE_civiliansEnabled', true]}",
+                (_maxD + 1)
+            ]
+        };
         _unit addAction [
-            "Talk to civilian",
+            _actionText,
             {
                 _this params ["_target", "_caller"];
                 [_caller, netId _target] remoteExec ["FADE_civTalk_start", 2];
@@ -455,6 +486,37 @@ if (hasInterface) then {
             5
         ];
     };
+
+    FADE_civTalk_refreshBaseNpcAction = {
+        if (!hasInterface) exitWith {};
+        private _fn = missionNamespace getVariable ["FADE_civTalk_addLocalAction", {}];
+        if !(_fn isEqualType {}) exitWith {};
+        private _nid = missionNamespace getVariable ["FADE_baseNpcTalk_netId", ""];
+        if (_nid isEqualTo "") exitWith {};
+        private _u = _nid call BIS_fnc_objectFromNetId;
+        if (isNull _u) then {
+            { if (netId _x == _nid) exitWith { _u = _x } } forEach allUnits;
+        };
+        if (!isNull _u && { alive _u }) then {
+            private _idFn = missionNamespace getVariable ["FADE_baseNpc_clientSetIdentity", {}];
+            if (_idFn isEqualType {}) then {
+                [_u, "FAC_baseNPC_wordsman"] call _idFn;
+            };
+            [_u] call _fn;
+        };
+    };
+
+    if (isNil "FAC_baseNpcTalk_netId_pvh") then {
+        FAC_baseNpcTalk_netId_pvh = "FADE_baseNpcTalk_netId" addPublicVariableEventHandler {
+            params ["", "_val"];
+            if (_val isEqualType "" && { _val != "" }) then {
+                [] call FADE_civTalk_refreshBaseNpcAction;
+            };
+        };
+    };
+
+    missionNamespace setVariable ["FADE_civTalk_addLocalAction", FADE_civTalk_addLocalAction];
+    missionNamespace setVariable ["FADE_civTalk_refreshBaseNpcAction", FADE_civTalk_refreshBaseNpcAction];
 };
 
 FAC_civTalkGui_fnc = {
@@ -467,15 +529,26 @@ FAC_civTalkGui_fnc = {
             missionNamespace setVariable ["FAC_civTalkGui_fnc", FAC_civTalkGui_fnc];
             uinamespace setVariable ["FAC_civTalkGui_fnc", FAC_civTalkGui_fnc];
             _display displayAddEventHandler ["Unload", { 0 spawn { [] call FADE_civTalk_clientTeardown } }];
-            uinamespace setVariable ["FAC_civTalk_menuPage", "root"];
-            private _defOp = missionNamespace getVariable ["FADE_civTalkBtnOpforDefault", "Seen any OPFOR?"];
-            uinamespace setVariable ["FAC_civTalk_sessionUi", [true, true, _defOp, true, true]];
+            private _sessionKind = uinamespace getVariable ["FAC_civTalk_sessionKind", "ambient"];
+            if (_sessionKind isEqualTo "baseNpc") then {
+                uinamespace setVariable ["FAC_civTalk_menuPage", "baseNpc"];
+                uinamespace setVariable ["FAC_civTalk_sessionUi", [true, false, "", false, false]];
+            } else {
+                uinamespace setVariable ["FAC_civTalk_menuPage", "root"];
+                private _defOp = missionNamespace getVariable ["FADE_civTalkBtnOpforDefault", "Seen any OPFOR?"];
+                uinamespace setVariable ["FAC_civTalk_sessionUi", [true, true, _defOp, true, true]];
+            };
             [] call FADE_civTalk_clientApplyVerticalLayout;
             private _reply = _display displayCtrl 60247;
             if (!isNull _reply) then {
                 _reply ctrlSetTextColor [1, 1, 1, 1];
                 _reply ctrlCommit 0;
-                [_reply, "Choose an option below."] call FADE_civTalk_replyCtrlSetText;
+                private _prompt = if (_sessionKind isEqualTo "baseNpc") then {
+                    "What do you want?"
+                } else {
+                    "Choose an option below."
+                };
+                [_reply, _prompt] call FADE_civTalk_replyCtrlSetText;
             };
             private _title = _display displayCtrl 60246;
             if (!isNull _title) then {
@@ -517,6 +590,13 @@ FAC_civTalkGui_fnc = {
             private _ui = call FADE_civTalk_clientMenuSessionUiOrDefault;
             _ui params ["_carEn", "_opforEn", "_opforTxt", "_rumoursEn", "_arrestEn"];
             private _dirL = toLower _dir;
+            if (_menu isEqualTo "baseNpc") then {
+                switch _dirL do {
+                    case "up": { [player, "base_npc_hello"] remoteExec ["FADE_civTalk_topic", 2] };
+                    case "left": { [player, "base_npc_mission"] remoteExec ["FADE_civTalk_topic", 2] };
+                    case "down": { [player, "base_npc_goodbye"] remoteExec ["FADE_civTalk_topic", 2] };
+                };
+            } else {
             if (_dirL == "down") then {
                 switch _menu do {
                     case "root": { closeDialog 0 };
@@ -565,6 +645,7 @@ FAC_civTalkGui_fnc = {
                         };
                     };
                 };
+            };
             };
         };
 

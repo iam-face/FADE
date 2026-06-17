@@ -1,6 +1,6 @@
 # FADE (Face’s Dynamic Environment)
 
-**Beta 3** — sandbox for broad community use. No Zeus required. In-game boards and GUIs drive scenario options and dynamic missions so players can run and tailor sessions quickly. Built for **rotary piloting**, **joint fires**, and **infantry training** in **Arma 3** multiplayer (listen or dedicated server).
+**Beta 4** — sandbox for broad community use. No Zeus required. In-game boards and GUIs drive scenario options and dynamic missions so players can run and tailor sessions quickly. Built for **rotary piloting**, **joint fires**, and **infantry training** in **Arma 3** multiplayer (listen or dedicated server).
 
 **Map:** Altis (this repository folder: `FAC_FADE.Altis`). **Slots:** up to **31** players (`description.ext` / `mission.sqm`).
 
@@ -11,7 +11,7 @@
 
 | Feature                        | Description                                                                                                                                                                                                                                                       |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Scenario management**        | Weather, time of day, friendly/enemy/civilian factions, gear/loadout limits, time compression. Enemy AI: patrols, skill, routing, AAA level, AO strength. Server applies and broadcasts. Lobby params can restrict **Missions** / **Scenario** GUIs to group leaders (`description.ext` **Params**). |
+| **Scenario management**        | Weather, time of day, friendly/enemy/civilian factions, gear/loadout limits, time compression. Enemy AI: patrols, skill, routing, AAA level, AO strength. Server applies and broadcasts. **Lobby params** (`description.ext` **Params**, `rsc/FAC_LobbyParams.sqf`) set access gates (Missions / Scenario / Vehicle / Loadout GUIs, Fast Travel teleport-to-player, Scenario Admin tab, jukebox, ACE Arsenal) and starting defaults (civilians, OPFOR threat, gear policy, time/weather, civ talk, intel read, AO strength, HQ auto-heal, script debug tools). Group leaders and admin/Zeus override most leader-only locks. |
 | **Missions**                   | **16** dynamic types — see [Mission types](#mission-types). **[G]** = one global mission at a time (**11** types); **[S]** = per-player singles, up to **3** concurrent (**5** types: Troop Insert/Extract, Cargo, Mine Clearing, CASEVAC). Locations are kept apart in logic. |
 | **Vehicles**                   | Spawn/despawn aircraft at helipads and land vehicles at defined points. Lists from `CfgVehicles`; optional limits via Scenario GUI. Pylon/loadout action for pilots.                                                                                              |
 | **Jukebox**                    | **Radio_1**–**Radio_4** objects and **Ctrl+'** (personal source): track list, play/stop, now-playing. 3D sound for clients; server sync and JIP replay.                                                                                                           |
@@ -115,8 +115,8 @@ Script IDs and behaviour: `rsc/Missions.sqf`, `rsc/MissionsGui.sqf`, `initServer
 
 ### Search & Destroy (`SearchDestroy`) — [G]
 
-- **Intent:** **Urban clearance** — up to **three** OPFOR **buildings** in a civ town, patrols (GM ammo piles if mod present).
-- **Typical experience:** Eliminate enemies in the marked building set; timeout/cancel per script.
+- **Intent:** **Ammo cache hunt** — up to **three** enemy **ammo caches** in garrisoned buildings (burning barrels mark sites); patrols in the zone.
+- **Typical experience:** Search the **250 m** marked zone; task/SMEAC states **cache count** and **destroy %** required (`FADE_searchDestroyCacheDestroyPct` in `Config.sqf`, default **100%**). Eliminate all defenders; timeout/cancel per script.
 - **Callouts:** **Counter-attack QRF** with detection radius on mission centre.
 
 ### Troop Extract (`TroopExtract`) — [S]

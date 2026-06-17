@@ -27,6 +27,111 @@ class Params
         texts[] = {"Disabled", "Enabled"};
         default = 1;
     };
+    class FAC_VehicleGuiAccess
+    {
+        title = "Vehicle GUI access";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_FastTravelToPlayer
+    {
+        title = "Fast Travel — teleport to player";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_ScenarioAdminAccess
+    {
+        title = "Scenario GUI — Admin tab";
+        values[] = {0, 1, 2};
+        texts[] = {"All with Scenario access", "Group leaders only (admin/Zeus override)", "Disabled (admin/Zeus override only)"};
+        default = 0;
+    };
+    class FAC_LoadoutGuiAccess
+    {
+        title = "Loadout GUI access";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_CiviliansAtStart
+    {
+        title = "Ambient civilians at start";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 1;
+    };
+    class FAC_OpforThreat
+    {
+        title = "Default OPFOR threat";
+        values[] = {0, 1, 2, 3};
+        texts[] = {"Off", "Light", "Standard", "Heavy"};
+        default = 2;
+    };
+    class FAC_GearPolicy
+    {
+        title = "Gear policy at start";
+        values[] = {0, 1, 2};
+        texts[] = {"Unrestricted", "Friendly faction only", "Preset loadouts only"};
+        default = 0;
+    };
+    class FAC_StartingTime
+    {
+        title = "Starting time of day";
+        values[] = {0, 1, 2, 3, 4};
+        texts[] = {"Default (Config)", "0800", "1200", "1800", "2200"};
+        default = 0;
+    };
+    class FAC_StartingWeather
+    {
+        title = "Starting weather";
+        values[] = {0, 1, 2, 3, 4, 5, 6};
+        texts[] = {"Default (Config)", "Clear", "Overcast", "Foggy", "Rain", "Storm", "Face Mission"};
+        default = 0;
+    };
+    class FAC_CivTalkPolicy
+    {
+        title = "Civilian talk at start";
+        values[] = {0, 1};
+        texts[] = {"Everyone", "Interpreters only"};
+        default = 0;
+    };
+    class FAC_IntelReadPolicy
+    {
+        title = "Building intel at start";
+        values[] = {0, 1};
+        texts[] = {"Everyone", "Specialists only"};
+        default = 0;
+    };
+    class FAC_AoStrength
+    {
+        title = "AO mission strength at start";
+        values[] = {0, 1, 2};
+        texts[] = {"Low", "Mid", "High"};
+        default = 1;
+    };
+    class FAC_DebugTools
+    {
+        title = "Script debug tools (Zeus self-assign via Admin tab)";
+        values[] = {0, 1, 2};
+        texts[] = {"Off", "Logged admin only", "Server admin"};
+        default = 2;
+    };
+    class FAC_JukeboxAccess
+    {
+        title = "Jukebox — start / change music";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_HqAutoHeal
+    {
+        title = "HQ auto-heal near base";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 1;
+    };
 };
 
 // Respawn: override mission.sqm to avoid respawn on mission start (no script calls forceRespawn).
@@ -35,7 +140,8 @@ respawn = 3;
 respawnTemplates[] = { "Spectator" };
 respawnOnStart = 0;
 
-// Unlocks ESC menu: Splendid Camera + Spectator (same debug-console block; default MP hides them)
+// ESC debug console (Splendid Camera + Spectator). Not lobby-tunable at runtime — use lobby param
+// FAC_DebugTools for script Zeus self-assign (Scenario Admin tab). 2 = server admin in MP.
 enableDebugConsole = 2;
 
 // bis_fnc_cp_* stubs before Eden CP/CPE modules (see rsc\fn_bisCpPreInit.sqf)

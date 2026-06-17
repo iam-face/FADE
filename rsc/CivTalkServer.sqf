@@ -16,7 +16,7 @@ FADE_civTalk_resolveCiv = {
         { if (netId _x == _netId) exitWith { _u = _x } } forEach allUnits;
     };
     if (isNull _u || {!alive _u}) exitWith { objNull };
-    if !(_u getVariable ["FADE_ambientCiv", false]) exitWith { objNull };
+    if !(_u getVariable ["FADE_ambientCiv", false] || {_u getVariable ["FADE_baseNpcTalk", false]}) exitWith { objNull };
     _u
 };
 
@@ -94,6 +94,7 @@ FADE_civTalk_computeFaceToFace = {
 FADE_civTalk_clearCivMoveLock = {
     params [["_civ", objNull]];
     if (isNull _civ || {!alive _civ}) exitWith {};
+    if (_civ getVariable ["FADE_baseNpcTalk", false]) exitWith {};
     _civ enableAI "MOVE";
     if (_civ getVariable ["ace_captives_isHandcuffed", false]) exitWith {};
     _civ switchMove "";
@@ -142,20 +143,27 @@ FADE_civTalk_start = {
     if (isNull _civ) exitWith {
         "No one to talk to." remoteExec ["systemChat", _player];
     };
+    private _isBaseNpc = _civ getVariable ["FADE_baseNpcTalk", false];
     private _maxD = missionNamespace getVariable ["FADE_civTalkMaxDistM", 6];
     if (_player distance _civ > _maxD) exitWith {
         "Too far away." remoteExec ["systemChat", _player];
     };
-    if !(missionNamespace getVariable ["FADE_civiliansEnabled", true]) exitWith {
-        "There is no one to talk to." remoteExec ["systemChat", _player];
+    if (!_isBaseNpc) then {
+        if !(missionNamespace getVariable ["FADE_civiliansEnabled", true]) exitWith {
+            "There is no one to talk to." remoteExec ["systemChat", _player];
+        };
+        private _cdKey = format ["%1_%2", getPlayerUID _player, _netId];
+        private _cdT = missionNamespace getVariable ["FADE_civTalkCooldownS", 45];
+        private _last = FADE_civTalk_cooldowns getOrDefault [_cdKey, -1e12];
+        if ((time - _last) < _cdT) exitWith {
+            "They are not interested in talking right now." remoteExec ["systemChat", _player];
+        };
     };
-    private _langOk = !(missionNamespace getVariable ["FADE_civTalkInterpretersOnly", false])
-        || { _player getVariable ["FADE_civInterpreter", false] };
-    private _cdKey = format ["%1_%2", getPlayerUID _player, _netId];
-    private _cdT = missionNamespace getVariable ["FADE_civTalkCooldownS", 45];
-    private _last = FADE_civTalk_cooldowns getOrDefault [_cdKey, -1e12];
-    if ((time - _last) < _cdT) exitWith {
-        "They are not interested in talking right now." remoteExec ["systemChat", _player];
+    private _langOk = if (_isBaseNpc) then {
+        true
+    } else {
+        !(missionNamespace getVariable ["FADE_civTalkInterpretersOnly", false])
+            || { _player getVariable ["FADE_civInterpreter", false] }
     };
     private _uid = getPlayerUID _player;
     if (!isNil { FADE_civTalk_sessions get _uid }) then {
@@ -164,10 +172,13 @@ FADE_civTalk_start = {
         if (!isNull _prevCiv) then { [_prevCiv] call FADE_civTalk_clearCivMoveLock };
         FADE_civTalk_sessions deleteAt _uid;
     };
-    private _forcedUncoop = _civ getVariable ["FADE_civTalkForcedUncooperative", false];
-    private _pPos = missionNamespace getVariable ["FADE_civTalkPositiveChance", 0.5];
-    _pPos = (_pPos max 0) min 1;
-    private _positive = _langOk && {!_forcedUncoop} && { random 1 < _pPos };
+    private _positive = true;
+    if (!_isBaseNpc) then {
+        private _forcedUncoop = _civ getVariable ["FADE_civTalkForcedUncooperative", false];
+        private _pPos = missionNamespace getVariable ["FADE_civTalkPositiveChance", 0.5];
+        _pPos = (_pPos max 0) min 1;
+        _positive = _langOk && {!_forcedUncoop} && { random 1 < _pPos };
+    };
     private _stance = [_civ, _player] call FADE_civTalk_computeFaceToFace;
     _stance params ["_playerAtl", "_playerDir", "_civDir"];
     // Same snap as client cutscene — without this, server still has pre-dialogue player pos and
@@ -178,10 +189,16 @@ FADE_civTalk_start = {
     doStop _civ;
     _civ setDir _civDir;
     [_netId, "idle"] call FADE_civTalk_serverCivAnim;
-    // [netId, positive, time, langOk, greetingUsed, carUsed, opforClicks, opforFirstWasIntel, rumoursUsed, arrestUsed]
-    FADE_civTalk_sessions set [_uid, [_netId, _positive, time, _langOk, false, false, 0, false, false, false]];
-    FADE_civTalk_cooldowns set [_cdKey, time];
-    [_playerAtl, _playerDir, _positive, _netId, _langOk] remoteExec ["FADE_civTalk_clientBeginCutscene", _player];
+    // [netId, positive, time, langOk, greetingUsed, carUsed, opforClicks, opforFirstWasIntel, rumoursUsed, arrestUsed, sessionKind]
+    if (_isBaseNpc) then {
+        FADE_civTalk_sessions set [_uid, [_netId, true, time, true, false, false, 0, false, false, false, "baseNpc"]];
+        [_playerAtl, _playerDir, true, _netId, true, "baseNpc"] remoteExec ["FADE_civTalk_clientBeginCutscene", _player];
+    } else {
+        private _cdKey = format ["%1_%2", getPlayerUID _player, _netId];
+        FADE_civTalk_cooldowns set [_cdKey, time];
+        FADE_civTalk_sessions set [_uid, [_netId, _positive, time, _langOk, false, false, 0, false, false, false, "ambient"]];
+        [_playerAtl, _playerDir, _positive, _netId, _langOk, "ambient"] remoteExec ["FADE_civTalk_clientBeginCutscene", _player];
+    };
 };
 
 // [carEn, opforEn, opforBtnText, rumoursEn, arrestEn] for radial "Talk to..." + apprehend
@@ -213,15 +230,19 @@ FADE_civTalk_topic = {
     private _sess = FADE_civTalk_sessions getOrDefault [_uid, []];
     if (count _sess < 2) exitWith {};
     _sess = +_sess;
-    _sess resize 10;
+    // Session has 11 fields (index 10 = sessionKind). Earlier resize 10 stripped it,
+    // forcing every base NPC topic into the ambient fall-through (default reply "...").
+    if (count _sess < 11) then { _sess resize 11 };
     if (isNil {_sess select 4}) then { _sess set [4, false] };
     if (isNil {_sess select 5}) then { _sess set [5, false] };
     if (isNil {_sess select 6}) then { _sess set [6, 0] };
     if (isNil {_sess select 7}) then { _sess set [7, false] };
     if (isNil {_sess select 8}) then { _sess set [8, false] };
     if (isNil {_sess select 9}) then { _sess set [9, false] };
+    if (isNil {_sess select 10}) then { _sess set [10, "ambient"] };
     _sess params ["_netId", "_positive"];
     private _langOk = _sess param [3, true];
+    private _sessionKind = _sess param [10, "ambient"];
     private _greetingUsed = _sess select 4;
     private _carUsed = _sess select 5;
     private _opforClicks = _sess select 6;
@@ -230,6 +251,22 @@ FADE_civTalk_topic = {
     if (isNull _civ) exitWith {
         FADE_civTalk_sessions deleteAt _uid;
         ["They left.", []] remoteExec ["FADE_civTalk_clientSetReply", _player];
+    };
+
+    if (_sessionKind isEqualTo "baseNpc") exitWith {
+        if !(_topicL in ["base_npc_hello", "base_npc_mission", "base_npc_goodbye"]) exitWith {};
+        private _pool = missionNamespace getVariable ["FADE_baseNpcTalkReplies", []];
+        if !(_pool isEqualType []) then { _pool = [] };
+        if (_pool isEqualTo []) then { _pool = ["..."] };
+        private _reply = selectRandom _pool;
+        private _uiStub = [true, false, "", false, false];
+        private _autoClose = _topicL isEqualTo "base_npc_goodbye";
+        FADE_civTalk_sessions set [_uid, _sess];
+        if (_autoClose) then {
+            [_reply, _uiStub, true] remoteExec ["FADE_civTalk_clientSetReply", _player];
+        } else {
+            [_reply, _uiStub] remoteExec ["FADE_civTalk_clientSetReply", _player];
+        };
     };
 
     private _civDisplayName = {
@@ -477,7 +514,9 @@ FADE_civTalk_end = {
     FADE_civTalk_sessions deleteAt _uid;
     private _civ = [_netId] call FADE_civTalk_resolveCiv;
     if (!isNull _civ) then {
-        [_civ] call FADE_civTalk_clearCivMoveLock;
+        if !(_civ getVariable ["FADE_baseNpcTalk", false]) then {
+            [_civ] call FADE_civTalk_clearCivMoveLock;
+        };
         if (_civ getVariable ["FADE_civTalkHoldAfterTalk", false]) then {
             _civ setVariable ["FADE_civTalkHoldAfterTalk", false, false];
             private _fn = missionNamespace getVariable ["FADE_civ_restoreAmbientFootPatrol", nil];

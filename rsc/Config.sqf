@@ -120,6 +120,38 @@ FADE_civTalkAnimCivIdle = "Acts_CivilIdle_2";
 // Unused: dialogue keeps civ in idle; only FADE_civTalkAnimCivIntel plays on intel lines.
 FADE_civTalkAnimCivTalk = "Acts_CivilTalking_1";
 FADE_civTalkAnimCivIntel = "Acts_Pointing_Right";
+// Base NPC (S Wordsman): server-spawned at Eden BaseNPCPos logic. Same CivTalk GUI; flat hello / mission / goodbye only.
+FADE_baseNpcTalkReplies = [
+    "Can I help you?",
+    "Umm...",
+    "I don't even play this game.",
+    "I'm not going on your mission.",
+    "No.",
+    "Sigh",
+    "Back in my day we used iron sights and we were fucking grateful for it.",
+    "Mission makers just don't have the real hatred for the players they used to when I played.",
+    "You kids have it so easy."
+];
+FADE_baseNpcTalkBtnHello = "Hello";
+FADE_baseNpcTalkBtnMission = "Will you come on the mission with us?";
+FADE_baseNpcTalkBtnGoodbye = "Goodbye";
+FADE_baseNpcTalkActionText = "Talk to S Wordsman";
+FADE_baseNpcTalkGoodbyeCloseDelay = 2.5;
+// Eden Game Logic variable name (same pattern as firesPos_* / BASE_1). Fallback: FADE_baseNpcEdenPosATL.
+FADE_baseNpcPosMarkerName = "BaseNPCPos";
+FADE_baseNpcEdenPosATL = [14754.169, 18.171377, 16638.416];
+// Mission start: map-click on civ-zone missions snaps to nearest settlement zone; others use tiered radius search
+FADE_missionMapClickRadiusTiers = [250, 500, 1000, 2500, 5000, -1];
+FADE_missionMapClickSnapCivZoneTypes = [
+    "Hostage", "HVT", "SearchDestroy", "AssetRetrieval", "MineClearing",
+    "TroopExtract", "ClearArea", "AreaOfOperations", "Operation"
+];
+FADE_missionMapClickSnappedRadius = -2; // FADE_missionMapClickResolvedRadius when snapped to civ zone (not a search tier metres)
+FADE_missionPlayerAnchorRadiusM = 5000;
+FADE_missionMapPickTimeoutSec = 20;
+FADE_baseNpcClass = "C_man_1";
+// getUnitLoadout / setUnitLoadout format (10 elements) — S Wordsman appearance at base.
+FADE_baseNpcLoadout = [[], [], [], ["U_I_G_Story_Protagonist_F", []], [], [], "H_Beret_blk", "G_aviator", [], ["ItemMap", "", "", "ItemCompass", "ItemWatch", ""]];
 // Building intel: spawns when a virtual garrison activates; server generates text on consume (`rsc/FADE_IntelServer.sqf`, `rsc/FADE_IntelClient.sqf`).
 // **Read intel** (hold) or **pick up** the prop (e.g. ACE): both award the same FADE hint/diary when a BLUFOR player is credited.
 FADE_intelEnabled = true;
@@ -338,6 +370,8 @@ FADE_aircraftSpawnWhitelist = [
 FADE_helipadMarkers = ["HeliMark_1", "HeliMark_2", "HeliMark_3", "HeliMark_4", "HeliMark_5", "HeliMark_6", "HeliMark_7", ""];
 // Seconds between pad marker text refreshes (initServer); 8s is enough for parked aircraft display.
 FADE_helipadMarkerUpdateInterval = 8;
+// Base pad status signs (UserTexture1m_F). Index matches FADE_helipadList (padIndicator_1 = HP_1, etc.). HP_8 has no sign.
+FADE_padIndicatorNames = ["padIndicator_1", "padIndicator_2", "padIndicator_3", "padIndicator_4", "padIndicator_5", "padIndicator_6", "padIndicator_7"];
 
 // Friendly / enemy infantry fallbacks when FADE_getUnitsForFaction returns empty (optional: set to mod rifleman classes).
 // Named FADE_fallback* so initPlayerLocal can load Config without overwriting missionNamespace
@@ -464,6 +498,8 @@ FADE_roadblockGarrisonMax = 16;
 // FADE_VirtualGarrison.sqf: spawn building OPFOR when any player is this close (2D); manager sleep interval (server).
 FADE_vgActivateRadiusM = 100;
 FADE_vgPollIntervalS = 10;
+// Search & Destroy: % of spawned ammo caches that must be destroyed (0–100). Mission also requires all defenders eliminated.
+FADE_searchDestroyCacheDestroyPct = 100;
 // Deferred nearby-building garrison (Missions: Asset Retrieval, Search & Destroy): roll per buildingPos when registering slots. Was 0.33.
 FADE_vgNearbySlotChance = 0.165;
 // Secondary garrison around mission anchors (Asset / S&D / HVT / Hostage / Clear Area / EE / Operation / ambient patrols):
@@ -579,6 +615,15 @@ FADE_rangeGunPosNames = [];
 FADE_rangeFriendlyVehPosNames = [
     "rangeFriendlyVehPos_1", "rangeFriendlyVehPos_2", "rangeFriendlyVehPos_3",
     "rangeFriendlyVehPos_4", "rangeFriendlyVehPos_5", "rangeFriendlyVehPos_6"
+];
+// Range equipment GUI pad labels (same order / length as FADE_rangeFriendlyVehPosNames).
+FADE_rangeFriendlyVehPosDisplayNames = [
+    "Friendly Equipment Position 1",
+    "Friendly Equipment Position 2",
+    "Friendly Equipment Position 3",
+    "Friendly Equipment Position 4",
+    "Friendly Equipment Position 5",
+    "Friendly Equipment Position 6"
 ];
 
 // -----------------------------------------------------------------------------

@@ -693,6 +693,9 @@ FAC_loadoutGui_fnc = {
 
     switch _action do {
         case "open": {
+            if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Loadout GUI access denied by lobby settings.";
+            };
             if (!createDialog "RscDisplayLoadout") then {
                 systemChat "LOADOUT GUI: RESOURCE NOT FOUND.";
             };

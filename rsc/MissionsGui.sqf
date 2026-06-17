@@ -19,7 +19,7 @@ private _missionListRaw = [
     ["Intercept Convoy", "InterceptConvoy", "Ambush and stop a moving enemy column before it reaches its destination. Expect escorts and rapid reactions. [G]", "Global"],
     ["Mine Clearing", "MineClearing", "Clear a short road segment of mines or IEDs. Use deliberate recon and proven clearance procedures. [S]", "Single"],
     ["Operation", "Operation", "Linked fights across several zones. Clear, hold, and prevent enemy movement between areas. [G]", "Global"],
-    ["Search & Destroy", "SearchDestroy", "Find and eliminate hardened enemy positions inside a town. Expect multiple strongpoints and interior fights. [G]", "Global"],
+    ["Search & Destroy", "SearchDestroy", "Search a marked zone for enemy ammo caches (burning barrels mark sites). Task states how many to find and what % must be destroyed. [G]", "Global"],
     ["Troop Extract", "TroopExtract", "Pick up a ground team and return them to base. LZ discipline and calm loading are essential. [S]", "Single"],
     ["Troop Insert", "TroopInsert", "Insert troops into a surveyed LZ from base. Aim for clear, safe landings and quick dismounts. [S]", "Single"]
 ];
@@ -67,6 +67,9 @@ FAC_missionsGui_fnc = {
 
     switch _action do {
         case "open": {
+            if !(["FAC_playerCanUseMissionsGui"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Missions GUI access denied by lobby settings.";
+            };
             if (!createDialog "RscDisplayMissions") then {
                 systemChat "MISSIONS GUI: RESOURCE NOT FOUND.";
             };
@@ -161,9 +164,12 @@ FAC_missionsGui_fnc = {
                 if (isNil "FAC_escapeEvasionPickGui_fnc") exitWith { systemChat "ESCAPE & EVASION UI not loaded."; };
                 ["open", []] call FAC_escapeEvasionPickGui_fnc;
             };
-            [_missionType, player] remoteExec ["FADE_startMission", 2];
-            hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
-            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+            if (_missionType == "TroopInsert") exitWith {
+                if (isNil "FAC_missionLocationPickGui_fnc") exitWith { systemChat "MISSION: location picker not loaded."; };
+                ["open", [_missionType]] call FAC_missionLocationPickGui_fnc;
+            };
+            if (isNil "FAC_missionLocationPickGui_fnc") exitWith { systemChat "MISSION: location picker not loaded."; };
+            ["open", [_missionType]] call FAC_missionLocationPickGui_fnc;
         };
         case "refreshStatus": {
             if (isNull _display) exitWith {};
