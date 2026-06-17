@@ -438,14 +438,9 @@ reverse _sortedFacNotes;
 } forEach _sortedFacNotes;
 
 // -----------------------------------------------------------------------------
-// Diary subject: Scenario Brief (distinct from vanilla "Briefing" in map menu)
+// Briefing: Scenario and Server (created first; diary shows newest first)
 // -----------------------------------------------------------------------------
-player createDiarySubject ["FAC_Briefing", "Scenario Brief"];
-
-// -----------------------------------------------------------------------------
-// Scenario Brief: Scenario and Server (created first; diary shows newest first)
-// -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Briefing", ["Scenario and Server", "
+player createDiaryRecord ["Diary", ["Scenario and Server", "
 <font color='#FFD700' size='14'>SCENARIO SETTINGS AND SERVER RULES</font><br/><br/>
 
 <font color='#87CEEB'>MANAGE SCENARIO</font><br/>
@@ -468,9 +463,9 @@ The Admin area handles server-side cleanup such as aborting active missions, des
 "]];
 
 // -----------------------------------------------------------------------------
-// Scenario Brief: Missions
+// Briefing: Missions
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Briefing", ["Missions", "
+player createDiaryRecord ["Diary", ["Missions", "
 <font color='#FFD700' size='14'>DYNAMIC MISSIONS</font><br/><br/>
 
 <font color='#87CEEB'>MISSION STREAMS</font><br/>
@@ -504,9 +499,9 @@ Mission start generates a task and SMEAC-style hint. Use the Tasks panel and map
 "]];
 
 // -----------------------------------------------------------------------------
-// Scenario Brief: Base and Travel
+// Briefing: Base and Travel
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Briefing", ["Base and Travel", "
+player createDiaryRecord ["Diary", ["Base and Travel", "
 <font color='#FFD700' size='14'>BASE FACILITIES AND SHORTCUTS</font><br/><br/>
 
 <font color='#87CEEB'>RHODESY'S OFFICE</font><br/>
@@ -539,9 +534,9 @@ Respawn is enabled. After death, use the configured respawn menu. When HQ auto-h
 "]];
 
 // -----------------------------------------------------------------------------
-// Scenario Brief: Overview (first thing players see)
+// Briefing: Overview (first thing players see)
 // -----------------------------------------------------------------------------
-player createDiaryRecord ["FAC_Briefing", ["Overview", "
+player createDiaryRecord ["Diary", ["Overview", "
 <font color='#FFD700' size='14'>FACE'S DYNAMIC ENVIRONMENT (FADE)  - SITUATION</font><br/><br/>
 
 <font color='#87CEEB'>NATURE</font><br/>
@@ -551,7 +546,7 @@ FADE Beta 4 is a multiplayer dynamic sandbox on <font color='#90EE90'>Altis</fon
 Spawn vehicles and gear at base, configure the theatre in <font color='#FFD700'>Manage Scenario</font>, then start dynamic missions from <font color='#FFD700'>Manage Missions</font> or <font color='#FFD700'>Ctrl+;</font>. Missions generate tasks, map markers and SMEAC-style hints. Scenario settings such as weather, factions, civilians, AI, AAA and access gates apply to the whole server once applied.<br/><br/>
 
 <font color='#87CEEB'>WHAT TO READ</font><br/>
-Use this <font color='#FFD700'>Scenario Brief</font> for player workflow. Use <font color='#FFD700'>FADE Notes</font> for RATEL, 5-line CAS, CFF, control measures, marking, LZ / EZ procedure, KAT medical references and rotary pilot standards. Use <font color='#FFD700'>Intel</font> for timestamped HUMINT, building intel and mission intel collected during play.<br/><br/>
+Use <font color='#FFD700'>Briefing</font> for player workflow. Use <font color='#FFD700'>FADE Notes</font> for RATEL, 5-line CAS, CFF, control measures, marking, LZ / EZ procedure, KAT medical references and rotary pilot standards. Use <font color='#FFD700'>Intel</font> for timestamped HUMINT, building intel and mission intel collected during play.<br/><br/>
 
 <font color='#87CEEB'>MISSION MODEL</font><br/>
 Global missions are shared server-wide operations; singles are smaller per-player taskings. Objective locations and enemy layouts are generated at runtime and usually respect distance rules from base and other active tasks. Follow the task and SMEAC for the current run rather than relying on old memory.

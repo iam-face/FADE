@@ -13,6 +13,8 @@ local_server/
 .cursor/agent-docs/
 .cursor/rules/
 .cursor
+*.docx
+*.doc
 
 # Arma / Eden (optional: uncomment if you don't want to track these)
 # *.bisign
