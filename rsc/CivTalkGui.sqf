@@ -28,10 +28,13 @@ if (hasInterface) then {
         // CT_STRUCTURED_TEXT (13): word-wrap; CT_STATIC (0): ST_MULTI in hpp + plain text.
         private _escaped = [_raw] call FADE_civTalk_escapeForStructuredText;
         if ((ctrlType _ctrl) == 13) then {
+            private _size = missionNamespace getVariable ["FADE_civTalkReplyTextSize", 1.1];
+            private _align = missionNamespace getVariable ["FADE_civTalkReplyTextAlign", "center"];
+            if !(_align in ["left", "center", "right"]) then { _align = "center" };
             // Concat (not format): civ lines may contain "%" which breaks format tokens.
             // Shadow matches title (60246 RscText shadow=2) for readability on sky / bright BG.
             private _st = (
-                "<t size='0.78' color='#ffffff' align='left' shadow='2' shadowColor='#000000'>"
+                "<t size='" + str _size + "' color='#ffffff' align='" + _align + "' valign='middle' shadow='2' shadowColor='#000000'>"
                 + _escaped + "</t>"
             );
             _ctrl ctrlSetStructuredText parseText _st;
@@ -81,8 +84,8 @@ if (hasInterface) then {
         if (!isNull _hub) then { _hub ctrlShow false };
         private _reply = _d displayCtrl 60247;
         if (!isNull _reply) then {
-            // Taller box + ST_MULTI (set in dialog hpp) so long replies wrap instead of clipping on one line.
-            _reply ctrlSetPosition [0.24, 0.54, 0.52, 0.12];
+            // Taller box so wrapped replies stay readable (structured text, centered).
+            _reply ctrlSetPosition [0.22, 0.52, 0.56, 0.14];
             _reply ctrlCommit 0;
         };
         private _bar = _d displayCtrl 60252;

@@ -96,13 +96,13 @@ FADE_cutscene_testCam_serverSpawnActors = {
     true
 };
 
-// Params: screen Eden var, texture indices, total runtime (s), hold per shot (s).
-// Defaults: Radio_1, 92s total; client now runs a fixed prepared-camera sequence.
+// Params: screen Eden var, texture indices, total runtime (s, -1 = auto), hold per Splendid shot (s).
+// Client drives end time from the prepared-camera sequence; server waits for clientFinished (safety cap below).
 FADE_cutscene_testCam_start = {
     params [
         ["_screenVarName", "Radio_1"],
         ["_indices", [0]],
-        ["_totalSeconds", 92],
+        ["_totalSeconds", -1],
         ["_stepSeconds", 3]
     ];
     if (!isServer) exitWith {};
@@ -117,10 +117,13 @@ FADE_cutscene_testCam_start = {
         [] call FADE_cutscene_testCam_stop;
     };
 
-    if !([] call FADE_cutscene_testCam_serverSpawnActors) exitWith {};
+    private _oldTimeline = missionNamespace getVariable ["FADE_cutscene_testCam_timeline", scriptNull];
+    if ((_oldTimeline isEqualType scriptNull) && {!scriptDone _oldTimeline}) then {
+        terminate _oldTimeline;
+    };
+    missionNamespace setVariable ["FADE_cutscene_testCam_timeline", scriptNull];
 
-    if !(_totalSeconds isEqualType 0) then { _totalSeconds = 92 };
-    if (_totalSeconds <= 0) then { _totalSeconds = 92 };
+    if !([] call FADE_cutscene_testCam_serverSpawnActors) exitWith {};
 
     if !(_stepSeconds isEqualType 0) then { _stepSeconds = 3 };
     if (_stepSeconds <= 0) then { _stepSeconds = 3 };
@@ -133,8 +136,12 @@ FADE_cutscene_testCam_start = {
     // jip=false: do not queue for JIP — clientStart moves the player in front of the laptop; late joiners must not replay it.
     [_screenVarName, _indices, _totalSeconds, _stepSeconds] remoteExec ["FADE_cutscene_testCam_clientStart", 0, false];
 
-    private _timeline = [_totalSeconds, _stepSeconds] spawn {
-        params ["_totalSeconds", "_stepSeconds"];
+    private _safetyCap = 210;
+    if ((_totalSeconds isEqualType 0) && { _totalSeconds > 0 }) then {
+        _safetyCap = (_totalSeconds + 30) max 210;
+    };
+    private _timeline = [_safetyCap, _stepSeconds] spawn {
+        params ["_safetyCap", "_stepSeconds"];
         private _t0 = time;
         private _did6 = false;
         private _did15 = false;
@@ -142,7 +149,7 @@ FADE_cutscene_testCam_start = {
 
         while { missionNamespace getVariable ["FADE_cutscene_testCam_active", false] } do {
             private _elapsed = time - _t0;
-            if (_elapsed >= _totalSeconds) exitWith {};
+            if (_elapsed >= _safetyCap) exitWith {};
 
             // 00:05 requested; synced to nearest 3s camera change => 00:06.
             if (!_did6 && {_elapsed >= 6}) then {
@@ -157,7 +164,6 @@ FADE_cutscene_testCam_start = {
             };
 
             // 00:35 requested; synced to nearest 3s camera change => 00:36.
-            // Apply dance set once and let clips play out naturally.
             if (!_did36 && {_elapsed >= 36}) then {
                 [FADE_cutscene_testCam_actorAnimsDance] call FADE_cutscene_testCam_serverApplyActorAnimSet;
                 _did36 = true;
@@ -166,18 +172,35 @@ FADE_cutscene_testCam_start = {
             sleep 0.1;
         };
 
-        // Auto stop on natural timeout (run in a fresh scheduled context).
+        // Safety only — normal end is FADE_cutscene_testCam_serverFinished from the client.
         if (missionNamespace getVariable ["FADE_cutscene_testCam_active", false]) then {
-            [] spawn { [] call FADE_cutscene_testCam_stop; };
+            diag_log "[CUTSCENE] safety cap reached — server abort";
+            [] call FADE_cutscene_testCam_serverFinished;
+            [] remoteExec ["FADE_cutscene_testCam_clientStop", 0, false];
         };
     };
 
     missionNamespace setVariable ["FADE_cutscene_testCam_timeline", _timeline];
 
     diag_log format [
-        "[CUTSCENE] Splendid RTT sequence started: screen=%1 total=%2s step=%3s actors=4",
-        _screenVarName, _totalSeconds, _stepSeconds
+        "[CUTSCENE] Splendid RTT sequence started: screen=%1 safetyCap=%2s step=%3s actors=4",
+        _screenVarName, _safetyCap, _stepSeconds
     ];
+};
+
+// Normal client completion — delete actors; do not stop music on clients.
+FADE_cutscene_testCam_serverFinished = {
+    if (!isServer) exitWith {};
+
+    missionNamespace setVariable ["FADE_cutscene_testCam_active", false];
+
+    private _h = missionNamespace getVariable ["FADE_cutscene_testCam_timeline", scriptNull];
+    if ((_h isEqualType scriptNull) && {!scriptDone _h}) then {
+        terminate _h;
+    };
+    missionNamespace setVariable ["FADE_cutscene_testCam_timeline", scriptNull];
+
+    [] call FADE_cutscene_testCam_serverDeleteActors;
 };
 
 FADE_cutscene_testCam_stop = {
@@ -193,5 +216,5 @@ FADE_cutscene_testCam_stop = {
 
     [] call FADE_cutscene_testCam_serverDeleteActors;
     [] remoteExec ["FADE_cutscene_testCam_clientStop", 0, false];
-    diag_log "[CUTSCENE] test camera stopped.";
+    diag_log "[CUTSCENE] test camera stopped (abort).";
 };

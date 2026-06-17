@@ -14,11 +14,11 @@ class RscDisplayCivTalkV: RscDisplayEmpty {
     class controls {
         class ReplyText: RscStructuredText {
             idc = 60247;
-            x = 0.24; y = 0.54; w = 0.52; h = 0.12;
+            x = 0.22; y = 0.52; w = 0.56; h = 0.14;
             colorBackground[] = {0.06, 0.07, 0.10, 0.78};
             text = "";
-            size = 0.028;
-            class Attributes { font = "PuristaMedium"; color = "#ffffff"; align = "left"; valign = "top"; shadow = 2; };
+            size = 0.034;
+            class Attributes { font = "PuristaMedium"; color = "#ffffff"; align = "center"; valign = "middle"; shadow = 2; };
         };
         class LangBarrier: RscText { idc = 60252; text = ""; x = 0.24; y = 0.688; w = 0.52; h = 0.026; sizeEx = 0.022; colorText[] = {0.72, 0.76, 0.82, 1}; colorBackground[] = {0, 0, 0, 0}; style = 528; };
         class BtnUp: RscButton { idc = 60248; text = ""; x = 0.24; y = 0.722; w = 0.52; h = 0.044; sizeEx = 0.026; colorBackground[] = {0.14, 0.38, 0.20, 0.95}; colorText[] = {1, 1, 1, 1}; action = "['radial', ['up']] call (missionNamespace getVariable ['FAC_civTalkGui_fnc', {}]);"; };

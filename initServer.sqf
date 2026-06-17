@@ -1579,7 +1579,7 @@ FADE_collectEdenNames = {
     _names apply { missionNamespace getVariable [_x, objNull] } select { !isNull _x }
 };
 
-// Pads: array of [object, padName] for spawn logic (planes excluded from HP_1, HP_2)
+// Pads: array of [object, padName] for spawn logic (planes excluded from FADE_planeForbiddenPads)
 FADE_helipadList = [];
 {
     private _obj = missionNamespace getVariable [_x, objNull];
@@ -3649,7 +3649,7 @@ FADE_spawnHeli = {
         ["NO PADS AVAILABLE."] remoteExec ["systemChat", _player];
     };
 
-    // Planes cannot spawn at HP_1, HP_2; helicopters can use any pad
+    // Planes cannot spawn at FADE_planeForbiddenPads; helicopters can use any pad
     private _isPlane = _heliClass isKindOf "Plane";
     private _forbidden = missionNamespace getVariable ["FADE_planeForbiddenPads", []];
     private _candidatePads = FADE_helipadList select {
@@ -5213,6 +5213,7 @@ publicVariable "FADE_medTrain_setUnconscious";
 publicVariable "FADE_medTrain_deleteAll";
 publicVariable "FADE_cutscene_testCam_start";
 publicVariable "FADE_cutscene_testCam_stop";
+publicVariable "FADE_cutscene_testCam_serverFinished";
 
 // Helper: clear active mission for a player (removes from Global or Single list).
 // Optional _taskIdGuard prevents stale mission threads from clearing a newer mission.

@@ -113,6 +113,9 @@ FADE_civTalkCamHeightAbovePlayerASL = 1;
 FADE_civTalkCamFov = 0.2;
 FADE_civTalkReturnIdleDelay = 5;
 FADE_civTalkIntelPoseSec = 4.5;
+// CivTalk reply box (idc 60247): structured-text size + alignment (center reads better for short NPC lines).
+FADE_civTalkReplyTextSize = 1.1;
+FADE_civTalkReplyTextAlign = "center";
 FADE_civTalkAnimPlayerIdle = "acts_millerIdle";
 // Unused while dialogue keeps the player in idle (see CivTalkGui).
 FADE_civTalkAnimPlayerTalk = "Acts_StandingSpeakingUnarmed";
@@ -237,7 +240,7 @@ FADE_firesProjectileTrackSleep = 0.1;
 // Camera height (m) above impact for PiP (local anchor = impact point).
 FADE_firesImpactCamHeightM = 90;
 // Pads where planes cannot spawn (helicopters can use any pad)
-FADE_planeForbiddenPads = ["HP_1", "HP_2"];
+FADE_planeForbiddenPads = ["HP_1", "HP_2", "HP_8"];
 // Vehicle GUI (aircraft): when whitelist is ON, list is restricted to these CfgVehicles classnames (exact match).
 FADE_aircraftSpawnWhitelist = [
     "RHS_AH64D_wd",
