@@ -1,5 +1,5 @@
 // =============================================================================
-// ARCHIVED — NOT loaded by the mission (reference / restore only)
+// ARCHIVED  -  NOT loaded by the mission (reference / restore only)
 // =============================================================================
 // Full drone briefing-screen RTT stack removed from rsc/FiresFallOfShot.sqf.
 // Depends on: FAC_FiresFoS_fnc_resolveEdenNamedObject, FAC_firesFoS_fnc_rttProceduralTex,
@@ -11,7 +11,7 @@
 
 #define FAC_FiresFoS_DRONE_RTT "FAC_FiresDroneRTT"
 
-// Server — was publicVariable'd as FADE_firesFoS_droneRttResetRequest in initServer.sqf
+// Server  -  was publicVariable'd as FADE_firesFoS_droneRttResetRequest in initServer.sqf
 FADE_firesFoS_droneRttResetRequest_ARCHIVED = {
     params [["_player", objNull]];
     if (!isServer) exitWith {};

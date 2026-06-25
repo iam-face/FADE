@@ -1,5 +1,5 @@
 // =============================================================================
-// DummyUnits.sqf — Eden dummyStand_* / dummyMove_* behaviour
+// DummyUnits.sqf  -  Eden dummyStand_* / dummyMove_* behaviour
 // -----------------------------------------------------------------------------
 // Server only. IntroCutscene.sqf (FAC_C_M01) has no unit animations; source list
 // is IntroCutscene2.sqf switchMove calls.

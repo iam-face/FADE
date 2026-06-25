@@ -5,7 +5,7 @@ call compile preprocessFileLineNumbers "rsc\fn_bisCpStubApply.sqf";
 if (missionNamespace getVariable ["FADE_bisCpStubGuardStarted", false]) exitWith {};
 missionNamespace setVariable ["FADE_bisCpStubGuardStarted", true];
 
-// Reapply stubs on a timer - do NOT use EachFrame: 12× setVariable per frame per machine caused noticeable MP stutter.
+// Reapply stubs on a timer - do NOT use EachFrame: 12x setVariable per frame per machine caused noticeable MP stutter.
 // BIS usually lazy-loads campaign functions once; ~1 Hz is enough to put stubs back (see FADE_bisCpStubReapplyInterval in Config.sqf).
 [] spawn {
     while { true } do {

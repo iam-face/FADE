@@ -1,11 +1,9 @@
 // =============================================================================
-// TroopInsertMission.sqf — multi-participant Troop Insert (server)
+// TroopInsertMission.sqf  -  multi-participant Troop Insert (server)
 // FADE_troopInsertParams: [_missionType, _destPos, _player, _participants, _mode]
 // =============================================================================
 if (!isServer) exitWith {};
-if (isNil "FADE_troopInsert_runTransport") then {
-    call compile preprocessFileLineNumbers "rsc\TroopInsertTransport.sqf";
-};
+FADE_troopInsertMissionMain = {
 if (isNil "FADE_troopInsertParams" || { count FADE_troopInsertParams < 5 }) exitWith {};
 FADE_troopInsertParams params ["_missionType", "_destPos", "_player", "_participants", "_mode"];
 if (_missionType != "TroopInsert") exitWith {};
@@ -119,7 +117,7 @@ private _fnc_pickupPosNearParticipant = {
     for "_try" from 0 to 18 do {
         private _dist = _minDist + random (_maxDist - _minDist);
         private _cand = [_anchor, _dist, random 360] call BIS_fnc_relPos;
-        private _safe = [_cand, 0, 50, 6, 1, 0.4, 0, [], _cand] call BIS_fnc_findSafePos;
+        private _safe = [[_cand, 0, 50, 6, 1, 0.4, 0, [], _cand], _cand] call FADE_findSafePosArray;
         if (_safe isEqualType [] && { count _safe >= 2 } && { !surfaceIsWater [_safe select 0, _safe select 1] }) exitWith { _pos = _safe };
     };
     if (count _pos < 2) then { _pos = [_anchor, (_minDist + _maxDist) / 2, random 360] call BIS_fnc_relPos };
@@ -293,7 +291,7 @@ private _fnc_finishMission = {
     missionNamespace setVariable [_claimedVehKey, nil, true];
     missionNamespace setVariable ["FADE_currentMissionType", ""];
     missionNamespace setVariable ["FADE_currentMissionPlayer", objNull];
-    publicVariable "FADE_currentMissionType";
+    [] call FADE_missionSlots_publish;
 };
 
 private _fnc_waveAllTransportOk = {
@@ -452,7 +450,7 @@ if (_mode == "oneOff") then {
         for "_try" from 0 to 24 do {
             private _dist = _pickupMin + random (_pickupMax - _pickupMin);
             private _cand = [_centroidParticipants, _dist, random 360] call BIS_fnc_relPos;
-            private _safe = [_cand, 0, 80, 8, 1, 0.4, 0, [], _cand] call BIS_fnc_findSafePos;
+            private _safe = [[_cand, 0, 80, 8, 1, 0.4, 0, [], _cand], _cand] call FADE_findSafePosArray;
             if (_safe isEqualType [] && { count _safe >= 2 } && { !surfaceIsWater [_safe select 0, _safe select 1] }) exitWith { _sharedPickup = _safe };
         };
         if (count _sharedPickup < 2) then {
@@ -499,7 +497,7 @@ if (_mode == "oneOff") then {
                 private _dist = round ((getPosATL _owner) distance2D _pickPos);
                 private _sector = [getPosATL _owner, _pickPos] call _fnc_compassSector;
                 [format [
-                    "<t color='#FFFFFF'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Shared link-up at Grid %1 — approx %2 m %3 from you. All pilots converge here, pick up within %4 s, then insert at LZ Grid %5 (approx %6 km from link-up).</t>",
+                    "<t color='#FFFFFF'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Shared link-up at Grid %1  -  approx %2 m %3 from you. All pilots converge here, pick up within %4 s, then insert at LZ Grid %5 (approx %6 km from link-up).</t>",
                     _sharedGrid, _dist, _sector, _reinfDelay, _nextLzGrid, _sharedLzKm
                 ]] remoteExec ["FADE_showMissionHint", _owner];
             };
@@ -514,7 +512,7 @@ if (_mode == "oneOff") then {
                     if (!isNull _owner && { alive _owner }) then {
                         private _lzKm = (round ((_newLz distance2D _pickPos) / 100)) / 10;
                         [format [
-                            "<t color='#FFFFFF'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Still holding at Grid %1 — link up in %2 s. Insert LZ Grid %3 (%4 km from link-up).</t>",
+                            "<t color='#FFFFFF'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Still holding at Grid %1  -  link up in %2 s. Insert LZ Grid %3 (%4 km from link-up).</t>",
                             mapGridPosition _pickPos, _reinfDelay - _sec, _nextLzGrid, _lzKm
                         ]] remoteExec ["FADE_showMissionHint", _owner];
                     };
@@ -533,4 +531,15 @@ if (_mode == "oneOff") then {
     if (!_missionEnded && { !(missionNamespace getVariable [_abortFlag, false]) }) then {
         ["SUCCEEDED", "<t size='1.2' color='#90EE90'>TROOP INSERT COMPLETE</t><br/><br/><t color='#E0E0E0'>Recurring Troop Insert ended.</t>", true] call _fnc_finishMission;
     };
+};
+
+};
+
+FADE_runMission_TroopInsert = {
+    if (isNil "FADE_troopInsertParams") exitWith {
+        private _p = missionNamespace getVariable ["FADE_missionRun_player", objNull];
+        if (!isNull _p) then { [_p] call FADE_clearActiveMission };
+        ["<t size='1.2' color='#FFAA00'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Use START to open the participant list (include yourself).</t>"] remoteExec ["FADE_showMissionHint", _p];
+    };
+    [] call FADE_troopInsertMissionMain;
 };

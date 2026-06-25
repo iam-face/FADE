@@ -40,7 +40,7 @@ FAC_teleportGui_fnc_resetDestButtonVisuals = {
 };
 
 // Returns [ok, atlPos, faceDir] for teleport offset math (Eden object or MARKER_name).
-// Z must be ATL (height above local terrain) for setPosATL — never use getTerrainHeightASL as Z (that is ASL).
+// Z must be ATL (height above local terrain) for setPosATL  -  never use getTerrainHeightASL as Z (that is ASL).
 FAC_teleportGui_fnc_resolveDestination = {
     params ["_objName"];
     if (_objName find "MARKER_" == 0) then {
@@ -158,15 +158,10 @@ FAC_teleportGui_destinations = [
     ["Sultan's CQB Killhouse", "teleportCQB"],
     ["Joon's Fires Range", "teleportFires"],
     ["Base HQ", "teleportBase"],
-    ["Juko's Locker Room", "teleportLockerRoom"],
     ["Bean's Medical Area", "teleportMedical"],
     ["Officer Area", "teleportOfficer"],
-    ["Pads 1 and 2", "teleportPad1"],
-    ["Pads 3, 4 and 5", "teleportPad3"],
     ["Firing Range", "teleportRange"],
-    ["Sniper Range", "teleportSniper"],
-    ["SDE's Pub", "teleportSDE"],
-    ["Specialist Area", "teleportSpecialist"]
+    ["Sniper Range", "teleportSniper"]
 ];
 
 FAC_teleportGui_fnc_destinationDisplayLabel = {

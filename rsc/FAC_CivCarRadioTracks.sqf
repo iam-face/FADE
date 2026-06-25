@@ -1,5 +1,5 @@
 // =============================================================================
-// FAC_CivCarRadioTracks.sqf — Sig_* classnames for ambient civ car radio
+// FAC_CivCarRadioTracks.sqf  -  Sig_* classnames for ambient civ car radio
 // =============================================================================
 // Keep in sync with rsc/JukeboxGui.sqf FAC_jukebox_tracks (second column only).
 // Loaded on server by AmbientCivilians.sqf when the first eligible car rolls radio.

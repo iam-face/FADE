@@ -1,5 +1,5 @@
 // =============================================================================
-// CivTalkServer.sqf — server: ambient civilian dialogue sessions (MP authority)
+// CivTalkServer.sqf  -  server: ambient civilian dialogue sessions (MP authority)
 // =============================================================================
 // Compiled on server from initServer.sqf. Clients use CivTalkGui + addAction.
 
@@ -11,9 +11,9 @@ if (isNil "FADE_civTalk_cooldowns") then { FADE_civTalk_cooldowns = createHashMa
 FADE_civTalk_resolveCiv = {
     params [["_netId", ""]];
     if (!(_netId isEqualType "") || { _netId == "" }) exitWith { objNull };
-    private _u = _netId call BIS_fnc_objectFromNetId;
+    private _u = [_netId] call FADE_entityRegistry_resolveNetId;
     if (isNull _u) then {
-        { if (netId _x == _netId) exitWith { _u = _x } } forEach allUnits;
+        _u = _netId call BIS_fnc_objectFromNetId;
     };
     if (isNull _u || {!alive _u}) exitWith { objNull };
     if !(_u getVariable ["FADE_ambientCiv", false] || {_u getVariable ["FADE_baseNpcTalk", false]}) exitWith { objNull };
@@ -76,8 +76,8 @@ FADE_civTalk_computeFaceToFace = {
     private _sep = missionNamespace getVariable ["FADE_civTalkFaceSeparationM", 3];
     private _newP = _c getPos [_sep, _dirToP];
     _newP set [2, _c select 2];
-    // Max search was 8m — safe pos could land the player far from the civ; keep nudge within ~1m of intended spot only.
-    private _sp = [_newP, 0, 1, 2, 0, 0.35, 0, [], _newP] call BIS_fnc_findSafePos;
+    // Max search was 8m  -  safe pos could land the player far from the civ; keep nudge within ~1m of intended spot only.
+    private _sp = [[_newP, 0, 1, 2, 0, 0.35, 0, [], _newP], _newP] call FADE_findSafePosArray;
     // findSafePos can rarely return a far fallback; keep the snap within a few metres of the intended face-to-face spot.
     if (_sp isEqualType [] && { count _sp >= 2 }) then {
         private _d2 = _newP distance2D [_sp select 0, _sp select 1];
@@ -181,7 +181,7 @@ FADE_civTalk_start = {
     };
     private _stance = [_civ, _player] call FADE_civTalk_computeFaceToFace;
     _stance params ["_playerAtl", "_playerDir", "_civDir"];
-    // Same snap as client cutscene — without this, server still has pre-dialogue player pos and
+    // Same snap as client cutscene  -  without this, server still has pre-dialogue player pos and
     // FADE_civTalk_topic's distance check fails (client moved locally; authority stayed "far").
     _player setPosATL _playerAtl;
     _player setDir _playerDir;

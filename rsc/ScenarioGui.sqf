@@ -59,7 +59,7 @@ FAC_scenarioGui_getFactionDisplayName = {
     if (_faction == "") exitWith { "Unknown" };
     if (!isNil "FAC_loadoutGui_getFactionDisplayName") exitWith { [_faction] call FAC_loadoutGui_getFactionDisplayName };
     private _dn = getText (configFile >> "CfgFactionClasses" >> _faction >> "displayName");
-    if (_dn != "") exitWith { _dn };
+    if (_dn != "" && { _dn find "STR_" != 0 }) exitWith { _dn };
     (_faction splitString "_") joinString " "
 };
 
@@ -70,7 +70,9 @@ FAC_scenarioGui_getFactionsForSide = {
         private _faction = configName _x;
         if (getNumber (_x >> "side") == _sideNum) then {
             private _dn = getText (_x >> "displayName");
-            if (_dn == "") then { _dn = _faction };
+            if (_dn == "" || { _dn find "STR_" == 0 }) then {
+                _dn = (_faction splitString "_") joinString " ";
+            };
             _result pushBack [_faction, _dn];
         };
     } forEach ("true" configClasses (configFile >> "CfgFactionClasses"));
@@ -144,7 +146,7 @@ FAC_scenarioGui_setTabVisibility = {
 };
 
 // Faction listboxes live on the Factions tab; when hidden (Scenario/Admin), lbCurSel is often -1. Store picks in missionNamespace
-// on every list change and on load; Apply reads picks only — never trust lbCurSel while the lists may be hidden.
+// on every list change and on load; Apply reads picks only  -  never trust lbCurSel while the lists may be hidden.
 FAC_scenarioGui_commitFactionListToPick = {
     params ["_display", "_idc", "_fallback"];
     private _lb = _display displayCtrl _idc;
@@ -245,7 +247,7 @@ FAC_scenarioGui_readWeatherParamsFromSliders = {
     ]
 };
 
-// Compare preset to UI (fog decay/base at indices 3–4 may differ from slider reconstruction; ignore them)
+// Compare preset to UI (fog decay/base at indices 3-4 may differ from slider reconstruction; ignore them)
 FAC_scenarioGui_weatherParamsMatchPreset = {
     params ["_a", "_b", "_eps"];
     if (count _a < 9 || { count _b < 9 }) exitWith { false };
@@ -469,7 +471,7 @@ FAC_scenarioGui_updateTownsLabel = {
     _lb ctrlSetText format ["Number of target towns in Operation mission: %1", _z];
 };
 
-// Sliders: foot cap 0–300 (0 = unlimited); density 25–250 -> 0.25–2.5x
+// Sliders: foot cap 0-300 (0 = unlimited); density 25-250 -> 0.25-2.5x
 FAC_scenarioGui_updateCivAmbientLabels = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
@@ -483,7 +485,7 @@ FAC_scenarioGui_updateCivAmbientLabels = {
     private _lDen = _d displayCtrl 60653;
     if (!isNull _sDen && { !isNull _lDen }) then {
         private _v = ((round (sliderPosition _sDen)) max 25 min 250) / 100;
-        _lDen ctrlSetText format ["Scale: %1x (capital→local tiers)", (round (_v * 100)) / 100];
+        _lDen ctrlSetText format ["Scale: %1x (capital to local tiers)", (round (_v * 100)) / 100];
     };
 };
 
@@ -901,6 +903,9 @@ FAC_scenarioGui_fnc = {
         case "apply": {
             private _d = findDisplay FAC_scenarioGui_IDD;
             if (isNull _d) exitWith {};
+            [_d, 60311, missionNamespace getVariable ["FAC_scenarioGui_pickFriendlyFaction", missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]]] call FAC_scenarioGui_commitFactionListToPick;
+            [_d, 60310, missionNamespace getVariable ["FAC_scenarioGui_pickEnemyFaction", missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"]]] call FAC_scenarioGui_commitFactionListToPick;
+            [_d, 60312, missionNamespace getVariable ["FAC_scenarioGui_pickCivFaction", missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"]]] call FAC_scenarioGui_commitFactionListToPick;
             private _hour = missionNamespace getVariable ["FAC_scenarioGui_hour", 12];
             _hour = (round _hour) max 0 min 23;
 

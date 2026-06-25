@@ -210,7 +210,7 @@ private _dedupePositions = {
 };
 
 // Longest 2D edge between connected road segments near _center → [midATL, dirDeg].
-// Uses a tighter search radius (FADE_dynamicRoadblockCivZoneRoadSearchMult × _radius) so we pick streets in the town, not a long highway chord through a large ambient radius.
+// Uses a tighter search radius (FADE_dynamicRoadblockCivZoneRoadSearchMult x _radius) so we pick streets in the town, not a long highway chord through a large ambient radius.
 // If FADE_dynamicRoadblockCivZoneMidMaxM > 0, prefer edges whose midpoint is within that distance of _center; fall back to unconstrained longest if none qualify.
 private _longestRoadMidInRadius = {
     params ["_center", "_radius"];
@@ -458,7 +458,7 @@ private _tryPickAggressive = {
     _picked
 };
 
-// Up to one new roadblock per call: first qualifying active civ zone (main road midpoint in town). No "ahead of player" filter — that belonged to corridor logic and blocked in-zone spawns.
+// Up to one new roadblock per call: first qualifying active civ zone (main road midpoint in town). No "ahead of player" filter  -  that belonged to corridor logic and blocked in-zone spawns.
 // Per-zone roll: FADE_dynamicRoadblockCivZoneSpawnChance (default 50%), or FADE_dynamicRoadblockCivZoneSpawnChanceEe when EE (FADE_dynRb_escapeZone set).
 private _tryCivZoneSpawn = {
     params ["_players", "_base", "_zoneRadius"];
@@ -516,9 +516,12 @@ while { true } do {
     if (!_enabled || { !_patrols }) then {
         if (count keys _state > 0) then {
             [] call FADE_dynamicRoadblocks_despawnAll;
-            ["Patrols or dynamic roadblocks OFF — cleared all."] call _rbLog;
+            ["Patrols or dynamic roadblocks OFF  -  cleared all."] call _rbLog;
         };
     } else {
+        if ((allPlayers findIf { alive _x }) < 0) then {
+            // skip spawn scan when nobody online
+        } else {
         private _zoneGoneRetainPlM = missionNamespace getVariable ["FADE_dynamicRoadblockZoneGoneRetainPlayerM", 1000];
         private _base = [missionNamespace getVariable ["FADE_basePos", [0, 0, 0]]] call _norm2;
         private _players = call _eligiblePlayers;
@@ -640,6 +643,7 @@ while { true } do {
                     };
                 };
             };
+        };
         };
     };
 

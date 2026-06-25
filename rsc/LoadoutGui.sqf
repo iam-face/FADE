@@ -1,11 +1,7 @@
 // =============================================================================
 // LoadoutGui.sqf - Loadout selection dialog
 // =============================================================================
-// Allows players to change their loadout by selecting from all infantry units
-// of the same side. Supports filtering by faction.
-//
-// Preset loadouts (ACE/getUnitLoadout arrays) live in rsc\PresetLoadouts.sqf; compiled
-// when the dialog opens (default view) or when the player clicks "Preset Loadouts".
+// Preset loadout helpers: rsc\LoadoutPresetCommon.sqf (compiled via FAC_ensureLoadoutGui).
 // =============================================================================
 
 // Join strings without joinString (engine compatibility).
@@ -19,101 +15,7 @@ FAC_loadoutGui_linesJoin = {
     _s
 };
 
-// Build preset entries from FAC_presetLoadouts:
-// [
-//   [eraKey, eraDisplay, [[roleDisplay, loadoutArray], ...]],
-//   ...
-// ]
-// Returns rows in the same shape as regular rows:
-// [key, displayName, factionKey, factionDisplayName, typeDisplayName]
-FAC_loadoutGui_buildPresetEntries = {
-    private _preset = missionNamespace getVariable ["FAC_presetLoadouts", []];
-    private _out = [];
-    {
-        _x params ["_eraKey", "_eraDn", "_roles"];
-        {
-            _x params ["_roleDn", "_loadout"];
-            if (_loadout isEqualType [] && {count _loadout > 0}) then {
-                private _entryKey = format ["FAC:%1:%2", _eraKey, _forEachIndex];
-                _out pushBack [_entryKey, _roleDn, _eraKey, _eraDn, "Preset"];
-            };
-        } forEach _roles;
-    } forEach _preset;
-    _out
-};
-
-// getUnitLoadout / setUnitLoadout use exactly 10 elements (see Tequila Outfits.sqf / BI wiki).
-// ACE/ACEAX exports often append an 11th cell (e.g. aceax_textureOptions) — setUnitLoadout then fails silently.
-FAC_loadoutGui_normalizePresetLoadoutArray = {
-    params ["_lo"];
-    if (!(_lo isEqualType [])) exitWith { [] };
-    if ((count _lo) > 10) then {
-        _lo = _lo select [0, 10];
-    };
-    _lo
-};
-
-// ACE exports sometimes nest the real loadout as [[[[...]]]]; unwrap single-element chains until we have the real array.
-FAC_loadoutGui_unwrapPresetLoadoutArray = {
-    params ["_lo"];
-    if (!(_lo isEqualType [])) exitWith { [] };
-    private _d = 0;
-    while {
-        _d < 12 &&
-        { count _lo == 1 } &&
-        { (_lo select 0) isEqualType [] }
-    } do {
-        _lo = _lo select 0;
-        _d = _d + 1;
-    };
-    _lo
-};
-
-// After unwrap: ACEAX sometimes stores [ loadout, [ ["aceax_textureOptions",[]] ] ] (count 2). Pick the branch that unwraps to a full loadout (>= 10 cells).
-FAC_loadoutGui_resolvePresetLoadoutArray = {
-    params ["_lo"];
-    if (!(_lo isEqualType [])) exitWith { [] };
-    _lo = [_lo] call FAC_loadoutGui_unwrapPresetLoadoutArray;
-    if ((count _lo) == 2) then {
-        private _pick = [];
-        {
-            if (_x isEqualType [] && { count _pick == 0 }) then {
-                private _c = [_x] call FAC_loadoutGui_unwrapPresetLoadoutArray;
-                if ((count _c) >= 10) then {
-                    _pick = _c;
-                };
-            };
-        } forEach [_lo select 0, _lo select 1];
-        if ((count _pick) >= 10) then {
-            _lo = _pick;
-        };
-    };
-    _lo = [_lo] call FAC_loadoutGui_unwrapPresetLoadoutArray;
-    [_lo] call FAC_loadoutGui_normalizePresetLoadoutArray
-};
-
-// Resolve preset loadout array from synthetic key: FAC:<eraKey>:<index>
-FAC_loadoutGui_getPresetLoadoutByKey = {
-    params ["_key"];
-    if ((_key find "FAC:") != 0) exitWith { [] };
-    private _parts = _key splitString ":";
-    if ((count _parts) < 3) exitWith { [] };
-    private _eraKey = _parts select 1;
-    private _idx = parseNumber (_parts select 2);
-    private _preset = missionNamespace getVariable ["FAC_presetLoadouts", []];
-    private _out = [];
-    {
-        _x params ["_k", "_eraDn", "_roles"];
-        if (_k == _eraKey) exitWith {
-            if (_idx >= 0 && {_idx < count _roles}) then {
-                _out = (_roles select _idx) select 1;
-            };
-        };
-    } forEach _preset;
-    [_out] call FAC_loadoutGui_resolvePresetLoadoutArray
-};
-
-// Human-readable summary for preset arrays in list tooltips.
+// Build preset tooltip text (LoadoutGui-only).
 FAC_loadoutGui_buildLoadoutTextFromArray = {
     params ["_loadout"];
     if (!(_loadout isEqualType [])) exitWith { "Preset loadout (invalid format)." };
@@ -207,13 +109,6 @@ FAC_loadoutGui_buildStdUnits = {
         };
     };
     _allUnits
-};
-
-// Compile rsc/PresetLoadouts.sqf once when user opens preset tab (failure must not break main GUI).
-FAC_loadoutGui_ensurePresetData = {
-    if (!((missionNamespace getVariable ["FAC_presetLoadouts", []]) isEqualTo [])) exitWith { true };
-    call compile preprocessFileLineNumbers "rsc\PresetLoadouts.sqf";
-    !((missionNamespace getVariable ["FAC_presetLoadouts", []]) isEqualTo [])
 };
 
 FAC_loadoutGui_populateStdFactionList = {
@@ -423,34 +318,6 @@ FAC_loadoutGui_tryAddBandageBundle = {
     systemChat "Cannot add bandages: no inventory space.";
 };
 
-// Build a concrete loadout array from a unit class by spawning a hidden local template unit.
-// This avoids edge cases where setUnitLoadout with classname omits container contents.
-// _grpSide: optional (dedicated server has no player); defaults to side player on clients.
-FAC_loadoutGui_getLoadoutFromClass = {
-    params ["_class", ["_grpSide", sideUnknown]];
-    if (_grpSide isEqualTo sideUnknown) then {
-        if (isNull player) exitWith { [] };
-        _grpSide = side player;
-    };
-    if (_class == "" || { !isClass (configFile >> "CfgVehicles" >> _class) }) exitWith { [] };
-
-    private _grp = createGroup [_grpSide, true];
-    private _tmp = objNull;
-    private _loadout = [];
-
-    _tmp = _grp createUnit [_class, [0,0,0], [], 0, "CAN_COLLIDE"];
-    if (!isNull _tmp) then {
-        _tmp hideObject true;
-        _tmp allowDamage false;
-        _tmp enableSimulation false;
-        _loadout = getUnitLoadout _tmp;
-        deleteVehicle _tmp;
-    };
-    deleteGroup _grp;
-
-    _loadout
-};
-
 // Clear weapons/containers so setUnitLoadout can replace gear reliably (same idea as
 // FAC_Tequila.Stratis\rsc\Loadout.sqf: strip mags/weapons before re-arm).
 FAC_loadoutGui_stripUnitForLoadout = {
@@ -499,7 +366,7 @@ FAC_loadoutGui_applyLoadoutArrayLocal = {
     true
 };
 
-// Vanilla traits — https://community.bohemia.net/wiki/setUnitTrait
+// Vanilla traits  -  https://community.bohemia.net/wiki/setUnitTrait
 // Medic: false/0 off; true -> 1; 1/2 = CfgVehicles attendant (trained / doctor). getUnitTrait may return bool or Number.
 // Engineer / explosiveSpecialist: boolean (CfgVehicles engineer / canDeactivateMines).
 FAC_loadoutGui_syncRoleTraitsLocal = {
@@ -518,38 +385,6 @@ FAC_loadoutGui_syncRoleTraitsLocal = {
     _u setUnitTrait ["explosiveSpecialist", _expOn];
 };
 
-// CfgVehicles: attendant, engineer, canDeactivateMines (explosive specialist / EOD).
-FAC_loadoutGui_getCfgRoleTraits = {
-    params ["_class"];
-    if (_class == "" || { !isClass (configFile >> "CfgVehicles" >> _class) }) exitWith { [0, false, false] };
-    private _cfg = configFile >> "CfgVehicles" >> _class;
-    [
-        getNumber (_cfg >> "attendant"),
-        getNumber (_cfg >> "engineer") > 0,
-        getNumber (_cfg >> "canDeactivateMines") > 0
-    ]
-};
-
-// Preset role display name -> [medic, engineer, explosiveSpecialist]. Unknown roles clear all three (zeros/false).
-// Medic level: missionNamespace FAC_loadoutGui_presetMedicTraitLevel (default 2).
-FAC_loadoutGui_getPresetRoleTraits = {
-    params ["_roleDn"];
-    private _medic = 0;
-    private _eng = false;
-    private _exp = false;
-    if (_roleDn == "Medic") then {
-        _medic = missionNamespace getVariable ["FAC_loadoutGui_presetMedicTraitLevel", 2];
-    };
-    if (_roleDn == "Engineer") then {
-        _eng = true;
-        _exp = true;
-    };
-    if (_roleDn == "Demolition") then {
-        _exp = true;
-    };
-    [_medic, _eng, _exp]
-};
-
 // Respawn snapshot: gear + Medic / Engineer / explosiveSpecialist (setUnitLoadout does not store traits).
 FAC_loadoutGui_saveRespawnLoadoutSnapshot = {
     params [["_u", player]];
@@ -562,7 +397,7 @@ FAC_loadoutGui_saveRespawnLoadoutSnapshot = {
     ];
 };
 
-// Capture mission slot / JIP spawn gear once; skipped if player already saved (loadout box) — same keys as saveRespawnLoadoutSnapshot.
+// Capture mission slot / JIP spawn gear once; skipped if player already saved (loadout box)  -  same keys as saveRespawnLoadoutSnapshot.
 FAC_loadoutGui_trySaveInitialRespawnLoadoutIfMissing = {
     params [["_u", player]];
     if (!hasInterface) exitWith {};
@@ -671,7 +506,7 @@ FAC_loadoutGui_populateWorker = {
         };
         missionNamespace setVariable ["FAC_loadoutGui_listMode", "preset"];
         if (!([] call FAC_loadoutGui_ensurePresetData)) then {
-            systemChat "[Loadout] Presets failed to load — check RPT and rsc\\PresetLoadouts.sqf.";
+            systemChat "[Loadout] Presets failed to load  -  check RPT and rsc\\PresetLoadouts.sqf.";
             missionNamespace setVariable ["FAC_loadoutGui_allUnits", []];
         } else {
             missionNamespace setVariable ["FAC_loadoutGui_allUnits", [] call FAC_loadoutGui_buildPresetEntries];
@@ -754,7 +589,7 @@ FAC_loadoutGui_fnc = {
             private _idx = lbCurSel _unitLb;
             if (_idx < 0) exitWith { systemChat "Select a loadout first." };
             private _rowKey = _unitLb lbData _idx;
-            if (_rowKey == "") exitWith { systemChat "Loadout GUI: no row data — re-open the dialog." };
+            if (_rowKey == "") exitWith { systemChat "Loadout GUI: no row data  -  re-open the dialog." };
 
             private _mbLb = _display displayCtrl 60220;
             private _mSel = lbCurSel _mbLb;
@@ -789,7 +624,7 @@ FAC_loadoutGui_fnc = {
                 [_display] call FAC_loadoutGui_populateStdFactionList;
             } else {
                 if (!([] call FAC_loadoutGui_ensurePresetData)) then {
-                    systemChat "[Loadout] Presets failed to load — check RPT and rsc\\PresetLoadouts.sqf.";
+                    systemChat "[Loadout] Presets failed to load  -  check RPT and rsc\\PresetLoadouts.sqf.";
                     missionNamespace setVariable ["FAC_loadoutGui_allUnits", []];
                 } else {
                     missionNamespace setVariable ["FAC_loadoutGui_allUnits", [] call FAC_loadoutGui_buildPresetEntries];
@@ -877,7 +712,7 @@ FAC_loadoutGui_fnc = {
             };
             private _class = _unitLb lbData _idx;
             if (_class == "") exitWith {
-                systemChat "Loadout GUI: no row data — re-open the dialog.";
+                systemChat "Loadout GUI: no row data  -  re-open the dialog.";
             };
 
             if ((_class find "FAC:") == 0) then {
@@ -890,7 +725,7 @@ FAC_loadoutGui_fnc = {
                         if (isNull player || {!alive player} || {!local player}) exitWith {
                             systemChat "Preset apply: no local player.";
                         };
-                        // Close loadout dialog — some setups block inventory writes while it is open.
+                        // Close loadout dialog  -  some setups block inventory writes while it is open.
                         if (!isNull (findDisplay 60200)) then { closeDialog 0; };
                         uiSleep 0.05;
                         if ([_load] call FAC_loadoutGui_applyLoadoutArrayLocal) then {
@@ -972,7 +807,7 @@ FAC_loadoutGui_fnc = {
         case "setCivInterpreter": {
             if (isNull player || {!alive player}) exitWith {};
             player setVariable ["FADE_civInterpreter", true, true];
-            systemChat "Marked as interpreter — you can talk to civilians when the scenario requires it.";
+            systemChat "Marked as interpreter  -  you can talk to civilians when the scenario requires it.";
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
 

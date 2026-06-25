@@ -37,7 +37,7 @@ private _stubCpMain = {
         { diag_log format ["[FADE BIS CP DEBUG]   %1: fn=%2 line=%3 scope=%4", _forEachIndex, _x param [0,""], _x param [1,0], _x param [2,""]] } forEach _stack;
     };
     diag_log "[FADE BIS CP DEBUG] ========================================";
-    // Match fn_bisCpStubApply: scalar 0 (see comment there — array return broke _threat > 0.1).
+    // Match fn_bisCpStubApply: scalar 0 (see comment there  -  array return broke _threat > 0.1).
     0
 };
 

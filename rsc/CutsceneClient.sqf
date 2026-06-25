@@ -135,7 +135,7 @@ FADE_cutscene_fnc_applySplendidTupleToCam = {
     };
 };
 
-// Splendid export — virtual camera for laptop RTT (shows 4× actor performance + world).
+// Splendid export  -  virtual camera for laptop RTT feed.
 FADE_cutscene_testCam_keyframes = [
     ["altis", [15180.2, 17414.7, 0.133347], 329.158, 0.32, [7.71416, 0], 0, 0, 1082.8, 0, 0, 1, 0, 1],
     ["altis", [15166.5, 17411.8, 0.624363], 42.107, 0.32, [2.78394, 0], 0, 0, 1082.8, 0, 0, 1, 0, 1],
@@ -217,7 +217,7 @@ FADE_cutscene_fnc_runPreparedShot = {
     };
 };
 
-// Accumulator sleep — must be called from a scheduled context (spawn), not via remoteExec.
+// Accumulator sleep  -  must be called from a scheduled context (spawn), not via remoteExec.
 FADE_cutscene_fnc_holdSeconds = {
     params [["_seconds", 0], ["_cam", objNull]];
     if (_seconds <= 0) exitWith {};
@@ -357,7 +357,7 @@ FADE_cutscene_testCam_clientTeardownLocal = {
     [] call FADE_cutscene_testCam_clientCleanup;
 };
 
-// Normal end from the cutscene spawn — cleanup without terminating the caller script.
+// Normal end from the cutscene spawn  -  cleanup without terminating the caller script.
 FADE_cutscene_testCam_clientFinish = {
     if (!hasInterface) exitWith {};
 
@@ -473,7 +473,7 @@ FADE_cutscene_testCam_clientStart = {
         params ["_rttCam", "_prepShots", "_keyframes", "_t0", "_stepSeconds", "_handoffAt", "_screen", "_indices"];
         private _restoreTex = "img\laptopJukebox.jpg";
 
-        // Phase 1 — laptop shows Splendid / actor virtual camera only (player stays in first person).
+        // Phase 1  -  laptop shows Splendid / actor virtual camera only (player stays in first person).
         private _kfN = count _keyframes;
         private _idxKf = 0;
         while {

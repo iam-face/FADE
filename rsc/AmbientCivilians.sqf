@@ -104,7 +104,7 @@ FADE_civ_getParkedCarClassesFromGui = {
     _all select { _x isKindOf "Car" }
 };
 
-// Per-zone metadata from FADE_civZonesFromLocations_build (defaults if missing — e.g. legacy Eden zones)
+// Per-zone metadata from FADE_civZonesFromLocations_build (defaults if missing  -  e.g. legacy Eden zones)
 FADE_civ_getZoneMeta = {
     params ["_zoneId"];
     if (!isNil "FADE_civZoneMeta" && { FADE_civZoneMeta isEqualType createHashMap } && { !isNil { FADE_civZoneMeta get _zoneId } }) exitWith {
@@ -248,7 +248,7 @@ FADE_enemyPatrol_spawnForZone = {
             private _angle = random 360;
             private _dist = 200 + random ((_zoneRadius - 200) max 1);
             private _rough = _center getPos [_dist, _angle];
-            _sp = [_rough, 0, 15, 3, 1, 0.4, 0, [], _rough] call BIS_fnc_findSafePos;
+            _sp = [[_rough, 0, 15, 3, 1, 0.4, 0, [], _rough], _rough] call FADE_findSafePosArray;
             if (!(_sp isEqualType []) || { count _sp < 2 }) then { _sp = +_rough };
             if (count _sp < 3) then { _sp set [2, 0] };
             if ([_sp] call _dryFn && { [_sp, _patrolPlClearM] call _patrolFarFromPlayers }) exitWith {};
@@ -272,7 +272,7 @@ FADE_enemyPatrol_spawnForZone = {
                 private _wpAngle = _w * 90 + (random 45);
                 private _wpDist = 150 + random (_zoneRadius min 600);
                 private _wRough = [(_center select 0) + _wpDist * (cos _wpAngle), (_center select 1) + _wpDist * (sin _wpAngle), 0];
-                _wpPos = [_wRough, 0, 10, 2, 1, 0.4, 0, [], _wRough] call BIS_fnc_findSafePos;
+                _wpPos = [[_wRough, 0, 10, 2, 1, 0.4, 0, [], _wRough], _wRough] call FADE_findSafePosArray;
                 if (_wpPos isEqualType [] && { count _wpPos >= 2 }) then {
                     _wpPos = [(_wpPos select 0), (_wpPos select 1), (if (count _wpPos > 2) then { _wpPos select 2 } else { 0 })];
                     if ([_wpPos] call _dryFn) exitWith {};
@@ -391,7 +391,7 @@ FADE_enemyPatrol_spawnForZone = {
                     _garrisonGroups pushBack _garrisonGrp;
                     private _bldCenter = getPosATL _bld;
                     if (count _bldCenter < 3) then { _bldCenter = [(_bldCenter select 0), (_bldCenter select 1), 0] };
-                    private _barrelPos = [_bldCenter, 8, 22, 2, 1, 0.3, 0, [], _bldCenter] call BIS_fnc_findSafePos;
+                    private _barrelPos = [[_bldCenter, 8, 22, 2, 1, 0.3, 0, [], _bldCenter], _bldCenter] call FADE_findSafePosArray;
                     if (_barrelPos isEqualType [] && { count _barrelPos >= 2 }) then {
                         _barrelPos = [(_barrelPos select 0), (_barrelPos select 1), (if (count _barrelPos > 2) then { _barrelPos select 2 } else { 0 })];
                         if ([_barrelPos, _patrolPlClearM] call _patrolFarFromPlayers) then {
@@ -479,7 +479,7 @@ FADE_civ_findSpawnPos = {
         private _dist = _radius * sqrt random 1;
         private _pos = _center getPos [_dist, _angle];
         _pos set [2, 0];
-        private _safe = [_pos, 0, 5, 2, 1, 0.3, 0, [], _pos] call BIS_fnc_findSafePos;
+        private _safe = [[_pos, 0, 5, 2, 1, 0.3, 0, [], _pos], _pos] call FADE_findSafePosArray;
         if (_safe isEqualType [] && { count _safe >= 2 } && { [_safe] call _dryFn } && { (_safe distance2D _center) <= _radius }) then {
             private _sepOk = true;
             if (_sepTry > 0 && {!(_otherPos isEqualTo [])}) then {
@@ -495,7 +495,7 @@ FADE_civ_findSpawnPos = {
     if (count _found >= 2) then { _found } else { _center }
 };
 
-// On terrain (ASL) — belts-and-suspenders after createUnit/createVehicle / bad Z from mixed coord spaces
+// On terrain (ASL)  -  belts-and-suspenders after createUnit/createVehicle / bad Z from mixed coord spaces
 FADE_civ_snapToTerrain = {
     params ["_obj", ["_aboveTerrain", 0.15]];
     if (isNull _obj) exitWith {};
@@ -585,7 +585,7 @@ FADE_civ_randomPosMinDistFrom = {
         private _d = _minDist + random 3500;
         private _p = _center getPos [_d, _ang];
         _p set [2, 0];
-        private _safe = [_p, 0, 12, 8, 1, 0.35, 0, [], _p] call BIS_fnc_findSafePos;
+        private _safe = [[_p, 0, 12, 8, 1, 0.35, 0, [], _p], _p] call FADE_findSafePosArray;
         if (_safe isEqualType [] && { count _safe >= 2 } && { (_safe distance _center) >= (_minDist * 0.92) }) exitWith {
             _pos = [(_safe select 0), (_safe select 1), if (count _safe > 2) then { _safe select 2 } else { 0 }];
         };
@@ -832,6 +832,7 @@ FADE_civ_spawnOne = {
         _unit setVariable ["BIS_cp_excluded", true];
         _grp setVariable ["BIS_cp_excluded", true];
         _unit setVariable ["FADE_ambientCiv", true];
+        [_unit] call (missionNamespace getVariable ["FADE_entityRegistry_register", {}]);
         _unit setVariable ["FADE_civPatrolCenter", +_center, false];
         _unit setVariable ["FADE_civPatrolWanderR", _wanderRadius, false];
         [_unit] remoteExec ["FADE_civTalk_addLocalAction", 0, true];
@@ -1374,6 +1375,7 @@ FADE_civ_checkZones = {
 
     private _activateDist = missionNamespace getVariable ["FADE_civPlayerActivateDist", 800];
     private _deactivateDist = missionNamespace getVariable ["FADE_civPlayerDeactivateDist", 1200];
+    private _zoneActivationDist = missionNamespace getVariable ["FADE_civZoneActivationDist", _activateDist];
     private _triggerNames = missionNamespace getVariable ["FADE_civTriggerNames", []];
     private _numPlayers = count _players;
 
@@ -1382,6 +1384,11 @@ FADE_civ_checkZones = {
         private _trigger = missionNamespace getVariable [_name, objNull];
         if (!isNull _trigger) then {
             private _center = getPosATL _trigger;
+            private _minPlayerDist = 1e12;
+            {
+                _minPlayerDist = _minPlayerDist min (_x distance2D _center);
+            } forEach _players;
+            if (_minPlayerDist > _zoneActivationDist) then { continue };
             private _nearCount = 0;
             private _farCount = 0;
             for "_p" from 0 to (_numPlayers - 1) do {
@@ -1444,8 +1451,13 @@ FADE_civ_resetHintFlags = {
 [] spawn {
     private _interval = missionNamespace getVariable ["FADE_civCheckInterval", 45];
     while { true } do {
-        sleep _interval;
-        call FADE_civ_checkZones;
+        private _players = playableUnits select { alive _x && { isPlayer _x } };
+        if (_players isEqualTo []) then {
+            sleep 60;
+        } else {
+            sleep _interval;
+            call FADE_civ_checkZones;
+        };
     };
 };
 

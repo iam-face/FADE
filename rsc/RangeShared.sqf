@@ -1,5 +1,5 @@
 // =============================================================================
-// RangeShared.sqf — shared helpers for firing/AT range (server; hit EHs live in SniperRangeServer)
+// RangeShared.sqf  -  shared helpers for firing/AT range (server; hit EHs live in SniperRangeServer)
 // =============================================================================
 if (!isServer) exitWith {};
 

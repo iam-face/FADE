@@ -1,5 +1,5 @@
 // =============================================================================
-// FAC_LobbyParams.sqf — lobby parameter indices, access helpers, scenario defaults
+// FAC_LobbyParams.sqf  -  lobby parameter indices, access helpers, scenario defaults
 // Loaded via FAC_ensureLobbyParams (initServer, initPlayerLocal, client GUI ensure).
 // description.ext class Params order must match FAC_LOBBY_IDX_* below.
 // =============================================================================
@@ -277,10 +277,10 @@ FAC_lobbyParams_callAccess = {
     params ["_fnName", ["_player", objNull]];
     private _fn = missionNamespace getVariable [_fnName, {}];
     if !(_fn isEqualType {}) exitWith {
-        diag_log format ["[FAC LobbyParams] Missing access function %1 — denying.", _fnName];
+        diag_log format ["[FAC LobbyParams] Missing access function %1  -  denying.", _fnName];
         false
     };
-    // [] call — bare `call _fn` inherits caller _this (e.g. fn name string from callAccess args).
+    // [] call  -  bare `call _fn` inherits caller _this (e.g. fn name string from callAccess args).
     if (isNull _player) then { [] call _fn } else { [_player] call _fn }
 };
 

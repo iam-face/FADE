@@ -1,24 +1,9 @@
 // =============================================================================
-// TroopInsertPickGui.sqf — participating pilots/drivers + One-Off / Recurring (60002 overlay)
+// TroopInsertPickGui.sqf  -  participating pilots/drivers + One-Off / Recurring (60002 overlay)
 // =============================================================================
 if (hasInterface) then {
-    FAC_troopInsertPickGui_fnc_baseMissionsIdcs = [60133, 60110, 60111, 60112, 60113, 60114, 60115, 60120, 60131, 60121, 60130, 60134, 60135, 60136, 60150, 60151, 60152, 60153];
-
-    FAC_troopInsertPickGui_fnc_setBaseMissionsLayerVisible = {
-        params [["_show", true]];
-        private _d = findDisplay 60002;
-        if (isNull _d) exitWith {};
-        {
-            private _c = _d displayCtrl _x;
-            if (!isNull _c) then { _c ctrlShow _show };
-        } forEach FAC_troopInsertPickGui_fnc_baseMissionsIdcs;
-    };
-
     FAC_troopInsertPickGui_fnc_destroyOverlay = {
-        private _lst = uinamespace getVariable ["FAC_tiPick_overlayCtrls", []];
-        { if (!isNull _x) then { ctrlDelete _x } } forEach _lst;
-        uinamespace setVariable ["FAC_tiPick_overlayCtrls", nil];
-        [true] call FAC_troopInsertPickGui_fnc_setBaseMissionsLayerVisible;
+        ["FAC_tiPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
     };
 
     FAC_troopInsertPickGui_fnc = {
@@ -31,7 +16,7 @@ if (hasInterface) then {
                 };
                 disableSerialization;
                 [] call FAC_troopInsertPickGui_fnc_destroyOverlay;
-                [false] call FAC_troopInsertPickGui_fnc_setBaseMissionsLayerVisible;
+                [false] call FAC_missionPickOverlay_setBaseVisible;
                 private _controls = [];
                 private _bg = _display ctrlCreate ["RscText", 60310];
                 _bg ctrlSetPosition [0.02, 0.09, 0.96, 0.76];
@@ -40,7 +25,7 @@ if (hasInterface) then {
                 _controls pushBack _bg;
                 private _title = _display ctrlCreate ["RscText", 60311];
                 _title ctrlSetPosition [0.02, 0.09, 0.96, 0.048];
-                _title ctrlSetText "TROOP INSERT — PARTICIPATING TRANSPORTS";
+                _title ctrlSetText "TROOP INSERT  -  PARTICIPATING TRANSPORTS";
                 _title ctrlSetBackgroundColor [0.15, 0.28, 0.42, 1];
                 _title ctrlCommit 0;
                 _controls pushBack _title;

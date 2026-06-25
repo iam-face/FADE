@@ -1,7 +1,7 @@
 // =============================================================================
 // PresetLoadouts.sqf - preset loadouts (ACE / getUnitLoadout arrays for setUnitLoadout)
 // =============================================================================
-// missionNamespace FAC_presetLoadouts — compiled when player selects preset tab in Loadout GUI.
+// missionNamespace FAC_presetLoadouts  -  compiled when player selects preset tab in Loadout GUI.
 //
 // Shape:
 // [
@@ -13,8 +13,8 @@
 // ]
 // - eraKey: no ":" (used in synthetic keys).
 // - loadoutArray: getUnitLoadout / ACE export shape; must parse as valid SQF.
-//   Must be exactly 10 array elements (0–9). Many ACE/ACEAX exports add an 11th slot
-//   (e.g. aceax_textureOptions) — LoadoutGui truncates on apply; trim manually for clarity.
+//   Must be exactly 10 array elements (0-9). Many ACE/ACEAX exports add an 11th slot
+//   (e.g. aceax_textureOptions)  -  LoadoutGui truncates on apply; trim manually for clarity.
 // =============================================================================
 
 missionNamespace setVariable [

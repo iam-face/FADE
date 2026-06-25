@@ -37,7 +37,7 @@ FADE_aaa_normalizeLevel = {
 //   3) Heuristic-matched static of any side-correct faction (cross-faction borrow).
 //   4) FADE_aaa_fallbackStatic as a last resort (CSAT HMG, only when no side-correct static exists).
 // This avoids silently picking a CSAT turret when the chosen OPFOR faction has none whose
-// displayName mentions HMG/GMG/AA — a previous bug where mod factions defaulted to CSAT.
+// displayName mentions HMG/GMG/AA  -  a previous bug where mod factions defaulted to CSAT.
 FADE_aaa_getStaticLightClass = {
     params [["_faction", ""]];
     if (_faction == "") then { _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"] };
@@ -184,7 +184,7 @@ FADE_aaa_pickSpawnPos = {
         if (_attempt > 32) then { _dist = 2000 + random 1000 };
         private _raw = _originVeh getPos [_dist, _baseDir + _bearing];
         private _peak = [_raw, 500] call FADE_aaa_findHighestPointInRadius;
-        private _safe = [_peak, 10, 60, 6, 0, 0.4, 0, [], _peak] call BIS_fnc_findSafePos;
+        private _safe = [[_peak, 10, 60, 6, 0, 0.4, 0, [], _peak], _peak] call FADE_findSafePosArray;
         private _cand = if (_safe isEqualType [] && { count _safe >= 2 }) then {
             if (count _safe < 3) then { _safe set [2, 0] };
             _safe
@@ -336,6 +336,9 @@ if (isNil "FADE_aaa_monitorStarted") then {
     FADE_aaa_monitorStarted = true;
     [] spawn {
         while { true } do {
+            if ((allPlayers findIf { alive _x }) < 0) then {
+                sleep 30;
+            } else {
             private _mode = [missionNamespace getVariable ["FADE_enemyAAALevel", "Off"]] call FADE_aaa_normalizeLevel;
             if (_mode == "Off") then {
                 if ((count (keys FADE_aaa_clusters)) > 0) then { call FADE_aaa_despawnAll };
@@ -363,6 +366,7 @@ if (isNil "FADE_aaa_monitorStarted") then {
                 } forEach _activeVehicles;
 
                 sleep 10;
+            };
             };
         };
     };

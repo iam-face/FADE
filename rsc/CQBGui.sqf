@@ -45,11 +45,11 @@ FAC_cqbGui_fnc = {
         private _lines = [
             format ["Eden: %1 CQB_POS_* triggers (direction = spawn facing).", _n],
             "",
-            "Pop-up targets — steel targets; any hit or splash knocks them down until you end the drill. Time is recorded when the last target drops.",
+            "Pop-up targets  -  steel targets; any hit or splash knocks them down until you end the drill. Time is recorded when the last target drops.",
             "",
-            "Live OPFOR — stationary hostiles (optional civilian decoys). Drill ends when all hostiles are dead or surrendered.",
+            "Live OPFOR  -  stationary hostiles (optional civilian decoys). Drill ends when all hostiles are dead or surrendered.",
             "",
-            "Spawn chance — each position rolls independently (Low / Medium / High).",
+            "Spawn chance  -  each position rolls independently (Low / Medium / High).",
             "",
             "Anyone can end an active drill from this board."
         ];
@@ -77,7 +77,7 @@ FAC_cqbGui_fnc = {
             uinamespace setVariable ["FAC_cqbGui_density", "Medium"];
 
             private _last = missionNamespace getVariable ["FADE_cqbLastResult", ""];
-            (_display displayCtrl 60508) ctrlSetText (if (_last == "") then { "—" } else { _last });
+            (_display displayCtrl 60508) ctrlSetText (if (_last == "") then { " - " } else { _last });
 
             [_display] call _fncSetInfoStructured;
 
@@ -90,7 +90,7 @@ FAC_cqbGui_fnc = {
             _display = findDisplay 60500;
             if (isNull _display) exitWith {};
             private _last = missionNamespace getVariable ["FADE_cqbLastResult", ""];
-            (_display displayCtrl 60508) ctrlSetText (if (_last == "") then { "—" } else { _last });
+            (_display displayCtrl 60508) ctrlSetText (if (_last == "") then { " - " } else { _last });
             [_display] call _fncSetInfoStructured;
             ["updateDrillButton", []] call FAC_cqbGui_fnc;
         };

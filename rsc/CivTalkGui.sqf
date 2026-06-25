@@ -1,25 +1,12 @@
 // =============================================================================
-// CivTalkGui.sqf — client: talk dialog + cutscene camera + anims (local player only)
+// CivTalkGui.sqf  -  client: talk dialog + cutscene camera + anims (local player only)
 // =============================================================================
 
 FAC_civTalkGui_IDD = 60245;
 
-if (hasInterface) then {
+// Diary escape + Intel append: rsc\FADE_ClientCommon.sqf (initPlayerLocal).
 
-    FADE_civTalk_escapeForStructuredText = {
-        params ["_s"];
-        if !(_s isEqualType "") then { _s = str _s };
-        private _a = _s splitString "&";
-        _s = _a joinString "&amp;";
-        _a = _s splitString "<";
-        _s = _a joinString "&lt;";
-        _a = _s splitString ">";
-        _s = _a joinString "&gt;";
-        private _nl = toString [10];
-        _a = _s splitString _nl;
-        _s = _a joinString "<br/>";
-        _s
-    };
+if (hasInterface) then {
 
     FADE_civTalk_replyCtrlSetText = {
         params ["_ctrl", "_raw"];
@@ -48,7 +35,7 @@ if (hasInterface) then {
         _ctrl ctrlCommit 0;
     };
 
-    // Server remoteExec — _unit must be local (player on owner client).
+    // Server remoteExec  -  _unit must be local (player on owner client).
     FADE_civTalk_clientPlayGestureAnimOnUnit = {
         params [["_unit", objNull], ["_anim", ""]];
         if (!hasInterface) exitWith {};
@@ -74,7 +61,7 @@ if (hasInterface) then {
         _ui
     };
 
-    // Single vertical column (same IDCs); positions match rsc/CivTalkDialog_vertical.hpp when that file is included.
+    // Single vertical column (same IDCs); layout defined inline in CivTalkGui onLoad.
     FADE_civTalk_clientApplyVerticalLayout = {
         if (!hasInterface) exitWith {};
         disableSerialization;
@@ -111,27 +98,6 @@ if (hasInterface) then {
             _title ctrlSetPosition [0.20, 0.908, 0.60, 0.028];
             _title ctrlCommit 0;
         };
-    };
-
-    // Map → Intel diary (Briefing.sqf creates subject "FAC_Intel"); server remoteExec on actionable civ lines.
-    FADE_civTalk_clientAppendIntelDiary = {
-        params [["_civName", "Civilian"], ["_whenStr", ""], ["_bodyRaw", ""], ["_kind", "HUMINT"]];
-        if (!hasInterface) exitWith {};
-        if (isNull player) exitWith {};
-        if !(_bodyRaw isEqualType "") then { _bodyRaw = str _bodyRaw };
-        // No-op if Briefing.sqf already created the subject (see initPlayerLocal).
-        player createDiarySubject ["FAC_Intel", "Intel"];
-        private _escBody = [_bodyRaw] call FADE_civTalk_escapeForStructuredText;
-        private _escCiv = [_civName] call FADE_civTalk_escapeForStructuredText;
-        private _escWhen = [_whenStr] call FADE_civTalk_escapeForStructuredText;
-        private _escKind = [_kind] call FADE_civTalk_escapeForStructuredText;
-        private _html = (
-            "<font color='#87CEEB'>" + _escCiv + "</font><br/><font color='#A0B4C8'>" + _escWhen + " · " + _escKind + "</font><br/><br/>"
-            + "<font color='#FFFFFF'>" + _escBody + "</font>"
-        );
-        private _title = _civName;
-        if ((count _title) > 40) then { _title = (_title select [0, 37]) + "..." };
-        player createDiaryRecord ["FAC_Intel", [_title, _html]];
     };
 
     FADE_civTalk_clientMenuApplyLabels = {
@@ -210,7 +176,7 @@ if (hasInterface) then {
         uinamespace setVariable ["FAC_civTalk_cam", nil];
     };
 
-    // OTS in Man model space (world ASL): X=right, Y=forward, Z=up from pelvis — tracks idle pose; avoids getPosASL/vectorUp drift → sky cam.
+    // OTS in Man model space (world ASL): X=right, Y=forward, Z=up from pelvis  -  tracks idle pose; avoids getPosASL/vectorUp drift → sky cam.
     FADE_civTalk_clientApplyCamera = {
         params [["_civ", objNull]];
         if (isNull _civ || isNull player) exitWith {};
@@ -310,7 +276,7 @@ if (hasInterface) then {
     /*
         Full setup (Local): same face distance as FADE_civTalk_computeFaceToFace (FADE_civTalkFaceSeparationM),
         civ in front of you facing you, then preview camera. Tweak with FADE_civTalk_debugPreviewCamera on cursorTarget after.
-        Params: [sep, right, back, up, fov, useIdleAnim, civClass] — use -1 for sep/right/back/up/fov for Config defaults; civClass "" = C_man_1.
+        Params: [sep, right, back, up, fov, useIdleAnim, civClass]  -  use -1 for sep/right/back/up/fov for Config defaults; civClass "" = C_man_1.
     */
     FADE_civTalk_debugSpawnSceneAndCamera = {
         if (!hasInterface || isNull player) exitWith {};
@@ -440,7 +406,7 @@ if (hasInterface) then {
         sleep (_fi max 0.1);
     };
 
-    // Legacy name kept if referenced elsewhere — delegates to cutscene entry.
+    // Legacy name kept if referenced elsewhere  -  delegates to cutscene entry.
     FADE_civTalk_clientOpen = {
         params ["_positive", "_netId"];
         private _p = getPosATL player;
@@ -459,7 +425,6 @@ if (hasInterface) then {
         private _isAmbientCiv = _unit getVariable ["FADE_ambientCiv", false];
         if (!_isBaseNpc && {!_isAmbientCiv}) exitWith {};
         if (_unit getVariable ["FADE_civTalk_actAdded_local", false]) exitWith {};
-        _unit setVariable ["FADE_civTalk_actAdded_local", true];
         private _maxD = missionNamespace getVariable ["FADE_civTalkMaxDistM", 6];
         private _actionText = if (_isBaseNpc) then {
             missionNamespace getVariable ["FADE_baseNpcTalkActionText", "Talk to S Wordsman"]
@@ -474,7 +439,7 @@ if (hasInterface) then {
                 (_maxD + 1)
             ]
         };
-        _unit addAction [
+        private _actionId = _unit addAction [
             _actionText,
             {
                 _this params ["_target", "_caller"];
@@ -486,8 +451,12 @@ if (hasInterface) then {
             true,
             "",
             _cond,
-            5
+            (_maxD + 1)
         ];
+        if (_actionId isEqualType 0 && { _actionId >= 0 }) then {
+            _unit setVariable ["FADE_civTalk_actAdded_local", true];
+            _unit setVariable ["FADE_civTalk_actionId_local", _actionId];
+        };
     };
 
     FADE_civTalk_refreshBaseNpcAction = {
@@ -505,7 +474,9 @@ if (hasInterface) then {
             if (_idFn isEqualType {}) then {
                 [_u, "FAC_baseNPC_wordsman"] call _idFn;
             };
-            [_u] call _fn;
+            if (!(_u getVariable ["FADE_civTalk_actAdded_local", false])) then {
+                [_u] call _fn;
+            };
         };
     };
 

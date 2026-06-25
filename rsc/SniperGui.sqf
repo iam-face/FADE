@@ -1,9 +1,9 @@
 // =============================================================================
-// SniperGui.sqf — sniper range terminal (client); trace via BIS_fnc_traceBullets
+// SniperGui.sqf  -  sniper range terminal (client); trace via BIS_fnc_traceBullets
 // idd 60910. Server: FADE_sniperStartSession / FADE_sniperEndSession
 // =============================================================================
 
-// Vanilla ballistics / penetration trace — BIS_fnc_traceBullets (functions_f_mark / engine). Strength 0 = off.
+// Vanilla ballistics / penetration trace  -  BIS_fnc_traceBullets (functions_f_mark / engine). Strength 0 = off.
 // [_enabled, _unit]: server broadcasts to all clients (0, _unit) so observers see the same shooter trace.
 FADE_sniperClient_setProjectileTrace = {
     params [["_enabled", false], ["_unit", objNull]];
@@ -49,7 +49,7 @@ FADE_sniperClient_startTraceProximityMonitor = {
                 missionNamespace setVariable ["FADE_sniperTraceProxActive", false];
                 if !(missionNamespace getVariable ["FADE_sniperTraceProxWarned", false]) then {
                     missionNamespace setVariable ["FADE_sniperTraceProxWarned", true];
-                    systemChat "Range ballistics FX disabled (trace and impact markers) — you left the terminal area (>100 m).";
+                    systemChat "Range ballistics FX disabled (trace and impact markers)  -  you left the terminal area (>100 m).";
                 };
             };
             sleep 2;
@@ -150,9 +150,9 @@ FAC_sniperGui_fnc = {
         private _display = findDisplay 60910;
         if (isNull _display) exitWith {};
         private _n = uinamespace getVariable ["FAC_sniperGui_targetCount", 10];
-        _n = (_n max 1) min 40;
+        _n = (_n max 1) min 72;
         private _slider = _display displayCtrl 60915;
-        if (!isNull _slider) then { _slider sliderSetRange [1, 40]; _slider sliderSetSpeed [1, 1]; _slider sliderSetPosition _n; };
+        if (!isNull _slider) then { _slider sliderSetRange [1, 72]; _slider sliderSetSpeed [1, 1]; _slider sliderSetPosition _n; };
         (_display displayCtrl 60916) ctrlSetText str _n;
     };
 
@@ -160,9 +160,9 @@ FAC_sniperGui_fnc = {
         private _display = findDisplay 60910;
         if (isNull _display) exitWith {};
         private _m = uinamespace getVariable ["FAC_sniperGui_maxRange", 600];
-        _m = (_m max 100) min 600;
+        _m = (_m max 100) min 1000;
         private _slider = _display displayCtrl 60931;
-        if (!isNull _slider) then { _slider sliderSetRange [100, 600]; _slider sliderSetSpeed [25, 100]; _slider sliderSetPosition _m; };
+        if (!isNull _slider) then { _slider sliderSetRange [100, 1000]; _slider sliderSetSpeed [25, 100]; _slider sliderSetPosition _m; };
         (_display displayCtrl 60932) ctrlSetText (format ["%1 m", _m]);
     };
 
@@ -226,11 +226,11 @@ FAC_sniperGui_fnc = {
             "",
             "Pop-up targets face you with board reversed (−180°). Live units face toward you.",
             "",
-            "Firing range — spawns exactly your selected target count (clamped to lane count). No time limit; end when finished.",
+            "Firing range  -  spawns exactly your selected target count (clamped to lane count). No time limit; end when finished.",
             "",
-            "Max range limits eligible lanes to 100..600m from shooter (horizontal distance).",
+            "Max range limits eligible lanes to 100..1000m from shooter (horizontal distance).",
             "",
-            "Time trial — uses target count + max range (near→far lanes). Each stage picks a lane with clear line of sight from the required sniperPos (terrain + objects); if none, falls back with a chat note. Shuffled sniperPos_1..7: within 2.5m you get 'At position N, engage target!' then damage is enabled.",
+            "Time trial  -  uses target count + max range (near→far lanes). Each stage picks a lane with clear line of sight from the required sniperPos (terrain + objects); if none, falls back with a chat note. Shuffled sniperPos_1..7: within 2.5m you get 'At position N, engage target!' then damage is enabled.",
             "",
             "Impact marker (~5 s, everyone sees): while within 100 m of the terminal, starter's machine tracks each projectile to its last ASL, then server spawns Config FADE_sniperImpactMarkerClass (hits, misses, terrain).",
             "",
@@ -291,14 +291,14 @@ FAC_sniperGui_fnc = {
         case "setTargetCount": {
             _params params [["_raw", 10]];
             private _n = round _raw;
-            _n = (_n max 1) min 40;
+            _n = (_n max 1) min 72;
             uinamespace setVariable ["FAC_sniperGui_targetCount", _n];
             [] call _fncRefreshTargetCount;
         };
         case "setMaxRange": {
             _params params [["_raw", 600]];
             private _m = round _raw;
-            _m = (_m max 100) min 600;
+            _m = (_m max 100) min 1000;
             uinamespace setVariable ["FAC_sniperGui_maxRange", _m];
             [] call _fncRefreshMaxRange;
         };

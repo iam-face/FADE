@@ -1,5 +1,5 @@
 // =============================================================================
-// FAC_MissionTypeLabels.sqf — display names for mission type IDs (server init)
+// FAC_MissionTypeLabels.sqf  -  display names for mission type IDs (server init)
 // =============================================================================
 // Keep [displayName, missionId] in sync with rsc/MissionsGui.sqf _missionListRaw
 // columns [0] and [1]. Used for FADE_showMissionAssignedIntro subtitle (mission type).

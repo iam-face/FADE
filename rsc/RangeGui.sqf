@@ -1,8 +1,8 @@
 // =============================================================================
-// RangeGui.sqf — firing / AT range terminal (client), idd 60920
+// RangeGui.sqf  -  firing / AT range terminal (client), idd 60920
 // Two tabs: Range… (session + my settings) | Equipment… (one class list + pads rangeFriendlyVehPos_*).
 // Full data refresh only: dialog onLoad, header Refresh, range session start (server),
-// or FADE_rangeClient_setAtWeaponState after equipment spawn sync — not FAC_guiScheduleHeaderRefresh.
+// or FADE_rangeClient_setAtWeaponState after equipment spawn sync  -  not FAC_guiScheduleHeaderRefresh.
 // =============================================================================
 FAC_rangeGui_IDD = 60920;
 
@@ -70,7 +70,7 @@ FAC_rangeGui_fnc = {
         private _s = _d displayCtrl 60923;
         if (_active) then {
             private _mode = missionNamespace getVariable ["FADE_rangeSessionMode", "firing"];
-            private _txt = if (_mode == "trial") then { "ACTIVE — TIME TRIAL" } else { "ACTIVE — FIRING RANGE" };
+            private _txt = if (_mode == "trial") then { "ACTIVE  -  TIME TRIAL" } else { "ACTIVE  -  FIRING RANGE" };
             _s ctrlSetText _txt;
             _s ctrlSetTextColor [1, 0.82, 0.45, 1];
         } else {
@@ -157,7 +157,7 @@ FAC_rangeGui_fnc = {
         {
             _x params ["_slot", "_state"];
             private _label = [_slot] call FAC_rangeGui_getSlotDisplayName;
-            private _line = if (_state == "") then { format ["%1 — empty", _label] } else { format ["%1 — %2", _label, _state] };
+            private _line = if (_state == "") then { format ["%1  -  empty", _label] } else { format ["%1  -  %2", _label, _state] };
             private _i = _sl lbAdd _line;
             _sl lbSetData [_i, _slot];
         } forEach _slotState;
@@ -190,14 +190,14 @@ FAC_rangeGui_fnc = {
         private _tab = missionNamespace getVariable ["FAC_rangeGui_tab", "range"];
         private _body = if (_tab == "equipment") then {
             format [
-                "<t size='0.85' color='#c8d8e8'>Equipment pads: <t color='#ffffff'>%1</t> friendly equipment positions — spawn/despawn stays available during an active range session. Range session settings are on the Range tab (locked while active).</t>",
+                "<t size='0.85' color='#c8d8e8'>Equipment pads: <t color='#ffffff'>%1</t> friendly equipment positions  -  spawn/despawn stays available during an active range session. Range session settings are on the Range tab (locked while active).</t>",
                 _fc
             ]
         } else {
             format [
                 "<t size='0.85' color='#c8d8e8'>Session pool: <t color='#ffffff'>%1</t> firing range positions (pop-ups, OPFOR, session vehicles). Equipment pads: <t color='#ffffff'>%2</t> friendly equipment positions (Equipment tab; usable while session active). " +
                 "Projectile trace and impact markers: visible to all players; trace and new impact spheres auto-off &gt;100 m from terminal. " +
-                "Targets face <t color='#ffffff'>terminalRange</t>. Max range 100–300 m (session + equipment).</t>",
+                "Targets face <t color='#ffffff'>terminalRange</t>. Max range 100-300 m (session + equipment).</t>",
                 _fp, _fc
             ]
         };

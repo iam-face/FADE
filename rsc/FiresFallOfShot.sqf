@@ -55,7 +55,7 @@ FAC_firesFoS_fnc_reImpactFeed = {
     _this spawn { _this call FAC_firesFoS_fnc_clientImpactFeed };
 };
 
-// Shared server + client (CfgAmmo only — safe everywhere).
+// Shared server + client (CfgAmmo only  -  safe everywhere).
 FAC_firesFoS_fnc_ammoLooksLikeIndirect = {
     params [["_ammo", ""]];
     if (_ammo == "" || {!(_ammo isEqualType "")}) exitWith { false };
@@ -72,7 +72,7 @@ FAC_firesFoS_fnc_ammoLooksLikeIndirect = {
 
 if (isServer) then {
 
-// Push RTT feed to all interface clients — only the server runs this (avoids client-initiated broadcast restrictions).
+// Push RTT feed to all interface clients  -  only the server runs this (avoids client-initiated broadcast restrictions).
 FAC_firesFoS_fnc_broadcastImpactFeed = {
     params ["_slotIdx", "_impactASL", "_duration"];
     [_slotIdx, _impactASL, _duration] remoteExec ["FAC_firesFoS_fnc_reImpactFeed", 0, true];
@@ -231,11 +231,11 @@ FADE_firesFoS_requestSync = {
 
 // Server-only: track projectile to impact, then push fall-of-shot feed to all clients.
 FAC_firesFoS_server_startImpactTracker = {
-    // Two arguments: projectile/shell object, FIRES slot index (not params [["_p", _slotIdx]] — that only binds _p).
+    // Two arguments: projectile/shell object, FIRES slot index (not params [["_p", _slotIdx]]  -  that only binds _p).
     params ["_p", "_slotIdx"];
     if (!isServer) exitWith {};
     if (_slotIdx < 0) exitWith {};
-    // Fired + EntityCreated can both see the same shell — only one tracker.
+    // Fired + EntityCreated can both see the same shell  -  only one tracker.
     private _nid = if (!isNull _p) then { netId _p } else { "" };
     if (_nid != "") then {
         private _hm = missionNamespace getVariable ["FAC_firesFoS_trackedShells", nil];
@@ -299,7 +299,7 @@ FAC_firesFoS_server_onShellEntityCreated = {
     };
     missionNamespace setVariable ["FAC_firesFoS_pendingVehList", _pl];
     // Do NOT exit when _pl is empty: on dedicated server, Fired often never runs (no camera / locality),
-    // so pending stays empty — we still match shells via nearest FIRES piece below.
+    // so pending stays empty  -  we still match shells via nearest FIRES piece below.
 
     private _candidates = [];
     {
@@ -318,7 +318,7 @@ FAC_firesFoS_server_onShellEntityCreated = {
         _candidates pushBack [_d, _veh, _slotIdx];
     } forEach _pl;
 
-    // Ammo class on spawned body can differ from Fired EH string (mods) — fall back to nearest pending gun.
+    // Ammo class on spawned body can differ from Fired EH string (mods)  -  fall back to nearest pending gun.
     if (count _candidates == 0) then {
         {
             private _veh = _x;
@@ -373,7 +373,7 @@ FAC_firesFoS_server_onShellEntityCreated = {
 };
 
 FAC_firesFoS_server_onFiresVehicleFired = {
-    // Fired EH: [unit, weapon, muzzle, mode, ammo, mag, projectile, gunner] — tolerate short _this (mods).
+    // Fired EH: [unit, weapon, muzzle, mode, ammo, mag, projectile, gunner]  -  tolerate short _this (mods).
     params ["_unit", "_weapon", "_muzzle", "_mode", "_ammo", "_mag"];
     private _projectile = _this param [6, objNull];
     if (!isServer) exitWith {};
@@ -394,7 +394,7 @@ FAC_firesFoS_server_onFiresVehicleFired = {
     if (!isNull _projectile) then {
         [_projectile, _idx] call FAC_firesFoS_server_startImpactTracker;
     } else {
-        // Artillery often reports objNull projectile — EntityCreated matches the shell to this piece.
+        // Artillery often reports objNull projectile  -  EntityCreated matches the shell to this piece.
         _veh setVariable ["FAC_firesFoS_pendingImpact", [time, _ammo], false];
         _pl = missionNamespace getVariable ["FAC_firesFoS_pendingVehList", []];
         if (!(_veh in _pl)) then { _pl pushBack _veh };
@@ -473,14 +473,6 @@ FAC_firesFoS_server_init = {
         missionNamespace setVariable ["FAC_firesFoS_shellEhRegistered", true];
         addMissionEventHandler ["EntityCreated", { _this call FAC_firesFoS_server_onShellEntityCreated }];
     };
-
-    addMissionEventHandler ["HandleDisconnect", {
-        params ["_id", "_uid", "_name", "_jip", "_owner"];
-        private _ou = missionNamespace getVariable ["FAC_firesFoS_droneOwnerUid", ""];
-        if (_uid == _ou) then {
-            [] call FADE_firesFoS_droneDespawnServer;
-        };
-    }];
 };
 
 };
@@ -504,7 +496,7 @@ FAC_firesFoS_fnc_textureIndicesImpact = {
     private _a = missionNamespace getVariable ["FADE_firesImpactVideoTextureIndices", [0]];
     if !(_a isEqualType []) then { _a = [0] };
     if (count _a == 0) then { _a = [0] };
-    // Only user-configured indices. Tripod / tablet models use extra indices for PiP or bezel quads — binding the same r2t to all of them tiles the feed.
+    // Only user-configured indices. Tripod / tablet models use extra indices for PiP or bezel quads  -  binding the same r2t to all of them tiles the feed.
     private _out = [];
     { if ((_x isEqualType 0) && {!(_x in _out)}) then { _out pushBack _x } } forEach _a;
     if (count _out == 0) then { [0] } else { _out }

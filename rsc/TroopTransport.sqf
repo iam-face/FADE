@@ -8,9 +8,11 @@
 // _cleanup receives task id explicitly -- parent execVM scope must not be relied on after script ends.
 // =============================================================================
 
+if (!isServer) exitWith {};
+
+FADE_runTroopTransport = {
 if (isNil "FADE_transportParams" || { count FADE_transportParams < 7 }) exitWith {};
 FADE_transportParams params ["_missionType", "_group", "_player", "_pickupPos", "_dropPos", "_taskId", ["_markerName", ""], ["_enemyGroups", []]];
-if (!isServer) exitWith {};
 
 if (_group getVariable ["FADE_callsign", ""] == "") then { [_group] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]) };
 private _callsign = _group getVariable ["FADE_callsign", "Alpha 1-1"];
@@ -75,7 +77,7 @@ private _staggerDisembark = {
     };
 };
 
-// CASEVAC / CSAR: wounded or unconscious AI cannot reliably orderGetIn — force cargo placement.
+// CASEVAC / CSAR: wounded or unconscious AI cannot reliably orderGetIn  -  force cargo placement.
 private _forceBoardUnit = {
     params ["_unit", "_veh"];
     if (isNull _unit || { !alive _unit } || { vehicle _unit == _veh }) exitWith {};
@@ -343,7 +345,7 @@ _phase3 = {
                     [_group, _markerName, _player, _cleanup, _enemyGroups, _taskId] spawn { params ["_group", "_markerName", "_player", "_cleanup", "_enemyGroups", "_tid"]; sleep 60; [_group, _markerName, _player, _enemyGroups, _tid] call _cleanup };
                 };
             } else {
-                private _wpPos = [_dropPos, 80, 120, 5, 1, 0, 0, [], _dropPos] call BIS_fnc_findSafePos;
+                private _wpPos = [[_dropPos, 80, 120, 5, 1, 0, 0, [], _dropPos], _dropPos] call FADE_findSafePosArray;
                 _group addWaypoint [_wpPos, 0];
                 [_group, _markerName, _player, _cleanup, _enemyGroups, _taskId] spawn { params ["_group", "_markerName", "_player", "_cleanup", "_enemyGroups", "_tid"]; sleep 60; [_group, _markerName, _player, _enemyGroups, _tid] call _cleanup };
             };
@@ -381,7 +383,7 @@ _phase4 = {
                 [_group, _markerName, _player, _cleanup, _enemyGroups, _taskId] spawn { params ["_group", "_markerName", "_player", "_cleanup", "_enemyGroups", "_tid"]; sleep 60; [_group, _markerName, _player, _enemyGroups, _tid] call _cleanup };
             };
         } else {
-            private _wpPos = [_dropPos, 80, 120, 5, 1, 0, 0, [], _dropPos] call BIS_fnc_findSafePos;
+            private _wpPos = [[_dropPos, 80, 120, 5, 1, 0, 0, [], _dropPos], _dropPos] call FADE_findSafePosArray;
             _group addWaypoint [_wpPos, 0];
             [_group, _markerName, _player, _cleanup, _enemyGroups, _taskId] spawn { params ["_group", "_markerName", "_player", "_cleanup", "_enemyGroups", "_tid"]; sleep 60; [_group, _markerName, _player, _enemyGroups, _tid] call _cleanup };
         };
@@ -428,3 +430,9 @@ _phase4b = {
     _missionType, _group, _player, _pickupPos, _dropPos, _taskId, _markerName, _pickupRadius, _dropRadius, _timeout, _cleanup, _startTime, _smokeSpawned, _initialCount, _enemyGroups, _checkCasualties, _setTaskFinalState, _staggerDisembark,
     _findPickupVehicles, _phase1, _phase2, _phase3, _phase4, _phase4b, _useForceBoard, _forceBoardUnit, _aliveInVehicle
 ] spawn _phase1;
+
+};
+
+if (!(isNil "FADE_transportParams") && { count FADE_transportParams >= 7 }) then {
+    [] call FADE_runTroopTransport;
+};

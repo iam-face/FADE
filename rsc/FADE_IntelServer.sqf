@@ -100,7 +100,7 @@ FADE_intel_buildLines = {
     };
 
     if (count _lines == 0) then {
-        _lines pushBack "No indexed hostile contacts in this sector at read time — area may be clear or outside collection radius.";
+        _lines pushBack "No indexed hostile contacts in this sector at read time  -  area may be clear or outside collection radius.";
     };
 
     private _maxL = (missionNamespace getVariable ["FADE_intelMaxLinesPerRead", 3]) max 1 min 5;
@@ -292,7 +292,7 @@ missionNamespace setVariable ["FADE_intel_serverTransferToSpecialist", FADE_inte
 
 // Called from FADE_vg_spawnOne when a garrison activates.
 FADE_intel_onVgSpawned = {
-    // _vgEntry: VG hash map — do not reuse name "_entry" inside forEach _pool (private overwrites outer scope).
+    // _vgEntry: VG hash map  -  do not reuse name "_entry" inside forEach _pool (private overwrites outer scope).
     params ["_vgEntry", "_grp", "_building"];
     if (!(missionNamespace getVariable ["FADE_intelEnabled", true])) exitWith {};
     if (isNull _grp || { count units _grp == 0 }) exitWith {};

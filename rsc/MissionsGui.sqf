@@ -204,10 +204,10 @@ FAC_missionsGui_fnc = {
                 if (count _entry < 3) exitWith { "Focus: see Tasks / markers." };
                 private _mType = _entry param [0, ""];
                 private _pos = _entry param [2, []];
-                if (_mType == "InterceptConvoy") exitWith { "Route: start and end markers — full orders in Tasks." };
-                if (_mType == "Operation") exitWith { "AO: multiple zones — capture rules in Tasks." };
+                if (_mType == "InterceptConvoy") exitWith { "Route: start and end markers  -  full orders in Tasks." };
+                if (_mType == "Operation") exitWith { "AO: multiple zones  -  capture rules in Tasks." };
                 if (_pos isEqualType [] && { count _pos >= 2 } && { !(_pos isEqualTo [0, 0, 0]) }) exitWith {
-                    "Approx. area grid: " + (mapGridPosition _pos) + " — detail in Tasks."
+                    "Approx. area grid: " + (mapGridPosition _pos) + "  -  detail in Tasks."
                 };
                 "Focus: see Tasks / markers."
             };
