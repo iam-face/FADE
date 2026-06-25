@@ -1,6 +1,6 @@
 # FADE (Face’s Dynamic Environment)
 
-**Beta 4** — multiplayer **Arma 3** sandbox on **Altis**. No Zeus required: boards and GUIs at the base let players set the scenario, spawn vehicles, run training ranges, and start dynamic missions. Aimed at **rotary**, **joint fires**, and **infantry** practice (listen server or dedicated).
+**Beta 5** — multiplayer **Arma 3** sandbox on **Altis**. No Zeus required: boards and GUIs at the base let players set the scenario, spawn vehicles, run training ranges, and start dynamic missions. Aimed at **rotary**, **joint fires**, and **infantry** practice (listen server or dedicated).
 
 **Repo folder:** `CTB_FAC_FADE.Altis` · **Players:** up to **31**
 
@@ -70,4 +70,4 @@ Core mission runs on vanilla-friendly setup. **ACE** and **KAT** are expected fo
 
 ## For contributors
 
-Implementation lives under `rsc/` and `initServer.sqf` / `initPlayerLocal.sqf`. Local AI/editor notes may exist in `.cursor/agent-docs/` (gitignored on this repo).
+Entry points: `initServer.sqf` (loads `rsc/server/`) and `initPlayerLocal.sqf`. Mission logic is split into `rsc/missions/` (one script per type); `rsc/Missions.sqf` dispatches. Shared helpers live in `rsc/FADE_*` and `rsc/FAC_*`. Local AI/editor notes may exist in `.cursor/agent-docs/` (gitignored).
