@@ -12,7 +12,7 @@
 2. **Manage Missions** — pick a mission type, read the in-GUI blurb, start (some missions use a map or player picker).
 3. **Terminals & boards** — vehicles, loadouts, fast travel, CQB, jukebox, medical training, firing/AT range, sniper range, FIRES range.
 
-Most settings are **server-authoritative** and sync to joining players. **Lobby parameters** (`description.ext`) can lock GUIs to group leaders and set starting defaults (civilians, OPFOR threat, civ talk, intel access, jukebox, ACE Arsenal, and more). Admins and Zeus usually override leader-only locks.
+Most settings are **server-authoritative** and sync to joining players. **Lobby parameters** (`description.ext`) can lock GUIs to group leaders, set starting defaults (civilians, OPFOR threat, civ talk, intel access, jukebox, ACE Arsenal, and more), and optional **DEBUG** overlays (garrison building markers, civilian town active/idle markers, spawn systemChat). Admins and Zeus usually override leader-only locks.
 
 ---
 

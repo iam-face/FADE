@@ -1,5 +1,5 @@
 // =============================================================================
-// MedicalTrainingGui.sqf — medical training dummies (client; ACE + KAM assumed)
+// MedicalTrainingGui.sqf  -  medical training dummies (client; ACE + KAM assumed)
 // terminalMedical addAction. Server: FADE_medTrain_* in initServer.sqf
 // =============================================================================
 
@@ -69,7 +69,7 @@ FAC_medicalTrainingGui_fnc = {
         private _rows = missionNamespace getVariable ["FAC_medTrain_clientList", []];
         {
             _x params ["_nid", "_alive", "_idx"];
-            private _row = _lb lbAdd format ["Dummy %1 — %2", (_idx + 1), (if (_alive) then { "alive" } else { "dead" })];
+            private _row = _lb lbAdd format ["Dummy %1  -  %2", (_idx + 1), (if (_alive) then { "alive" } else { "dead" })];
             _lb lbSetData [_row, _nid];
         } forEach _rows;
         if (lbSize _lb > 0) then {
@@ -141,14 +141,14 @@ FAC_medicalTrainingGui_fnc = {
         private _d = findDisplay 60800;
         if (isNull _d) exitWith {};
         private _v = round (sliderPosition (_d displayCtrl 60864));
-        (_d displayCtrl 60871) ctrlSetText format ["Pneumothorax: %1 (0–4)", _v];
+        (_d displayCtrl 60871) ctrlSetText format ["Pneumothorax: %1 (0-4)", _v];
     };
 
     private _fncUpdateKatSpo2Label = {
         private _d = findDisplay 60800;
         if (isNull _d) exitWith {};
         private _v = round (sliderPosition (_d displayCtrl 60865));
-        (_d displayCtrl 60872) ctrlSetText format ["SpO2 / PaO2 slot: %1 (0–100)", _v];
+        (_d displayCtrl 60872) ctrlSetText format ["SpO2 / PaO2 slot: %1 (0-100)", _v];
     };
 
     private _fncFillCombos = {
@@ -168,13 +168,13 @@ FAC_medicalTrainingGui_fnc = {
                 ["airway_vomit", "Airway (vomit / occlusion)"],
                 ["bloodloss", "Hypovolemia (blood loss)"],
                 ["deep_penetrating", "Deep penetrating chest"],
-                ["cardiac_vt", "Cardiac — VT"],
-                ["cardiac_vf", "Cardiac — VF"],
-                ["cardiac_pea", "Cardiac — PEA"],
-                ["cardiac_asystole", "Cardiac — Asystole"],
-                ["fracture_simple", "Fracture — simple (random part)"],
-                ["fracture_compound", "Fracture — compound (random part)"],
-                ["fracture_comminuted", "Fracture — comminuted (random part)"]
+                ["cardiac_vt", "Cardiac  -  VT"],
+                ["cardiac_vf", "Cardiac  -  VF"],
+                ["cardiac_pea", "Cardiac  -  PEA"],
+                ["cardiac_asystole", "Cardiac  -  Asystole"],
+                ["fracture_simple", "Fracture  -  simple (random part)"],
+                ["fracture_compound", "Fracture  -  compound (random part)"],
+                ["fracture_comminuted", "Fracture  -  comminuted (random part)"]
             ];
         };
         {
@@ -242,7 +242,7 @@ FAC_medicalTrainingGui_fnc = {
             _sl sliderSetRange [0, 100];
             _sl sliderSetPosition 30;
             [] call _fncUpdateBleedLabel;
-            private _info = "<t color='#a8d4cc'><t color='#FFD700'>Apply airway / chest</t> sets obstruction, occlusion, hemopneumothorax, tension PTX, PTX level, SpO2/PaO2 slot, deterioration, and deep penetrating injury (Zeus <t color='#888'>Manage Airways</t> parity). <t color='#FFD700'>Apply cardiac</t> matches Zeus <t color='#888'>Change Cardiac State</t>.<br/><br/><t color='#FFD700'>Apply preset</t> — packaged scenarios (includes KAT Surgery fractures if loaded). <t color='#FFD700'>Apply wound</t> — bleeding wound on the selected body part.<br/><br/><t color='#FFD700'>Heal part</t> clears open wounds and KAT fracture on that part. <t color='#FFD700'>Heal all</t> clears KAM breathing/circulation/vitals locals then ACE full heal.</t>";
+            private _info = "<t color='#a8d4cc'><t color='#FFD700'>Apply airway / chest</t> sets obstruction, occlusion, hemopneumothorax, tension PTX, PTX level, SpO2/PaO2 slot, deterioration, and deep penetrating injury (Zeus <t color='#888'>Manage Airways</t> parity). <t color='#FFD700'>Apply cardiac</t> matches Zeus <t color='#888'>Change Cardiac State</t>.<br/><br/><t color='#FFD700'>Apply preset</t>  -  packaged scenarios (includes KAT Surgery fractures if loaded). <t color='#FFD700'>Apply wound</t>  -  bleeding wound on the selected body part.<br/><br/><t color='#FFD700'>Heal part</t> clears open wounds and KAT fracture on that part. <t color='#FFD700'>Heal all</t> clears KAM breathing/circulation/vitals locals then ACE full heal.</t>";
             (_display displayCtrl 60850) ctrlSetStructuredText parseText _info;
             [player] remoteExec ["FADE_medTrain_requestList", 2];
             [] spawn {

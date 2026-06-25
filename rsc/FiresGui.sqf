@@ -73,10 +73,10 @@ FAC_firesGui_updateDroneStatus = {
     private _nid = missionNamespace getVariable ["FAC_firesFoS_rangeDroneNetId", ""];
     private _nm = missionNamespace getVariable ["FAC_firesFoS_droneOwnerName", ""];
     if (_nid == "") then {
-        _st ctrlSetText "Drone: inactive — map-click Place; operator gets UAV terminal.";
+        _st ctrlSetText "Drone: inactive  -  map-click Place; operator gets UAV terminal.";
     } else {
         private _op = if (_nm != "") then { _nm } else { "unknown" };
-        _st ctrlSetText format ["Drone: ACTIVE — operator %1 (UAV terminal).", _op];
+        _st ctrlSetText format ["Drone: ACTIVE  -  operator %1 (UAV terminal).", _op];
     };
 };
 
@@ -209,7 +209,7 @@ FAC_firesGui_updateAmmoPanel = {
         private _cfg = configFile >> "CfgMagazines" >> _mag;
         private _dn = if (isClass _cfg) then { getText (_cfg >> "displayName") } else { "" };
         if (_dn == "") then { _dn = _mag };
-        private _row = _ammoLb lbAdd format ["%1 (%2) — total %3 / %4", _dn, _mag, _cur, _max];
+        private _row = _ammoLb lbAdd format ["%1 (%2)  -  total %3 / %4", _dn, _mag, _cur, _max];
         _ammoLb lbSetData [_row, str [_mag, _cur, _max]];
     } forEach _magState;
 
@@ -312,7 +312,7 @@ FAC_firesGui_fnc = {
                 private _slotDisp = [_slotName] call FAC_firesGui_getSlotDisplayName;
                 private _logicOk = !isNull (missionNamespace getVariable [_slotName, objNull]);
                 private _line = if (_cls == "") then {
-                    format ["%1 — empty%2", _slotDisp, if (!_logicOk) then { " (no Eden logic)" } else { "" }]
+                    format ["%1  -  empty%2", _slotDisp, if (!_logicOk) then { " (no Eden logic)" } else { "" }]
                 } else {
                     private _dn = if (isClass (configFile >> "CfgVehicles" >> _cls)) then {
                         getText (configFile >> "CfgVehicles" >> _cls >> "displayName")
@@ -320,7 +320,7 @@ FAC_firesGui_fnc = {
                         _cls
                     };
                     if (_dn == "") then { _dn = _cls };
-                    format ["%1 — %2 | ammo ~%3 rds", _slotDisp, _dn, _ammo]
+                    format ["%1  -  %2 | ammo ~%3 rds", _slotDisp, _dn, _ammo]
                 };
                 private _i = _slotLb lbAdd _line;
                 _slotLb lbSetData [_i, _slotName];
@@ -491,7 +491,7 @@ FAC_firesGui_fnc = {
                 if (!hasInterface) exitWith {};
                 [] call FAC_firesFoS_fnc_startMapClickDrone;
             };
-            systemChat "FIRES: map opening — click where the observer drone should hover.";
+            systemChat "FIRES: map opening  -  click where the observer drone should hover.";
         };
 
         case "droneDespawn": {

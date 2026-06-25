@@ -1,5 +1,5 @@
-// Locker Room - client only (initPlayerLocal). Dedicated server does not run this; each human client runs one loop (not 30× on the server).
-// Hostage + slap: independent timers (Config: default 3–6s).
+// Locker Room - client only (initPlayerLocal). Dedicated server does not run this; each human client runs one loop (not 30x on the server).
+// Hostage + slap: independent timers (Config: default 3-6s).
 // Perf: distanceSqr vs precomputed r² (no sqrt); adaptive sleep when far; nearestObjects only if no posLocker_* (prefer Eden helpers).
 // MP: [player, [class, dist, pitch, 2]] remoteExec ["say3D", 0] so all clients hear 3D audio.
 if (!hasInterface) exitWith {};
@@ -14,8 +14,8 @@ private _roomVar = missionNamespace getVariable ["FADE_lockerRoomCenterVar", "po
 waitUntil { sleep 0.5; !isNull (missionNamespace getVariable [_roomVar, objNull]) };
 private _roomCenter = missionNamespace getVariable _roomVar;
 
-private _roomR = missionNamespace getVariable ["FADE_lockerRoomRadius", 20];
-private _lockerD = missionNamespace getVariable ["FADE_lockerNearLockerDist", 5];
+private _roomR = missionNamespace getVariable ["FADE_lockerRoomRadius", 5];
+private _lockerD = missionNamespace getVariable ["FADE_lockerNearLockerDist", 2];
 private _roomRSq = _roomR * _roomR;
 private _lockerDSq = _lockerD * _lockerD;
 private _sleepFarSq = (_roomR + 100) * (_roomR + 100);

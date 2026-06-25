@@ -1,5 +1,5 @@
 // =============================================================================
-// FiresDrillServer.sqf — FIRES range timed lane drills (server)
+// FiresDrillServer.sqf  -  FIRES range timed lane drills (server)
 // =============================================================================
 // One concurrent drill per firesPos_* slot; timer starts at target spawn.
 // Spawns: locked car (FADE_firesDrillCarClass) + burning smoke barrel + optional extra marker; completes on car damage.
@@ -76,7 +76,7 @@ FAC_fires_drill_fnc_recipients = {
     _set
 };
 
-// CQB horn (FAC_cqbLoudspeakerHorn / FADE_cqbLoudspeakerBroadcast) at FIRES terminal — server only at runtime.
+// CQB horn (FAC_cqbLoudspeakerHorn / FADE_cqbLoudspeakerBroadcast) at FIRES terminal  -  server only at runtime.
 FAC_fires_drill_fnc_terminalHorn = {
     params [["_mode", "stop"]];
     private _t = missionNamespace getVariable ["FADE_firesTerminal", objNull];
@@ -149,7 +149,7 @@ FADE_fires_drillStart = {
         _attempts = _attempts + 1;
         _distUsed = _min + random ((_max - _min) max 1);
         _brgUsed = if (_randBrg) then { random 360 } else { getDir _logicObj };
-        // Position + getPos [dist, degFromNorth] — anchor from logic ATL (object-form getPos on Logic is unreliable).
+        // Position + getPos [dist, degFromNorth]  -  anchor from logic ATL (object-form getPos on Logic is unreliable).
         private _p = _logicAtl getPos [_distUsed, _brgUsed];
         private _dry = !surfaceIsWater _p;
         private _farFromBase = if (!_baseOk || {_minFromBase <= 0}) then { true } else { (_p distance2D _basePos) >= _minFromBase };
@@ -247,7 +247,7 @@ FADE_fires_drillStart = {
     } forEach _recips;
 
     private _startMsg = format [
-        "FIRES drill started (%1): grid %2, ~%3 m, elev ~%4 m ASL — engage the vehicle (smoke/barrel marker nearby).",
+        "FIRES drill started (%1): grid %2, ~%3 m, elev ~%4 m ASL  -  engage the vehicle (smoke/barrel marker nearby).",
         _slotDisp, _grid, round _distUsed, _elev
     ];
     { [_startMsg] remoteExec ["systemChat", _x] } forEach _recips;
@@ -311,7 +311,7 @@ FADE_fires_drillStart = {
         [_chat] remoteExec ["systemChat", 0];
         ["stop"] call FAC_fires_drill_fnc_terminalHorn;
         private _lines = [];
-        _lines pushBack "<t size='1.05' color='#a8e6cf'>FIRES TIMED DRILL — complete</t>";
+        _lines pushBack "<t size='1.05' color='#a8e6cf'>FIRES TIMED DRILL  -  complete</t>";
         if (_destroyed) then {
             _lines pushBack format ["<t color='#ffcc88'>%1</t> <t color='#cccccc'>at grid</t> <t color='#90EE90'>%2</t> <t color='#cccccc'>destroyed the drill vehicle.</t>", _nm, _gr];
         } else {

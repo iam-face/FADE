@@ -1,7 +1,7 @@
 // =============================================================================
 // Briefing.sqf  - In-game briefing and diary records (map screen)
 // =============================================================================
-// Runs on each client from initPlayerLocal.sqf (call compile — must finish before play adds diary records).
+// Runs on each client from initPlayerLocal.sqf (call compile  -  must finish before play adds diary records).
 // Diary order: create in reverse order (last created = first displayed).
 // =============================================================================
 
@@ -13,7 +13,7 @@ player createDiarySubject ["FAC_Notes", "FADE Notes"];
 player createDiarySubject ["FAC_Intel", "Intel"];
 player createDiaryRecord ["FAC_Intel", ["About Intel", "
 <font color='#87CEEB' size='14'>INTEL LOG</font><br/><br/>
-<font color='#E0E0E0'>When an <font color='#90EE90'>ambient civilian</font> gives you something actionable (e.g. OPFOR sighting, vehicle tip), or you <font color='#90EE90'>read building intel</font> / <font color='#90EE90'>secure an Asset Retrieval package</font>, a <font color='#FFD700'>timestamped entry</font> is added below — newest first.</font><br/><br/>
+<font color='#E0E0E0'>When an <font color='#90EE90'>ambient civilian</font> gives you something actionable (e.g. OPFOR sighting, vehicle tip), or you <font color='#90EE90'>read building intel</font> / <font color='#90EE90'>secure an Asset Retrieval package</font>, a <font color='#FFD700'>timestamped entry</font> is added below  -  newest first.</font><br/><br/>
 <font color='#AAAAAA'>Open the map → <font color='#FFD700'>Intel</font> to review past reports. Building intel still shows on-screen hints and optional map markers when applicable.</font>
 "]];
 private _facNotes = [];
@@ -126,7 +126,7 @@ In general, section commanders request supporting fires via the platoon commande
 "];
 
 // -----------------------------------------------------------------------------
-// Note: Joint arms call for fires (FAC Fires doc §6.4 style — combined arms integration)
+// Note: Joint arms call for fires (FAC Fires doc §6.4 style  -  combined arms integration)
 // -----------------------------------------------------------------------------
 _facNotes pushBack ["Joint arms call for fires (combined arms)", "
 <font color='#FFD700' size='14'>JOINT ARMS CALL FOR FIRES</font><br/><br/>
@@ -149,14 +149,14 @@ Fires should support the main effort: suppression for crossing open ground, obsc
 "];
 
 // -----------------------------------------------------------------------------
-// Note: Manual / map gunnery — elevation and interpolation (instructor reference)
+// Note: Manual / map gunnery  -  elevation and interpolation (instructor reference)
 // -----------------------------------------------------------------------------
-_facNotes pushBack ["Manual fires — elevation and interpolation (instructor)", "
+_facNotes pushBack ["Manual fires  -  elevation and interpolation (instructor)", "
 <font color='#FFD700' size='14'>GUN ELEVATION AND INTERPOLATION (MANUAL / MAP WORK)</font><br/><br/>
 Short reference for teaching manual firing solutions when tables or computers are primary; use with unit ballistics and safety SOPs. Instructor SME: Gobbit (no formal citation in-repo).<br/><br/>
 
 <font color='#87CEEB'>ELEVATION (QUADRANT / TUBE)</font><br/>
-Charge and elevation (quadrant elevation or equivalent) translate range and terrain into tube attitude. <font color='#90EE90'>Always</font> confirm charge is safe for the trajectory (clearance, crests, overhead restrictions) before sending data to the line. Corrections from fall of shot change elevation and/or charge per tables — not by guess. Record amendments read back by the gun line.<br/><br/>
+Charge and elevation (quadrant elevation or equivalent) translate range and terrain into tube attitude. <font color='#90EE90'>Always</font> confirm charge is safe for the trajectory (clearance, crests, overhead restrictions) before sending data to the line. Corrections from fall of shot change elevation and/or charge per tables  -  not by guess. Record amendments read back by the gun line.<br/><br/>
 
 <font color='#87CEEB'>INTERPOLATION</font><br/>
 Tabulated data are stepped in range, charge or meteor lines. When the mission falls between entries, <font color='#90EE90'>interpolate</font> linearly between the bracketing values unless your tables specify otherwise. Double-check direction (line, attitude in mils) separately from range; mixing corrections from different charge columns causes large errors. If the solution is near a table limit, confirm with a second method or adjust position before accepting fire for effect.<br/><br/>
@@ -330,9 +330,9 @@ Enemy EW can jam radio. You may not be briefed in advance. Key point: <font colo
 "];
 
 // -----------------------------------------------------------------------------
-// KAT Medical (KAM) — by topic; condensed from KAM docs for in-mission reference
+// KAT Medical (KAM)  -  by topic; condensed from KAM docs for in-mission reference
 // -----------------------------------------------------------------------------
-_facNotes pushBack ["KAT — Airway and vomiting", "
+_facNotes pushBack ["KAT  -  Airway and vomiting", "
 <font color='#FFD700' size='14'>KAT AIRWAY (KAM DOCS)</font><br/><br/>
 <font color='#87CEEB'>Obstruction</font>  - Airway blocked (e.g. tongue, debris). <font color='#90EE90'>Guedel tube</font> (<font color='#C0C0C0'>kat_guedel</font>) supports the airway and clears obstruction; patient must be unconscious and <font color='#FF6666'>not</font> occluded. One-time use; removed if patient wakes.<br/><br/>
 <font color='#87CEEB'>Occlusion</font>  - Different from obstruction: material in the airway (e.g. after vomiting while supine). Guedel does <font color='#FF6666'>not</font> clear occlusions. Use <font color='#90EE90'>Accuvac</font> (<font color='#C0C0C0'>kat_accuvac</font>) suction from Head &gt; Airway Management; patient must be unconscious; clears occlusion reliably per KAM.<br/><br/>
@@ -340,41 +340,41 @@ _facNotes pushBack ["KAT — Airway and vomiting", "
 <font color='#87CEEB'>Chest seal path</font>  - Chest seal is under Torso &gt; Airway Management for pneumothorax / tension / hemopneumothorax (see chest note).
 "];
 
-_facNotes pushBack ["KAT — Bleeding and wounds", "
+_facNotes pushBack ["KAT  -  Bleeding and wounds", "
 <font color='#FFD700' size='14'>KAT BLEEDING / WOUNDS (KAM DOCS)</font><br/><br/>
 In-game, wound severity often shows as bandage colours (rough guide): <font color='#EEEE00'>yellow</font>  - moderate bleed; <font color='#FFA500'>orange</font>  - heavy; <font color='#FF6666'>red</font>  - severe. Stop bleeding with the right tools (tourniquets on limbs, packing, etc.) per your SOP.<br/><br/>
 <font color='#87CEEB'>Coagulation</font>  - If enabled, wounds can clot over time (unstable clot); clotting factors are consumed. <font color='#90EE90'>TXA</font> (IV) can help stabilise clots; IV fluid choice affects coagulation (see fluids note).<br/><br/>
 <font color='#87CEEB'>Deep penetrating injury</font>  - See separate note; treated in the chest / seal workflow, not ordinary surface bandaging alone.
 "];
 
-_facNotes pushBack ["KAT — Blood volume and IV fluids", "
+_facNotes pushBack ["KAT  -  Blood volume and IV fluids", "
 <font color='#FFD700' size='14'>KAT BLOOD VOLUME &amp; IV (KAM DOCS)</font><br/><br/>
 Rough blood state (about <font color='#90EE90'>6 L</font> total): <font color='#90EE90'>5.9  - 5.1 L</font> lost some; <font color='#90EE90'>5.1  - 4.2 L</font> lost a lot; <font color='#90EE90'>4.2  - 3.6 L</font> lost a large amount; <font color='#90EE90'>3.6  - 3.0 L</font> lost a fatal amount. By default, below about <font color='#FF6666'>3 L</font> is lethal unless treated; severe loss leads toward <font color='#90EE90'>cardiac arrest</font>.<br/><br/>
 <font color='#87CEEB'>IV / IO</font>  - Establish access: <font color='#90EE90'>16g IV</font> (limbs, minor damage, no TQ on that limb) or <font color='#90EE90'>FAST IO</font> (torso; painful). <font color='#87CEEB'>IV obstruction</font>  - After some drugs (e.g. TXA, EACA), line can block; use Inspect Catheter and <font color='#90EE90'>saline flush</font> (needs saline on line).<br/><br/>
 <font color='#87CEEB'>Fluids</font>  - Saline, blood, plasma increase circulating volume; each differs in effect on coagulation and kidney pH (see KAM Nephrology if using long treatments).
 "];
 
-_facNotes pushBack ["KAT — Cardiac arrest and AED", "
+_facNotes pushBack ["KAT  -  Cardiac arrest and AED", "
 <font color='#FFD700' size='14'>KAT CARDIAC ARREST (KAM DOCS)</font><br/><br/>
 Arrest from critical HR/BP; patient becomes unconscious with no effective breathing/perfusion. <font color='#87CEEB'>Rhythms</font>  - <font color='#90EE90'>Shockable:</font> <font color='#90EE90'>VT</font> (ventricular tachycardia), <font color='#90EE90'>VF</font> (ventricular fibrillation). <font color='#90EE90'>Non-shockable:</font> <font color='#90EE90'>PEA</font> (pulseless electrical activity  - EKG may look organised but no pulse), <font color='#90EE90'>asystole</font> (flat/near-flat line). <font color='#FF6666'>PEA can mimic normal sinus on EKG</font>  - check pulse.<br/><br/>
 <font color='#87CEEB'>AED</font> (<font color='#C0C0C0'>kat_AED</font>)  - Analyse rhythm; shock if advised (clear the patient); if no shock advised, CPR and meds per algorithm. <font color='#87CEEB'>AED-X</font> adds EKG to identify VT vs VF vs PEA vs asystole. If you only have a basic AED, KAM notes you may treat shockable rhythms similarly to V-tach.<br/><br/>
 <font color='#87CEEB'>Treatment assumptions (KAM)</font>  - Docs assume major bleeding controlled, airway managed, IV access and fluids where appropriate, pads connected, and rhythm identified before advanced arrest care (epinephrine, amiodarone, lidocaine, shocks as indicated).
 "];
 
-_facNotes pushBack ["KAT — Chest deep penetrating injury", "
+_facNotes pushBack ["KAT  -  Chest deep penetrating injury", "
 <font color='#FFD700' size='14'>KAT CHEST / DEEP PENETRATING (KAM DOCS)</font><br/><br/>
 <font color='#90EE90'>Deep penetrating injury</font>  - A chest injury pattern in KAM tied to ballistic/thoracic trauma logic; shown in injury UI. Manage with appropriate KAT chest interventions (e.g. <font color='#90EE90'>chest seal</font> <font color='#C0C0C0'>kat_chestseal</font> for open chest wounds, pneumothorax, tension pneumothorax, hemopneumothorax per mod). Use Torso &gt; Airway Management &gt; chest seal as per training.<br/><br/>
 Pair with bleeding control and respiratory assessment (breath sounds, SpO2, decompression options if your modset enables them).
 "];
 
-_facNotes pushBack ["KAT — Pharmacy quick reference", "
+_facNotes pushBack ["KAT  -  Pharmacy quick reference", "
 <font color='#FFD700' size='14'>KAT PHARMACY (KAM DOCS  - SHORT)</font><br/><br/>
 <font color='#87CEEB'>IM (examples)</font>  - <font color='#90EE90'>Epinephrine</font> used in arrest algorithms and shocks; follow KAM cardiac pages for sequencing with CPR and analysis.<br/><br/>
 <font color='#87CEEB'>IV (examples)</font>  - <font color='#90EE90'>Amiodarone</font>, <font color='#90EE90'>lidocaine</font> appear in shockable-rhythm treatment chains; <font color='#90EE90'>TXA</font> supports clot stabilisation; <font color='#90EE90'>EACA</font> also tied to coagulation/line care. Always confirm dose and contraindications in-game.<br/><br/>
 Full tables: KAM docs under Pharmacy (IV / IM / Oral).
 "];
 
-_facNotes pushBack ["KAT — Medical training terminal (FADE)", "
+_facNotes pushBack ["KAT  -  Medical training terminal (FADE)", "
 <font color='#FFD700' size='14'>MEDICAL TRAINING TERMINAL</font><br/><br/>
 Use the <font color='#90EE90'>Medical training</font> scroll action on <font color='#90EE90'>terminalMedical</font> (Medical Training Area). Spawn training dummies, apply <font color='#90EE90'>random or chosen presets</font> from the KAT injury pool (same framework as before). Dummies are uniform-only (no vest, backpack, NVG, or carried items) when configured that way from the terminal:<br/><br/>
 <font color='#87CEEB'>Bleeding tiers</font>  - Minor: awake, few wounds, light bleed. Moderate: <font color='#90EE90'>unconscious</font>, several wounds (yellow-tier bleed rates). Massive: unconscious, many wounds (orange-tier rates). Catastrophic: unconscious, very many wounds (red-tier rates). <font color='#C0C0C0'>Uncon</font> means unconscious.<br/><br/>
@@ -521,7 +521,7 @@ MB's gear room and loadout boxes provide <font color='#90EE90'>Manage My Loadout
 - <font color='#90EE90'>cqbBoard</font>: CQB shoothouse drills with targets or live AI, density and civilian options.<br/><br/>
 
 <font color='#87CEEB'>FAST TRAVEL</font><br/>
-Use teleport boards or <font color='#FFD700'>Ctrl+Shift+apostrophe</font> from anywhere. Destinations include Base HQ, Cargo Slingload, Sultan's CQB Killhouse, Joon's Fires Range, Juko's Locker Room, Bean's Medical Area, Officer Area, Pads 1 and 2, Pads 3, 4 and 5, Firing Range, Sniper Range, SDE's Pub and Specialist Area. Server settings may also allow teleport-to-player.<br/><br/>
+Use teleport boards or <font color='#FFD700'>Ctrl+Shift+apostrophe</font> from anywhere. Destinations include Base HQ, Cargo Slingload, Sultan's CQB Killhouse, Joon's Fires Range, Bean's Medical Area, Officer Area, Firing Range and Sniper Range. Server settings may also allow teleport-to-player.<br/><br/>
 
 <font color='#87CEEB'>JUKEBOX AND SOCIAL AREAS</font><br/>
 Radio_1 through Radio_4 open the jukebox for 3D music at that source. In vehicles, use <font color='#FFD700'>Vehicle loudspeaker...</font> for attached 3D music. SDE's Pub, Juko's Locker Room, C3 Quiet Area and other base locations are flavour / training spaces as placed in Eden.<br/><br/>

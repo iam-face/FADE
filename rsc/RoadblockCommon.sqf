@@ -5,7 +5,7 @@
 //   FADE_roadblock_relToWorld, FADE_roadblock_dirFromPos,
 //   FADE_roadblock_spawnBundle, FADE_roadblock_despawnBundle
 // Props: one random barricade (Land_Barricade_01_10m_F, Land_Barricade_01_4m_F,
-//   Fort_Barricade — invalid classes skipped). Infantry on the road + garrison in
+//   Fort_Barricade  -  invalid classes skipped). Infantry on the road + garrison in
 //   enterable buildings within 25 m. No vehicles or other props.
 // =============================================================================
 

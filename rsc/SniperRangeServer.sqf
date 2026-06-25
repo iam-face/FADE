@@ -1,16 +1,16 @@
 // =============================================================================
-// SniperRangeServer.sqf — server-only (included from initServer via compile)
+// SniperRangeServer.sqf  -  server-only (included from initServer via compile)
 // terminalSniper + sniperRangeTarget_* logic objects; one sniper session at a time (MP). Firing range may run in parallel.
 // =============================================================================
 
 if (!isServer) exitWith {};
 
 // -----------------------------------------------------------------------------
-// Eden: collect sniperRangeTarget_1 .. _N (scan 1–64)
+// Eden: collect sniperRangeTarget_1 .. _N (scan 1-72)
 // -----------------------------------------------------------------------------
 FADE_sniperPositions = [];
 private _si = 1;
-while { _si <= 64 } do {
+while { _si <= 72 } do {
     private _o = missionNamespace getVariable [format ["sniperRangeTarget_%1", _si], objNull];
     if (!isNull _o) then { FADE_sniperPositions pushBack _o };
     _si = _si + 1;
@@ -134,14 +134,14 @@ FADE_sniperFriendlyHitPart = {
     _s
 };
 
-// joinString requires all strings; HitPart rows sometimes mix scalars (hit index, etc.) — e.g. leg selections on pop-up targets.
+// joinString requires all strings; HitPart rows sometimes mix scalars (hit index, etc.)  -  e.g. leg selections on pop-up targets.
 FADE_sniperJoinHitPartCells = {
     params [["_arr", []]];
     if (!(_arr isEqualType []) || {_arr isEqualTo []}) exitWith { "" };
     (_arr apply { if (_x isEqualType "") then { _x } else { str _x } }) joinString ","
 };
 
-// Index 3 in a HitPart row should be model-space or ASL position as three finite scalars. Leg (and some mod) hits can pass other types — do not call finite() / vectorMagnitude on those.
+// Index 3 in a HitPart row should be model-space or ASL position as three finite scalars. Leg (and some mod) hits can pass other types  -  do not call finite() / vectorMagnitude on those.
 FADE_sniperHitPartPosIsValidNumericTriplet = {
     params [["_p", []]];
     if (!(_p isEqualType []) || { count _p < 3 }) exitWith { false };
@@ -151,7 +151,7 @@ FADE_sniperHitPartPosIsValidNumericTriplet = {
     (typeName _x == "SCALAR" && typeName _y == "SCALAR" && typeName _z == "SCALAR") && { finite _x } && { finite _y } && { finite _z }
 };
 
-// HitPart: _this is often [[victim, shooter, projectile, pos, vel, selection, ...], ...] — unwrap first row.
+// HitPart: _this is often [[victim, shooter, projectile, pos, vel, selection, ...], ...]  -  unwrap first row.
 FADE_sniperNormalizeHitPartArgs = {
     private "_hp";
     _hp = _this select 0;
@@ -193,12 +193,12 @@ FADE_sniperTargetDisplayName = {
     "Target"
 };
 
-// HitPart row: selection index varies by game version / mods — try common slots (skip pure 3-vectors = velocity).
+// HitPart row: selection index varies by game version / mods  -  try common slots (skip pure 3-vectors = velocity).
 FADE_sniperPickHitPartSelection = {
     private "_row";
     _row = _this select 0;
     if (!(_row isEqualType []) || { count _row < 1 }) exitWith { "" };
-    // Must not call finite() on strings — HitPart can pass 3-element selection arrays (e.g. pelvis/legs).
+    // Must not call finite() on strings  -  HitPart can pass 3-element selection arrays (e.g. pelvis/legs).
     private _isVel3 = {
         private "_v";
         _v = _this select 0;
@@ -351,7 +351,7 @@ FADE_sniperSpawnImpactSphere = {
     _cls = missionNamespace getVariable ["FADE_sniperImpactMarkerClass", "Sign_sphere25cm_EP1"];
     if (!isClass (configFile >> "CfgVehicles" >> _cls)) then { _cls = "Sign_Sphere100cm_F" };
     if (!isClass (configFile >> "CfgVehicles" >> _cls)) then { _cls = "Land_HelipadEmpty_F" };
-    // Spawn at origin then setPosASL — avoids createVehicle rejecting odd ASL/AGL at placement time (MP).
+    // Spawn at origin then setPosASL  -  avoids createVehicle rejecting odd ASL/AGL at placement time (MP).
     _s = createVehicle [_cls, [0, 0, 0], [], 0, "NONE"];
     if (isNull _s) exitWith {};
     _s enableSimulationGlobal false;
@@ -428,15 +428,15 @@ FADE_sniperProcessImpact = {
         private _di = (getPosASL _shooterObj) vectorDistance _posASL;
         if (finite _di) then { _distImpact = _di };
     };
-    private _distImpStr = if (_distImpact >= 0 && { finite _distImpact }) then { str (round _distImpact) + " m" } else { "—" };
+    private _distImpStr = if (_distImpact >= 0 && { finite _distImpact }) then { str (round _distImpact) + " m" } else { " - " };
     // Keep immediate and summary note minimal during stabilization: distance + body part only.
-    private _lastHit = format ["%1 — %2", _distImpStr, _part];
+    private _lastHit = format ["%1  -  %2", _distImpStr, _part];
     missionNamespace setVariable ["FADE_sniperLastHitNote", _lastHit];
     private _victimSessionMode = _victimObj getVariable ["FADE_sniperVictimSessionMode", missionNamespace getVariable ["FADE_sniperSessionMode", ""]];
     private _title = if (_victimSessionKind == "range") then {
-        if (_victimSessionMode == "trial") then { "FIRING RANGE (TRIAL) — hit" } else { "FIRING / AT RANGE — hit" };
+        if (_victimSessionMode == "trial") then { "FIRING RANGE (TRIAL)  -  hit" } else { "FIRING / AT RANGE  -  hit" };
     } else {
-        if (_victimSessionMode == "trial") then { "SNIPER TIME TRIAL — hit" } else { "SNIPER RANGE — hit" };
+        if (_victimSessionMode == "trial") then { "SNIPER TIME TRIAL  -  hit" } else { "SNIPER RANGE  -  hit" };
     };
     private _lastHitSafe = [_lastHit] call FADE_sniperHintSafeText;
     if (_victimSessionMode == "firing" || { _victimSessionMode == "trial" }) then {
@@ -488,7 +488,7 @@ FADE_sniperEhHit = {
     if (_victim getVariable ["FADE_sniperTrialNodeLock", false]) exitWith { [] call FADE_sniperTrialWrongPosFeedback };
     private _pos = getPosASL _victim vectorAdd [0, 0, 0.45];
     // Hit almost always fires before HitPart; defer so HitPart can place the marker at the real impact.
-    // Unpack _this before sleep — scheduled scripts + params can leave locals undefined after sleep (RPT).
+    // Unpack _this before sleep  -  scheduled scripts + params can leave locals undefined after sleep (RPT).
     [_victim, _firer, _pos, ""] spawn {
         private _victim = _this param [0, objNull, [objNull]];
         private _firer = _this param [1, objNull, [objNull]];
@@ -654,7 +654,7 @@ FADE_sniperEndSession = {
     };
 };
 
-// Params: _player, _enemyType ("targets"|"enemies"), _targetCount (1..40), _maxRangeM (100..600), _trace (bool), _hitTrack (bool), _mode ("firing"|"trial")
+// Params: _player, _enemyType ("targets"|"enemies"), _targetCount (1..72), _maxRangeM (100..1000), _trace (bool), _hitTrack (bool), _mode ("firing"|"trial")
 // Session-scoped spawn (trial script runs async; must not rely on StartSession locals).
 FADE_sniper_spawnAtPos = {
     params ["_player", "_posObj", "_isHuman", ["_trialLocked", false]];
@@ -716,7 +716,7 @@ FADE_sniper_spawnAtPos = {
     };
 };
 
-FADE_sniperStartSession = {
+FADE_sniperStartSession_impl = {
     params ["_player", "_enemyType", "_targetCount", "_maxRangeM", "_trace", "_hitTrack", "_mode"];
     if (!isServer) exitWith {};
     if (missionNamespace getVariable ["FADE_sniperRangeActive", false]) exitWith {
@@ -727,9 +727,9 @@ FADE_sniperStartSession = {
         ["No sniper lanes found. Place sniperRangeTarget_* logic objects in Eden."] remoteExec ["systemChat", _player];
     };
     _targetCount = round _targetCount;
-    _targetCount = (_targetCount max 1) min 40;
+    _targetCount = (_targetCount max 1) min 72;
     _maxRangeM = round _maxRangeM;
-    _maxRangeM = (_maxRangeM max 100) min 600;
+    _maxRangeM = (_maxRangeM max 100) min 1000;
 
     private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_F"]]];
     _enemyUnits = [_enemyUnits] call FADE_filterUnitsArmed;
@@ -817,8 +817,8 @@ FADE_sniperStartSession = {
     } else {
         private _trial = [_player, _enemyType, +_rangePool, _targetCount, _maxRangeM, +(missionNamespace getVariable ["FADE_sniperTrialPosLogics", []])] spawn {
             params ["_player", "_enemyType", "_eligibleLanes", "_nTargets", "_maxRangeM", "_allNodes"];
-            _nTargets = (_nTargets max 1) min 40;
-            _maxRangeM = (_maxRangeM max 100) min 600;
+            _nTargets = (_nTargets max 1) min 72;
+            _maxRangeM = (_maxRangeM max 100) min 1000;
             private _distances = [];
             private _step = _maxRangeM / _nTargets;
             for "_iStep" from 1 to _nTargets do {
@@ -891,7 +891,7 @@ FADE_sniperStartSession = {
                     } else {
                         _posObj = (_scoredRem select 0) select 1;
                     };
-                    [format ["Time trial: no clear line of sight from position %1 — using best-range lane (may be obscured).", _nodeLabel]] remoteExec ["systemChat", _player];
+                    [format ["Time trial: no clear line of sight from position %1  -  using best-range lane (may be obscured).", _nodeLabel]] remoteExec ["systemChat", _player];
                 };
                 private _ri = _remaining find _posObj;
                 if (_ri >= 0) then { _remaining deleteAt _ri };
@@ -953,11 +953,11 @@ FADE_sniperStartSession = {
                         selectRandom _allNodes
                     };
                     private _nextLabel = _nextEntry select 0;
-                    private _hHit = "<t size='1.05' color='#a8e6cf'>SNIPER TIME TRIAL</t><br/><br/><t color='#ffffff'>Hit — move to position " + str _nextLabel + "!</t>";
+                    private _hHit = "<t size='1.05' color='#a8e6cf'>SNIPER TIME TRIAL</t><br/><br/><t color='#ffffff'>Hit  -  move to position " + str _nextLabel + "!</t>";
                     [_hHit] remoteExec ["FADE_sniperClient_showTrialHint", _player];
-                    [format ["Time trial: Target %1 hit — move to position %2 for the next target.", _targetNum, _nextLabel]] remoteExec ["systemChat", _player];
+                    [format ["Time trial: Target %1 hit  -  move to position %2 for the next target.", _targetNum, _nextLabel]] remoteExec ["systemChat", _player];
                 } else {
-                    [format ["Time trial: Target %1 hit — trial complete.", _targetNum]] remoteExec ["systemChat", _player];
+                    [format ["Time trial: Target %1 hit  -  trial complete.", _targetNum]] remoteExec ["systemChat", _player];
                 };
                 [] call FADE_sniper_trialRemoveLastSpawn;
             };
@@ -967,7 +967,7 @@ FADE_sniperStartSession = {
             private _total = diag_tickTime - _t0;
             private _totalStr = str ((round (_total * 100)) / 100);
             private _lines = [];
-            _lines pushBack "<t size='1.05' color='#a8e6cf'>SNIPER TIME TRIAL — complete</t>";
+            _lines pushBack "<t size='1.05' color='#a8e6cf'>SNIPER TIME TRIAL  -  complete</t>";
             _lines pushBack format ["<t color='#cccccc'>Total time: <t color='#ffffff'>%1 s</t></t>", _totalStr];
             {
                 private _idx = _forEachIndex + 1;
@@ -975,7 +975,7 @@ FADE_sniperStartSession = {
                 private _ti = _times select _forEachIndex;
                 private _tStr = str ((round (_ti * 100)) / 100);
                 _lines pushBack format [
-                    "<t color='#9fb8d4'>Stage %1 (~%2m): <t color='#ffffff'>%3 s</t> — %4</t>",
+                    "<t color='#9fb8d4'>Stage %1 (~%2m): <t color='#ffffff'>%3 s</t>  -  %4</t>",
                     _idx, _d, _tStr, _notes select _forEachIndex
                 ];
             } forEach _times;
@@ -983,7 +983,7 @@ FADE_sniperStartSession = {
             private _body = _lines joinString "<br/><br/>";
             [_body] remoteExec ["FADE_sniperClient_showTrialHint", _player];
 
-            private _summary = format ["Time trial done — %1 s total.", _totalStr];
+            private _summary = format ["Time trial done  -  %1 s total.", _totalStr];
             missionNamespace setVariable ["FADE_sniperLastResult", _summary, true];
             publicVariable "FADE_sniperLastResult";
 
@@ -996,7 +996,7 @@ FADE_sniperStartSession = {
         };
         missionNamespace setVariable ["FADE_sniperTrialScript", _trial];
         private _nr = missionNamespace getVariable ["FADE_sniperTrialNodeRadiusM", 2.5];
-        [format ["Sniper time trial started — %1 targets, max %2m. Positions sniperPos_1..7 (within %3m).", _targetCount, _maxRangeM, _nr]] remoteExec ["systemChat", _player];
+        [format ["Sniper time trial started  -  %1 targets, max %2m. Positions sniperPos_1..7 (within %3m).", _targetCount, _maxRangeM, _nr]] remoteExec ["systemChat", _player];
     };
 };
 
@@ -1018,7 +1018,6 @@ FADE_sniperServer_impactSphereFromClient = {
 };
 
 publicVariable "FADE_sniperRangeActive";
-publicVariable "FADE_sniperStartSession";
 publicVariable "FADE_sniperEndSession";
 publicVariable "FADE_sniperServer_impactSphereFromClient";
 publicVariable "FADE_sniperLastResult";

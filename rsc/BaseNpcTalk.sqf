@@ -1,11 +1,11 @@
 // =============================================================================
-// BaseNpcTalk.sqf — S Wordsman at base: server-spawned unit + CivTalk scroll action
+// BaseNpcTalk.sqf  -  S Wordsman at base: server-spawned unit + CivTalk scroll action
 // Spawn position: Eden Game Logic named BaseNPCPos (FADE_baseNpcPosMarkerName).
-// No Eden soldier — only the BaseNPCPos logic should exist in mission.sqm.
+// No Eden soldier  -  only the BaseNPCPos logic should exist in mission.sqm.
 // =============================================================================
 
 // Global variable name exposed for the spawned NPC (also used by older scripts that
-// referenced baseNPC_1 as a missionNamespace key — kept stable for back-compat).
+// referenced baseNPC_1 as a missionNamespace key  -  kept stable for back-compat).
 if (isNil "FADE_baseNpc_globalVarName") then { FADE_baseNpc_globalVarName = "baseNPC_1" };
 if (isNil "FADE_baseNpc_identityKey") then { FADE_baseNpc_identityKey = "FAC_baseNPC_wordsman" };
 if (isNil "FADE_baseNpcClass") then { FADE_baseNpcClass = "C_man_1" };
@@ -37,7 +37,7 @@ FADE_baseNpc_resolveSpawnData = {
     if (!isServer) exitWith { [[0, 0, 0], 0, ""] };
     private _markerName = missionNamespace getVariable ["FADE_baseNpcPosMarkerName", "BaseNPCPos"];
     private _obj = [_markerName] call FADE_baseNpc_fnc_findLogicByEdenName;
-    // SQF parses "+missionNamespace" as unary + on the namespace — always parenthesize getVariable.
+    // SQF parses "+missionNamespace" as unary + on the namespace  -  always parenthesize getVariable.
     private _pos = +(missionNamespace getVariable ["FADE_baseNpcEdenPosATL", [14754.169, 18.171377, 16638.416]]);
     private _dir = 0;
     private _src = "config";
@@ -47,7 +47,7 @@ FADE_baseNpc_resolveSpawnData = {
         _src = _markerName;
     } else {
         diag_log format [
-            "[BaseNpcTalk] Eden marker %1 not found — using FADE_baseNpcEdenPosATL %2",
+            "[BaseNpcTalk] Eden marker %1 not found  -  using FADE_baseNpcEdenPosATL %2",
             _markerName, _pos
         ];
     };
@@ -117,6 +117,8 @@ FADE_baseNpc_registerUnit = {
         diag_log format ["[BaseNpcTalk] missionConfigFile CfgIdentities %1 missing", _idKey];
     };
     [_npc, _idKey] remoteExec ["FADE_baseNpc_clientSetIdentity", 0, _npc];
+    // Same MP pattern as AmbientCivilians: JIP-safe scroll action on every client (unit-targeted only).
+    [_npc] remoteExec ["FADE_civTalk_addLocalAction", 0, true];
     missionNamespace setVariable ["FADE_baseNpc_registered", true, true];
     publicVariable "FADE_baseNpc_registered";
     diag_log format [
@@ -129,7 +131,7 @@ FADE_baseNpc_spawnAndRegister = {
     if (!isServer) exitWith { objNull };
     private _existing = call FADE_baseNpc_resolveUnit;
     if (!isNull _existing && { _existing getVariable ["FADE_baseNpcInitDone", false] }) exitWith {
-        diag_log "[BaseNpcTalk] spawn skipped — already active";
+        diag_log "[BaseNpcTalk] spawn skipped  -  already active";
         _existing
     };
     if (!isNull _existing) then { deleteVehicle _existing };
@@ -137,7 +139,7 @@ FADE_baseNpc_spawnAndRegister = {
     (call FADE_baseNpc_resolveSpawnData) params ["_pos", "_dir", "_src"];
     private _class = missionNamespace getVariable ["FADE_baseNpcClass", "C_man_1"];
     if (!isClass (configFile >> "CfgVehicles" >> _class)) then {
-        diag_log format ["[BaseNpcTalk] invalid class %1 — using C_man_1", _class];
+        diag_log format ["[BaseNpcTalk] invalid class %1  -  using C_man_1", _class];
         _class = "C_man_1";
     };
     // Skip findEmptyPosition: it nudges to terrain "open" spots, pushing indoor placements outside walls.
@@ -170,6 +172,13 @@ FADE_baseNpc_clientEnsureInteractOnce = {
     if (!hasInterface) exitWith { false };
     private _u = call FADE_baseNpc_resolveUnit;
     if (isNull _u) exitWith { false };
+    // Legacy: remove old player-bound scroll action if a prior build added one.
+    private _legacyAid = missionNamespace getVariable ["FADE_baseNpc_playerScrollActionId", -1];
+    if (_legacyAid >= 0) then {
+        player removeAction _legacyAid;
+        missionNamespace setVariable ["FADE_baseNpc_playerScrollActionId", -1];
+        missionNamespace setVariable ["FADE_baseNpc_playerScrollNetId", ""];
+    };
     if (isNil "FAC_ensureCivTalkGui") then {
         call compile preprocessFileLineNumbers "rsc\FAC_ClientGuiEnsure.sqf";
     };
@@ -177,11 +186,9 @@ FADE_baseNpc_clientEnsureInteractOnce = {
     private _idKey = missionNamespace getVariable ["FADE_baseNpc_identityKey", "FAC_baseNPC_wordsman"];
     [_u, _idKey] call FADE_baseNpc_clientSetIdentity;
     private _fn = missionNamespace getVariable ["FADE_civTalk_addLocalAction", {}];
-    if !(_fn isEqualType {}) exitWith {
-        diag_log "[BaseNpcTalk] clientEnsureInteract: FADE_civTalk_addLocalAction missing";
-        false
+    if (_fn isEqualType {} && {!(_u getVariable ["FADE_civTalk_actAdded_local", false])}) then {
+        [_u] call _fn;
     };
-    [_u] call _fn;
     if (!isNil "ace_interact_menu_fnc_createAction" && {!(_u getVariable ["FADE_baseNpc_aceAdded", false])}) then {
         private _aceAct = [
             "FADE_base_npc_talk",

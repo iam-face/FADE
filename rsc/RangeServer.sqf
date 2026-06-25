@@ -1,5 +1,5 @@
 // =============================================================================
-// RangeServer.sqf — server-only firing/AT range for terminalRange
+// RangeServer.sqf  -  server-only firing/AT range for terminalRange
 // =============================================================================
 if (!isServer) exitWith {};
 
@@ -51,7 +51,7 @@ missionNamespace setVariable ["FADE_rangeSessionMode", "", true];
 missionNamespace setVariable ["FADE_rangeLastResult", "", true];
 
 FADE_rangeCleanupSpawned = {
-    // Dead OPFOR are no longer in units grp — remove men/targets (and corpses) by tracked refs first
+    // Dead OPFOR are no longer in units grp  -  remove men/targets (and corpses) by tracked refs first
     private _men = missionNamespace getVariable ["FADE_rangeSpawnedMen", []];
     { if (!isNull _x) then { deleteVehicle _x } } forEach _men;
     missionNamespace setVariable ["FADE_rangeSpawnedMen", []];
@@ -251,7 +251,7 @@ FADE_rangeEndSession = {
     };
 };
 
-// Evenly space desired 2D distances between closest and farthest pool logics (<= _maxRangeM), then pick nearest unused firingRangePos for each — avoids clustering when many slots sit near the shooter.
+// Evenly space desired 2D distances between closest and farthest pool logics (<= _maxRangeM), then pick nearest unused firingRangePos for each  -  avoids clustering when many slots sit near the shooter.
 FADE_rangePickSlotsEvenAlongRange = {
     params ["_player", "_poolObjs", "_maxRangeM", "_n"];
     if (_n <= 0) exitWith { [] };
@@ -290,7 +290,7 @@ FADE_rangePickSlotsEvenAlongRange = {
     _out
 };
 
-FADE_rangeStartSession = {
+FADE_rangeStartSession_impl = {
     params ["_player", "_enemyType", "_humanCount", "_vehCount", "_vehTypes", "_maxRangeM", "_trace", "_hitTrack", "_mode"];
     if (!isServer) exitWith {};
     if (isNull _player) exitWith {};
@@ -323,7 +323,7 @@ FADE_rangeStartSession = {
     private _vCap = _vehCount min ((_avail - _hCap) max 0);
     if (_humanCount > _hCap || {_vehCount > _vCap}) then {
         [format [
-            "Only %1 firingRangePos slot(s) within %2 m — spawning %3 human(s), %4 vehicle(s).",
+            "Only %1 firingRangePos slot(s) within %2 m  -  spawning %3 human(s), %4 vehicle(s).",
             _avail, _maxRangeM, _hCap, _vCap
         ]] remoteExec ["systemChat", _player];
     };
@@ -463,7 +463,7 @@ FADE_rangeStartSession = {
         missionNamespace setVariable ["FADE_rangeTrialScript", _trial];
         [
             format [
-                "Range time trial: %1 target(s) — humans first, then vehicles; distance increases each target (within your max range).",
+                "Range time trial: %1 target(s)  -  humans first, then vehicles; distance increases each target (within your max range).",
                 _nTrial
             ]
         ] remoteExec ["systemChat", _player];
@@ -642,7 +642,6 @@ FADE_rangeDespawnFriendlyLandAtSlot = {
     [_player] call FADE_rangePublishAtStateTo;
 };
 
-publicVariable "FADE_rangeStartSession";
 publicVariable "FADE_rangeEndSession";
 publicVariable "FADE_rangeRequestAtWeaponState";
 publicVariable "FADE_rangeSpawnFriendlyLandAtSlot";

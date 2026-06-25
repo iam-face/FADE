@@ -1,9 +1,9 @@
 // =============================================================================
-// FADE_civZonesFromLocations.sqf — build CIV_T_* zone anchors from map Locations
+// FADE_civZonesFromLocations.sqf  -  build CIV_T_* zone anchors from map Locations
 // =============================================================================
 // Server-only. Loaded from initServer after FADE_basePos is set.
 // Per-zone metadata in FADE_civZoneMeta (HashMap): locType, hasAmbientPop (buildings
-// within FADE_civZoneBuildingRadius), parkedVehicles (2–6 by tier), footMult for
+// within FADE_civZoneBuildingRadius), parkedVehicles (2-6 by tier), footMult for
 // walking civ count scaling. Zones with no buildings in radius get no foot/parked
 // ambient spawns (anchor kept for missions: AO, Operation, etc.).
 // =============================================================================

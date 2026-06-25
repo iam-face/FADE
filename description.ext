@@ -132,6 +132,27 @@ class Params
         texts[] = {"Off", "On"};
         default = 1;
     };
+    class FAC_DebugVgMarkers
+    {
+        title = "DEBUG: Show garrison buildings";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 0;
+    };
+    class FAC_DebugCivTownMarkers
+    {
+        title = "DEBUG: Show civilian town markers";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 0;
+    };
+    class FAC_DebugPrintSpawns
+    {
+        title = "DEBUG: Print spawns";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 0;
+    };
 };
 
 // Respawn: override mission.sqm to avoid respawn on mission start (no script calls forceRespawn).

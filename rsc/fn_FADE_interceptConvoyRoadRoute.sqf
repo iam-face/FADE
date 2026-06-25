@@ -1,9 +1,9 @@
 /*
     Server-only helper: find two road positions for Intercept Convoy.
     Returns [] if no valid pair, else [[x,y,z],[x,y,z]] with 2D distance >= _minRouteM.
-    Params: [_basePos, _minRouteM optional, _mapAnchor optional — prefer routes near map click]
+    Params: [_basePos, _minRouteM optional, _mapAnchor optional, _resolvedRadius optional — prefer routes near map click]
 */
-params [["_basePos", [0, 0, 0]], ["_minRouteM", -1], ["_mapAnchor", []]];
+params [["_basePos", [0, 0, 0]], ["_minRouteM", -1], ["_mapAnchor", []], ["_resolvedRadius", -1]];
 if (_minRouteM < 0) then {
     _minRouteM = missionNamespace getVariable ["FADE_convoyMinRouteM", if (isNil "FADE_convoyMinRouteM") then { 5000 } else { FADE_convoyMinRouteM }];
 };
@@ -12,8 +12,12 @@ private _mapMax = missionNamespace getVariable ["FADE_mapMax", worldSize];
 private _minFromBase = FADE_minDistFromBase;
 private _useAnchor = [_mapAnchor] call FADE_fnc_isValidMapClickPos;
 private _anchorSearchR = if (_useAnchor) then {
-    private _r = missionNamespace getVariable ["FADE_missionMapClickResolvedRadius", -1];
-    if (_r < 0) then { missionNamespace getVariable ["FADE_missionPlayerAnchorRadiusM", 5000] } else { _r }
+    private _snappedR = missionNamespace getVariable ["FADE_missionMapClickSnappedRadius", -2];
+    if (_resolvedRadius == _snappedR || { _resolvedRadius < 0 }) then {
+        missionNamespace getVariable ["FADE_missionPlayerAnchorRadiusM", 5000]
+    } else {
+        _resolvedRadius
+    }
 } else { 0 };
 
 private _tryRouteFromStart = {

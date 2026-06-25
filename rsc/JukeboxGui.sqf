@@ -1,13 +1,13 @@
 // =============================================================================
 // JukeboxGui.sqf -- Jukebox: loudspeaker tracks (per client, per source)
 // =============================================================================
-// Sources: radio:Radio_1..4 (Eden) use playSound3D (fixed world position at emitters). vehicle:<netId> uses
-//   createSoundSource (CfgVehicles FAC_Jukebox_<CfgSounds name>) + attachTo — playSound3D does not move with objects.
+// Sources: radio:Radio_1..4 (Eden) and vehicle:<netId> prefer createSoundSource
+//   (CfgVehicles FAC_Jukebox_<CfgSounds name>) + attachTo so stop can delete the source.
 // Each source has at most one track; different sources may play simultaneously.
 // Stop all music: Scenario → Admin only (FAC_jukebox_stopAllMusic → FAC_jukebox_clientStopAll on all clients).
 // Client Play -> server validates emitter + CfgSounds, updates FAC_jukebox_activeSources [key, song, volume, distance],
 //   remoteExec FAC_jukebox_clientPlay [song, sourceKey, volume, distance] to all clients (no JIP replay of active sources).
-// Per client: queued drain (spawn) serializes jobs. Radios: playSound3D + stopSound on handle; vehicles: attached Sound + deleteVehicle.
+// Per client: queued drain (spawn) serializes jobs. Preferred path: attached Sound + deleteVehicle; playSound3D is only a fallback.
 // FAC_jukebox_clientAudioList: [sourceKey, playSound3D handle or "", attached Sound object or objNull].
 // =============================================================================
 
@@ -116,7 +116,7 @@ FAC_jukebox_fnc_stopPs3d = {
     };
 };
 
-// GUI defaults (sliders 1–25 / 50–2500); persisted in missionNamespace while mission runs.
+// GUI defaults (sliders 1-25 / 50-2500); persisted in missionNamespace while mission runs.
 FAC_jukebox_guiVolumeDefault = 4;
 FAC_jukebox_guiDistanceDefault = 400;
 
@@ -170,6 +170,17 @@ FAC_jukebox_fnc_getSongForSource = {
     (_hit select 0) select 1
 };
 
+FAC_jukebox_fnc_setClientActiveSourceSong = {
+    params ["_key", "_song", ["_vol", 4], ["_dist", 400]];
+    if (_key == "") exitWith {};
+    private _arr = missionNamespace getVariable ["FAC_jukebox_activeSources", []];
+    private _next = _arr select { (_x select 0) != _key };
+    if (_song != "") then {
+        _next pushBack [_key, _song, _vol, _dist];
+    };
+    missionNamespace setVariable ["FAC_jukebox_activeSources", _next];
+};
+
 // Resolve OGG path + pitch from CfgSounds (mission first); optional volume/distance from config when not overridden by GUI.
 FAC_jukebox_fnc_soundFileFromCfg = {
     params [["_song", ""]];
@@ -207,14 +218,18 @@ FAC_jukebox_fnc_clientClearSourceAudio = {
     missionNamespace setVariable ["FAC_jukebox_clientAudioList", _keep];
 };
 
-// Vehicle loudspeaker: playSound3D position is world-fixed; use mission CfgVehicles Sound FAC_Jukebox_<song> + attachTo.
-// Returns true if playback started. Loudness / range = CfgSounds FAC_JukeVeh_* (description.ext; vehicle 25 / 1000 m). GUI sliders apply to radio playSound3D only.
-FAC_jukebox_fnc_tryVehicleAttachedSound = {
+// Preferred 3D music path: create a deletable sound source and attach it to the emitter.
+// Returns true if playback started. Loudness / range = CfgSFX FAC_JukeVeh_* (description.ext; currently 25 / 1000 m).
+FAC_jukebox_fnc_tryAttachedSound = {
     params [["_sourceKey", ""], ["_song", ""], ["_emitter", objNull]];
-    if (_sourceKey find "vehicle:" != 0) exitWith {false};
+    if !((_sourceKey find "vehicle:" == 0) || { _sourceKey find "radio:" == 0 }) exitWith {false};
     if (_song == "" || {isNull _emitter}) exitWith {false};
     private _cls = format ["FAC_Jukebox_%1", _song];
     if (!isClass (missionConfigFile >> "CfgVehicles" >> _cls)) exitWith {false};
+    private _sfx = getText (missionConfigFile >> "CfgVehicles" >> _cls >> "sound");
+    if (_sfx == "" || {!isClass (missionConfigFile >> "CfgSFX" >> _sfx)}) exitWith {false};
+    private _sounds = getArray (missionConfigFile >> "CfgSFX" >> _sfx >> "sounds");
+    if (_sounds isEqualTo [] || {!((_sounds select 0) isEqualType "")}) exitWith {false};
     private _snd = createSoundSource [_cls, getPosATL _emitter, [], 0];
     if (isNull _snd) exitWith {false};
     _snd attachTo [_emitter, [0, 0, 0]];
@@ -248,8 +263,8 @@ FAC_jukebox_clientPlay_execOne = {
         } else {
             _vol = ((round _vol) max 1) min 25;
             _dist = ((round _dist) max 50) min 2500;
-            if ([_sourceKey, _song, _emitter] call FAC_jukebox_fnc_tryVehicleAttachedSound) then {
-                [format ["vehicle attach OK: %1 @ %2", _song, _sourceKey]] call FAC_jukebox_dbg;
+            if ([_sourceKey, _song, _emitter] call FAC_jukebox_fnc_tryAttachedSound) then {
+                [format ["sound source attach OK: %1 @ %2", _song, _sourceKey]] call FAC_jukebox_dbg;
             } else {
                 ([_song] call FAC_jukebox_fnc_soundFileFromCfg) params ["_file", "_pitch"];
                 if (_file == "") then {
@@ -326,6 +341,8 @@ FAC_jukebox_clientPlay = {
     private _dist = _this param [3, missionNamespace getVariable ["FAC_jukebox_guiDistance", FAC_jukebox_guiDistanceDefault]];
     if (_sourceKey == "") exitWith {};
 
+    [_sourceKey, _song, _vol, _dist] call FAC_jukebox_fnc_setClientActiveSourceSong;
+
     private _q = missionNamespace getVariable ["FAC_jukebox_cpQueue", []];
     if (_song == "") then {
         _q = (_q select { (_x select 1) != _sourceKey });
@@ -338,11 +355,16 @@ FAC_jukebox_clientPlay = {
     [] call FAC_jukebox_clientPlay_kickDrain;
 };
 
-// Stops every jukebox source on this client (radios, all players' personal audio, queued jobs).
+// Stops every jukebox source on this client (radios, vehicles, queued jobs).
 FAC_jukebox_clientStopAll = {
     if (!hasInterface) exitWith {};
+    params [["_sourceKeys", []]];
     missionNamespace setVariable ["FAC_jukebox_cpQueue", []];
     missionNamespace setVariable ["FAC_jukebox_cpDrainRunning", false];
+
+    {
+        if (_x != "") then { [_x] call FAC_jukebox_fnc_clientClearSourceAudio };
+    } forEach _sourceKeys;
 
     private _list = missionNamespace getVariable ["FAC_jukebox_clientAudioList", []];
     {
@@ -435,7 +457,7 @@ FAC_jukeboxGui_fnc = {
             _sd sliderSetRange [50, 2500];
             _sv sliderSetPosition _v;
             _sd sliderSetPosition _d;
-            // Match track list width (0.46 @ x 0.27) — description.ext may still use 0.30 until updated.
+            // Match track list width (0.46 @ x 0.27)  -  description.ext may still use 0.30 until updated.
             private _p = ctrlPosition _sv;
             _sv ctrlSetPosition [0.27, _p select 1, 0.46, _p select 3];
             _sv ctrlCommit 0;
@@ -532,6 +554,7 @@ FAC_jukeboxGui_fnc = {
             if (_key == "") exitWith { ["No source (re-open the jukebox)."] call FAC_jukebox_dbg };
             ["Stop → server"] call FAC_jukebox_dbg;
             ["", _key, player] remoteExec ["FAC_jukebox_serverPlay", 2];
+            [_key, ""] call FAC_jukebox_fnc_setClientActiveSourceSong;
             [_key] call FAC_jukebox_fnc_clientClearSourceAudio;
             systemChat "Jukebox stopped at this source.";
             if (!isNull (findDisplay 60400)) then {
@@ -573,7 +596,7 @@ FAC_jukeboxGui_fnc = {
     };
 };
 
-// Vehicle loudspeaker *menu*: [local Man] call only. addAction + ACE live on the *infantry unit* (player), not the vehicle —
+// Vehicle loudspeaker *menu*: [local Man] call only. addAction + ACE live on the *infantry unit* (player), not the vehicle  - 
 // avoids scroll/distance quirks when the hull moves fast. Playback uses createSoundSource + attachTo on the vehicle netId.
 // Vanilla: condition uses _target (= unit the action is on). ACE: ACE_SelfActions on same unit.
 FAC_jukebox_fnc_addVehicleLoudspeakerAction = {

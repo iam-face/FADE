@@ -140,7 +140,7 @@ FADE_vg_spawnOutdoorHint = {
     if (!(_bc isEqualType []) || { count _bc < 2 }) exitWith { objNull };
     if (count _bc < 3) then { _bc = [(_bc select 0), (_bc select 1), 0] };
 
-    private _barrelPos = [_bc, 8, 22, 2, 1, 0.3, 0, [], _bc] call BIS_fnc_findSafePos;
+    private _barrelPos = [[_bc, 8, 22, 2, 1, 0.3, 0, [], _bc], _bc] call FADE_findSafePosArray;
     if (!(_barrelPos isEqualType []) || { count _barrelPos < 2 }) exitWith { objNull };
     _barrelPos = [(_barrelPos select 0), (_barrelPos select 1), (_barrelPos param [2, 0])];
 
@@ -296,7 +296,13 @@ FADE_vg_spawnOne = {
 [] spawn {
     scriptName "FADE_vg_loop";
     while { true } do {
-        sleep ((missionNamespace getVariable ["FADE_vgPollIntervalS", 10]) max 2);
+        private _pending = missionNamespace getVariable ["FADE_vg_pending", []];
+        private _sleepS = if (count _pending == 0) then {
+            missionNamespace getVariable ["FADE_vgPollEmptyIntervalS", 30]
+        } else {
+            missionNamespace getVariable ["FADE_vgPollIntervalS", 10]
+        };
+        sleep (_sleepS max 2);
         private _rAct = (missionNamespace getVariable ["FADE_vgActivateRadiusM", 100]) max 5;
 
         private _remain = [];

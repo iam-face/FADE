@@ -70,7 +70,7 @@ FAC_vehicleGui_syncWhitelistSpawnControl = {
 };
 
 // Pylon/loadout UI: vanilla player action names (VehicleCustomization, OpenPylonLoadout) are not valid on all clients.
-// ACE3 Pylons: ace_pylons_fnc_showDialog — non-curator mode auto-closes the dialog when player is farther than
+// ACE3 Pylons: ace_pylons_fnc_showDialog  -  non-curator mode auto-closes the dialog when player is farther than
 // ace_pylons_searchDistance (default 15m) from the aircraft (vehicle board vs pad). Curator mode [veh, true] skips
 // that check when ace_zeus is loaded (same as Zeus “configure pylons”). See cba_settings.sqf for distance fallback.
 FAC_vehicleGui_tryOpenPylonDialog = {
@@ -135,7 +135,7 @@ FAC_vehicleGui_buildVehicleTooltip = {
     _lines joinString "\n"
 };
 
-// Plain multiline details (RscEdit — StructuredText often draws nothing in custom dialogs)
+// Plain multiline details (RscEdit  -  StructuredText often draws nothing in custom dialogs)
 FAC_vehicleGui_buildVehicleDetailsPlain = {
     params ["_class"];
     private _nl = toString [10];
@@ -264,7 +264,7 @@ FAC_vehicleGui_rebuildManageAmmoList = {
                 if (_cur > _max) then { _cur = _max };
                 private _dn = if (isClass _cfgMag) then { getText (_cfgMag >> "displayName") } else { "" };
                 if (_dn == "") then { _dn = _mag };
-                private _row = _ammoLb lbAdd format ["%1 (%2) — %3/%4", _dn, _mag, _cur, _max];
+                private _row = _ammoLb lbAdd format ["%1 (%2)  -  %3/%4", _dn, _mag, _cur, _max];
                 _ammoLb lbSetData [_row, str [_mag, _cur, _max]];
             };
         };
@@ -284,7 +284,7 @@ FAC_vehicleGui_rebuildManageAmmoList = {
             if (_cur > _max) then { _cur = _max };
             private _dn = if (isClass _cfgMag) then { getText (_cfgMag >> "displayName") } else { "" };
             if (_dn == "") then { _dn = _mag };
-            private _row = _ammoLb lbAdd format ["Pylon %1: %2 (%3) — %4/%5", _i + 1, _dn, _mag, _cur, _max];
+            private _row = _ammoLb lbAdd format ["Pylon %1: %2 (%3)  -  %4/%5", _i + 1, _dn, _mag, _cur, _max];
             _ammoLb lbSetData [_row, str ["PYLON", _i, _mag, _cur, _max]];
         };
     };
@@ -855,7 +855,7 @@ FAC_vehicleGui_fnc = {
 
             if (_cat == "aircraft") then {
                 private _helipads = missionNamespace getVariable ["FADE_helipads", []];
-                private _iAuto = _padLb lbAdd "Auto — first available pad";
+                private _iAuto = _padLb lbAdd "Auto  -  first available pad";
                 _padLb lbSetData [_iAuto, "-1"];
                 {
                     private _padObj = _x;
@@ -864,15 +864,15 @@ FAC_vehicleGui_fnc = {
                     private _occ = [_padObj, 10] call FAC_vehicleGui_isHelipadOccupied;
                     private _badPlane = _isPlane && { _eden in _forbidden };
                     private _suffix = if (_badPlane) then {
-                        " — NO PLANES"
+                        "  -  NO PLANES"
                     } else {
-                        if (_occ) then { " — OCCUPIED" } else { " — empty" }
+                        if (_occ) then { "  -  OCCUPIED" } else { "  -  empty" }
                     };
                     private _row = _padLb lbAdd (_disp + _suffix);
                     _padLb lbSetData [_row, str _forEachIndex];
                 } forEach _helipads;
             } else {
-                private _iAuto = _padLb lbAdd "Auto — first clear VEH slot";
+                private _iAuto = _padLb lbAdd "Auto  -  first clear VEH slot";
                 _padLb lbSetData [_iAuto, "-1"];
                 private _vehPts = missionNamespace getVariable ["FADE_vehiclePoints", []];
                 {
@@ -880,7 +880,7 @@ FAC_vehicleGui_fnc = {
                     private _eden = vehicleVarName _ptObj;
                     private _disp = [_eden, _forEachIndex] call FAC_vehicleGui_spawnLocationDisplayName;
                     private _occ = [_ptObj, 9] call FAC_vehicleGui_isHelipadOccupied;
-                    private _suffix = if (_occ) then { " — OCCUPIED" } else { " — empty" };
+                    private _suffix = if (_occ) then { "  -  OCCUPIED" } else { "  -  empty" };
                     private _row = _padLb lbAdd (_disp + _suffix);
                     _padLb lbSetData [_row, str _forEachIndex];
                 } forEach _vehPts;
@@ -1031,7 +1031,7 @@ FAC_vehicleGui_fnc = {
                     private _cls = typeOf _veh;
                     private _name = getText (configFile >> "CfgVehicles" >> _cls >> "displayName");
                     if (_name == "") then { _name = _cls };
-                    private _label = format ["%1 — %2", _name, _padName];
+                    private _label = format ["%1  -  %2", _name, _padName];
                     private _varName = "FADE_obj_" + (str _veh);
                     missionNamespace setVariable [_varName, _veh];
                     private _idx = _lb lbAdd _label;

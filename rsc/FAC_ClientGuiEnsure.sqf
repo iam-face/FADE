@@ -1,5 +1,5 @@
 // =============================================================================
-// FAC_ClientGuiEnsure.sqf — lazy compile for client GUIs (initPlayerLocal)
+// FAC_ClientGuiEnsure.sqf  -  lazy compile for client GUIs (initPlayerLocal)
 // =============================================================================
 // Call FAC_ensure* before using missionNamespace FAC_*Gui_fnc / jukebox helpers.
 // Idempotent: safe to call multiple times.
@@ -13,9 +13,29 @@ FAC_ensureLobbyParams = {
     };
 };
 
+FAC_guiOpenDeferred = {
+    params ["_ensureFn", "_guiFnName", ["_openParams", []]];
+    private _ensure = missionNamespace getVariable [_ensureFn, {}];
+    private _gui = missionNamespace getVariable [_guiFnName, {}];
+    if (!(_ensure isEqualType {}) || { !(_gui isEqualType {}) }) exitWith {};
+    [] spawn {
+        params ["_ensure", "_gui", "_openParams"];
+        call _ensure;
+        sleep 0.2;
+        if (_openParams isEqualTo []) then {
+            ["open", []] call _gui;
+        } else {
+            ["open", _openParams] call _gui;
+        };
+    };
+};
+
 FAC_ensureLoadoutGui = {
     call FAC_ensureLobbyParams;
     if (missionNamespace getVariable ["FAC_clientGui_loadout", false]) exitWith {};
+    if (isNil "FAC_loadoutGui_buildPresetEntries") then {
+        call compile preprocessFileLineNumbers "rsc\LoadoutPresetCommon.sqf";
+    };
     call compile preprocessFileLineNumbers "rsc\LoadoutGui.sqf";
     missionNamespace setVariable ["FAC_clientGui_loadout", true];
 };
@@ -50,10 +70,12 @@ FAC_ensureMedicalTrainingGui = {
 FAC_ensureMissionsGui = {
     call FAC_ensureLobbyParams;
     if (missionNamespace getVariable ["FAC_clientGui_missions", false]) exitWith {};
+    call compile preprocessFileLineNumbers "rsc\MissionPickOverlay.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionsGui.sqf";
     call compile preprocessFileLineNumbers "rsc\EscapeEvasionPickGui.sqf";
     call compile preprocessFileLineNumbers "rsc\TroopInsertPickGui.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionLocationPickGui.sqf";
+    call compile preprocessFileLineNumbers "rsc\FADE_MapClickPick.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionMapPick.sqf";
     missionNamespace setVariable ["FAC_missionsGui_fnc", FAC_missionsGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_missions", true];
@@ -69,6 +91,9 @@ FAC_ensureScenarioGui = {
 
 FAC_ensureCivTalkGui = {
     if (missionNamespace getVariable ["FAC_clientGui_civtalk", false]) exitWith {};
+    if (isNil "FADE_client_escapeForDiary") then {
+        call compile preprocessFileLineNumbers "rsc\FADE_ClientCommon.sqf";
+    };
     call compile preprocessFileLineNumbers "rsc\CivTalkGui.sqf";
     missionNamespace setVariable ["FAC_clientGui_civtalk", true];
     private _refresh = missionNamespace getVariable ["FADE_civTalk_refreshBaseNpcAction", {}];
@@ -115,7 +140,7 @@ FAC_ensureRangeGui = {
     call compile preprocessFileLineNumbers "rsc\RangeGui.sqf";
     missionNamespace setVariable ["FAC_rangeGui_fnc", FAC_rangeGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_range", true];
-    // FAC_ensureSniperGui is CODE (lazy compile); isNull does not apply — call it so range FX helpers exist.
+    // FAC_ensureSniperGui is CODE (lazy compile); isNull does not apply  -  call it so range FX helpers exist.
     call FAC_ensureSniperGui;
 };
 

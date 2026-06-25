@@ -13,7 +13,7 @@ FADE_scenarioWeather = "Clear";
 FADE_scenarioEnemyFaction = "OPF_F";
 FADE_scenarioFriendlyFaction = "BLU_F";
 FADE_scenarioCivFaction = "CIV_F";
-// Optional exact CfgFactionClasses names — if non-empty and the class exists and side matches, wins over display-name pick in initServer (use when mod display strings drift). initServer also prefers USMC / 3CB African factions by display name when these stay empty.
+// Optional exact CfgFactionClasses names  -  if non-empty and the class exists and side matches, wins over display-name pick in initServer (use when mod display strings drift). initServer also prefers USMC / 3CB African factions by display name when these stay empty.
 FADE_startupFactionFriendly = "";
 FADE_startupFactionEnemy = "";
 FADE_startupFactionCiv = "";
@@ -30,7 +30,7 @@ FADE_topographyLocationRadius = 8000;
 FADE_aoStrength = "Mid";       // AO mission strength: "Low", "Mid", "High" (used by AO mission type)
 // Operation (global): number of enemy-held civ zones (Scenario GUI); must not exceed built zone count
 FADE_operationZoneCount = 6;
-// Legacy: random pool if ever needed — Operation uses FADE_operationZoneCount from scenario
+// Legacy: random pool if ever needed  -  Operation uses FADE_operationZoneCount from scenario
 FADE_operationZoneCountChoices = [4, 6, 10];
 // Intercept Convoy: minimum straight-line distance (m) between road start and road end (mission picks random roads; no Eden ROAD_SP_*).
 FADE_convoyMinRouteM = 5000;
@@ -48,8 +48,8 @@ FADE_operationCleanupDistPlayers = 2000;
 FADE_operationCleanupInterval = 600;
 FADE_enemySkill = 0.2;         // Default enemy AI skill (Scenario GUI can override)
 FADE_opforPopulationSetting = "Auto";  // default Auto; also "VeryLow", "Low", "Normal", "High", "VeryHigh", "Insane"
-FADE_opforLauncherSetting = "Normal";     // "Normal", "Reduced", "Minimal", "None" — AT launchers (not MANPADS AA)
-FADE_opforAirSetting = "Off";               // "Off", "Low" (max 1, 10 min cooldown), "Medium" (max 2, 5 min) — OPFOR air after AI spots BLUFOR + random delay (initServer FADE_opforAir_*)
+FADE_opforLauncherSetting = "Normal";     // "Normal", "Reduced", "Minimal", "None"  -  AT launchers (not MANPADS AA)
+FADE_opforAirSetting = "Off";               // "Off", "Low" (max 1, 10 min cooldown), "Medium" (max 2, 5 min)  -  OPFOR air after AI spots BLUFOR + random delay (initServer FADE_opforAir_*)
 FADE_limitGearToFriendlyFaction = false;  // When true, Loadout and Vehicle GUIs restrict to chosen Friendly faction
 FADE_limitToPresetLoadouts = false;          // When true, Loadout GUI allows preset loadouts only
 FADE_teleportToPlayerMode = 0;            // 0 = all players can teleport-to-player, 1 = SL/admin/Zeus only
@@ -66,16 +66,16 @@ FADE_civTalkBtnOpforDefault = "Seen any OPFOR?";
 FADE_civTalkOpforFollowupButtonText = "Are you sure...?";
 FADE_civTalkCooldownS = 45;
 FADE_civTalkPositiveChance = 0.5;
-FADE_civTalkGreetingPositive = ["Hello. Can I help you?", "Good day. What do you need?", "Yes? Make it quick.", "I do not want trouble—what is it?"];
+FADE_civTalkGreetingPositive = ["Hello. Can I help you?", "Good day. What do you need?", "Yes? Make it quick.", "I do not want trouble - what is it?"];
 FADE_civTalkGreetingNegative = ["What do you want?", "Leave me alone.", "I am busy.", "Do not point that thing at me."];
 FADE_civTalkRumoursPositive = ["They say the road north is quiet.", "People talk, but I pay no attention.", "Only that strangers have been asking questions.", "I heard engines on the main road earlier.", "Folk are keeping their heads down."];
-// Heard rumours — extra lines when a global mission type with QRF is active (see FADE_globalMissionTypesWithQrf; server picks ~half the time when cooperative).
+// Heard rumours  -  extra lines when a global mission type with QRF is active (see FADE_globalMissionTypesWithQrf; server picks ~half the time when cooperative).
 FADE_civTalkRumoursPositiveQrf = [
     "Word is, when it gets loud out there, their trucks do not take long to show up.",
-    "Folk say the army moves fast once someone starts shooting—best not to stick around.",
-    "I heard they like to pile on quick if things go hot—just what people say.",
+    "Folk say the army moves fast once someone starts shooting - best not to stick around.",
+    "I heard they like to pile on quick if things go hot - just what people say.",
     "Rumour is their quick-response runs on a hair trigger lately.",
-    "If you hear a firefight, expect company soon—that is what everyone whispers."
+    "If you hear a firefight, expect company soon - that is what everyone whispers."
 ];
 // Global mission types that use truck/zone QRF (excludes e.g. Intercept Convoy). Used for rumour hints only.
 FADE_globalMissionTypesWithQrf = ["AreaOfOperations", "Hostage", "HVT", "ClearArea", "CAS", "SearchDestroy", "Operation", "AssetRetrieval", "CSAR", "EscapeEvasion"];
@@ -87,7 +87,7 @@ FADE_civTalkGestureNoUnderstandFmt = "%1 does not understand you.";
 FADE_civTalkArrestUncooperativeRadiusM = 500;
 FADE_civTalkArrestComply = ["I am not resisting.", "Okay, I will come quietly.", "Please, do not hurt me."];
 FADE_civTalkArrestRefuse = ["You have no authority!", "I am not going anywhere with you.", "Leave me alone!"];
-FADE_civTalkRefuseOpfor = ["I'm not telling you anything.", "I have nothing to say to you.", "Ask someone else.", "I did not see anything—understand?"];
+FADE_civTalkRefuseOpfor = ["I'm not telling you anything.", "I have nothing to say to you.", "Ask someone else.", "I did not see anything - understand?"];
 FADE_civTalkRefuseCar = ["Go away.", "Find your own ride.", "I do not have keys for you.", "That is not how this works."];
 FADE_civTalkOpforNone = ["I have not seen any soldiers.", "No, nothing like that around here."];
 FADE_civTalkOpforUnsure = ["I am not sure.", "Maybe, I did not get a good look."];
@@ -95,18 +95,18 @@ FADE_civTalkCarNone = ["I do not know of any free car nearby.", "Sorry, no empty
 // Optional second line in replies: time-of-day + nearest settlement name (server: FADE_civTalk_contextLines).
 FADE_civTalkContextAppendChance = 0.35;
 FADE_civTalkCtxNight = ["It is hard to see at night.", "The dark makes everyone nervous.", "You should not be out here after dark."];
-FADE_civTalkCtxMorning = ["The morning is quiet.", "Barely anyone is about yet.", "Early light—easy to miss details."];
+FADE_civTalkCtxMorning = ["The morning is quiet.", "Barely anyone is about yet.", "Early light - easy to miss details."];
 FADE_civTalkCtxAfternoon = ["Heat shimmers on the road.", "The day drags.", "Sun is high; hard to be sure of anything."];
 FADE_civTalkCtxNearFmt = ["Not far from %1.", "Toward %1...", "People still talk about %1.", "We are in the shadow of %1."];
 // When true, actionable civilian intel (OPFOR sighting / vehicle tip) appends an entry to map → Intel (see Briefing.sqf / FADE_civTalk_clientAppendIntelDiary).
 FADE_civTalkIntelDiary = true;
 // When true, building intel (hold-to-read props) and Asset Retrieval package pickup append to map → Intel (FADE_intel_clientAppendIntelDiary).
 FADE_intelDiaryLog = true;
-// Civilian talk — cutscene (local to initiating player) + animation names (switchMove; clear with "" before changing)
+// Civilian talk  -  cutscene (local to initiating player) + animation names (switchMove; clear with "" before changing)
 FADE_civTalkFadeOutSec = 1.2;
 FADE_civTalkFadeInSec = 1;
 FADE_civTalkFaceSeparationM = 3;
-// Cutscene camera: modelToWorld on player — right / back / up (m) in Man space (X right, Y forward, Z up); lower FOV = more zoom (tuned to match debug).
+// Cutscene camera: modelToWorld on player  -  right / back / up (m) in Man space (X right, Y forward, Z up); lower FOV = more zoom (tuned to match debug).
 FADE_civTalkCamBehindM = 3;
 FADE_civTalkCamRightM = 2;
 FADE_civTalkCamHeightAbovePlayerASL = 1;
@@ -149,11 +149,11 @@ FADE_missionMapClickSnapCivZoneTypes = [
     "Hostage", "HVT", "SearchDestroy", "AssetRetrieval", "MineClearing",
     "TroopExtract", "ClearArea", "AreaOfOperations", "Operation"
 ];
-FADE_missionMapClickSnappedRadius = -2; // FADE_missionMapClickResolvedRadius when snapped to civ zone (not a search tier metres)
+FADE_missionMapClickSnappedRadius = -2; // FADE_missionRun_mapPickResolvedRadius when snapped to civ zone (not a search tier metres)
 FADE_missionPlayerAnchorRadiusM = 5000;
 FADE_missionMapPickTimeoutSec = 20;
 FADE_baseNpcClass = "C_man_1";
-// getUnitLoadout / setUnitLoadout format (10 elements) — S Wordsman appearance at base.
+// getUnitLoadout / setUnitLoadout format (10 elements)  -  S Wordsman appearance at base.
 FADE_baseNpcLoadout = [[], [], [], ["U_I_G_Story_Protagonist_F", []], [], [], "H_Beret_blk", "G_aviator", [], ["ItemMap", "", "", "ItemCompass", "ItemWatch", ""]];
 // Building intel: spawns when a virtual garrison activates; server generates text on consume (`rsc/FADE_IntelServer.sqf`, `rsc/FADE_IntelClient.sqf`).
 // **Read intel** (hold) or **pick up** the prop (e.g. ACE): both award the same FADE hint/diary when a BLUFOR player is credited.
@@ -224,14 +224,14 @@ FADE_firesDrillBarrelDistanceM = [4, 7];
 FADE_firesDrillMinDistFromBaseM = 500;
 // Max random samples (dry land + outside base radius) before start fails with systemChat to the caller.
 FADE_firesDrillSpawnMaxAttempts = 25;
-// Drill completes on first real vehicle damage (splash/part damage counts) or destruction — not aggregate `damage` threshold.
-// [display label, unused class] — kept for FIRES GUI combo; spawn uses FADE_firesDrillCarClass.
+// Drill completes on first real vehicle damage (splash/part damage counts) or destruction  -  not aggregate `damage` threshold.
+// [display label, unused class]  -  kept for FIRES GUI combo; spawn uses FADE_firesDrillCarClass.
 FADE_firesDrillTargetDefinitions = [
     ["Drill vehicle (offroad)", "C_Offroad_01_F"]
 ];
 // RTT setObjectTextureGlobal indices on firesScreenPos_* . Use [0] for the main panel only; adding 1+ repeats the feed on PiP/bezel selections (tiled picture-in-picture).
 FADE_firesImpactVideoTextureIndices = [0];
-// 512+ recommended; non–power-of-two sizes often produce black RTT on some GPUs.
+// 512+ recommended; non-power-of-two sizes often produce black RTT on some GPUs.
 FADE_firesImpactVideoRttResolution = 512;
 // r2t(name, aspect): 1.0 matches common PiP/RTT examples; widen/narrow if the panel looks stretched.
 FADE_firesImpactRttAspect = 1;
@@ -480,7 +480,7 @@ FADE_civVehCleanupDist = 3500;
 FADE_civAirCleanupDist = -1;
 FADE_civDebug = false;  // systemChat for spawn/despawn/road vehicle actions
 FADE_civDebugMarkers = false;  // when true, show map markers for active civ zones (Civ: zoneId)
-// Debug: systemChat for dynamic roadblocks (rsc\DynamicRoadblocks.sqf — spawn, despawn, patrols off)
+// Debug: systemChat for dynamic roadblocks (rsc\DynamicRoadblocks.sqf  -  spawn, despawn, patrols off)
 FADE_checkpointDebug = false;
 // Dynamic roadblocks / ambush props along base <-> mission corridor (rsc\DynamicRoadblocks.sqf). Requires Enemy Patrols ON.
 // Counts all friendly players for distance (including helicopters) once beyond FADE_dynamicRoadblockMinDistFromBase.
@@ -501,7 +501,7 @@ FADE_roadblockGarrisonMax = 16;
 // FADE_VirtualGarrison.sqf: spawn building OPFOR when any player is this close (2D); manager sleep interval (server).
 FADE_vgActivateRadiusM = 100;
 FADE_vgPollIntervalS = 10;
-// Search & Destroy: % of spawned ammo caches that must be destroyed (0–100). Mission also requires all defenders eliminated.
+// Search & Destroy: % of spawned ammo caches that must be destroyed (0-100). Mission also requires all defenders eliminated.
 FADE_searchDestroyCacheDestroyPct = 100;
 // Deferred nearby-building garrison (Missions: Asset Retrieval, Search & Destroy): roll per buildingPos when registering slots. Was 0.33.
 FADE_vgNearbySlotChance = 0.165;
@@ -532,11 +532,11 @@ FADE_dynamicRoadblockCivZoneSpawnChanceEe = 1;   // per zone when Escape & Evasi
 FADE_dynamicRoadblockCivZonePlayerMaxM = 5200;   // need ≥1 eligible player within this of zone centre
 FADE_dynamicRoadblockCivZoneSpawnMinM = 200;    // player ↔ roadblock distance band (can be < default corridor min)
 FADE_dynamicRoadblockCivZoneSpawnMaxM = 3200;
-// Civ-zone road pick: search roads within (FADE_civSpawnRadius * this mult), min 350 m — keeps "main road" inside the town, not a regional highway chord.
+// Civ-zone road pick: search roads within (FADE_civSpawnRadius * this mult), min 350 m  -  keeps "main road" inside the town, not a regional highway chord.
 FADE_dynamicRoadblockCivZoneRoadSearchMult = 0.55;
 // Prefer longest segment whose midpoint is within this distance of the zone anchor (m); 0 = no extra constraint (legacy).
 FADE_dynamicRoadblockCivZoneMidMaxM = 500;
-// With a mission anchor: roadblock must be at least this much CLOSER to the anchor (obj or HQ for EE) than the player — stops spawns behind you on the way to the task.
+// With a mission anchor: roadblock must be at least this much CLOSER to the anchor (obj or HQ for EE) than the player  -  stops spawns behind you on the way to the task.
 FADE_dynamicRoadblockAheadMarginM = 200;
 // Extra road samples along each eligible player → anchor (merged with corridor).
 FADE_dynamicRoadblockPlayerRaySamples = 5;
@@ -567,6 +567,10 @@ FADE_counterAttackMinDistFromBase = 1000;
 FADE_counterAttackCargoStaggerSec = 0.35;
 // When QRF spawns with no players left in the objective / contested zone, driver waypoints retarget this often (friendly player centroid).
 FADE_qrfHuntWaypointIntervalS = 60;
+
+FADE_vgPollEmptyIntervalS = 30;
+// Ambient civ: skip zone ticks when nearest player farther than this (defaults to activate dist).
+FADE_civZoneActivationDist = 900;
 
 // Mission load profiling (RPT): CfgVehicles scan, client GUI compile, waitUntil. Set true temporarily to measure; leave false in production.
 FADE_profileMissionLoad = false;
@@ -612,7 +616,7 @@ FADE_rangeAtWeaponDefinitions = [
     ["MRAWS [AT] (placeholder)", "launch_MRAWS_green_F"],
     ["Titan AT [placeholder]", "launch_B_Titan_short_F"]
 ];
-// Legacy separate AT pads (rangeGunPos_*): leave empty — equipment uses rangeFriendlyVehPos_* only.
+// Legacy separate AT pads (rangeGunPos_*): leave empty  -  equipment uses rangeFriendlyVehPos_* only.
 FADE_rangeGunPosNames = [];
 // Friendly BLUFOR ground vehicles (same class pool as Vehicle GUI land spawn); logic positions in Eden.
 FADE_rangeFriendlyVehPosNames = [
@@ -632,15 +636,15 @@ FADE_rangeFriendlyVehPosDisplayNames = [
 // -----------------------------------------------------------------------------
 // Locker Room ambient (client: rsc\LockerRoomAmbient.sqf)
 // Player say3D -- 250 m audible radius; timers repeat while in zone / near lockers
-// Eden game logic: variable name posLockerRoom = room center. Within radius = in locker room.
-// Locker proximity helpers: posLocker_0..N or posLockers_1..N (either naming; scan collects non-null).
-// If none found, LockerRoomAmbient falls back to vanilla Metal_Locker_F within proximity distance.
+// Eden game logic: posLockerRoom = room center (hostage VO within room radius).
+// Locker slap helpers: posLockers_1, posLockers_2 (within locker proximity distance).
+// If no helpers exist, LockerRoomAmbient falls back to vanilla Metal_Locker_F nearby.
 // -----------------------------------------------------------------------------
 FADE_lockerRoomCenterVar = "posLockerRoom";
-FADE_lockerRoomRadius = 20;
-FADE_lockerNearLockerDist = 5;
+FADE_lockerRoomRadius = 5;
+FADE_lockerNearLockerDist = 2;
 FADE_lockerPosVarMax = 64;
-// Roll timing: time + min + random rand → default 3–6s (both hostage and slap)
+// Roll timing: time + min + random rand → default 3-6s (both hostage and slap)
 FADE_lockerSoundDelayMin = 3;
 FADE_lockerSoundDelayRand = 3;
 // 1 = always play on each roll (hostage and slap are independent timers)

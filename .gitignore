@@ -3,6 +3,7 @@
 Thumbs.db
 *.swp
 *.swo
+*.bak
 *~
 
 # Local scripts / tooling (not shared)

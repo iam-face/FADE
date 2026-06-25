@@ -1,7 +1,7 @@
 // =============================================================================
 // OperationMission.sqf - Multi-zone capture (global). Random civ zones; players
 // only (BLUFOR). Main loop polls every 5s (abort/task); zone evaluation every 60s
-// using distance2D vs ellipse radius — captured when 0 OPFOR (latched until OPFOR
+// using distance2D vs ellipse radius  -  captured when 0 OPFOR (latched until OPFOR
 // re-enter); markers: enemy if OPFOR outnumber BLUFOR players in ellipse, else
 // orange if OPFOR present, friendly when clear.
 // Infantry: patrols + building garrison (optional smoking barrel). Vehicles with
@@ -11,11 +11,13 @@
 // Params: FADE_operationParams = [_player, _mapAnchor, _taskId, _basePos, _enemyUnits, _operationNameUpper, _operationName]
 // =============================================================================
 if (!isServer) exitWith {};
+
+FADE_operationMissionMain = {
 if (isNil "FADE_operationParams" || { count FADE_operationParams < 6 }) exitWith {};
 
 FADE_operationParams params ["_player", ["_mapAnchor", []], "_taskId", "_basePos", "_enemyUnits", ["_operationNameUpper", "OPERATION"], ["_operationName", "Operation"]];
 if (!([_mapAnchor] call FADE_fnc_isValidMapClickPos)) then {
-    _mapAnchor = missionNamespace getVariable ["FADE_missionMapAnchor", []];
+    _mapAnchor = [];
 };
 private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", { params [["_p", [0, 0, 0]]]; [_p] call FADE_normPos3 }];
 
@@ -70,8 +72,6 @@ private _useMapAnchor = [_mapAnchor] call FADE_fnc_isValidMapClickPos;
 private _wantN = missionNamespace getVariable ["FADE_operationZoneCount", 6];
 _wantN = (round _wantN) max 2 min 10;
 if (_useMapAnchor) then {
-    private _snapped = missionNamespace getVariable ["FADE_missionMapClickSnappedZoneCenter", []];
-    if (count _snapped >= 2) then { _mapAnchor = +_snapped };
     _zoneCandidates = [_zoneCandidates, [], { ([_x] call FADE_normPos3) distance2D _mapAnchor }, "ASCEND"] call BIS_fnc_sortBy;
 } else {
     _zoneCandidates = _zoneCandidates call BIS_fnc_arrayShuffle;
@@ -182,7 +182,7 @@ private _fnc_opDeleteVehWithCrews = {
     if (!isNull _veh) then { deleteVehicle _veh };
 };
 
-// Returns [vehicle, driverGroup, cargoGroup] — cargoGroup may be grpNull
+// Returns [vehicle, driverGroup, cargoGroup]  -  cargoGroup may be grpNull
 // Must not close over other private locals: stored in missionNamespace and called from resupply/QRF after this script ends.
 private _fnc_opMakeVeh = {
     params ["_spawnPos", "_enemyUnits", "_facApply"];
@@ -384,7 +384,7 @@ private _fnc_opMakeVeh = {
             _opAllGroups pushBack _vGrp;
             if (!isNull _cGrp) then { _opAllGroups pushBack _cGrp };
             _veh engineOn true;
-            // Traffic spawn runs after missionNamespace (zone centers / cap) is set — see below.
+            // Traffic spawn runs after missionNamespace (zone centers / cap) is set  -  see below.
         };
     };
 } forEach _zones;
@@ -420,7 +420,7 @@ private _countFriendlyPlayersOp = missionNamespace getVariable ["FADE_countFrien
 }];
 private _friendlyPlayerCountOp = [_sideFriendly] call _countFriendlyPlayersOp;
 private _acreSummaryOp = [] call (missionNamespace getVariable ["FADE_getAcreChannelSummary", { "ACRE channel names unavailable" }]);
-private _actualOpforCountOp = { alive _x && { side group _x == _sideEnemy } } count allUnits;
+private _actualOpforCountOp = [_sideEnemy] call FADE_getEnemyMenCount;
 private _opforBaselineOp = if (_actualOpforCountOp > 0) then { _actualOpforCountOp } else { 36 };
 private _opforCountFactorOp = if (random 1 < 0.5) then { 0.8 } else { 1.2 };
 private _estimatedOpforCountOp = (round (_opforBaselineOp * _opforCountFactorOp)) max 0;
@@ -481,9 +481,7 @@ private _situationIntelOpHint = if (_intelFormatterOp isEqualTo {}) then {
         "#FFFFFF"
     ] call _intelFormatterOp
 };
-private _zeroAlphaObjOp = missionNamespace getVariable ["FAC_PILOT_1", objNull];
-private _zeroAlphaNameOp = if (isNull _zeroAlphaObjOp) then { "UNASSIGNED" } else { name _zeroAlphaObjOp };
-if (_zeroAlphaNameOp == "") then { _zeroAlphaNameOp = "UNASSIGNED" };
+private _zeroAlphaNameOp = [] call (missionNamespace getVariable ["FADE_getZeroAlphaDisplayName", { "UNASSIGNED" }]);
 private _taskDescOp = if (_taskBuilderOp isEqualTo {}) then {
     format [
         "Capture all %1 marked zones. Clear OPFOR in each zone and prevent enemy re-entry.",
@@ -559,7 +557,7 @@ missionNamespace setVariable ["FADE_operationAborted_" + _taskId, false];
 
 private _briefGuiTail = toString [10] + toString [10] + "See your Tasks panel and map markers for objectives, routes, and completion criteria.";
 private _brief = format [
-    "OPERATION%1%1Multi-zone fight across several civil sectors — clear, hold, and counter OPFOR movement between ellipses.%1%1Capture rules, evaluation, and QRF behaviour on task.",
+    "OPERATION%1%1Multi-zone fight across several civil sectors  -  clear, hold, and counter OPFOR movement between ellipses.%1%1Capture rules, evaluation, and QRF behaviour on task.",
     toString [10]
 ] + _briefGuiTail;
 if (!isNull _player) then {
@@ -767,7 +765,7 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, 0];
     private _captured = [];
     { _captured pushBack false } forEach _zones;
 
-    // Poll every 5s for abort; evaluate zones every 60s (matches ellipse markers — distance2D)
+    // Poll every 5s for abort; evaluate zones every 60s (matches ellipse markers  -  distance2D)
     private _evalInterval = 60;
     private _evalNext = time + _evalInterval;
     waitUntil {
@@ -987,5 +985,26 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, 0];
         } forEach _zones;
         };
         };
+    };
+};
+
+};
+
+FADE_runMission_Operation = {
+    private _fromMapClick = missionNamespace getVariable ["FADE_missionRun_fromMapClick", false];
+    private _mapAnchor = missionNamespace getVariable ["FADE_missionRun_mapAnchor", []];
+    if (!_fromMapClick) then { _mapAnchor = [] };
+    [
+        missionNamespace getVariable ["FADE_missionRun_player", objNull],
+        _mapAnchor,
+        missionNamespace getVariable ["FADE_missionRun_taskId", ""],
+        missionNamespace getVariable ["FADE_missionRun_basePos", [0, 0, 0]],
+        missionNamespace getVariable ["FADE_missionRun_enemyUnits", []],
+        missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""],
+        missionNamespace getVariable ["FADE_missionRun_operationName", ""]
+    ] spawn {
+        params ["_player", "_mapAnchor", "_taskId", "_basePos", "_enemyUnits", "_operationNameUpper", "_operationName"];
+        FADE_operationParams = [_player, _mapAnchor, _taskId, _basePos, _enemyUnits, _operationNameUpper, _operationName];
+        [] call FADE_operationMissionMain;
     };
 };

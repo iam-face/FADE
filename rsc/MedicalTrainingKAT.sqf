@@ -1,5 +1,5 @@
 // =============================================================================
-// MedicalTrainingKAT.sqf — medical training injury application (ACE Medical + KAM / KAT)
+// MedicalTrainingKAT.sqf  -  medical training injury application (ACE Medical + KAM / KAT)
 // Server-only (compile from initServer). Mission assumes both stacks are loaded.
 // =============================================================================
 
@@ -16,13 +16,13 @@ FAC_medKAT_scenarioList = [
     ["airway_vomit", "Airway (vomit / occlusion)"],
     ["bloodloss", "Hypovolemia (blood loss)"],
     ["deep_penetrating", "Deep penetrating chest"],
-    ["cardiac_vt", "Cardiac — VT"],
-    ["cardiac_vf", "Cardiac — VF"],
-    ["cardiac_pea", "Cardiac — PEA"],
-    ["cardiac_asystole", "Cardiac — Asystole"],
-    ["fracture_simple", "Fracture — simple (random part)"],
-    ["fracture_compound", "Fracture — compound (random part)"],
-    ["fracture_comminuted", "Fracture — comminuted (random part)"]
+    ["cardiac_vt", "Cardiac  -  VT"],
+    ["cardiac_vf", "Cardiac  -  VF"],
+    ["cardiac_pea", "Cardiac  -  PEA"],
+    ["cardiac_asystole", "Cardiac  -  Asystole"],
+    ["fracture_simple", "Fracture  -  simple (random part)"],
+    ["fracture_compound", "Fracture  -  compound (random part)"],
+    ["fracture_comminuted", "Fracture  -  comminuted (random part)"]
 ];
 
 // ACE/KAT surgery fracture array order (matches ALL_BODY_PARTS).
@@ -263,7 +263,7 @@ FAC_medKAT_applyScenarioNow = {
     [_u, _scenario] call FAC_medKAT_fnc_applyScenarioImmediate;
 };
 
-// Single wound for GUI (fixed depth 2, user bleed 0.1–1.2 scaled).
+// Single wound for GUI (fixed depth 2, user bleed 0.1-1.2 scaled).
 FAC_medKAT_applyCustomWound = {
     params ["_u", "_part", "_woundType", "_bleed", "_depth"];
     if (isNull _u || {!alive _u}) exitWith {};

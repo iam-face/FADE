@@ -1,25 +1,9 @@
 // =============================================================================
-// EscapeEvasionPickGui.sqf — evadee selection overlay on Manage Missions (60002)
+// EscapeEvasionPickGui.sqf  -  evadee selection overlay on Manage Missions (60002)
 // =============================================================================
 if (hasInterface) then {
-    // Config-defined controls (description.ext) draw above ctrlCreate overlay — hide them while overlay is up.
-    FAC_escapeEvasionPickGui_fnc_baseMissionsIdcs = [60133, 60110, 60111, 60112, 60113, 60114, 60115, 60120, 60131, 60121, 60130, 60134, 60135, 60136, 60150, 60151, 60152, 60153];
-
-    FAC_escapeEvasionPickGui_fnc_setBaseMissionsLayerVisible = {
-        params [["_show", true]];
-        private _d = findDisplay 60002;
-        if (isNull _d) exitWith {};
-        {
-            private _c = _d displayCtrl _x;
-            if (!isNull _c) then { _c ctrlShow _show };
-        } forEach FAC_escapeEvasionPickGui_fnc_baseMissionsIdcs;
-    };
-
     FAC_escapeEvasionPickGui_fnc_destroyOverlay = {
-        private _lst = uinamespace getVariable ["FAC_eePick_overlayCtrls", []];
-        { if (!isNull _x) then { ctrlDelete _x } } forEach _lst;
-        uinamespace setVariable ["FAC_eePick_overlayCtrls", nil];
-        [true] call FAC_escapeEvasionPickGui_fnc_setBaseMissionsLayerVisible;
+        ["FAC_eePick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
     };
 
     FAC_escapeEvasionPickGui_fnc = {
@@ -32,7 +16,7 @@ if (hasInterface) then {
                 };
                 disableSerialization;
                 [] call FAC_escapeEvasionPickGui_fnc_destroyOverlay;
-                [false] call FAC_escapeEvasionPickGui_fnc_setBaseMissionsLayerVisible;
+                [false] call FAC_missionPickOverlay_setBaseVisible;
                 private _controls = [];
                 private _bg = _display ctrlCreate ["RscText", 60280];
                 _bg ctrlSetPosition [0.02, 0.09, 0.96, 0.72];
@@ -41,7 +25,7 @@ if (hasInterface) then {
                 _controls pushBack _bg;
                 private _title = _display ctrlCreate ["RscText", 60281];
                 _title ctrlSetPosition [0.02, 0.09, 0.96, 0.048];
-                _title ctrlSetText "ESCAPE & EVASION — SELECT EVADEES";
+                _title ctrlSetText "ESCAPE & EVASION  -  SELECT EVADEES";
                 _title ctrlSetBackgroundColor [0.15, 0.28, 0.42, 1];
                 _title ctrlCommit 0;
                 _controls pushBack _title;
