@@ -48,7 +48,12 @@ FAC_jukebox_fnc_resolveSourceObject = {
     params ["_sourceKey"];
     if (_sourceKey find "radio:" == 0) exitWith {
         private _eden = _sourceKey select [6];
-        missionNamespace getVariable [_eden, objNull]
+        private _em = missionNamespace getVariable [_eden, objNull];
+        if (!isNull _em) exitWith { _em };
+        private _scan = allMissionObjects "Land_Laptop_Intel_02_F";
+        private _i = _scan findIf { vehicleVarName _x == _eden };
+        if (_i >= 0) exitWith { _scan select _i };
+        objNull
     };
     if (_sourceKey find "vehicle:" == 0) exitWith {
         private _nid = _sourceKey select [8];
@@ -119,14 +124,6 @@ FAC_jukebox_serverPlay = {
 
     if (_song != "") then {
         private _cur = (missionNamespace getVariable ["FAC_jukebox_activeSources", []]) select { (_x select 0) == _sourceKey };
-        if (
-            count _cur > 0
-            && { (_cur select 0) select 1 == _song }
-            && { (_cur select 0) param [2, -1] == _vol }
-            && { (_cur select 0) param [3, -1] == _dist }
-        ) exitWith {
-            [format ["SKIP duplicate play: %1 @ %2", _song, _sourceKey], _requester] call FAC_jukebox_serverDbg;
-        };
         private _wasPlaying = _cur select { (_x select 1) != "" };
         if (count _wasPlaying > 0) then {
             [_sourceKey, ""] call FAC_jukebox_fnc_setActiveSourceSong;

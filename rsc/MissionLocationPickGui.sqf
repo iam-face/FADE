@@ -17,6 +17,12 @@ if (hasInterface) then {
             case "open": {
                 _params params [["_missionType", ""]];
                 if (_missionType == "") exitWith { systemChat "MISSION: no mission type selected."; };
+                if (_missionType in ["TroopInsert", "TroopExtract"]) exitWith {
+                    if (isNil "FAC_troopInsertPickGui_fnc") exitWith { systemChat "TROOP TRANSPORT UI not loaded."; };
+                    uinamespace setVariable ["FAC_troopTransport_mapAnchor", []];
+                    uinamespace setVariable ["FAC_troopInsert_lzAnchor", nil];
+                    ["open", [_missionType]] call FAC_troopInsertPickGui_fnc;
+                };
                 if (isNull _display) exitWith {
                     systemChat "MISSION: open Manage Missions first, then start a mission.";
                 };
@@ -25,26 +31,18 @@ if (hasInterface) then {
                 [false] call FAC_missionPickOverlay_setBaseVisible;
                 uinamespace setVariable ["FAC_missionLocPick_type", _missionType];
                 private _titleName = [_missionType] call FAC_missionLocationPickGui_fnc_missionDisplayName;
-                private _helpText = if (_missionType == "TroopInsert") then {
+                private _helpText = if (_missionType in (missionNamespace getVariable ["FADE_missionMapClickSnapCivZoneTypes", []])) then {
                     format [
-                        "Random: first insert LZ is chosen automatically.%1Map click: choose the first LZ only (%2 s limit). Recurring mode still uses random link-up and LZ positions within mission distance rules after the first drop.",
+                        "Random: mission area is chosen automatically.%1Map click: snaps to the nearest civ settlement zone to your click, then places the mission there (%2 s limit).",
                         toString [10, 10],
                         missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
                     ]
                 } else {
-                    if (_missionType in (missionNamespace getVariable ["FADE_missionMapClickSnapCivZoneTypes", []])) then {
-                        format [
-                            "Random: mission area is chosen automatically.%1Map click: snaps to the nearest civ settlement zone to your click, then places the mission there (%2 s limit).",
-                            toString [10, 10],
-                            missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
-                        ]
-                    } else {
-                        format [
-                            "Random: mission area is chosen automatically.%1Map click: choose a point on the map (%2 s limit). The server searches 250 m, then 500 m, 1 km, 2.5 km, 5 km, then the whole map for a valid site as close as possible to your click.",
-                            toString [10, 10],
-                            missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
-                        ]
-                    }
+                    format [
+                        "Random: mission area is chosen automatically.%1Map click: choose a point on the map (%2 s limit). The server searches 250 m, then 500 m, 1 km, 2.5 km, 5 km, then the whole map for a valid site as close as possible to your click.",
+                        toString [10, 10],
+                        missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
+                    ]
                 };
                 private _controls = [_display, format ["%1 - CHOOSE LOCATION", toUpper _titleName], _helpText, 60340, [0.12, 0.58, 0.048, 0.14]] call FAC_missionPickOverlay_createShell;
                 private _btnY = 0.36;
@@ -74,10 +72,11 @@ if (hasInterface) then {
                 private _mt = uinamespace getVariable ["FAC_missionLocPick_type", ""];
                 if (_mt == "") exitWith {};
                 ["FAC_mlocPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
-                if (_mt == "TroopInsert") then {
-                    uinamespace setVariable ["FAC_troopInsert_lzAnchor", []];
-                    if (isNil "FAC_troopInsertPickGui_fnc") exitWith { systemChat "TROOP INSERT UI not loaded."; };
-                    ["open", []] call FAC_troopInsertPickGui_fnc;
+                if (_mt in ["TroopInsert", "TroopExtract"]) then {
+                    uinamespace setVariable ["FAC_troopTransport_mapAnchor", []];
+                    uinamespace setVariable ["FAC_troopInsert_lzAnchor", nil];
+                    if (isNil "FAC_troopInsertPickGui_fnc") exitWith { systemChat "TROOP TRANSPORT UI not loaded."; };
+                    ["open", [_mt]] call FAC_troopInsertPickGui_fnc;
                 } else {
                     [_mt, player, []] remoteExec ["FADE_startMission", 2];
                     hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
@@ -87,9 +86,12 @@ if (hasInterface) then {
             case "mapClick": {
                 private _mt = uinamespace getVariable ["FAC_missionLocPick_type", ""];
                 if (_mt == "") exitWith {};
+                if (_mt in ["TroopInsert", "TroopExtract"]) exitWith {
+                    systemChat "TROOP INSERT / EXTRACT: random location only — use START from Manage Missions.";
+                };
                 ["FAC_mlocPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
                 private _missionsDisp = findDisplay 60002;
-                if (_mt != "TroopInsert" && { !isNull _missionsDisp }) then { closeDialog 60002 };
+                if (_mt != "TroopInsert" && { _mt != "TroopExtract" } && { !isNull _missionsDisp }) then { closeDialog 60002 };
                 missionNamespace setVariable ["FAC_missionMapPick_execType", _mt];
                 [] spawn {
                     sleep 0.15;

@@ -34,6 +34,7 @@ FADE_hqMainBoard_missionTypeDisplayName = {
             ["ClearArea", "Clear Area"],
             ["CSAR", "CSAR"],
             ["EscapeEvasion", "Escape & Evasion"],
+            ["GeoGuesser", "Geo-Guesser"],
             ["Hostage", "Hostage"],
             ["HVT", "HVT"],
             ["InterceptConvoy", "Intercept Convoy"],
@@ -47,19 +48,19 @@ FADE_hqMainBoard_missionTypeDisplayName = {
 
 FADE_hqMainBoard_buildTexture = {
     params [["_globalMission", []]];
-    private _body = "\n\nTODAY'S MISSION\n\nNo Mission Active";
+    private _body = "Stand down\nNo current operation underway";
     if (_globalMission isEqualType [] && { count _globalMission >= 5 }) then {
         private _missionType = _globalMission param [0, ""];
         private _operationName = _globalMission param [4, ""];
         private _missionTypeName = [_missionType] call FADE_hqMainBoard_missionTypeDisplayName;
         _body = format [
-            "\n\nTODAY'S MISSION\n\n%1\n\n%2",
-            [_operationName] call FADE_hqMainBoard_sanitizeTextureText,
+            "Today's Mission\n%1\n(%2)",
+            toUpper ([_operationName] call FADE_hqMainBoard_sanitizeTextureText),
             [_missionTypeName] call FADE_hqMainBoard_sanitizeTextureText
         ];
     };
     format [
-        "#(rgb,512,512,1)text(0,1,""TahomaB"",0.05,""#000000"",""#FFFFFF"",""%1"")",
+        "#(rgb,512,512,1)text(1,1,""Caveat"",0.07,""#FFFFFF"",""#000000"",""%1"")",
         _body
     ]
 };

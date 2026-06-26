@@ -50,11 +50,16 @@ FADE_abortMission = {
     private _isGlobalOwner = count _global >= 2 && { [_global, _player] call FADE_isMissionEntryOwnedByPlayer };
     private _missionType = if (_isGlobalOwner) then { _global select 0 } else { _player getVariable ["FADE_myMission", ""] };
     if (_taskId != "") then {
-        if (_missionType == "TroopInsert") then {
-            missionNamespace setVariable ["FADE_troopInsertAborted_" + _taskId, true, true];
+        if (_missionType in ["TroopInsert", "TroopExtract"]) then {
+            private _abortKey = if (_missionType == "TroopInsert") then {
+                "FADE_troopInsertAborted_" + _taskId
+            } else {
+                "FADE_troopExtractAborted_" + _taskId
+            };
+            missionNamespace setVariable [_abortKey, true, true];
             {
                 if (!isNull _x && { isPlayer _x } && { (_x getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then {
-                    ["<t size='1.2' color='#B0B0B0'>MISSION ABORTED</t><br/><br/><t color='#E0E0E0'>Mission cancelled.</t>"] remoteExec ["FADE_showMissionHint", _x];
+                    ["MISSION ABORTED."] remoteExec ["systemChat", _x];
                 };
             } forEach allPlayers;
         };
@@ -64,7 +69,7 @@ FADE_abortMission = {
         [_markerName] call FADE_deleteMarkerSafe;
         [_markerNameEnd] call FADE_deleteMarkerSafe;
     };
-    if (_missionType == "TroopInsert" && { _taskId != "" }) then {
+    if (_missionType in ["TroopInsert", "TroopExtract"] && { _taskId != "" }) then {
         {
             if (!isNull _x && { (_x getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then {
                 _x setVariable ["FADE_myMission", "", true];
@@ -76,7 +81,7 @@ FADE_abortMission = {
         } forEach allPlayers;
     };
     [_player] call FADE_clearActiveMission;
-    if (_missionType != "TroopInsert") then {
+    if !(_missionType in ["TroopInsert", "TroopExtract"]) then {
         ["<t size='1.2' color='#B0B0B0'>MISSION ABORTED</t><br/><br/><t color='#E0E0E0'>Mission cancelled.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
 };

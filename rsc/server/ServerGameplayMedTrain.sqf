@@ -220,6 +220,8 @@ publicVariable "FADE_spawnCopilot";
 publicVariable "FADE_removeCopilot";
 publicVariable "FADE_startMission";
 publicVariable "FADE_startEscapeEvasion";
+publicVariable "FADE_startGeoGuesser";
+publicVariable "FADE_geoGuesser_submitGuess";
 publicVariable "FADE_abortMission";
 publicVariable "FADE_getCargoSeats";
 publicVariable "FADE_ensureEnemyVehicleGunner";
@@ -366,8 +368,16 @@ FADE_cleanupMissionEntities = {
         if (_missionType == "Operation") then { missionNamespace setVariable ["FADE_operationAborted_" + _taskId, true] };
         if (_missionType == "SearchDestroy") then { missionNamespace setVariable ["FADE_sdAborted_" + _taskId, true] };
         if (_missionType == "EscapeEvasion") then { missionNamespace setVariable ["FADE_eeAborted_" + _taskId, true] };
+        if (_missionType == "GeoGuesser") then { missionNamespace setVariable ["FADE_ggAborted_" + _taskId, true] };
         if (_missionType == "AssetRetrieval") then { missionNamespace setVariable ["FADE_assetAborted_" + _taskId, true] };
-        if (_missionType == "TroopInsert") then { missionNamespace setVariable ["FADE_troopInsertAborted_" + _taskId, true, true] };
+        if (_missionType in ["TroopInsert", "TroopExtract"]) then {
+            private _abortKey = if (_missionType == "TroopInsert") then {
+                "FADE_troopInsertAborted_" + _taskId
+            } else {
+                "FADE_troopExtractAborted_" + _taskId
+            };
+            missionNamespace setVariable [_abortKey, true, true];
+        };
     };
 
     private _ent = missionNamespace getVariable [format ["FADE_missionEnt_%1", _taskId], createHashMap];

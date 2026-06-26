@@ -315,6 +315,8 @@ FAC_surrenderChallenge_fnc_activate = {
 // Lazy GUI loaders — compile dialogs on first open (rsc\FAC_ClientGuiEnsure.sqf) for faster lobby → map.
 private _iplEnsureT = if (missionNamespace getVariable ["FADE_profileMissionLoad", false]) then { diag_tickTime } else { -1 };
 call compile preprocessFileLineNumbers "rsc\FAC_ClientGuiEnsure.sqf";
+call compile preprocessFileLineNumbers "rsc\FADE_MapClickPick.sqf";
+call compile preprocessFileLineNumbers "rsc\GeoGuesserClient.sqf";
 if (_iplEnsureT >= 0) then {
     diag_log format ["[FAC profile] compile FAC_ClientGuiEnsure.sqf: %1 s", diag_tickTime - _iplEnsureT];
 };

@@ -18,7 +18,7 @@ Most settings are **server-authoritative** and sync to joining players. **Lobby 
 
 ## What’s in the box
 
-- **16 mission types** — see below (**[G]** one shared mission at a time; **[S]** up to three personal missions at once).
+- **17 mission types** — see below (**[G]** one shared mission at a time; **[S]** up to three personal missions at once).
 - **Scenario & enemy AI** — patrols, garrisons, skill, routing, retreat, AAA (Off / AAA / AAA+MANPADS), AO strength.
 - **Vehicles** — spawn and manage at pads; pylons/loadouts where supported.
 - **Loadouts** — box GUI, session save, presets; ACE Arsenal when enabled.
@@ -44,6 +44,7 @@ Descriptions in-game (**Manage Missions**) are the source of truth for objective
 | Clear Area | Assault a town or camp. |
 | CSAR | Recover personnel from a crash site. |
 | Escape & Evasion | Evadees separated in hostile ground; rescue force coordinates recovery. |
+| Geo-Guesser | Navigation drill: map-click guess where you were dropped; ranked scoring. |
 | Hostage | Rescue civilians from a built-up site. |
 | HVT | Find, kill, or capture a priority target. |
 | Intercept Convoy | Stop a moving column before it finishes its route. |

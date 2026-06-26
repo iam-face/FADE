@@ -10,9 +10,10 @@
 // -----------------------------------------------------------------------------
 FADE_scenarioTime = 18;
 FADE_scenarioWeather = "Clear";
-FADE_scenarioEnemyFaction = "OPF_F";
-FADE_scenarioFriendlyFaction = "BLU_F";
-FADE_scenarioCivFaction = "CIV_F";
+// Defaults only before initServer faction pick / scenario sync (initPlayerLocal re-compiles Config on clients).
+if (isNil "FADE_scenarioEnemyFaction") then { FADE_scenarioEnemyFaction = "OPF_F"; };
+if (isNil "FADE_scenarioFriendlyFaction") then { FADE_scenarioFriendlyFaction = "BLU_F"; };
+if (isNil "FADE_scenarioCivFaction") then { FADE_scenarioCivFaction = "CIV_F"; };
 // Optional exact CfgFactionClasses names  -  if non-empty and the class exists and side matches, wins over display-name pick in initServer (use when mod display strings drift). initServer also prefers USMC / 3CB African factions by display name when these stay empty.
 FADE_startupFactionFriendly = "";
 FADE_startupFactionEnemy = "";
@@ -147,7 +148,7 @@ FADE_baseNpcEdenPosATL = [14754.169, 18.171377, 16638.416];
 FADE_missionMapClickRadiusTiers = [250, 500, 1000, 2500, 5000, -1];
 FADE_missionMapClickSnapCivZoneTypes = [
     "Hostage", "HVT", "SearchDestroy", "AssetRetrieval", "MineClearing",
-    "TroopExtract", "ClearArea", "AreaOfOperations", "Operation"
+    "ClearArea", "AreaOfOperations", "Operation"
 ];
 FADE_missionMapClickSnappedRadius = -2; // FADE_missionRun_mapPickResolvedRadius when snapped to civ zone (not a search tier metres)
 FADE_missionPlayerAnchorRadiusM = 5000;
@@ -183,7 +184,7 @@ FADE_intelSpecialistsOnly = false;
 FADE_hqHealIntervalSec = 40;
 
 // Loadout box Eden object names - all get Manage My Loadout, Save loadout, ACE Arsenal (if loaded)
-FADE_loadoutBoxNames = ["LOADOUTBOX", "LOADOUTBOX_1", "LOADOUTBOX_2", "LOADOUTBOX_3", "LOADOUTBOX_4"];
+FADE_loadoutBoxNames = ["LOADOUTBOX", "LOADOUTBOX_1", "LOADOUTBOX_2", "LOADOUTBOX_3", "LOADOUTBOX_4", "objWorkbench"];
 // Pad names - Eden object variable names (expand as needed)
 FADE_padNames = ["HP_1", "HP_2", "HP_3", "HP_4", "HP_5", "HP_6", "HP_7", "HP_8"];
 // FIRES range: game logic object names (position + direction = spawn transform). Match mission.sqm / expand as needed.

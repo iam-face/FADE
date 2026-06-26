@@ -48,23 +48,10 @@ FAC_missionMapPick_fnc_onValidClick = {
     private _mt = missionNamespace getVariable ["FAC_missionMapPick_type", ""];
     if (_mt == "") exitWith {};
     missionNamespace setVariable ["FAC_missionMapPick_type", nil];
-    if (_mt == "TroopInsert") then {
-        uinamespace setVariable ["FAC_troopInsert_lzAnchor", _clickPos];
-        if (isNull (findDisplay 60002)) then {
-            call FAC_ensureMissionsGui;
-            ["open", []] call FAC_missionsGui_fnc;
-        };
-        if (isNil "FAC_troopInsertPickGui_fnc") exitWith {
-            systemChat "TROOP INSERT UI not loaded.";
-        };
-        ["open", []] call FAC_troopInsertPickGui_fnc;
-        hint parseText "<t size='1.1' color='#A0D0A0'>LZ area selected.</t><br/><t color='#808080'>Choose participants and mode. Later recurring waves use random positions.</t>";
-    } else {
-        [_mt, player, _clickPos] spawn {
-            params ["_mt", "_pl", "_clickPos"];
-            [_mt, _pl, _clickPos] remoteExec ["FADE_startMission", 2];
-            hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
-        };
+    [_mt, player, _clickPos] spawn {
+        params ["_mt", "_pl", "_clickPos"];
+        [_mt, _pl, _clickPos] remoteExec ["FADE_startMission", 2];
+        hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
     };
 };
 
@@ -79,6 +66,9 @@ FAC_missionMapPick_fnc_start = {
     if (_missionType isEqualType []) then { _missionType = _missionType param [0, ""] };
     if (_missionType == "") exitWith {
         systemChat "MISSION: map pick aborted (no mission type).";
+    };
+    if (_missionType in ["TroopInsert", "TroopExtract"]) exitWith {
+        systemChat "TROOP INSERT / EXTRACT: random location only — map click is not supported.";
     };
     if (missionNamespace getVariable ["FAC_missionMapPick_active", false]) exitWith {
         systemChat "MISSION: map location pick already in progress.";

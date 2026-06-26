@@ -17,7 +17,7 @@
 
 FAC_missionTestSuite__missionRunnerTypes = [
     "AreaOfOperations", "Operation", "TroopInsert", "TroopExtract", "Cargo", "MineClearing",
-    "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "InterceptConvoy", "EscapeEvasion",
+    "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "InterceptConvoy", "EscapeEvasion", "GeoGuesser",
     "CAS", "HVT", "Hostage", "ClearArea"
 ];
 
@@ -106,6 +106,8 @@ FAC_missionTestSuite_runServer = {
     if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_globalMissionTypes contains Operation"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_globalMissionTypes / Operation"; };
     _ok = _gmt isEqualType [] && { "EscapeEvasion" in _gmt };
     if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_globalMissionTypes contains EscapeEvasion"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_globalMissionTypes / EscapeEvasion"; };
+    _ok = _gmt isEqualType [] && { "GeoGuesser" in _gmt };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_globalMissionTypes contains GeoGuesser"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_globalMissionTypes / GeoGuesser"; };
     _ok = _smt isEqualType [] && { count _smt > 0 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_singleMissionTypes (%1)", count _smt]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_singleMissionTypes"; };
 
@@ -161,6 +163,47 @@ FAC_missionTestSuite_runServer = {
     private _lz = [_bp] call FADE_findSafeLZ;
     _ok = _lz isEqualTo [] || { count _lz >= 2 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_findSafeLZ(base) %1", if (_lz isEqualTo []) then {"[]"} else { str (_lz select [0, 2]) }]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_findSafeLZ"; };
+
+    // ----- Troop Insert / Extract (wave count, civ-zone heli sites) -----
+    private _clampLo = [1] call FADE_startTroopTransport_clampWaves;
+    private _clampHi = [99] call FADE_startTroopTransport_clampWaves;
+    private _clampBad = ["x"] call FADE_startTroopTransport_clampWaves;
+    _ok = _clampLo == 1 && { _clampHi == 10 } && { _clampBad == 1 };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_startTroopTransport_clampWaves (1..10)"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_startTroopTransport_clampWaves (%1 %2 %3)", _clampLo, _clampHi, _clampBad]; };
+
+    private _eligZones = [2000] call FADE_fnc_eligibleCivZoneCenters;
+    _ok = _eligZones isEqualType [];
+    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_fnc_eligibleCivZoneCenters (%1 zones)", count _eligZones]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_fnc_eligibleCivZoneCenters"; };
+
+    if (count _eligZones > 0) then {
+        private _troopSite = [2000, [], [], -1, []] call FADE_fnc_pickTroopHeliSiteAtCivZone;
+        _ok = _troopSite isEqualType [] && { count _troopSite == 0 || { count _troopSite >= 2 } };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log format ["[FAC TestSuite] PASS (server): FADE_fnc_pickTroopHeliSiteAtCivZone %1", if (count _troopSite >= 2) then { str (_troopSite select [0, 2]) } else {"[] (no clear site this roll)"}];
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): FADE_fnc_pickTroopHeliSiteAtCivZone";
+        };
+    } else {
+        diag_log "[FAC TestSuite] SKIP (server): FADE_fnc_pickTroopHeliSiteAtCivZone (no eligible civ zones)";
+    };
+
+    _ok = !isNil "FADE_startTroopInsert" && { FADE_startTroopInsert isEqualType {} };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_startTroopInsert installed"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_startTroopInsert missing"; };
+
+    _ok = !isNil "FADE_startTroopExtract" && { FADE_startTroopExtract isEqualType {} };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_startTroopExtract installed"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_startTroopExtract missing"; };
+
+    if (!isNil "FADE_geoGuesser_computeScore") then {
+        private _ggPerfect = [0, 60, 60, 1, 1] call FADE_geoGuesser_computeScore;
+        private _ggMiss = [-1, 0, 60, 1, 1] call FADE_geoGuesser_computeScore;
+        _ok = _ggPerfect == 1500 && { _ggMiss == 0 };
+        if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_geoGuesser_computeScore (%1 / %2)", _ggPerfect, _ggMiss]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_geoGuesser_computeScore (%1 / %2)", _ggPerfect, _ggMiss]; };
+    } else {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): FADE_geoGuesser_computeScore missing";
+    };
 
     private _urban = [700] call FADE_findMissionPosUrban;
     _ok = count _civT == 0 || { count _urban >= 2 };
@@ -259,6 +302,13 @@ FAC_missionTestSuite_runServer = {
         _fail = _fail + 1;
         diag_log "[FAC TestSuite] FAIL (server): FADE_troopInsert_runTransport missing";
     };
+    if (!isNil "FADE_troopExtract_runTransport" && { FADE_troopExtract_runTransport isEqualType {} }) then {
+        _pass = _pass + 1;
+        diag_log "[FAC TestSuite] PASS (server): FADE_troopExtract_runTransport installed";
+    } else {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): FADE_troopExtract_runTransport missing";
+    };
     if (missionNamespace getVariable ["FADE_missions_installed", false]) then {
         _pass = _pass + 1;
         diag_log "[FAC TestSuite] PASS (server): FADE_missions_installed";
@@ -304,7 +354,11 @@ FAC_missionTestSuite_runServer = {
         "FADE_spawnCopilot",
         "FADE_removeCopilot",
         "FADE_startMission",
+        "FADE_startEscapeEvasion",
+        "FADE_startGeoGuesser",
+        "FADE_geoGuesser_submitGuess",
         "FADE_startTroopInsert",
+        "FADE_startTroopExtract",
         "FADE_getEnemyMenCount",
         "FADE_missionSlots_publish",
         "FADE_abortMission",
@@ -363,12 +417,16 @@ FAC_missionTestSuite_runServer = {
         "rsc\missions\AOMission.sqf",
         "rsc\missions\OperationMission.sqf",
         "rsc\TroopInsertTransport.sqf",
+        "rsc\TroopExtractTransport.sqf",
         "rsc\missions\TroopInsertMission.sqf",
+        "rsc\missions\TroopExtractMission.sqf",
+        "rsc\TroopInsertPickGui.sqf",
         "rsc\FADE_MapClickPick.sqf",
         "rsc\MissionPickOverlay.sqf",
         "rsc\ServerEntityRegistry.sqf",
         "rsc\FADE_Common.sqf",
         "rsc\FADE_MissionSlots.sqf",
+        "rsc\FADE_MOTDBoard.sqf",
         "rsc\FADE_ClientCommon.sqf",
         "rsc\FAC_ClientBoardActions.sqf",
         "rsc\server\ServerGameplayCqb.sqf",
@@ -384,6 +442,10 @@ FAC_missionTestSuite_runServer = {
         "rsc\missions\MissionCasevacCsar.sqf",
         "rsc\missions\MissionInterceptConvoy.sqf",
         "rsc\missions\MissionEscapeEvasion.sqf",
+        "rsc\missions\MissionGeoGuesser.sqf",
+        "rsc\GeoGuesserPickGui.sqf",
+        "rsc\GeoGuesserClient.sqf",
+        "rsc\EscapeEvasionPickGui.sqf",
         "rsc\missions\MissionCAS.sqf",
         "rsc\missions\MissionCargo.sqf",
         "rsc\missions\MissionHVT.sqf",
@@ -454,9 +516,11 @@ FAC_missionTestSuite_runServer = {
 
     private _gameplayFns = [
         "FADE_startMission", "FADE_clearActiveMission", "FADE_abortMission", "FADE_missionSlots_set",
-        "FADE_installMissionModules", "FADE_aoMissionMain", "FADE_operationMissionMain", "FADE_troopInsertMissionMain",
+        "FADE_installMissionModules", "FADE_aoMissionMain", "FADE_operationMissionMain", "FADE_troopInsertMissionMain", "FADE_troopExtractMissionMain",
         "FADE_cqbStartDrill", "FADE_cqbEndDrill", "FADE_rangeStartSession", "FADE_rangeEndSession",
-        "FADE_sniperStartSession", "FADE_sniperEndSession", "FADE_startTroopInsert"
+        "FADE_sniperStartSession", "FADE_sniperEndSession", "FADE_startTroopInsert", "FADE_startTroopExtract",
+        "FADE_startEscapeEvasion", "FADE_startGeoGuesser", "FADE_geoGuesser_submitGuess", "FADE_geoGuesser_computeScore",
+        "FADE_startTroopTransport_clampWaves", "FADE_fnc_eligibleCivZoneCenters", "FADE_fnc_pickTroopHeliSiteAtCivZone"
     ];
     {
         private _chk = ["server", _x] call FAC_missionTestSuite__checkFn;
@@ -576,6 +640,13 @@ FAC_missionTestSuite_runClient = {
         "FAC_vehicleGui_fnc",
         "FAC_missionsGui_fnc",
         "FAC_missionLocationPickGui_fnc",
+        "FAC_troopInsertPickGui_fnc",
+        "FAC_escapeEvasionPickGui_fnc",
+        "FAC_geoGuesserPickGui_fnc",
+        "FADE_ggClient_beginRound",
+        "FADE_ggClient_closeMissionGui",
+        "FADE_ggClient_forceStop",
+        "FADE_ggClient_showResults",
         "FAC_scenarioGui_fnc",
         "FAC_loadoutGui_fnc",
         "FAC_jukeboxGui_fnc",
@@ -759,6 +830,16 @@ FAC_missionTestSuite_runClient = {
         _ok = !isNil "_gui" && { _gui isEqualType {} };
         if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (client): %1 -> %2", _ensure, _guiFn]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (client): %1 -> %2", _ensure, _guiFn]; };
     } forEach _ensureFns;
+
+    if (!isNil "FAC_troopInsertPickGui_fnc_missionLabels") then {
+        private _tiLbl = ["TroopInsert"] call FAC_troopInsertPickGui_fnc_missionLabels;
+        private _teLbl = ["TroopExtract"] call FAC_troopInsertPickGui_fnc_missionLabels;
+        _ok = count _tiLbl == 3 && { count _teLbl == 3 } && { (_tiLbl select 0) == "TROOP INSERT" } && { (_teLbl select 0) == "TROOP EXTRACT" };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (client): troop transport pick labels (Insert + Extract)"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (client): troop transport pick labels (%1 / %2)", _tiLbl, _teLbl]; };
+    } else {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (client): FAC_troopInsertPickGui_fnc_missionLabels missing";
+    };
 
     private _mb = missionNamespace getVariable ["FADE_missionBoard", objNull];
     if (isNull _mb) then { _mb = missionNamespace getVariable ["missionBoard", objNull]; };
