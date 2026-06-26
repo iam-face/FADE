@@ -73,9 +73,11 @@ FAC_ensureMissionsGui = {
     call compile preprocessFileLineNumbers "rsc\MissionPickOverlay.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionsGui.sqf";
     call compile preprocessFileLineNumbers "rsc\EscapeEvasionPickGui.sqf";
+    call compile preprocessFileLineNumbers "rsc\GeoGuesserPickGui.sqf";
+    call compile preprocessFileLineNumbers "rsc\FADE_MapClickPick.sqf";
+    call compile preprocessFileLineNumbers "rsc\GeoGuesserClient.sqf";
     call compile preprocessFileLineNumbers "rsc\TroopInsertPickGui.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionLocationPickGui.sqf";
-    call compile preprocessFileLineNumbers "rsc\FADE_MapClickPick.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionMapPick.sqf";
     missionNamespace setVariable ["FAC_missionsGui_fnc", FAC_missionsGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_missions", true];

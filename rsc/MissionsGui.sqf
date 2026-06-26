@@ -14,6 +14,7 @@ private _missionListRaw = [
     ["Clear Area", "ClearArea", "Clear and secure an enemy-held town or camp. Expect close fighting and reinforced positions. [G]", "Global"],
     ["CSAR", "CSAR", "Search and recover personnel from a crash site. Treat the area as dangerous until secured. [G]", "Global"],
     ["Escape & Evasion", "EscapeEvasion", "Move separated personnel out of hostile territory while a rescue force coordinates recovery. Navigate with limited aids. [G]", "Global"],
+    ["Geo-Guesser", "GeoGuesser", "Navigation drill: participants are dropped at a random location and click the map where they think they are. Faster guesses score higher. [G]", "Global"],
     ["Hostage", "Hostage", "Rescue civilians held by hostiles in dense terrain. Move fast, control the scene, and separate civilians from combatants. [G]", "Global"],
     ["HVT", "HVT", "Locate and neutralise or capture a priority target in built-up areas. Secure the target and extract them to base. [G]", "Global"],
     ["Intercept Convoy", "InterceptConvoy", "Ambush and stop a moving enemy column before it reaches its destination. Expect escorts and rapid reactions. [G]", "Global"],
@@ -164,9 +165,21 @@ FAC_missionsGui_fnc = {
                 if (isNil "FAC_escapeEvasionPickGui_fnc") exitWith { systemChat "ESCAPE & EVASION UI not loaded."; };
                 ["open", []] call FAC_escapeEvasionPickGui_fnc;
             };
+            if (_missionType == "GeoGuesser") exitWith {
+                if (isNil "FAC_geoGuesserPickGui_fnc") exitWith { systemChat "GEO-GUESSER UI not loaded."; };
+                ["open", []] call FAC_geoGuesserPickGui_fnc;
+            };
             if (_missionType == "TroopInsert") exitWith {
-                if (isNil "FAC_missionLocationPickGui_fnc") exitWith { systemChat "MISSION: location picker not loaded."; };
-                ["open", [_missionType]] call FAC_missionLocationPickGui_fnc;
+                if (isNil "FAC_troopInsertPickGui_fnc") exitWith { systemChat "TROOP TRANSPORT UI not loaded."; };
+                uinamespace setVariable ["FAC_troopTransport_mapAnchor", []];
+                uinamespace setVariable ["FAC_troopInsert_lzAnchor", nil];
+                ["open", [_missionType]] call FAC_troopInsertPickGui_fnc;
+            };
+            if (_missionType == "TroopExtract") exitWith {
+                if (isNil "FAC_troopInsertPickGui_fnc") exitWith { systemChat "TROOP TRANSPORT UI not loaded."; };
+                uinamespace setVariable ["FAC_troopTransport_mapAnchor", []];
+                uinamespace setVariable ["FAC_troopInsert_lzAnchor", nil];
+                ["open", [_missionType]] call FAC_troopInsertPickGui_fnc;
             };
             if (isNil "FAC_missionLocationPickGui_fnc") exitWith { systemChat "MISSION: location picker not loaded."; };
             ["open", [_missionType]] call FAC_missionLocationPickGui_fnc;

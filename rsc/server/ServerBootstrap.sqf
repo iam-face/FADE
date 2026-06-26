@@ -20,17 +20,19 @@ FADE_pickFactionByDisplayName = {
         if (_dn in _preferredDisplayNames) exitWith { _picked = configName _cfg };
     } forEach _allFc;
     if (_picked == _fallbackFaction) then {
+        // Prefer earlier entries in _preferredDisplayNames (e.g. "USA (USMC - D)" before bare "Marine").
         {
-            private _cfg = _x;
-            if (getNumber (_cfg >> "side") != _sideNum) then { continue };
-            private _dn = toLower getText (_cfg >> "displayName");
-            if (_dn == "") then { continue };
+            private _pref = toLower _x;
+            if (_pref == "") then { continue };
             {
-                private _pref = toLower _x;
-                if (_pref != "" && { _dn find _pref >= 0 }) exitWith { _picked = configName _cfg };
-            } forEach _preferredDisplayNames;
+                private _cfg = _x;
+                if (getNumber (_cfg >> "side") != _sideNum) then { continue };
+                private _dn = toLower getText (_cfg >> "displayName");
+                if (_dn == "") then { continue };
+                if (_dn find _pref >= 0) exitWith { _picked = configName _cfg };
+            } forEach _allFc;
             if (_picked != _fallbackFaction) exitWith {};
-        } forEach _allFc;
+        } forEach _preferredDisplayNames;
     };
     _picked
 };
@@ -463,44 +465,42 @@ FADE_getUnitsForFaction = {
     _result
 };
 
-// Resolve scenario unit class arrays for mission spawns (Apply lists first, then live lookup, then hard fallbacks).
+// Resolve scenario unit class arrays for mission spawns (live faction lookup first — cached lists can drift).
 FADE_resolveScenarioFriendlyUnits = {
     params [["_fallback", []]];
     private _ff = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"];
     private _snF = missionNamespace getVariable ["FADE_scenarioFriendlySideNum", 1];
-    private _units = +(missionNamespace getVariable ["FADE_friendlyUnits", []]);
+    private _units = [_ff, _snF] call FADE_getUnitsForFaction;
     if (_units isEqualTo []) then {
-        _units = [_ff, _snF] call FADE_getUnitsForFaction;
-        if (_units isEqualTo []) then {
-            _units = +_fallback;
-        };
-        if (_units isEqualTo []) then {
-            _units = +(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"]]);
-        };
-        private _filter = missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }];
-        _units = [_units] call _filter;
-        _units = [_units, _ff, _snF, false] call FADE_filterUnitsForScenarioFaction;
+        _units = +(missionNamespace getVariable ["FADE_friendlyUnits", _fallback]);
     };
-    _units
+    if (_units isEqualTo []) then {
+        _units = +_fallback;
+    };
+    if (_units isEqualTo [] && { _ff isEqualTo "BLU_F" }) then {
+        _units = +(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"]]);
+    };
+    private _filter = missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }];
+    _units = [_units] call _filter;
+    [_units, _ff, _snF, false] call FADE_filterUnitsForScenarioFaction
 };
 FADE_resolveScenarioEnemyUnits = {
     params [["_fallback", []]];
     private _ef = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
     private _snE = missionNamespace getVariable ["FADE_scenarioEnemySideNum", 0];
-    private _units = +(missionNamespace getVariable ["FADE_enemyUnits", []]);
+    private _units = [_ef, _snE] call FADE_getUnitsForFaction;
     if (_units isEqualTo []) then {
-        _units = [_ef, _snE] call FADE_getUnitsForFaction;
-        if (_units isEqualTo []) then {
-            _units = +_fallback;
-        };
-        if (_units isEqualTo []) then {
-            _units = +(missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"]]);
-        };
-        private _filter = missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }];
-        _units = [_units] call _filter;
-        _units = [_units, _ef, _snE, false] call FADE_filterUnitsForScenarioFaction;
+        _units = +(missionNamespace getVariable ["FADE_enemyUnits", _fallback]);
     };
-    _units
+    if (_units isEqualTo []) then {
+        _units = +_fallback;
+    };
+    if (_units isEqualTo [] && { _ef isEqualTo "OPF_F" }) then {
+        _units = +(missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"]]);
+    };
+    private _filter = missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }];
+    _units = [_units] call _filter;
+    [_units, _ef, _snE, false] call FADE_filterUnitsForScenarioFaction
 };
 missionNamespace setVariable ["FADE_resolveScenarioFriendlyUnits", FADE_resolveScenarioFriendlyUnits];
 missionNamespace setVariable ["FADE_resolveScenarioEnemyUnits", FADE_resolveScenarioEnemyUnits];
@@ -1266,10 +1266,10 @@ FADE_applyScenarioSettings = {
     private _civUnits = [_civFaction, 3] call FADE_getUnitsForFaction;
     private _civVehicles = [_civFaction] call FADE_getCivVehiclesForFaction;
 
-    if (_enemyUnits isEqualTo []) then {
+    if (_enemyUnits isEqualTo [] && { _enemyFaction isEqualTo "OPF_F" }) then {
         _enemyUnits = +(missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"]]);
     };
-    if (_friendlyUnits isEqualTo []) then {
+    if (_friendlyUnits isEqualTo [] && { _friendlyFaction isEqualTo "BLU_F" }) then {
         _friendlyUnits = +(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"]]);
     };
     _enemyUnits = [_enemyUnits] call FADE_filterUnitsArmed;
@@ -1441,8 +1441,12 @@ private _defEnemy = [_enemyF, _enemySideNum0] call FADE_getUnitsForFaction;
 private _defFriendly = [_friendlyF, _friendlySideNum0] call FADE_getUnitsForFaction;
 private _defCiv = [_civF, 3] call FADE_getUnitsForFaction;
 private _defCivVeh = [_civF] call FADE_getCivVehiclesForFaction;
-if (_defEnemy isEqualTo []) then { _defEnemy = +(missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"]]) };
-if (_defFriendly isEqualTo []) then { _defFriendly = +(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"]]) };
+if (_defEnemy isEqualTo [] && { _enemyF isEqualTo "OPF_F" }) then {
+    _defEnemy = +(missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"]]);
+};
+if (_defFriendly isEqualTo [] && { _friendlyF isEqualTo "BLU_F" }) then {
+    _defFriendly = +(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"]]);
+};
 if (_defCiv isEqualTo []) then { _defCiv = ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"] };
 if (_defCivVeh isEqualTo []) then { _defCivVeh = ["C_Offroad_01_F", "C_Hatchback_01_F", "C_SUV_01_F", "C_Van_01_transport_F"] };
 _defEnemy = [_defEnemy] call FADE_filterUnitsArmed;
@@ -1492,6 +1496,10 @@ FADE_scenarioClientSync = [
     missionNamespace getVariable ["FADE_markerColorFriendly", "ColorWEST"]
 ];
 publicVariable "FADE_scenarioClientSync";
+diag_log format [
+    "[FAC] Startup factions: friendly=%1 (%2 units), enemy=%3 (%4 units), civ=%5",
+    _friendlyF, count _defFriendly, _enemyF, count _defEnemy, _civF
+];
 [] call FADE_missionSlots_publish;
 
 // OPFOR ambient air (P24): bounded spawns toward BLUFOR players / base.

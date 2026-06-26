@@ -51,7 +51,7 @@ FADE_mapClickPick_onMapClick = {
     true
 };
 
-// Args: [activeVar, ehVar (unused legacy slot), timeoutSec, hintBuilderCode, onValidClickCode, onTimeoutCode, rejectWater]
+// Args: [activeVar, ehVar (unused legacy slot), timeoutSec, hintBuilderCode, onValidClickCode, onTimeoutCode, rejectWater, openMap]
 FADE_mapClickPick_start = {
     params [
         "_activeVar",
@@ -60,7 +60,8 @@ FADE_mapClickPick_start = {
         "_hintBuilder",
         "_onClick",
         "_onTimeout",
-        ["_rejectWater", true]
+        ["_rejectWater", true],
+        ["_openMap", true]
     ];
     if (missionNamespace getVariable [_activeVar, false]) exitWith { false };
 
@@ -68,7 +69,7 @@ FADE_mapClickPick_start = {
     missionNamespace setVariable [_activeVar, true];
     missionNamespace setVariable ["FADE_mapClickPick_context", [_activeVar, _ehVar, _onClick, _onTimeout, _rejectWater]];
     onMapSingleClick "missionNamespace setVariable ['FADE_mapClickPick_clickPos', _pos]; call FADE_mapClickPick_onMapClick;";
-    openMap true;
+    if (_openMap) then { openMap true };
     hint ([-1] call _hintBuilder);
 
     [_timeoutSec, _activeVar, _hintBuilder, _onTimeout] spawn {

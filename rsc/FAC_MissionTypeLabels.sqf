@@ -14,6 +14,7 @@ missionNamespace setVariable ["FAC_missionTypeLabels", [
     ["Clear Area", "ClearArea"],
     ["CSAR", "CSAR"],
     ["Escape & Evasion", "EscapeEvasion"],
+    ["Geo-Guesser", "GeoGuesser"],
     ["Hostage", "Hostage"],
     ["HVT", "HVT"],
     ["Intercept Convoy", "InterceptConvoy"],

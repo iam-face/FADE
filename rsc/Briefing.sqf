@@ -472,7 +472,7 @@ player createDiaryRecord ["Diary", ["Missions", "
 In <font color='#FFD700'>Manage Missions</font>, <font color='#90EE90'>[G] Global</font> missions are shared server-wide operations. Only one global mission may run at once. <font color='#90EE90'>[S] Single</font> missions are smaller per-player tasks; up to three may run at once, started by different players. You may only personally run one mission at a time, global or single.<br/><br/>
 
 <font color='#87CEEB'>STARTING A MISSION</font><br/>
-Most missions open a location overlay: choose <font color='#90EE90'>Random location</font> or <font color='#90EE90'>Map click</font>. Map click has a 20 s timer. Some mission types snap to nearby civilian zones; others search outward from the click for a valid site. Troop Insert map click chooses the first insert LZ only; later recurring insert positions still follow mission rules. Escape &amp; Evasion uses an evadee picker instead of a location picker and the starter must be included.<br/><br/>
+Most missions open a location overlay: choose <font color='#90EE90'>Random location</font> or <font color='#90EE90'>Map click</font>. Map click has a 20 s timer. Some mission types snap to nearby civilian zones; others search outward from the click for a valid site. <font color='#90EE90'>Troop Insert</font> and <font color='#90EE90'>Troop Extract</font> skip the location overlay — LZ/pickup sites are chosen randomly near civ zones (including each wave). Escape &amp; Evasion and Geo-Guesser use participant pickers instead of a location picker; the starter must be included.<br/><br/>
 
 <font color='#87CEEB'>GLOBAL [G]</font><br/>
 - <font color='#90EE90'>Area of Operations</font>  - 2 km square AO with three objectives. BLUFOR assaults OBJ 1 through OBJ 3; OPFOR defend, reinforce and may counter-attack. 30-minute limit.<br/>
@@ -481,6 +481,7 @@ Most missions open a location overlay: choose <font color='#90EE90'>Random locat
 - <font color='#90EE90'>Clear Area</font>  - Clear an enemy-held town or procedural camp; about 80 percent of enemies must be eliminated before timeout.<br/>
 - <font color='#90EE90'>CSAR</font>  - Downed helicopter survivor moves near the crash area, radios at 1 km and marks with smoke / IR near 500 m. Extract and RTB.<br/>
 - <font color='#90EE90'>Escape &amp; Evasion</font>  - Selected evadees start dispersed without GPS in a hostile civilian area. Current rule: any selected evadee death fails the mission; all living selected evadees must reach within 1000 m of base to succeed. No task destination markers for evadees.<br/>
+- <font color='#90EE90'>Geo-Guesser</font>  - Navigation drill: pick participants, round time (30–600 s), and difficulty. All participants share one random drop; click the map where you think you are. Faster guesses earn a score bonus. Ranked results when the timer ends or everyone has guessed.<br/>
 - <font color='#90EE90'>Hostage</font>  - Rescue civilians held in urban buildings and return survivors near base; too many hostage deaths fail the mission.<br/>
 - <font color='#90EE90'>HVT</font>  - Locate a high-value target in an urban building. Kill or capture; captured HVTs must be brought back near base.<br/>
 - <font color='#90EE90'>Intercept Convoy</font>  - Stop a moving road convoy before it reaches the end zone. At least 60 percent of convoy vehicles must be destroyed or immobilised.<br/>
@@ -491,8 +492,8 @@ Most missions open a location overlay: choose <font color='#90EE90'>Random locat
 - <font color='#90EE90'>Cargo / Resupply</font>  - Sling-load or deliver supplies from CargoPoint_1 to a friendly camp and land to complete. Non-combat logistics task.<br/>
 - <font color='#90EE90'>CASEVAC</font>  - Evacuate wounded survivors from the field. ACE / KAT injuries apply when available; the pickup may draw enemy pressure.<br/>
 - <font color='#90EE90'>Mine Clearing</font>  - EOD task on roads near a civilian zone: either 2-5 mines or 1-3 IEDs, one hazard type per mission. Clear all hazards to complete.<br/>
-- <font color='#90EE90'>Troop Extract</font>  - Pick up an AI ground team and return them to base; enemy groups may be moving toward the LZ.<br/>
-- <font color='#90EE90'>Troop Insert</font>  - Pick up an AI squad at base spawn points, fly to the selected or generated LZ, land and dismount them safely.<br/><br/>
+- <font color='#90EE90'>Troop Extract</font>  - Multi-participant field pickup: squads spawn in the field near a civ-zone heli site; load and RTB. Set 1–10 waves for back-to-back lifts (new field pickup each wave). Optional local enemy groups per wave; cleared when the wave ends.<br/>
+- <font color='#90EE90'>Troop Insert</font>  - Multi-participant insert from base: fresh squads at B_SP/base each wave, fly to civ-zone LZs and dismount. Set 1–10 waves (1 = single lift). Between waves, RTB and pick up new squads at base.<br/><br/>
 
 <font color='#87CEEB'>TASKS AND SMEAC</font><br/>
 Mission start generates a task and SMEAC-style hint. Use the Tasks panel and map markers for grids, routes, return distances, completion thresholds and abort state; the Missions GUI only gives a short live summary.

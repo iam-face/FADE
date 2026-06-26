@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------------
 // Mission streams: Global (1 at a time, heavy) vs Single (up to 3, lighter). All locations >= 2 km apart.
 // -----------------------------------------------------------------------------
-FADE_globalMissionTypes = ["AreaOfOperations", "Hostage", "HVT", "ClearArea", "CAS", "InterceptConvoy", "SearchDestroy", "Operation", "AssetRetrieval", "CSAR", "EscapeEvasion"];
+FADE_globalMissionTypes = ["AreaOfOperations", "Hostage", "HVT", "ClearArea", "CAS", "InterceptConvoy", "SearchDestroy", "Operation", "AssetRetrieval", "CSAR", "EscapeEvasion", "GeoGuesser"];
 FADE_singleMissionTypes = ["TroopInsert", "TroopExtract", "Cargo", "MineClearing", "CASEVAC"];
 FADE_minDistBetweenMissions = 2000;
 missionNamespace setVariable ["FADE_globalMission", []];
@@ -143,10 +143,10 @@ FADE_startEscapeEvasion = {
 };
 
 // -----------------------------------------------------------------------------
-// Troop Insert (server): participating UIDs + oneOff|recurring. Picks LZ; runs compile-once FADE_troopInsertMissionMain.
+// Geo-Guesser (server): participant UIDs, round time (30-600 s), difficulty.
 // -----------------------------------------------------------------------------
-FADE_startTroopInsert = {
-    params ["_participantUids", "_mode", "_player", ["_lzAnchor", []]];
+FADE_startGeoGuesser = {
+    params ["_participantUids", "_timeSec", "_difficulty", "_player"];
     if (!isServer) exitWith {};
     if (isNull _player) exitWith {};
     if (!(_participantUids isEqualType [])) exitWith {
@@ -157,9 +157,8 @@ FADE_startTroopInsert = {
     };
     private _playerUid = getPlayerUID _player;
     if !(_playerUid in _participantUids) exitWith {
-        ["<t size='1.2' color='#FF6666'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>You must include yourself in the participating list.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        ["<t size='1.2' color='#FF6666'>GEO-GUESSER</t><br/><br/><t color='#E0E0E0'>You must include yourself in the participant list.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
-    if !(_mode in ["oneOff", "recurring"]) then { _mode = "oneOff" };
     private _global = missionNamespace getVariable ["FADE_globalMission", []];
     private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
     if ((count _global >= 1 && { [_global, _player] call FADE_isMissionEntryOwnedByPlayer }) || { { [_x, _player] call FADE_isMissionEntryOwnedByPlayer } count _singleList > 0 }) exitWith {
@@ -168,9 +167,57 @@ FADE_startTroopInsert = {
     if (count _global >= 1) exitWith {
         ["<t size='1.2' color='#FFAA00'>GLOBAL MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>A global mission is in progress. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
-    if (count _singleList >= 3) exitWith {
-        ["<t size='1.2' color='#FFAA00'>SINGLE SLOTS FULL</t><br/><br/><t color='#E0E0E0'>Three single missions are active. Wait for one to finish.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    _timeSec = if (_timeSec isEqualType 0) then { round _timeSec max 30 min 600 } else { 60 };
+    if !(_difficulty in ["Normal", "Hard", "Impossible"]) then { _difficulty = "Normal" };
+    private _sideFriendly = missionNamespace getVariable ["FADE_sideFriendly", west];
+    private _participants = [];
+    private _missing = false;
+    {
+        private _uid = _x;
+        if (!(_uid isEqualType "") || { _uid == "" }) then { _missing = true };
+        private _p = objNull;
+        { if (getPlayerUID _x == _uid) exitWith { _p = _x } } forEach allPlayers;
+        if (isNull _p || { !alive _p } || { !isPlayer _p } || { side group _p != _sideFriendly }) then {
+            _missing = true;
+        } else {
+            _participants pushBack _p;
+        };
+    } forEach _participantUids;
+    if (_missing || { count _participants == 0 }) exitWith {
+        ["<t size='1.2' color='#FF6666'>GEO-GUESSER</t><br/><br/><t color='#E0E0E0'>One or more selected players are unavailable (disconnect, dead, or wrong side).</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
+    private _seen = [];
+    _participants = _participants select {
+        private _u = getPlayerUID _x;
+        if (_u in _seen) then { false } else { _seen pushBack _u; true };
+    };
+    if (isNil "FADE_geoGuesser_pickDropPos") then { [] call FADE_installMissionModules };
+    private _dropPos = [_difficulty] call FADE_geoGuesser_pickDropPos;
+    if (count _dropPos < 2) exitWith {
+        ["<t size='1.2' color='#FF6666'>GEO-GUESSER</t><br/><br/><t color='#E0E0E0'>Could not find a valid drop location. Try again.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    };
+    private _operationName = [] call FADE_generateOperationName;
+    missionNamespace setVariable ["FADE_globalMission", ["GeoGuesser", _player, _dropPos, _playerUid, _operationName]];
+    missionNamespace setVariable ["FADE_currentMissionType", "GeoGuesser"];
+    missionNamespace setVariable ["FADE_currentMissionPlayer", _player];
+    [] call FADE_missionSlots_publish;
+    missionNamespace setVariable ["FADE_ggRun_timeSec", _timeSec];
+    missionNamespace setVariable ["FADE_ggRun_difficulty", _difficulty];
+    ["GeoGuesser", _dropPos, _player, _participants] spawn {
+        params ["_missionType", "_destPos", "_player", "_participants"];
+        FADE_missionParams = [_missionType, _destPos, _player, _participants];
+        [] call FADE_profile_missionStartMark;
+        if (isNil "FADE_runMission") then { [] call FADE_installMissionModules };
+        [] call FADE_runMission;
+    };
+};
+
+// -----------------------------------------------------------------------------
+// Troop Insert / Extract (server): participating UIDs + wave count 1-10.
+// Heli sites: civ zone centre -> random point within 1 km -> FADE_findSafeLZ.
+// -----------------------------------------------------------------------------
+FADE_startTroopTransport_resolveParticipants = {
+    params ["_participantUids", "_player", "_missionLabel"];
     private _sideFriendly = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _participants = [];
     private _missing = false;
@@ -185,8 +232,10 @@ FADE_startTroopInsert = {
         };
     } forEach _participantUids;
     if (_missing || { count _participants == 0 }) exitWith {
-        ["<t size='1.2' color='#FF6666'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>One or more selected players are unavailable.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [format ["<t size='1.2' color='#FF6666'>%1</t><br/><br/><t color='#E0E0E0'>One or more selected players are unavailable.</t>", _missionLabel]] remoteExec ["FADE_showMissionHint", _player];
+        []
     };
+    private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
     private _busyParticipant = objNull;
     {
         if (_x != _player && { (_x getVariable ["FADE_myMission", ""]) != "" }) exitWith { _busyParticipant = _x };
@@ -197,74 +246,157 @@ FADE_startTroopInsert = {
     } forEach _participants;
     if (!isNull _busyParticipant) exitWith {
         [format [
-            "<t size='1.2' color='#FFAA00'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>%1 already has an active mission.</t>",
+            "<t size='1.2' color='#FFAA00'>%1</t><br/><br/><t color='#E0E0E0'>%2 already has an active mission.</t>",
+            _missionLabel,
             name _busyParticipant
         ]] remoteExec ["FADE_showMissionHint", _player];
+        []
     };
+    _participants
+};
+
+FADE_startTroopTransport_gateSlots = {
+    params ["_player"];
+    private _global = missionNamespace getVariable ["FADE_globalMission", []];
+    private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
+    if ((count _global >= 1 && { [_global, _player] call FADE_isMissionEntryOwnedByPlayer }) || { { [_x, _player] call FADE_isMissionEntryOwnedByPlayer } count _singleList > 0 }) exitWith {
+        ["<t size='1.2' color='#FFAA00'>MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>You already have a mission. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        false
+    };
+    if (count _global >= 1) exitWith {
+        ["<t size='1.2' color='#FFAA00'>GLOBAL MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>A global mission is in progress. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        false
+    };
+    if (count _singleList >= 3) exitWith {
+        ["<t size='1.2' color='#FFAA00'>SINGLE SLOTS FULL</t><br/><br/><t color='#E0E0E0'>Three single missions are active. Wait for one to finish.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        false
+    };
+    true
+};
+
+FADE_startTroopTransport_clampWaves = {
+    params [["_waveCount", 1]];
+    if (!(_waveCount isEqualType 0)) then { _waveCount = 1 };
+    (_waveCount max 1) min 10
+};
+
+FADE_startTroopInsert = {
+    params ["_participantUids", "_waveCount", "_player", ["_mapAnchor", []]];
+    if (!isServer) exitWith {};
+    if (isNull _player) exitWith {};
+    private _missionLabel = "TROOP INSERT";
+    if (!(_participantUids isEqualType [])) exitWith {
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Invalid participant list.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    };
+    if (!([_player] call FADE_playerCanUseMissionsGui)) exitWith {
+        ["<t size='1.2' color='#FF6666'>ACCESS DENIED</t><br/><br/><t color='#E0E0E0'>Missions GUI is restricted to group leaders by lobby settings.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    };
+    private _playerUid = getPlayerUID _player;
+    if !(_playerUid in _participantUids) exitWith {
+        ["<t size='1.2' color='#FF6666'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>You must include yourself in the participating list.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    };
+    _waveCount = [_waveCount] call FADE_startTroopTransport_clampWaves;
+    if !([_player] call FADE_startTroopTransport_gateSlots) exitWith {};
+    private _participants = [_participantUids, _player, _missionLabel] call FADE_startTroopTransport_resolveParticipants;
+    if (_participants isEqualTo []) exitWith {};
     private _minDistForPos = FADE_troopInsertExtractMinDistFromBase max FADE_minDistFromBase;
     private _lzMinFromPickup = FADE_troopInsertLzMinDistFromPickup;
-    private _pickupRef = [0, 0, 0];
-    private _bSp = objNull;
+    private _pickupRef = +FADE_basePos;
     if (count FADE_bSpPoints > 0) then {
-        _bSp = selectRandom FADE_bSpPoints;
-        if (!isNull _bSp) then { _pickupRef = position _bSp };
+        private _bSp = selectRandom FADE_bSpPoints;
+        if (!isNull _bSp) then { _pickupRef = getPosATL _bSp };
     };
-    private _destPos = [];
-    private _lzMinStrict = _lzMinFromPickup;
-    private _lzMinRelaxed = (_lzMinFromPickup * 0.7) max 1500;
-    private _useLzAnchor = [_lzAnchor] call FADE_fnc_isValidMapClickPos;
+    private _useMapAnchor = [_mapAnchor] call FADE_fnc_isValidMapClickPos;
+    private _preferredZone = [];
     private _snappedZone = [];
-    private _mapPickRadius = -1;
-    if (_useLzAnchor) then {
-        private _pick = [_lzAnchor, _minDistForPos, _pickupRef, _lzMinStrict, _lzMinRelaxed] call FADE_fnc_pickTroopInsertLzNearMapClick;
-        _pick params ["_picked", "_usedR", "_snapped"];
-        _destPos = _picked;
-        _mapPickRadius = _usedR;
-        _snappedZone = _snapped;
+    if (_useMapAnchor) then {
+        _preferredZone = [_mapAnchor, _minDistForPos] call FADE_fnc_snapMapClickToNearestCivZone;
+        _snappedZone = +_preferredZone;
     };
-    if (count _destPos < 2) then {
-        for "_pass" from 0 to 1 do {
-            private _needDist = if (_pass == 0) then { _lzMinStrict } else { _lzMinRelaxed };
-            for "_attempt" from 0 to 30 do {
-                private _cand = [_minDistForPos] call FADE_findMissionPos;
-                if (count _cand >= 2) then {
-                    private _lz = [_cand] call FADE_findSafeLZ;
-                    if (
-                        count _lz >= 2
-                        && { [_lz] call FADE_missionPosClear }
-                        && { _lz distance2D _pickupRef >= _needDist }
-                    ) exitWith { _destPos = _lz };
-                };
-            };
-            if (count _destPos >= 2) exitWith {};
-        };
-    };
+    private _destPos = [_minDistForPos, [], _preferredZone, _lzMinFromPickup, _pickupRef] call FADE_fnc_pickTroopHeliSiteAtCivZone;
     if (count _destPos < 2) exitWith {
-        private _mapSuffix = if (_useLzAnchor) then {
-            " NO VALID LZ NEAR YOUR MAP CLICK (searched 250 m ? whole map) � TRY ANOTHER AREA OR USE RANDOM."
+        private _mapSuffix = if (_useMapAnchor) then {
+            " NO VALID LZ NEAR YOUR MAP CLICK (civ zone / heli landing search) - TRY ANOTHER AREA OR USE RANDOM."
         } else { "" };
         [format [
-            "<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No valid LZ (need clear ground at least 2.5 km from base pickup).%1</t>",
+            "<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No valid insert LZ near a civ zone (heli landing required, clear of other missions).%1</t>",
             _mapSuffix
         ]] remoteExec ["FADE_showMissionHint", _player];
     };
-    if (_useLzAnchor && { count _destPos >= 2 }) then {
-        [_player, _destPos, _lzAnchor, _snappedZone, _mapPickRadius] call FADE_fnc_mapPickResultHint;
+    if (_useMapAnchor && { count _destPos >= 2 }) then {
+        [_player, _destPos, _mapAnchor, _snappedZone, -2] call FADE_fnc_mapPickResultHint;
     };
     private _operationName = [] call FADE_generateOperationName;
+    private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
     _singleList pushBack ["TroopInsert", _player, _destPos, _playerUid, _operationName];
     missionNamespace setVariable ["FADE_singleMissions", _singleList];
     missionNamespace setVariable ["FADE_currentMissionType", "TroopInsert"];
     missionNamespace setVariable ["FADE_currentMissionPlayer", _player];
     [] call FADE_missionSlots_publish;
-    ["TroopInsert", _destPos, _player, _participants, _mode] spawn {
-        params ["_missionType", "_destPos", "_player", "_participants", "_mode"];
+    ["TroopInsert", _destPos, _player, _participants, _waveCount] spawn {
+        params ["_missionType", "_destPos", "_player", "_participants", "_waveCount"];
         if (isNil "FADE_troopInsertMissionMain") then { [] call FADE_installMissionModules };
-        FADE_troopInsertParams = [_missionType, _destPos, _player, _participants, _mode];
+        FADE_troopInsertParams = [_missionType, _destPos, _player, _participants, _waveCount];
         [] call FADE_troopInsertMissionMain;
     };
 };
 publicVariable "FADE_startTroopInsert";
+
+FADE_startTroopExtract = {
+    params ["_participantUids", "_waveCount", "_player", ["_mapAnchor", []]];
+    if (!isServer) exitWith {};
+    if (isNull _player) exitWith {};
+    private _missionLabel = "TROOP EXTRACT";
+    if (!(_participantUids isEqualType [])) exitWith {
+        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Invalid participant list.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    };
+    if (!([_player] call FADE_playerCanUseMissionsGui)) exitWith {
+        ["<t size='1.2' color='#FF6666'>ACCESS DENIED</t><br/><br/><t color='#E0E0E0'>Missions GUI is restricted to group leaders by lobby settings.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    };
+    private _playerUid = getPlayerUID _player;
+    if !(_playerUid in _participantUids) exitWith {
+        ["<t size='1.2' color='#FF6666'>TROOP EXTRACT</t><br/><br/><t color='#E0E0E0'>You must include yourself in the participating list.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    };
+    _waveCount = [_waveCount] call FADE_startTroopTransport_clampWaves;
+    if !([_player] call FADE_startTroopTransport_gateSlots) exitWith {};
+    private _participants = [_participantUids, _player, _missionLabel] call FADE_startTroopTransport_resolveParticipants;
+    if (_participants isEqualTo []) exitWith {};
+    private _minDistForPos = FADE_troopInsertExtractMinDistFromBase max 1000;
+    private _useMapAnchor = [_mapAnchor] call FADE_fnc_isValidMapClickPos;
+    private _preferredZone = [];
+    private _snappedZone = [];
+    if (_useMapAnchor) then {
+        _preferredZone = [_mapAnchor, _minDistForPos] call FADE_fnc_snapMapClickToNearestCivZone;
+        _snappedZone = +_preferredZone;
+    };
+    private _destPos = [_minDistForPos, [], _preferredZone] call FADE_fnc_pickTroopHeliSiteAtCivZone;
+    if (count _destPos < 2) exitWith {
+        private _mapSuffix = if (_useMapAnchor) then {
+            " NO VALID PICKUP NEAR YOUR MAP CLICK (civ zone / heli landing search) - TRY ANOTHER AREA OR USE RANDOM."
+        } else { "" };
+        [format [
+            "<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No valid extract pickup near a civ zone (heli landing required, clear of other missions).%1</t>",
+            _mapSuffix
+        ]] remoteExec ["FADE_showMissionHint", _player];
+    };
+    if (_useMapAnchor && { count _destPos >= 2 }) then {
+        [_player, _destPos, _mapAnchor, _snappedZone, -2] call FADE_fnc_mapPickResultHint;
+    };
+    private _operationName = [] call FADE_generateOperationName;
+    private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
+    _singleList pushBack ["TroopExtract", _player, _destPos, _playerUid, _operationName];
+    missionNamespace setVariable ["FADE_singleMissions", _singleList];
+    missionNamespace setVariable ["FADE_currentMissionType", "TroopExtract"];
+    missionNamespace setVariable ["FADE_currentMissionPlayer", _player];
+    [] call FADE_missionSlots_publish;
+    ["TroopExtract", _destPos, _player, _participants, _waveCount] spawn {
+        params ["_missionType", "_destPos", "_player", "_participants", "_waveCount"];
+        if (isNil "FADE_troopExtractMissionMain") then { [] call FADE_installMissionModules };
+        FADE_troopExtractParams = [_missionType, _destPos, _player, _participants, _waveCount];
+        [] call FADE_troopExtractMissionMain;
+    };
+};
+publicVariable "FADE_startTroopExtract";
 
 // -----------------------------------------------------------------------------
 // Map-click anchor: numeric [x,y] only (server).
@@ -308,6 +440,69 @@ FADE_fnc_snapMapClickToNearestCivZone = {
         };
     } forEach (missionNamespace getVariable ["FADE_civTriggerNames", []]);
     _best
+};
+
+// Civ zone centres eligible for troop insert/extract (>= _minDistFromBase from HQ).
+FADE_fnc_eligibleCivZoneCenters = {
+    params [["_minDistFromBase", 2000]];
+    private _base = +FADE_basePos;
+    if (count _base < 2) exitWith { [] };
+    private _out = [];
+    {
+        private _trig = missionNamespace getVariable [_x, objNull];
+        if (!isNull _trig) then {
+            private _zc = getPosATL _trig;
+            if (count _zc >= 2 && { (_zc distance2D _base) >= _minDistFromBase }) then {
+                _out pushBack [(_zc select 0), (_zc select 1), (_zc param [2, 0])];
+            };
+        };
+    } forEach (missionNamespace getVariable ["FADE_civTriggerNames", []]);
+    _out
+};
+
+// Pick a heli landing site: random civ zone -> point within 1 km -> FADE_findSafeLZ.
+// Optional _preferredZoneCenter (map-click snap) is tried first; _minDistFromRef enforces distance from _refPos when > 0.
+FADE_fnc_pickTroopHeliSiteAtCivZone = {
+    params [
+        ["_minDistFromBase", 2000],
+        ["_excludePositions", []],
+        ["_preferredZoneCenter", []],
+        ["_minDistFromRef", -1],
+        ["_refPos", []]
+    ];
+    private _zones = [_minDistFromBase] call FADE_fnc_eligibleCivZoneCenters;
+    if (_zones isEqualTo []) exitWith { [] };
+    private _base = +FADE_basePos;
+    private _maxDistFromZone = 1000;
+    private _zoneOrder = +_zones call BIS_fnc_arrayShuffle;
+    if (count _preferredZoneCenter >= 2) then {
+        private _nearest = [_zones, _preferredZoneCenter] call BIS_fnc_nearestPosition;
+        if (_nearest isEqualType [] && { count _nearest >= 2 }) then {
+            _zoneOrder = [_nearest] + (_zoneOrder select { (_x distance2D _nearest) >= 1 });
+        };
+    };
+    private _result = [];
+    {
+        private _zoneCenter = _x;
+        for "_try" from 0 to 14 do {
+            private _dist = 50 + random (_maxDistFromZone - 50);
+            private _cand = [_zoneCenter, _dist, random 360] call BIS_fnc_relPos;
+            private _safe = [[_cand, 0, 120, 8, 1, 0.35, 0, [], _cand], _cand] call FADE_findSafePosArray;
+            if (count _safe < 2 || { surfaceIsWater _safe }) then { continue };
+            private _lz = [_safe] call FADE_findSafeLZ;
+            if (count _lz < 2) then { continue };
+            if ((_lz distance2D _base) < _minDistFromBase) then { continue };
+            if (_minDistFromRef > 0 && { count _refPos >= 2 } && { _lz distance2D _refPos < _minDistFromRef }) then { continue };
+            private _blocked = false;
+            { if (_lz distance2D _x < 2000) exitWith { _blocked = true } } forEach _excludePositions;
+            if (_blocked) then { continue };
+            if !([_lz] call FADE_missionPosClear) then { continue };
+            _result = _lz;
+            break;
+        };
+        if (count _result >= 2) exitWith {};
+    } forEach _zoneOrder;
+    _result
 };
 
 // Built-up position near a civ zone centre (50�400 m by default).
@@ -682,6 +877,12 @@ FADE_startMission = {
     };
     if (_missionType == "TroopInsert") exitWith {
         ["<t size='1.2' color='#FFAA00'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Use START to open the participant list (pilots/drivers; include yourself).</t>"] remoteExec ["FADE_showMissionHint", _player];
+    };
+    if (_missionType == "TroopExtract") exitWith {
+        ["<t size='1.2' color='#FFAA00'>TROOP EXTRACT</t><br/><br/><t color='#E0E0E0'>Use START to open the participant list (pilots/drivers; include yourself).</t>"] remoteExec ["FADE_showMissionHint", _player];
+    };
+    if (_missionType == "GeoGuesser") exitWith {
+        ["<t size='1.2' color='#FFAA00'>GEO-GUESSER</t><br/><br/><t color='#E0E0E0'>Use START to open the participant list, timer, and difficulty (include yourself).</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
     if (!([_player] call FADE_playerCanUseMissionsGui)) exitWith {
         ["<t size='1.2' color='#FF6666'>ACCESS DENIED</t><br/><br/><t color='#E0E0E0'>Missions GUI is restricted to group leaders by lobby settings.</t>"] remoteExec ["FADE_showMissionHint", _player];

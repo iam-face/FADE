@@ -1,7 +1,7 @@
 // =============================================================================
 // TroopInsertTransport.sqf  -  per-participant insert transport (server)
 // Params: [_group, _ownerPlayer, _pickupPos, _dropPos, _taskId, _markerName, _abortFlag,
-//          _claimedVehKey, _pickupMarker]
+//          _claimedVehKey, _pickupMarker, _waveIndex, _waveCount]
 // _pickupMarker (optional) is the per-player local marker name created by the mission
 // script; this transport runner deletes it on the owner's client once boarding succeeds.
 // =============================================================================
@@ -11,7 +11,9 @@ FADE_troopInsert_runTransport = {
     params [
         "_group", "_ownerPlayer", "_pickupPos", "_dropPos", "_taskId", "_markerName", "_abortFlag",
         ["_claimedVehKey", ""],
-        ["_pickupMarker", ""]
+        ["_pickupMarker", ""],
+        ["_waveIndex", 1],
+        ["_waveCount", 1]
     ];
 
     private _fnc_clearLocalPickupMarker = {
@@ -47,17 +49,17 @@ FADE_troopInsert_runTransport = {
         _ldr
     };
 
-    private _fnc_sideChat = {
+    private _fnc_metaOwner = {
+        params ["_msg"];
+        if (!isNull _ownerPlayer && { alive _ownerPlayer }) then {
+            [_msg] remoteExec ["systemChat", _ownerPlayer];
+        };
+    };
+
+    private _fnc_sideChatMsg = {
         params ["_msg"];
         private _ldr = [] call _fnc_leader;
         if (!isNull _ldr && { alive _ldr }) then { [_ldr, _msg] call FADE_aiSideChat };
-    };
-
-    private _fnc_hintOwner = {
-        params ["_msg"];
-        if (!isNull _ownerPlayer && { alive _ownerPlayer }) then {
-            [_msg] remoteExec ["FADE_showMissionHint", _ownerPlayer];
-        };
     };
 
     private _fnc_playOwnerSound = {
@@ -129,7 +131,7 @@ FADE_troopInsert_runTransport = {
                 unassignVehicle _u;
                 _u moveOut _veh;
                 if (_i == _n - 1) then {
-                    [format ["This is %1. Last man! Over.", [] call _fnc_callsign]] call _fnc_sideChat;
+                    [format ["%1, last man! Over.", [] call _fnc_callsign]] call _fnc_sideChatMsg;
                     ["FADE_disembarkDone"] call _fnc_playOwnerSound;
                 };
             };
@@ -162,18 +164,8 @@ FADE_troopInsert_runTransport = {
         _pickupPos
     };
 
-    private _fnc_compassSector = {
-        params ["_from", "_to"];
-        private _pFrom = if (_from isEqualType []) then { _from } else { getPosATL _from };
-        private _pTo = if (_to isEqualType []) then { _to } else { getPosATL _to };
-        private _sectors = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-        private _bearing = _pFrom getDir _pTo;
-        _sectors select ((round ((_bearing + 22.5) / 45)) % 8)
-    };
-
     private _transportDone = false;
     private _warnedNoVehicle = false;
-    private _warnedTravelToPickup = false;
     private _warnedDuplicateVeh = false;
     while {
         !_transportDone
@@ -182,35 +174,16 @@ FADE_troopInsert_runTransport = {
         && { !([] call _fnc_aborted) }
     } do {
         if (time - _startTime > _timeout) exitWith {
-            ["<t size='1.2' color='#FF6666'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Transport timed out  -  squad could not complete insertion.</t>"] call _fnc_hintOwner;
-            [format ["This is %1. Negative  -  no pickup. Standing down. Over.", [] call _fnc_callsign]] call _fnc_sideChat;
+            [format ["TROOP INSERT: Transport timed out (wave transport)."]] call _fnc_metaOwner;
+            [format ["%1, negative - no pickup. Standing down. Over.", [] call _fnc_callsign]] call _fnc_sideChatMsg;
         };
         private _anchor = [] call _fnc_pickupAnchor;
         private _veh = [_anchor, _pickupRadius, _ownerPlayer] call _fnc_ownerVehicle;
         if (isNull _veh) then {
-            if (
-                !_warnedTravelToPickup
-                && { !isNull _ownerPlayer }
-                && { alive _ownerPlayer }
-                && { count _pickupPos >= 2 }
-                && { (getPosATL _ownerPlayer) distance2D _pickupPos > 250 }
-            ) then {
-                // Squad spawn already issues the "holding at grid" sidechat via _fnc_squadPickupSideChat;
-                // here we only update the requesting player's UI hint to avoid a duplicate radio call.
-                _warnedTravelToPickup = true;
-                private _pickGrid = mapGridPosition _anchor;
-                private _sector = [getPosATL _ownerPlayer, _pickupPos] call _fnc_compassSector;
-                private _dist = round ((getPosATL _ownerPlayer) distance2D _pickupPos);
-                [format [
-                    "<t color='#FFFFFF'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Proceed to squad link-up: Grid %1  -  approx %2 m %3. Land or hold steady to board  -  driver/commander within 200 m.</t>",
-                    _pickGrid, _dist, _sector
-                ]] call _fnc_hintOwner;
-            };
             if (time - _startTime > 45 && { !_warnedNoVehicle }) then {
                 _warnedNoVehicle = true;
                 private _pickGrid = mapGridPosition _anchor;
-                [format ["This is %1. Still no pickup at Grid %2. Where's our lift? Over.", [] call _fnc_callsign, _pickGrid]] call _fnc_sideChat;
-                ["<t color='#FFFFFF'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Link up with your squad  -  be driver or commander of your landed vehicle within 200 m of the link-up point.</t>"] call _fnc_hintOwner;
+                [format ["%1, still no pickup at Grid %2. Over.", [] call _fnc_callsign, _pickGrid]] call _fnc_sideChatMsg;
             };
             sleep 2;
             continue;
@@ -218,8 +191,8 @@ FADE_troopInsert_runTransport = {
         if !([_veh] call _fnc_claimVehicle) then {
             if (!_warnedDuplicateVeh) then {
                 _warnedDuplicateVeh = true;
-                ["<t color='#FFFFFF'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>That vehicle is already assigned to another transport  -  use a different vehicle.</t>"] call _fnc_hintOwner;
-                [format ["This is %1. Negative  -  that vehicle is already assigned to another lift. Over.", [] call _fnc_callsign]] call _fnc_sideChat;
+                ["TROOP INSERT: That vehicle is already assigned to another transport - use a different aircraft."] call _fnc_metaOwner;
+                [format ["%1, negative - that lift is already assigned. Over.", [] call _fnc_callsign]] call _fnc_sideChatMsg;
             };
             sleep 3;
             continue;
@@ -229,16 +202,16 @@ FADE_troopInsert_runTransport = {
         private _totalCount = count units _group;
         private _cs = [] call _fnc_callsign;
         if (count _unitsToBoard == 0) then {
-            [format ["This is %1. Negative  -  you have no cargo seats. We cannot board. Over.", _cs]] call _fnc_sideChat;
-            ["<t color='#FFFFFF'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Your vehicle has no cargo seats for the squad.</t>"] call _fnc_hintOwner;
+            [format ["%1, negative - no cargo seats. We cannot board. Over.", _cs]] call _fnc_sideChatMsg;
+            ["TROOP INSERT: Your vehicle has no cargo seats for the squad."] call _fnc_metaOwner;
             [] call _fnc_releaseClaimedVehicle;
             sleep 3;
             continue;
         };
         if (_totalCount > _cargoSeats) then {
-            [format ["This is %1. We have more personnel than you have seats  -  loading %2. Stand by. Over.", _cs, _cargoSeats]] call _fnc_sideChat;
+            [format ["%1, loading %2 personnel only - stand by. Over.", _cs, _cargoSeats]] call _fnc_sideChatMsg;
         } else {
-            [format ["This is %1. We're loading now. Stand by. Over.", _cs]] call _fnc_sideChat;
+            [format ["%1, loading now. Stand by. Over.", _cs]] call _fnc_sideChatMsg;
         };
         { _x assignAsCargo _veh } forEach _unitsToBoard;
         _unitsToBoard orderGetIn true;
@@ -251,7 +224,7 @@ FADE_troopInsert_runTransport = {
         };
         if ([] call _fnc_aborted) exitWith {};
         if (isNull _veh || {!alive _veh}) exitWith {
-            ["<t size='1.2' color='#FF6666'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Your transport vehicle was lost before insertion.</t>"] call _fnc_hintOwner;
+            ["TROOP INSERT: Transport vehicle lost before insertion."] call _fnc_metaOwner;
         };
         if (({ vehicle _x == _veh } count _unitsToBoard) < count _unitsToBoard) then {
             [] call _fnc_releaseClaimedVehicle;
@@ -259,9 +232,9 @@ FADE_troopInsert_runTransport = {
             continue;
         };
         if (count _unitsToBoard < _totalCount) then {
-            [format ["This is %1. Only %2 aboard  -  not enough seats for everyone. Proceeding to LZ. Over.", [] call _fnc_callsign, count _unitsToBoard]] call _fnc_sideChat;
+            [format ["%1, only %2 aboard - proceeding to LZ. Over.", [] call _fnc_callsign, count _unitsToBoard]] call _fnc_sideChatMsg;
         } else {
-            [format ["This is %1. All aboard. Ready for liftoff. Over.", [] call _fnc_callsign]] call _fnc_sideChat;
+            [format ["%1, all aboard. Ready for liftoff. Over.", [] call _fnc_callsign]] call _fnc_sideChatMsg;
         };
         ["FADE_embarkDone"] call _fnc_playOwnerSound;
         [] call _fnc_clearLocalPickupMarker;
@@ -274,15 +247,15 @@ FADE_troopInsert_runTransport = {
         };
         if ([] call _fnc_aborted) exitWith {};
         if (isNull _veh || {!alive _veh}) exitWith {
-            ["<t size='1.2' color='#FF6666'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Your transport vehicle was lost en route to the LZ.</t>"] call _fnc_hintOwner;
+            ["TROOP INSERT: Transport vehicle lost en route to the LZ."] call _fnc_metaOwner;
         };
         private _atLz = (_veh distance _dropPos) < _dropRadius && { if (_veh isKindOf "Air") then { isTouchingGround _veh } else { true } };
         if (!_atLz) exitWith {
-            ["<t size='1.2' color='#FF6666'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>LZ not reached in time  -  insert failed.</t>"] call _fnc_hintOwner;
+            ["TROOP INSERT: LZ not reached in time - insert failed."] call _fnc_metaOwner;
         };
         _group setVariable ["FADE_insertReachedLZ", true, true];
         private _inVeh = (units _group) select { vehicle _x == _veh };
-        [format ["This is %1. Disembarking. Over.", [] call _fnc_callsign]] call _fnc_sideChat;
+        [format ["%1, disembarking. Over.", [] call _fnc_callsign]] call _fnc_sideChatMsg;
         ["FADE_disembarkStart"] call _fnc_playOwnerSound;
         [_inVeh, _veh, 1.2] call _fnc_disembarkOneByOne;
         (units _group) orderGetIn false;
@@ -291,9 +264,11 @@ FADE_troopInsert_runTransport = {
             sleep 0.25;
             ([] call _fnc_aborted) || { ({ vehicle _x == _veh } count (units _group)) == 0 } || { time > _tOut }
         };
-        [format ["This is %1. On the ground at the LZ. Good hunting. Over.", [] call _fnc_callsign]] call _fnc_sideChat;
-        ["<t color='#FFFFFF'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>Squad inserted at the LZ.</t>"] call _fnc_hintOwner;
+        [format ["%1, on the ground at the LZ. Good hunting. Over.", [] call _fnc_callsign]] call _fnc_sideChatMsg;
         _group setVariable ["FADE_troopInsertTransportDone", true, true];
+        if (!isNull _ownerPlayer) then {
+            _ownerPlayer setVariable [format ["FADE_tiWaveOk_%1_%2", _taskId, _waveIndex], true, false];
+        };
         [_group, _taskId, 30] call _fnc_scheduleGroupCleanup;
         _transportDone = true;
     };

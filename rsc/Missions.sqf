@@ -32,7 +32,7 @@ if (!([_mapAnchor] call FADE_fnc_isValidMapClickPos)) then {
 if (!isServer) exitWith {};
 
 // Validate mission type (Global + Single types)
-private _validTypes = ["TroopInsert", "TroopExtract", "CAS", "Cargo", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "MineClearing", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "EscapeEvasion"];
+private _validTypes = ["TroopInsert", "TroopExtract", "CAS", "Cargo", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "MineClearing", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "EscapeEvasion", "GeoGuesser"];
 if !(_missionType in _validTypes) exitWith {
     if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
     ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Unknown mission type.</t>"] remoteExec ["FADE_showMissionHint", _player];
@@ -40,6 +40,10 @@ if !(_missionType in _validTypes) exitWith {
 if (_missionType == "EscapeEvasion" && { count _evadeePlayers == 0 }) exitWith {
     if (!isNull _player) then { [_player] call FADE_clearActiveMission };
     ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No evadees for Escape &amp; Evasion.</t>"] remoteExec ["FADE_showMissionHint", _player];
+};
+if (_missionType == "GeoGuesser" && { count _evadeePlayers == 0 }) exitWith {
+    if (!isNull _player) then { [_player] call FADE_clearActiveMission };
+    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No participants for Geo-Guesser.</t>"] remoteExec ["FADE_showMissionHint", _player];
 };
 
 // Single source: scenario-applied unit lists (initServer FADE_resolveScenario* helpers)
@@ -129,12 +133,12 @@ private _basePos = FADE_basePos;
 
 // Refine position: LZ missions use small refinement; HVT/ClearArea/InterceptConvoy handle position themselves
 private _needsLZ = _missionType in ["TroopInsert", "TroopExtract", "Cargo", "CASEVAC", "CSAR"];
-if (_missionType != "HVT" && { _missionType != "Hostage" } && { _missionType != "ClearArea" } && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" } && { _missionType != "SearchDestroy" } && { _missionType != "Operation" } && { _missionType != "AssetRetrieval" } && { _missionType != "MineClearing" } && { _missionType != "EscapeEvasion" }) then {
+if (_missionType != "HVT" && { _missionType != "Hostage" } && { _missionType != "ClearArea" } && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" } && { _missionType != "SearchDestroy" } && { _missionType != "Operation" } && { _missionType != "AssetRetrieval" } && { _missionType != "MineClearing" } && { _missionType != "EscapeEvasion" } && { _missionType != "GeoGuesser" }) then {
     private _refineMax = if (_needsLZ) then { 10 } else { 50 };
     private _refineObj = if (_needsLZ) then { 15 } else { 5 };
     _destPos = [[_destPos, 0, _refineMax, _refineObj, 1, 0.5, 0, [], _destPos], _destPos] call FADE_findSafePosArray;
 };
-if ((!(_destPos isEqualType []) || { count _destPos < 2 }) && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" } && { _missionType != "Operation" }) exitWith {
+if ((!(_destPos isEqualType []) || { count _destPos < 2 }) && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" } && { _missionType != "Operation" } && { _missionType != "GeoGuesser" }) exitWith {
     if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
     ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No valid area of operations found.</t>"] remoteExec ["FADE_showMissionHint", _player];
 };
