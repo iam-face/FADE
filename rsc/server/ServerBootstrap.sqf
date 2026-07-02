@@ -1,6 +1,7 @@
 ﻿call compile preprocessFileLineNumbers "rsc\OperationNames.sqf";
 missionNamespace setVariable ["FADE_convoyMinRouteM", FADE_convoyMinRouteM];
 FADE_interceptConvoyRoadRoute = compile preprocessFileLineNumbers "rsc\fn_FADE_interceptConvoyRoadRoute.sqf";
+FADE_interceptConvoyRouteWaypoints = compile preprocessFileLineNumbers "rsc\fn_FADE_interceptConvoyRouteWaypoints.sqf";
 missionNamespace setVariable ["FADE_counterAttackFirstDelayMin", FADE_counterAttackFirstDelayMin];
 missionNamespace setVariable ["FADE_counterAttackFirstDelayMax", FADE_counterAttackFirstDelayMax];
 missionNamespace setVariable ["FADE_counterAttackMinDistFromBase", FADE_counterAttackMinDistFromBase];

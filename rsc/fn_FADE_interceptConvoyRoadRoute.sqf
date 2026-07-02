@@ -1,9 +1,12 @@
 /*
     Server-only helper: find two road positions for Intercept Convoy.
-    Returns [] if no valid pair, else [[x,y,z],[x,y,z]] with 2D distance >= _minRouteM.
-    Params: [_basePos, _minRouteM optional, _mapAnchor optional, _resolvedRadius optional — prefer routes near map click]
+    Returns [] if no valid pair, else [[x,y,z],[x,y,z]].
+    Random / single-anchor routes require 2D distance >= _minRouteM (default FADE_convoyMinRouteM).
+    Dual map-click (start + end anchors): no minimum route length; only requires distinct road snaps.
+    Params: [_basePos, _minRouteM optional, _mapStartAnchor optional, _resolvedRadius optional,
+             _mapEndAnchor optional — when both anchors valid, snaps each to nearest road near click]
 */
-params [["_basePos", [0, 0, 0]], ["_minRouteM", -1], ["_mapAnchor", []], ["_resolvedRadius", -1]];
+params [["_basePos", [0, 0, 0]], ["_minRouteM", -1], ["_mapAnchor", []], ["_resolvedRadius", -1], ["_mapEndAnchor", []]];
 if (_minRouteM < 0) then {
     _minRouteM = missionNamespace getVariable ["FADE_convoyMinRouteM", if (isNil "FADE_convoyMinRouteM") then { 5000 } else { FADE_convoyMinRouteM }];
 };
@@ -11,6 +14,46 @@ private _mapMin = missionNamespace getVariable ["FADE_mapMin", 0];
 private _mapMax = missionNamespace getVariable ["FADE_mapMax", worldSize];
 private _minFromBase = FADE_minDistFromBase;
 private _useAnchor = [_mapAnchor] call FADE_fnc_isValidMapClickPos;
+private _useEndAnchor = [_mapEndAnchor] call FADE_fnc_isValidMapClickPos;
+
+private _roadPosCandidatesNearAnchor = {
+    params ["_anchor", ["_maxRoads", 20], ["_roadSearchM", 500]];
+    private _roads = _anchor nearRoads _roadSearchM;
+    _roads = [_roads, [], { (getPosATL _x) distance2D _anchor }, "ASCEND"] call BIS_fnc_sortBy;
+    private _out = [];
+    private _ri = 0;
+    while { _ri < (count _roads min _maxRoads) } do {
+        private _sp = getPosATL (_roads select _ri);
+        _ri = _ri + 1;
+        if (count _sp < 3) then { _sp = [(_sp select 0), (_sp select 1), 0] };
+        if (surfaceIsWater _sp) then { continue };
+        if ((_sp distance2D _basePos) < _minFromBase) then { continue };
+        _out pushBack _sp;
+    };
+    _out
+};
+
+if (_useAnchor && { _useEndAnchor }) exitWith {
+    private _startCandidates = [_mapAnchor, 20, 500] call _roadPosCandidatesNearAnchor;
+    private _endCandidates = [_mapEndAnchor, 20, 500] call _roadPosCandidatesNearAnchor;
+    if (_startCandidates isEqualTo [] || { _endCandidates isEqualTo [] }) exitWith { [] };
+    private _bestPair = [];
+    private _bestScore = 1e15;
+    {
+        private _sp = _x;
+        {
+            private _ep = _x;
+            if (_sp distance2D _ep < 50) then { continue };
+            private _score = (_sp distance2D _mapAnchor) + (_ep distance2D _mapEndAnchor);
+            if (_score < _bestScore) then {
+                _bestScore = _score;
+                _bestPair = [_sp, _ep];
+            };
+        } forEach _endCandidates;
+    } forEach _startCandidates;
+    _bestPair
+};
+
 private _anchorSearchR = if (_useAnchor) then {
     private _snappedR = missionNamespace getVariable ["FADE_missionMapClickSnappedRadius", -2];
     if (_resolvedRadius == _snappedR || { _resolvedRadius < 0 }) then {
