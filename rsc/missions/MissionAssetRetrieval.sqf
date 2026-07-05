@@ -44,7 +44,7 @@ FADE_runMission_AssetRetrieval = {
     private _topographyArea = missionNamespace getVariable ["FADE_missionRun_topographyArea", ""];
     if (count _enemyUnits == 0) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No enemy units configured.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "No enemy units configured."] call FADE_missionErrorHint;
     };
 
     private _enemyUnitsAsset = +_enemyUnits;
@@ -52,6 +52,7 @@ FADE_runMission_AssetRetrieval = {
     if (count _enemyUnitsAsset == 0) then { _enemyUnitsAsset = +_enemyUnits };
     private _baseEnemyClass = _enemyUnitsAsset select 0;
     private _assetBranch = if (random 1 < 0.66) then { 1 } else { 2 };
+    private _areaRadius = missionNamespace getVariable ["FADE_missionApproxZoneRadiusM", 110];
 
     // Branch 2 (33%): recover enemy vehicle and return it near base.
     if (_assetBranch == 2) exitWith {
@@ -73,7 +74,7 @@ FADE_runMission_AssetRetrieval = {
         } forEach _assetCandidates;
         if (_vehicleClass == "") exitWith {
             [_player] call FADE_clearActiveMission;
-            ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No recovery vehicle class available for this scenario.</t>"] remoteExec ["FADE_showMissionHint", _player];
+            [_player, "MISSION ERROR", "No recovery vehicle class available for this scenario."] call FADE_missionErrorHint;
         };
         private _vehicleCfg = configFile >> "CfgVehicles" >> _vehicleClass;
         private _vehicleName = if (isClass _vehicleCfg) then { getText (_vehicleCfg >> "displayName") } else { _vehicleClass };
@@ -81,55 +82,31 @@ FADE_runMission_AssetRetrieval = {
 
         private _spawnRoadVehicleInZone = {
             params ["_zoneCenter", "_vehClass"];
-            private _roads = _zoneCenter nearRoads 500;
-            if (_roads isEqualTo []) exitWith { [objNull, []] };
-            _roads = _roads call BIS_fnc_arrayShuffle;
-            private _result = [objNull, []];
+            private _hit = [_zoneCenter, 500, [], -1, [], _zoneCenter] call FADE_findOpforGroundVehicleRoadSpawn;
+            if (_hit isEqualTo []) exitWith { [objNull, []] };
+            _hit params ["_candidate", "_dir"];
+            private _veh = createVehicle [_vehClass, _candidate, [], 0, "NONE"];
+            if (isNull _veh) exitWith { [objNull, []] };
 
-            {
-                private _road = _x;
-                private _roadPos = getPosATL _road;
-                if (_roadPos isEqualType [] && { count _roadPos < 3 }) then { _roadPos = [(_roadPos select 0), (_roadPos select 1), 0] };
+            _veh allowDamage false;
+            _veh setPosATL _candidate;
+            _veh setDir _dir;
+            _veh setVectorUp surfaceNormal _candidate;
+            _veh setVelocity [0, 0, 0];
+            _veh setFuel 1;
+            _veh setDamage 0;
+            clearWeaponCargoGlobal _veh;
+            clearMagazineCargoGlobal _veh;
+            clearItemCargoGlobal _veh;
+            clearBackpackCargoGlobal _veh;
+            [_veh] spawn { params ["_v"]; sleep 2; if (!isNull _v) then { _v allowDamage true } };
 
-                private _candidate = [[_roadPos, 0, 8, 5, 1, 0.2, 0, [], _roadPos], _roadPos] call FADE_findSafePosArray;
-                if !(_candidate isEqualType [] && { count _candidate >= 2 }) then { _candidate = _roadPos };
-                if (_candidate isEqualType [] && { count _candidate < 3 }) then { _candidate = [(_candidate select 0), (_candidate select 1), 0] };
-                if !([_candidate] call _dryPos) then { continue };
-
-                if !(isOnRoad _candidate || { (_candidate distance2D _roadPos) <= 12 }) then { continue };
-                private _nearVehicles = nearestObjects [_candidate, ["LandVehicle", "Air", "Ship"], 5];
-                if (count _nearVehicles > 0) then { continue };
-
-                private _veh = createVehicle [_vehClass, _candidate, [], 0, "NONE"];
-                if (isNull _veh) then { continue };
-
-                private _dir = random 360;
-                private _conn = roadsConnectedTo _road;
-                if (count _conn > 0) then { _dir = _road getDir (_conn select 0) };
-
-                _veh allowDamage false;
-                _veh setPosATL _candidate;
-                _veh setDir _dir;
-                _veh setVectorUp surfaceNormal _candidate;
-                _veh setVelocity [0, 0, 0];
-                _veh setFuel 1;
-                _veh setDamage 0;
-                clearWeaponCargoGlobal _veh;
-                clearMagazineCargoGlobal _veh;
-                clearItemCargoGlobal _veh;
-                clearBackpackCargoGlobal _veh;
-                [_veh] spawn { params ["_v"]; sleep 2; if (!isNull _v) then { _v allowDamage true } };
-
-                if (!alive _veh || { !canMove _veh }) then {
-                    deleteVehicle _veh;
-                    continue;
-                };
-
-                _result = [_veh, _candidate];
-                if (!isNull _veh) exitWith {};
-            } forEach _roads;
-
-            _result
+            if (!alive _veh || { !canMove _veh }) then {
+                deleteVehicle _veh;
+                [objNull, []]
+            } else {
+                [_veh, _candidate]
+            };
         };
 
         private _zones = +(missionNamespace getVariable ["FADE_civTriggerNames", []]);
@@ -176,7 +153,7 @@ FADE_runMission_AssetRetrieval = {
 
         if (isNull _assetVehicle) exitWith {
             [_player] call FADE_clearActiveMission;
-            ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not spawn the recovery vehicle on a safe road near an eligible civ zone.</t>"] remoteExec ["FADE_showMissionHint", _player];
+            [_player, "MISSION ERROR", "Could not spawn the recovery vehicle on a safe road near an eligible civ zone."] call FADE_missionErrorHint;
         };
 
         private _allGroups = [];
@@ -210,7 +187,6 @@ FADE_runMission_AssetRetrieval = {
             };
         };
 
-        private _areaRadius = 220;
         private _numPatrols = [2 + floor random 2, 1] call _scaleOpforCount;
         for "_g" from 0 to (_numPatrols - 1) do {
             private _sp = [];
@@ -269,9 +245,7 @@ FADE_runMission_AssetRetrieval = {
         private _topoVeh = [_center] call (missionNamespace getVariable ["FADE_getTopographySummary", { ["UNKNOWN", "Unknown area"] }]);
         private _vehSituationTaskText = if (_intelFormatter isEqualTo {}) then {
             format [
-                "<t align='left' color='#FFFFFF'>Branch: VEHICLE RECOVERY</t><br/><t align='left' color='#FFFFFF'>Topography: Grid %1 | Area: %2</t><br/><t align='left' color='#FFFFFF'>Enemy: %3 dismounts securing a recovery vehicle on roads; patrols in the area.</t><br/><t align='left' color='#FFFFFF'>Friendly: operating from base.</t>",
-                _topoVeh select 0,
-                _topoVeh select 1,
+                "<t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='#FFFFFF'>%1 dismounts securing a recovery vehicle on roads; patrols in the area.</t><br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/><t align='left' color='#FFFFFF'>CTB — task-organized from base.</t>",
                 _enemyFactionName
             ]
         } else {
@@ -290,19 +264,24 @@ FADE_runMission_AssetRetrieval = {
                 "#FFFFFF"
             ] call _intelFormatter
         };
+        private _loreAppendFn = missionNamespace getVariable ["FADE_lore_appendSituationHtml", { params ["_s"]; _this select 0 }];
+        _vehSituationTaskText = [_vehSituationTaskText] call _loreAppendFn;
         private _vehExecutionTaskText = format [
-            "Branch task: vehicle recovery. Move to the objective marker (road/vehicle site). Clear local OPFOR, then recover the OPFOR %1 (drive, tow, or sling as available). Exfil by feasible route; vehicle must arrive operational within 1000 m of base. Mission fails if the vehicle is destroyed.",
+            "<t align='left' color='#C0C0C0'>Move to the objective marker (road/vehicle site). Clear local OPFOR, then recover the OPFOR %1 (drive, tow, or sling as available). Exfil by feasible route; vehicle must arrive operational within 1000 m of base. Vehicle must remain recoverable for exfil.</t>",
             _vehicleName
         ];
         private _vehMissionDesc = format [
-            "Branch: VEHICLE RECOVERY. Recover the OPFOR %1 and return it within 1000 m of base. Vehicle must remain operational.",
+            "Branch: VEHICLE RECOVERY — Grid %1 (%2). Recover the OPFOR %3 and return it within 1000 m of base. Vehicle must remain operational.",
+            _topoVeh select 0,
+            _topoVeh select 1,
             _vehicleName
         ];
         [_player, _taskId, _vehMissionDesc, "Asset Retrieval", _center, "car", _vehSituationTaskText, _vehExecutionTaskText] call _fnc_createMissionTask;
 
         private _markerName = "FADE_asset_" + _taskId;
         _player setVariable ["FADE_myMissionMarker", _markerName, true];
-        private _marker = createMarker [_markerName, [_center, 100] call _mkrJitter];
+        [_taskId, _markerName + "_zone", _center, _areaRadius, "ColorYellow"] call FADE_mission_createRadiusMarker;
+        private _marker = createMarker [_markerName, [_center] call FADE_normPos3];
         [_taskId, _markerName] call FADE_missionEnt_registerMarker;
         _marker setMarkerType "mil_objective";
         _marker setMarkerColor "ColorYellow";
@@ -329,24 +308,21 @@ FADE_runMission_AssetRetrieval = {
                 if ((_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"]) exitWith { true };
                 if (isNull _assetVehicle || { !alive _assetVehicle }) exitWith {
                     [_taskId, "FAILED"] call BIS_fnc_taskSetState;
-                    ["<t size='1.2' color='#FF6666'>MISSION FAILED</t><br/><br/><t color='#E0E0E0'>Recovery vehicle destroyed.</t>"] remoteExec ["FADE_showMissionHint", _player];
+                    [_player, "Recovery vehicle destroyed."] call FADE_missionFailHint;
                     true
                 };
                 if ((_assetVehicle distance _basePos) <= _baseDist) exitWith {
                     [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
-                    ["<t size='1.2' color='#90EE90'>MISSION COMPLETE</t><br/><br/><t color='#E0E0E0'>Recovery vehicle returned to base.</t>"] remoteExec ["FADE_showMissionHint", _player];
+                    [_player, "Recovery vehicle returned to base."] call FADE_missionSuccessHint;
                     true
                 };
                 false
             };
-            [_markerName] call FADE_deleteMarkerSafe;
-            if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
+            [_taskId, _markerName, _player, 45] call FADE_mission_completeCleanup;
             missionNamespace setVariable ["FADE_assetIntelTaken_" + _taskId, nil];
-            [_taskId, 45, _player] call FADE_missionEnt_scheduledCleanup;
         };
     };
 
-    private _areaRadius = 220;
     private _house = objNull;
     private _houseBps = [];
     private _center = +_destPos;
@@ -412,10 +388,10 @@ FADE_runMission_AssetRetrieval = {
 
     if (isNull _house || { count _houseBps < 1 }) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No civ zone >=1500m from HQ had a building with at least 6 positions within 500m.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "No civ zone >=1500m from HQ had a building with at least 6 positions within 500m."] call FADE_missionErrorHint;
     };
 
-    private _assetClass = "Land_PlasticCase_01_small_gray_F";
+    private _assetClass = missionNamespace getVariable ["FADE_recoverObjectClass", "Land_PlasticCase_01_small_gray_F"];
     private _assetIdx = 0;
     if (count _houseBps >= 3) then {
         // Avoid first/last building positions  -  often outside.
@@ -426,17 +402,15 @@ FADE_runMission_AssetRetrieval = {
     private _intelObj = createVehicle [_assetClass, _assetBp, [], 0, "NONE"];
     if (isNull _intelObj) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Failed to spawn asset object.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "Failed to spawn asset object."] call FADE_missionErrorHint;
     };
     _intelObj setPosATL _assetBp;
     _intelObj setDir (getDir _house);
 
-    private _assetCfg = configFile >> "CfgVehicles" >> _assetClass;
-    private _assetName = if (isClass _assetCfg) then { getText (_assetCfg >> "displayName") } else { _assetClass };
-    if (_assetName == "") then { _assetName = _assetClass };
+    private _assetName = [_assetClass] call (missionNamespace getVariable ["FADE_getRecoverObjectDisplayName", { _this select 0 }]);
 
     private _assetBarrel = objNull;
-    private _barrelPos = [[_center, 8, 22, 2, 1, 0.3, 0, [], _center], _center] call FADE_findSafePosArray;
+    private _barrelPos = [_center] call FADE_findOutdoorHintPos;
     if (_barrelPos isEqualType [] && { count _barrelPos >= 2 }) then {
         _barrelPos = [(_barrelPos select 0), (_barrelPos select 1), (_barrelPos param [2, 0])];
         _assetBarrel = createVehicle ["MetalBarrel_burning_F", _barrelPos, [], 0, "NONE"];
@@ -657,14 +631,12 @@ FADE_runMission_AssetRetrieval = {
     private _topoObj = [_center] call (missionNamespace getVariable ["FADE_getTopographySummary", { ["UNKNOWN", "Unknown area"] }]);
     private _objSituationTaskText = if (_intelFormatter isEqualTo {}) then {
         format [
-            "<t align='left' color='#FFFFFF'>Branch: OBJECT RECOVERY</t><br/><t align='left' color='#FFFFFF'>Topography: Grid %1 | Area: %2</t><br/><t align='left' color='#FFFFFF'>Enemy: %3 dismounts securing an objective house; patrols in the area.</t><br/><t align='left' color='#FFFFFF'>Friendly: operating from base.</t>",
-            _topoObj select 0,
-            _topoObj select 1,
+            "<t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='#FFFFFF'>%1 dismounts securing an objective house; patrols in the area.</t><br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/><t align='left' color='#FFFFFF'>CTB — task-organized from base.</t>",
             _enemyFactionName
         ]
     } else {
         [
-            "AssetRetrievalObj",
+            "AssetRetrieval",
             _center,
             _sideEnemy,
             _sideFriendly,
@@ -678,28 +650,34 @@ FADE_runMission_AssetRetrieval = {
             "#FFFFFF"
         ] call _intelFormatter
     };
+    _objSituationTaskText = [_objSituationTaskText] call (missionNamespace getVariable ["FADE_lore_appendSituationHtml", { params ["_s"]; _this select 0 }]);
+    private _recoverIntelLine = [_assetName, "#FFFFFF"] call (missionNamespace getVariable ["FADE_smeac_recoverObjectIntelLine", { "" }]);
+    if (_recoverIntelLine != "") then { _objSituationTaskText = _objSituationTaskText + "<br/>" + _recoverIntelLine };
     private _objExecutionTaskText = format [
-        "Branch task: object recovery. Move to the marked objective house, clear local OPFOR, and use scroll action to secure %1. After securing the object, RTB and move within 150 m of base to complete mission.",
+        "<t align='left' color='#C0C0C0'>Move to the marked objective house. Target: %1 — most likely indoors inside a defended building. Clear local OPFOR and use scroll action to secure it. After securing the object, RTB and move within 150 m of base to complete mission.</t>",
         _assetName
     ];
     private _objMissionDesc = format [
-        "Branch: OBJECT RECOVERY. Secure %1 inside the target house, then RTB (within 150 m of base).",
+        "Branch: OBJECT RECOVERY — Grid %1 (%2). Recover %3 (most likely indoors inside a defended building), then RTB (within 150 m of base).",
+        _topoObj select 0,
+        _topoObj select 1,
         _assetName
     ];
     [_player, _taskId, _objMissionDesc, "Asset Retrieval", _center, "search", _objSituationTaskText, _objExecutionTaskText] call _fnc_createMissionTask;
 
     private _markerName = "FADE_asset_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    private _marker = createMarker [_markerName, [_center, 100] call _mkrJitter];
+    [_taskId, _markerName + "_zone", _center, _areaRadius, "ColorYellow"] call FADE_mission_createRadiusMarker;
+    private _marker = createMarker [_markerName, [_center] call FADE_normPos3];
     [_taskId, _markerName] call FADE_missionEnt_registerMarker;
     _marker setMarkerType "mil_objective";
     _marker setMarkerColor "ColorYellow";
     _marker setMarkerText _operationName;
 
     private _grid = mapGridPosition _center;
-    private _brief = format ["ASSET RETRIEVAL  -  OBJECT%1%1Objective area (approx.): Grid %2%1%1Secure the target object %3 and RTB as instructed. Clear structures, recover the item, and move to extraction per the task.", toString [10], _grid, _assetName] + _briefGuiTail;
+    private _brief = format ["ASSET RETRIEVAL  -  OBJECT%1%1Objective area (approx.): Grid %2%1%1Recover %3 (most likely indoors inside a defended building). Secure the item and RTB as instructed. Clear structures, recover the item, and move to extraction per the task.", toString [10], _grid, _assetName] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
-    [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFCC00'>Branch: Object recovery</t><br/><t color='#FFFFFF'>Target object: %2</t><br/><t color='#FFFFFF'>Secure inside the house, then RTB (150 m).</t>", _grid, _assetName]] call _showAssignedHint;
+    [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFCC00'>Branch: Object recovery</t><br/><t color='#FFFFFF'>Target: %2</t><br/><t color='#FFFFFF'>Most likely indoors inside a defended building. Secure it, then RTB (150 m).</t>", _grid, _assetName]] call _showAssignedHint;
     [_player, "Asset Retrieval"] call FADE_notifyOthersMissionStarted;
 
     private _arQrfPos = +_center;
@@ -722,15 +700,13 @@ FADE_runMission_AssetRetrieval = {
                 { (_player distance _basePos) <= _baseDist }
             ) exitWith {
                 [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
-                ["<t size='1.2' color='#90EE90'>MISSION COMPLETE</t><br/><br/><t color='#E0E0E0'>Intel secured and returned to base.</t>"] remoteExec ["FADE_showMissionHint", _player];
+                [_player, "Intel secured and returned to base."] call FADE_missionSuccessHint;
                 true
             };
             false
         };
-        [_markerName] call FADE_deleteMarkerSafe;
-        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
+        [_taskId, _markerName, _player, 45] call FADE_mission_completeCleanup;
         missionNamespace setVariable ["FADE_assetIntelTaken_" + _taskId, nil];
-        [_taskId, 45, _player] call FADE_missionEnt_scheduledCleanup;
         { if (!isNull _x) then { deleteVehicle _x } } forEach _assetObjects;
     };
 };

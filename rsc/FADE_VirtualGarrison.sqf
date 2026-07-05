@@ -49,12 +49,22 @@ FADE_vg_buildingValid = {
 };
 
 FADE_vg_nearestPlayerDist2D = {
-    params ["_pos"];
+    params ["_pos", ["_playerPosList", []]];
     if (count _pos < 2) exitWith { 1e15 };
     private _d = 1e15;
-    {
-        if (alive _x && { isPlayer _x }) then { _d = _d min (_x distance2D _pos) };
-    } forEach allPlayers;
+    if (_playerPosList isEqualTo []) then {
+        {
+            if (alive _x && { isPlayer _x }) then { _d = _d min (_x distance2D _pos) };
+        } forEach allPlayers;
+    } else {
+        private _px = _pos select 0;
+        private _py = _pos select 1;
+        {
+            if (_x isEqualType [] && { count _x >= 2 }) then {
+                _d = _d min ([_px, _py] distance2D [_x select 0, _x select 1]);
+            };
+        } forEach _playerPosList;
+    };
     _d
 };
 
@@ -108,6 +118,25 @@ FADE_vg_pendingMenInEllipse = {
     _n
 };
 
+// Drop deferred garrison slots whose anchor lies in the zone ellipse (Operation capture).
+FADE_vg_cancelPendingInEllipse = {
+    params ["_center", "_r", ["_ownerMatch", ""]];
+    if (count _center < 2) exitWith {};
+    private _cc = [_center] call FADE_normPos3;
+    FADE_vg_pending = FADE_vg_pending select {
+        private _entry = _x;
+        private _owner = (_entry get "settings") getOrDefault ["owner", ""];
+        if (_ownerMatch != "" && { _owner != _ownerMatch }) exitWith { true };
+        private _anch = [_entry] call FADE_vg_entryAnchor;
+        if (count _anch >= 2 && { (_anch distance2D _cc) <= _r }) then {
+            [_entry] call FADE_vg_dropEntry;
+            false
+        } else {
+            true
+        };
+    };
+};
+
 FADE_vg_cancelPendingByOwner = {
     params ["_owner"];
     if (_owner == "") exitWith {};
@@ -140,7 +169,7 @@ FADE_vg_spawnOutdoorHint = {
     if (!(_bc isEqualType []) || { count _bc < 2 }) exitWith { objNull };
     if (count _bc < 3) then { _bc = [(_bc select 0), (_bc select 1), 0] };
 
-    private _barrelPos = [[_bc, 8, 22, 2, 1, 0.3, 0, [], _bc], _bc] call FADE_findSafePosArray;
+    private _barrelPos = [_bc] call FADE_findOutdoorHintPos;
     if (!(_barrelPos isEqualType []) || { count _barrelPos < 2 }) exitWith { objNull };
     _barrelPos = [(_barrelPos select 0), (_barrelPos select 1), (_barrelPos param [2, 0])];
 
@@ -260,7 +289,6 @@ FADE_vg_spawnOne = {
             if (_st getOrDefault ["ambientCombat", true]) then {
                 [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
             };
-            if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then { [_u] call FADE_applyOpforLauncherPolicyToUnit };
         };
     } forEach _positions;
 
@@ -304,6 +332,8 @@ FADE_vg_spawnOne = {
         };
         sleep (_sleepS max 2);
         private _rAct = (missionNamespace getVariable ["FADE_vgActivateRadiusM", 100]) max 5;
+        private _plPos = [];
+        { if (alive _x && { isPlayer _x }) then { _plPos pushBack (getPosATL _x) } } forEach allPlayers;
 
         private _remain = [];
         {
@@ -319,7 +349,7 @@ FADE_vg_spawnOne = {
                 if (count _anch < 2) then {
                     _drop = true;
                 } else {
-                    if (([_anch] call FADE_vg_nearestPlayerDist2D) <= _rAct) then {
+                    if (([_anch, _plPos] call FADE_vg_nearestPlayerDist2D) <= _rAct) then {
                         _spawn = true;
                     };
                 };
@@ -354,5 +384,6 @@ if (!(_rawCnt isEqualTo {})) then {
 
 missionNamespace setVariable ["FADE_vg_register", FADE_vg_register];
 missionNamespace setVariable ["FADE_vg_cancelPendingByOwner", FADE_vg_cancelPendingByOwner];
+missionNamespace setVariable ["FADE_vg_cancelPendingInEllipse", FADE_vg_cancelPendingInEllipse];
 missionNamespace setVariable ["FADE_vg_pendingMenForOwner", FADE_vg_pendingMenForOwner];
 missionNamespace setVariable ["FADE_vg_pendingMenInEllipse", FADE_vg_pendingMenInEllipse];

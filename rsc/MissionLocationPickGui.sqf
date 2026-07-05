@@ -31,38 +31,72 @@ if (hasInterface) then {
                 [false] call FAC_missionPickOverlay_setBaseVisible;
                 uinamespace setVariable ["FAC_missionLocPick_type", _missionType];
                 private _titleName = [_missionType] call FAC_missionLocationPickGui_fnc_missionDisplayName;
-                private _helpText = if (_missionType in (missionNamespace getVariable ["FADE_missionMapClickSnapCivZoneTypes", []])) then {
+                private _helpText = if (_missionType == "InterceptConvoy") then {
                     format [
-                        "Random: mission area is chosen automatically.%1Map click: snaps to the nearest civ settlement zone to your click, then places the mission there (%2 s limit).",
+                        "Random: convoy start and end are chosen automatically on roads (minimum route length applies).%1Map click: choose convoy start, then convoy end (%2 s per click). Each point snaps to the nearest road within 500 m; no minimum route length.%1%1Enemy corridor dots on the map show the expected convoy route between start and end.",
                         toString [10, 10],
                         missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
                     ]
                 } else {
-                    format [
-                        "Random: mission area is chosen automatically.%1Map click: choose a point on the map (%2 s limit). The server searches 250 m, then 500 m, 1 km, 2.5 km, 5 km, then the whole map for a valid site as close as possible to your click.",
-                        toString [10, 10],
-                        missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
-                    ]
+                    if (_missionType == "Raid") then {
+                        private _rz = (round (missionNamespace getVariable ["FADE_raidObjectiveCount", 3])) max 2 min 5;
+                        private _minD = missionNamespace getVariable ["FADE_minDistBetweenMissions", 2000];
+                        format [
+                            "Random: three objective zones are chosen automatically from civ settlements.%1Map click: place %2 zones on the map (%3 s per click, timer resets after each zone). Zones must be at least %4 m apart; map stays open until all are placed. Each click snaps to the nearest eligible civ zone on the server.",
+                            toString [10, 10],
+                            _rz,
+                            missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20],
+                            _minD
+                        ]
+                    } else {
+                    if (_missionType in (missionNamespace getVariable ["FADE_missionMapClickSnapCivZoneTypes", []])) then {
+                        format [
+                            "Random: mission area is chosen automatically.%1Map click: snaps to the nearest civ settlement zone to your click, then places the mission there (%2 s limit).",
+                            toString [10, 10],
+                            missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
+                        ]
+                    } else {
+                        format [
+                            "Random: mission area is chosen automatically.%1Map click: choose a point on the map (%2 s limit). The server searches 250 m, then 500 m, 1 km, 2.5 km, 5 km, then the whole map for a valid site as close as possible to your click.",
+                            toString [10, 10],
+                            missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
+                        ]
+                    }
+                    }
                 };
-                private _controls = [_display, format ["%1 - CHOOSE LOCATION", toUpper _titleName], _helpText, 60340, [0.12, 0.58, 0.048, 0.14]] call FAC_missionPickOverlay_createShell;
-                private _btnY = 0.36;
+                private _layout = [0.18, 0.18, 0.64, 0.48, 0.046, 0.15];
+                _layout params ["_bgX", "_bgY", "_bgW", "_bgH", "_titleH", "_helpH"];
+                private _controls = [_display, format ["%1 - CHOOSE LOCATION", toUpper _titleName], _helpText, 60340, _layout] call FAC_missionPickOverlay_createShell;
+                private _padX = 0.04;
+                private _innerX = _bgX + _padX;
+                private _innerW = _bgW - (_padX * 2);
+                private _btnH = 0.052;
+                private _btnGap = 0.012;
+                private _btnY = _bgY + _titleH + _helpH + 0.028;
                 private _bRandom = _display ctrlCreate ["RscButton", 60343];
-                _bRandom ctrlSetPosition [0.06, _btnY, 0.88, 0.065];
+                _bRandom ctrlSetPosition [_innerX, _btnY, _innerW, _btnH];
                 _bRandom ctrlSetText "Random location";
-                _bRandom ctrlSetBackgroundColor [0.18, 0.32, 0.48, 1];
+                [_bRandom] call FAC_missionPick_stylePrimary;
                 _bRandom ctrlCommit 0;
                 _bRandom ctrlAddEventHandler ["ButtonClick", { ["random", []] call (missionNamespace getVariable ["FAC_missionLocationPickGui_fnc", {}]) }];
                 _controls pushBack _bRandom;
                 private _bMap = _display ctrlCreate ["RscButton", 60344];
-                _bMap ctrlSetPosition [0.06, _btnY + 0.08, 0.88, 0.065];
-                _bMap ctrlSetText "Map click (choose area on map)";
-                _bMap ctrlSetBackgroundColor [0.18, 0.38, 0.32, 1];
+                _bMap ctrlSetPosition [_innerX, _btnY + _btnH + _btnGap, _innerW, _btnH];
+                _bMap ctrlSetText (
+                    switch (_missionType) do {
+                        case "InterceptConvoy": { "Map click (choose start and end)" };
+                        case "Raid": { format ["Map click (choose %1 zones)", (round (missionNamespace getVariable ["FADE_raidObjectiveCount", 3])) max 2 min 5] };
+                        default { "Map click (choose area on map)" };
+                    }
+                );
+                [_bMap] call FAC_missionPick_styleStart;
                 _bMap ctrlCommit 0;
                 _bMap ctrlAddEventHandler ["ButtonClick", { ["mapClick", []] call (missionNamespace getVariable ["FAC_missionLocationPickGui_fnc", {}]) }];
                 _controls pushBack _bMap;
                 private _bCancel = _display ctrlCreate ["RscButton", 60345];
-                _bCancel ctrlSetPosition [0.06, _btnY + 0.16, 0.88, 0.055];
+                _bCancel ctrlSetPosition [_innerX, _btnY + (_btnH + _btnGap) * 2, _innerW, _btnH];
                 _bCancel ctrlSetText "Cancel";
+                [_bCancel] call FAC_missionPick_styleDanger;
                 _bCancel ctrlCommit 0;
                 _bCancel ctrlAddEventHandler ["ButtonClick", { ["cancel", []] call (missionNamespace getVariable ["FAC_missionLocationPickGui_fnc", {}]) }];
                 _controls pushBack _bCancel;
@@ -80,6 +114,8 @@ if (hasInterface) then {
                 } else {
                     [_mt, player, []] remoteExec ["FADE_startMission", 2];
                     hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
+                    missionNamespace setVariable ["FAC_missionsGui_tab", "active"];
+                    [] call FAC_missionsGui_syncTabs;
                     [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
                 };
             };
@@ -92,6 +128,18 @@ if (hasInterface) then {
                 ["FAC_mlocPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
                 private _missionsDisp = findDisplay 60002;
                 if (_mt != "TroopInsert" && { _mt != "TroopExtract" } && { !isNull _missionsDisp }) then { closeDialog 60002 };
+                if (_mt == "InterceptConvoy") exitWith {
+                    [] spawn {
+                        sleep 0.15;
+                        execVM "rsc\MissionConvoyMapPick_exec.sqf";
+                    };
+                };
+                if (_mt == "Raid") exitWith {
+                    [] spawn {
+                        sleep 0.15;
+                        execVM "rsc\MissionRaidMapPick_exec.sqf";
+                    };
+                };
                 missionNamespace setVariable ["FAC_missionMapPick_execType", _mt];
                 [] spawn {
                     sleep 0.15;

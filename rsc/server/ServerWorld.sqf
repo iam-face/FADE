@@ -513,11 +513,39 @@ private _loadoutMapTex = "img\whiteboardLoadouts.jpg";
 FADE_loadoutBoxes = (missionNamespace getVariable ["FADE_loadoutBoxNames", ["LOADOUTBOX", "LOADOUTBOX_2"]]) apply { missionNamespace getVariable [_x, objNull] } select { !isNull _x };
 FADE_loadoutBox = FADE_loadoutBoxes param [0, objNull];
 FADE_loadoutBox2 = FADE_loadoutBoxes param [1, objNull];
+FADE_workbench = missionNamespace getVariable [missionNamespace getVariable ["FADE_workbenchEdenName", "objWorkbench"], objNull];
 FADE_bSpPoints = [["B_SP_1","B_SP_2","B_SP_3"]] call FADE_collectEdenNames;
+FADE_hqRecruitBoard = missionNamespace getVariable ["hqRecruitBoard", objNull];
 
 // ACE Arsenal: init each loadout box if ACE is loaded; FIRES terminal as virtual box for range kit
+FADE_isWorkbenchObject = {
+    params [["_obj", objNull, [objNull]]];
+    !isNull _obj && { !isNull FADE_workbench } && { _obj isEqualTo FADE_workbench }
+};
+
+// objWorkbench: full ACE catalog init, then strip everything except weapon attachments (optics, pointers, muzzles, bipods).
+FADE_initWorkbenchArsenal = {
+    params ["_box"];
+    [_box, true, true] call ace_arsenal_fnc_initBox;
+    [{
+        params ["_box"];
+        private _cargo = _box getVariable "ace_arsenal_virtualItems";
+        if (isNil "_cargo") exitWith {};
+        private _attachments = _cargo get 1;
+        private _keep = createHashMap;
+        { { _keep set [_x, true]; } forEach (keys (_attachments get _x)); } forEach [0, 1, 2, 3];
+        private _all = +([_box] call ace_arsenal_fnc_getVirtualItems);
+        private _remove = (keys _all) select { isNil { _keep get _x } };
+        if (_remove isNotEqualTo []) then { [_box, _remove, true] call ace_arsenal_fnc_removeVirtualItems; };
+    }, [_box]] call CBA_fnc_execNextFrame;
+};
+
 if (isClass (configFile >> "CfgPatches" >> "ace_arsenal")) then {
-    { if (!isNull _x) then { [_x, true, true] call ace_arsenal_fnc_initBox } } forEach FADE_loadoutBoxes;
+    {
+        if (!isNull _x) then {
+            if ([_x] call FADE_isWorkbenchObject) then { [_x] call FADE_initWorkbenchArsenal } else { [_x, true, true] call ace_arsenal_fnc_initBox };
+        };
+    } forEach FADE_loadoutBoxes;
     private _ft = missionNamespace getVariable ["FADE_firesTerminal", objNull];
     if (!isNull _ft) then { [_ft, true, true] call ace_arsenal_fnc_initBox };
 };
@@ -561,7 +589,8 @@ call FADE_civZonesFromLocations_build;
 0 spawn { execVM "rsc\AmbientCivilians.sqf"; };
 
 // Enemy AAA (dynamic around airborne player aircraft; Off/AAA/AAA+MANPADS)
-0 spawn { execVM "rsc\EnemyAAA.sqf"; };
+call compile preprocessFileLineNumbers "rsc\EnemyAAA.sqf";
+0 spawn { waitUntil { !isNil "FADE_aaa_applyLevel" }; call FADE_aaa_applyLevel; };
 
 // Map bounds for mission spawns (min/max X and Y); playable area 0..30000 on current terrain
 FADE_mapMin = 0;
@@ -572,7 +601,15 @@ FADE_troopInsertExtractMinDistFromBase = 2000;
 FADE_troopInsertPickupMinDist = 500;           // fresh squad link-up: min offset from transport
 FADE_troopInsertPickupMaxDist = 1000;          // fresh squad link-up: max offset from transport
 FADE_troopInsertLzMinDistFromPickup = 2500;    // insert LZ must be at least this far from link-up
+FADE_troopHeliSiteMaxDistFromCivZone = 250;    // insert/extract LZ/pickup must be within this of a civ zone centre
 FADE_troopInsertWaveTimeout = 620;             // max seconds to wait for slowest transport in a wave
+// Heli LZ search (FADE_findSafeLZ): loose rules — marker hints area; pilots pick the actual landing spot
+FADE_lzClearanceM = 5;                         // min clearance from buildings/walls (trees/bushes allowed closer)
+FADE_lzMaxGrad = 0.5;                        // max terrain slope (BIS findSafePos; higher = steeper OK)
+FADE_lzSearchRadiusDefault = 80;              // default search disc when caller omits radius
+FADE_lzLocalSearchM = 25;                    // findSafePos radius around each random attempt point
+FADE_lzMaxAttempts = 30;                      // placement attempts before giving up
+FADE_lzBlockObjectTypes = ["Building", "House", "Wall"]; // hard-block only structures, not vegetation
 
 // -----------------------------------------------------------------------------
 // Reusable: delete marker only if it exists (avoids "marker not found" in RPT).
@@ -589,7 +626,7 @@ FADE_retreatDebug = false;  // set true for systemChat messages (retreat trigger
 FADE_doEnemyRetreat = {
     params ["_groups", "_basePos"];
     if (_groups isEqualTo [] || { _basePos isEqualTo [] }) exitWith {};
-    private _skill = missionNamespace getVariable ["FADE_enemySkill", 0.2];
+    private _skill = missionNamespace getVariable ["FADE_enemySkill", 0.0];
     private _retreatChance = 1 - (_skill max 0 min 1);
     private _debug = missionNamespace getVariable ["FADE_retreatDebug", false];
     if (_debug) then {
@@ -877,41 +914,45 @@ FADE_counterAttack_filterClassesByMinCargo = {
 };
 
 // -----------------------------------------------------------------------------
-// QRF hint: red flare in the air above friendly players near _center (or above _center if none in radius). Server only.
-// Params: [_centerATL, _radiusM]
+// QRF hint: red flare high in the air near _center (optionally biased toward friendly players in radius). Server only.
+// Params: [_centerATL, _radiusM, _heightM (optional)]
+// Uses setPosASL — F_40mm_Red ignores createVehicle ATL and otherwise lands at ground level (feet).
 // -----------------------------------------------------------------------------
 FADE_qrfSpawnHintFlare = {
-    params [["_center", [0, 0, 0]], ["_radiusM", 500]];
+    params [["_center", [0, 0, 0]], ["_radiusM", 500], ["_heightM", 100]];
     if (!isServer) exitWith {};
     if (count _center < 2) exitWith {};
-    private _cx = _center select 0;
-    private _cy = _center select 1;
+    private _centerN = [_center] call FADE_normPos3;
     private _sf = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _acc = [0, 0, 0];
     private _n = 0;
     {
-        if (isPlayer _x && { alive _x } && { side _x == _sf } && { (_x distance2D _center) <= _radiusM }) then {
-            private _p = getPosATL _x;
+        if (isPlayer _x && { alive _x } && { side _x == _sf } && { (_x distance2D _centerN) <= _radiusM }) then {
+            private _p = getPosASL _x;
             if (count _p < 3) then { _p = [(_p select 0), (_p select 1), 0] };
             _acc = _acc vectorAdd _p;
             _n = _n + 1;
         };
     } forEach allPlayers;
-    private _gx = _cx;
-    private _gy = _cy;
-    private _gz = if (count _center > 2) then { _center select 2 } else { 0 };
+    private _gx = _centerN select 0;
+    private _gy = _centerN select 1;
+    private _groundRefAsl = getTerrainHeightASL [_gx, _gy];
     if (_n > 0) then {
         private _avg = _acc vectorMultiply (1 / _n);
         _gx = _avg select 0;
         _gy = _avg select 1;
-        _gz = (_avg select 2) max _gz;
+        _groundRefAsl = (_groundRefAsl max (_avg select 2));
     };
-    private _terrainAsl = getTerrainHeightASL [_gx, _gy];
-    private _flareAsl = [_gx, _gy, _terrainAsl + 95 + random 35];
-    private _flarePos = ASLToATL _flareAsl;
-    private _flare = createVehicle ["F_40mm_Red", _flarePos, [], 0, "FLY"];
+    private _flareAsl = [_gx, _gy, _groundRefAsl + (_heightM max 80) + random 25];
+    private _flare = createVehicle ["F_40mm_Red", [0, 0, 0], [], 0, "NONE"];
     if (isNull _flare) exitWith {};
-    _flare setVelocity [0, 0, -0.5];
+    _flare setPosASL _flareAsl;
+    _flare setVelocity [0, 0, 0];
+    [_flare, 50] spawn {
+        params ["_f", "_ttl"];
+        sleep _ttl;
+        if (!isNull _f) then { deleteVehicle _f };
+    };
 };
 missionNamespace setVariable ["FADE_qrfSpawnHintFlare", FADE_qrfSpawnHintFlare];
 
@@ -978,15 +1019,19 @@ FADE_counterAttackStart = {
         "_enemyUnits",
         "_allGroups",
         ["_detectionRadius", -1],
-        ["_skipDetectionWait", false]
+        ["_skipDetectionWait", false],
+        ["_firstDelayMin", -1],
+        ["_firstDelayMax", -1],
+        ["_ambientSingleWave", false]
     ];
     if (!isServer) exitWith {};
     if (count _objectivePos < 2 || { count _enemyUnits == 0 }) exitWith {};
     if (_detectionRadius <= 0) then {
         _detectionRadius = missionNamespace getVariable ["FADE_counterAttackDetectionRadius", 450];
     };
-    private _firstMin = missionNamespace getVariable ["FADE_counterAttackFirstDelayMin", 120];
-    private _firstMax = missionNamespace getVariable ["FADE_counterAttackFirstDelayMax", 360];
+    private _firstMin = if (_firstDelayMin >= 0) then { _firstDelayMin } else { missionNamespace getVariable ["FADE_counterAttackFirstDelayMin", 120] };
+    private _firstMax = if (_firstDelayMax >= 0) then { _firstDelayMax } else { missionNamespace getVariable ["FADE_counterAttackFirstDelayMax", 360] };
+    if (_firstMax < _firstMin) then { _firstMax = _firstMin };
     private _betMin = missionNamespace getVariable ["FADE_counterAttackBetweenMin", 540];
     private _betMax = missionNamespace getVariable ["FADE_counterAttackBetweenMax", 660];
     private _numTrucks = (missionNamespace getVariable ["FADE_counterAttackTruckCount", 3]) max 1;
@@ -994,12 +1039,16 @@ FADE_counterAttackStart = {
     private _applyGrp = missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}];
     if (_applyGrp isEqualTo {}) exitWith {};
 
-    [_taskId, _objectivePos, _basePos, _enemyUnits, _allGroups, _detectionRadius, _firstMin, _firstMax, _betMin, _betMax, _numTrucks, _applyGrp, _pollInterval, _skipDetectionWait] spawn {
+    [_taskId, _objectivePos, _basePos, _enemyUnits, _allGroups, _detectionRadius, _firstMin, _firstMax, _betMin, _betMax, _numTrucks, _applyGrp, _pollInterval, _skipDetectionWait, _ambientSingleWave] spawn {
         params [
             "_taskId", "_objectivePos", "_basePos", "_enemyUnits", "_allGroups", "_detectionRadius",
-            "_firstMin", "_firstMax", "_betMin", "_betMax", "_numTrucks", "_applyGrp", "_pollInterval", "_skipDetectionWait"
+            "_firstMin", "_firstMax", "_betMin", "_betMax", "_numTrucks", "_applyGrp", "_pollInterval", "_skipDetectionWait", "_ambientSingleWave"
         ];
-        private _taskDone = { (_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"] };
+        private _taskDone = if (_ambientSingleWave) then {
+            { false }
+        } else {
+            { (_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"] }
+        };
         private _playersInZone = {
             private _ok = false;
             {
@@ -1023,7 +1072,7 @@ FADE_counterAttackStart = {
         } else {
             if (call _taskDone) exitWith {};
         };
-        private _maxWaves = 1 + floor random 3;
+        private _maxWaves = if (_ambientSingleWave) then { 1 } else { 1 + floor random 3 };
         private _firstDelaySec = _firstMin + random (_firstMax - _firstMin);
         sleep _firstDelaySec;
 
@@ -1059,27 +1108,19 @@ FADE_counterAttackStart = {
                 private _st = (_stCandidates select _si) select 1;
                 _staging = _st;
                 if (count _staging < 3) then { _staging = [(_staging select 0), (_staging select 1), 0] };
-                private _roads = _staging nearRoads 450;
-                private _okRoads = _roads select { (getPosATL _x) distance2D _baseQ > _minBase };
-                if (count _okRoads > 0) then {
-                    _roadPos = getPosATL (selectRandom _okRoads);
+                private _roadHit = [_staging, 450, [], _minBase, _baseQ, _objectivePos] call FADE_findOpforGroundVehicleRoadSpawn;
+                if !(_roadHit isEqualTo []) then {
+                    _roadHit params ["_roadPos", "_dir"];
                     _stagingResolved = true;
-                } else {
-                    private _cand = [[_staging, 0, 400, 12, 1, 0.35, 0, [], _staging], _staging] call FADE_findSafePosArray;
-                    if ((_cand isEqualType []) && { count _cand >= 2 } && { _cand distance2D _baseQ > _minBase }) then {
-                        _roadPos = [(_cand select 0), (_cand select 1), (_cand param [2, 0])];
-                        _stagingResolved = true;
-                    };
                 };
                 _si = _si + 1;
             };
             if (!_stagingResolved) then {
                 private _dirFromBase = _baseQ getDir _objectivePos;
                 private _fallbackPos = _baseQ getPos [(_minBase + 50), _dirFromBase];
-                private _r2 = _fallbackPos nearRoads 250;
-                _r2 = _r2 select { (getPosATL _x) distance2D _baseQ > _minBase };
-                if (count _r2 > 0) then {
-                    _roadPos = getPosATL (selectRandom _r2);
+                private _roadHit2 = [_fallbackPos, 250, [], _minBase, _baseQ, _objectivePos] call FADE_findOpforGroundVehicleRoadSpawn;
+                if !(_roadHit2 isEqualTo []) then {
+                    _roadHit2 params ["_roadPos", "_dir"];
                     _staging = _fallbackPos;
                     _stagingResolved = true;
                 };
@@ -1180,80 +1221,58 @@ FADE_counterAttackStart = {
 
             private _cargoStagger = missionNamespace getVariable ["FADE_counterAttackCargoStaggerSec", 0.35];
             private _spawnedVehs = [];
-            private _findGap = {
-                params ["_desired", "_vehs", "_fallback"];
-                private _fb = _fallback;
-                if (!(_fb isEqualType []) || { count _fb < 2 }) then {
-                    _fb = [(_objectivePos select 0), (_objectivePos select 1), 0];
-                };
-                if (count _fb < 3) then { _fb = [(_fb select 0), (_fb select 1), 0] };
-                private _des = _desired;
-                if (!(_des isEqualType []) || { count _des < 2 }) then { _des = +_fb };
-                if (count _des < 3) then { _des = [(_des select 0), (_des select 1), 0] };
-                private _best = [];
-                for "_try" from 0 to 8 do {
-                    private _cand = [[_des, 0, 18, 8, 1, 0.35, 0, [], _fb], _fb] call FADE_findSafePosArray;
-                    if (!(_cand isEqualType []) || { count _cand < 2 }) then { _cand = +_fb };
-                    if (count _cand < 3) then { _cand = [(_cand select 0), (_cand select 1), 0] };
-                    private _bad = false;
-                    { if (!isNull _x && { alive _x } && { (_x distance2D _cand) < 14 }) exitWith { _bad = true } } forEach _vehs;
-                    if (!_bad) exitWith { _best = _cand };
-                };
-                if (!(_best isEqualType []) || { count _best < 2 }) then { _best = +_fb };
-                if (count _best < 3) then { _best = [(_best select 0), (_best select 1), 0] };
-                _best
-            };
+            private _roadHit = [];
+            private _vClass = "";
+            private _anchor = [0, 0, 0];
+            private _spawnPos = [0, 0, 0];
+            private _spawnDir = 0;
+            private _vehGrp = grpNull;
+            private _veh = objNull;
+            private _driver = objNull;
+            private _g = objNull;
+            private _wpM = objNull;
+            private _wpS = objNull;
+            private _prev = objNull;
             for "_vi" from 0 to (_numTrucks - 1) do {
                 if (_vi > 0) then { sleep 8 };
-                private _vClass = selectRandom _vehPick;
-                private _anchor = if (count _spawnedVehs > 0) then {
-                    getPosATL (_spawnedVehs select ((count _spawnedVehs) - 1))
-                } else {
-                    _roadPos
-                };
-                private _desired = if (_vi == 0) then {
+                _vClass = selectRandom _vehPick;
+                _anchor = if (_vi == 0) then {
                     _roadPos
                 } else {
-                    [
-                        (_anchor select 0) - (sin _dir) * 12,
-                        (_anchor select 1) - (cos _dir) * 12,
-                        0
-                    ]
+                    _prev = _spawnedVehs select ((count _spawnedVehs) - 1);
+                    if (isNull _prev) then { _roadPos } else { (getPosATL _prev) getPos [14, _dir + 180] }
                 };
-                if ((_desired isEqualType []) && { count _desired >= 2 } && { count _desired < 3 }) then {
-                    _desired = [(_desired select 0), (_desired select 1), 0];
-                };
-                private _spawnPos = [_desired, _spawnedVehs, _roadPos] call _findGap;
-                if (_spawnPos distance2D _baseQ <= _minBase) then {
-                    _spawnPos = [[_roadPos, 0, 35, 10, 1, 0.35, 0, [], _roadPos], _roadPos] call FADE_findSafePosArray;
-                    if (!(_spawnPos isEqualType []) || { count _spawnPos < 2 } || { _spawnPos distance2D _baseQ <= _minBase }) then { continue };
-                };
-                private _vehGrp = createGroup _sideEnemy;
-                private _veh = createVehicle [_vClass, _spawnPos, [], 0, "NONE"];
+                _roadHit = [_anchor, 450, _spawnedVehs, _minBase, _baseQ, _tgtMove] call FADE_findOpforGroundVehicleRoadSpawn;
+                if (_roadHit isEqualTo []) then { continue };
+                _roadHit params ["_spawnPos", "_spawnDir"];
+                if (_spawnPos distance2D _baseQ <= _minBase) then { continue };
+                _vehGrp = createGroup _sideEnemy;
+                _veh = createVehicle [_vClass, _spawnPos, [], 0, "NONE"];
                 if (isNull _veh) then { deleteGroup _vehGrp; continue };
                 _veh setPosATL _spawnPos;
-                _veh setDir _dir;
+                _veh setDir _spawnDir;
+                _veh setVectorUp surfaceNormal _spawnPos;
                 _veh setVelocity [(sin _dir) * 2, (cos _dir) * 2, 0];
                 _veh engineOn true;
                 _spawnedVehs pushBack _veh;
                 [_taskId, _veh] call FADE_missionEnt_registerVehicle;
-                private _driver = _vehGrp createUnit [selectRandom _enemyUnits, _spawnPos, [], 0, "NONE"];
+                _driver = _vehGrp createUnit [selectRandom _enemyUnits, _spawnPos, [], 0, "NONE"];
                 if (!isNull _driver) then {
                     _driver moveInDriver _veh;
                     _vehGrp selectLeader _driver;
                 };
                 if (_veh emptyPositions "gunner" > 0) then {
-                    private _g = _vehGrp createUnit [selectRandom _enemyUnits, _spawnPos, [], 0, "NONE"];
+                    _g = _vehGrp createUnit [selectRandom _enemyUnits, _spawnPos, [], 0, "NONE"];
                     if (!isNull _g) then { _g moveInGunner _veh };
                 };
                 [_vehGrp] call _applyGrp;
                 _vehGrp setBehaviour "AWARE";
                 _vehGrp setCombatMode "RED";
                 _vehGrp setSpeedMode "NORMAL";
-                private _wpM = _vehGrp addWaypoint [_tgtMove, 25];
+                _wpM = _vehGrp addWaypoint [_tgtMove, 25];
                 _wpM setWaypointType "MOVE";
                 _wpM setWaypointSpeed "NORMAL";
-                private _wpS = _vehGrp addWaypoint [_tgtMove, 0];
+                _wpS = _vehGrp addWaypoint [_tgtMove, 0];
                 _wpS setWaypointType "SAD";
                 _allGroups pushBack _vehGrp;
                 if (_huntQrf) then {
@@ -1734,29 +1753,33 @@ FADE_fnc_assetZonesNearMapClick = {
     }, "ASCEND"] call BIS_fnc_sortBy
 };
 
-// Find a safe LZ for helicopter landing: no water, no buildings, no trees within radius
-// Params: [_center] - center position to search around
+// Find a loose heli LZ hint near _center: dry land, moderate slope, no building/wall within clearance.
+// Pilots are expected to choose the actual landing site nearby — not a pre-cleared pad.
+// Params: [_center, _searchRadius] — search disc (default FADE_lzSearchRadiusDefault); each attempt jitters randomly within it.
 // Returns: position array or [] if none found
 FADE_findSafeLZ = {
-    params ["_center"];
+    params ["_center", ["_searchRadius", -1]];
     if (count _center < 2) exitWith { [] };
-    private _lzRadius = 25;   // min distance from objects (trees, buildings)
-    private _maxGrad = 0.3;   // flatter terrain for landing
-    private _attempt = 0;
+    if (_searchRadius < 0) then {
+        _searchRadius = missionNamespace getVariable ["FADE_lzSearchRadiusDefault", 80];
+    };
+    private _clearance = missionNamespace getVariable ["FADE_lzClearanceM", 5];
+    private _maxGrad = missionNamespace getVariable ["FADE_lzMaxGrad", 0.5];
+    private _maxAttempts = missionNamespace getVariable ["FADE_lzMaxAttempts", 30];
+    private _localSearch = missionNamespace getVariable ["FADE_lzLocalSearchM", 25];
+    private _objTypes = +(missionNamespace getVariable ["FADE_lzBlockObjectTypes", ["Building", "House", "Wall"]]);
     private _result = [];
-    while { _attempt < 15 && { count _result == 0 } } do {
-        _attempt = _attempt + 1;
-        private _safe = [[_center, 0, 120, _lzRadius, 1, _maxGrad, 0, [], []], []] call FADE_findSafePosArray;
-        if (_safe isEqualType [] && { count _safe >= 2 }) then {
-            if (!(surfaceIsWater _safe)) then {
-                private _terrainObstacles = nearestTerrainObjects [_safe, ["TREE", "SMALL TREE", "BUSH", "BUILDING", "HOUSE", "WALL"], _lzRadius, false];
-                private _vehObstacles = nearestObjects [_safe, ["Building", "House", "Wall"], _lzRadius];
-                private _blocking = (_terrainObstacles + _vehObstacles) select { !isNull _x };
-                if (count _blocking == 0) then {
-                    _result = _safe;
-                };
-            };
+    for "_attempt" from 1 to _maxAttempts do {
+        private _tryCenter = if (_searchRadius < 1) then {
+            +_center
+        } else {
+            [_center, random _searchRadius, random 360] call BIS_fnc_relPos
         };
+        private _safe = [[_tryCenter, 0, _localSearch, _clearance, 0, _maxGrad, 0, [], _tryCenter], _tryCenter] call FADE_findLandPosWithArgs;
+        if (count _safe < 2 || { surfaceIsWater _safe }) then { continue };
+        private _blocking = nearestObjects [_safe, _objTypes, _clearance];
+        if (({ !isNull _x } count _blocking) > 0) then { continue };
+        _result = _safe;
     };
     _result
 };

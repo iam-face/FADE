@@ -6,11 +6,24 @@
 // FADE_cqbDrillActive + FADE_cqbLastResult are publicVariable'd from server.
 // =============================================================================
 
+FAC_cqbGui_tabSetupIdcs = [60522, 60523, 60524, 60525, 60526, 60510, 60511, 60515, 60516, 60517, 60512, 60513, 60508, 60504];
+FAC_cqbGui_tabInfoIdcs = [60507];
+
+FAC_cqbGui_syncTabs = {
+    private _d = findDisplay 60500;
+    if (isNull _d) exitWith {};
+    private _tab = missionNamespace getVariable ["FAC_cqbGui_tab", "setup"];
+    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow (_tab == "setup") } } forEach FAC_cqbGui_tabSetupIdcs;
+    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow (_tab == "info") } } forEach FAC_cqbGui_tabInfoIdcs;
+    [_d displayCtrl 60520, _tab == "setup"] call FAC_theme_applyTab;
+    [_d displayCtrl 60521, _tab == "info"] call FAC_theme_applyTab;
+};
+
 FAC_cqbGui_fnc = {
     params ["_action", "_params"];
 
-    private _btnSel = [0.2, 0.4, 0.62, 1];
-    private _btnIdle = [0.10, 0.12, 0.16, 1];
+    private _btnSel = FAC_theme_tabActive;
+    private _btnIdle = FAC_theme_tabIdle;
 
     private _fncRefreshThreat = {
         private _display = findDisplay 60500;
@@ -54,7 +67,7 @@ FAC_cqbGui_fnc = {
             "Anyone can end an active drill from this board."
         ];
         private _body = "";
-        { _body = _body + format ["<t color='#d2e8dc'>%1</t><br/>", _x] } forEach _lines;
+        { _body = _body + format ["<t color='%1'>%2</t><br/>", FAC_theme_htmlBody, _x] } forEach _lines;
         _ctrl ctrlSetStructuredText parseText _body;
     };
 
@@ -84,7 +97,19 @@ FAC_cqbGui_fnc = {
             [] call _fncRefreshThreat;
             [] call _fncRefreshCiv;
             [] call _fncRefreshDensity;
+            missionNamespace setVariable ["FAC_cqbGui_tab", "setup"];
+            [] call FAC_cqbGui_syncTabs;
             ["updateDrillButton", []] call FAC_cqbGui_fnc;
+        };
+        case "setTab": {
+            _params params [["_tab", "setup"]];
+            if !(_tab in ["setup", "info"]) exitWith {};
+            missionNamespace setVariable ["FAC_cqbGui_tab", _tab];
+            [] call FAC_cqbGui_syncTabs;
+            if (_tab == "info") then {
+                private _d = findDisplay 60500;
+                if (!isNull _d) then { [_d] call _fncSetInfoStructured };
+            };
         };
         case "headerRefresh": {
             _display = findDisplay 60500;

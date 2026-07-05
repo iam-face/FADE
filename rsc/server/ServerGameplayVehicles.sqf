@@ -1,6 +1,17 @@
 // =============================================================================
-// ServerGameplayVehicles.sqf � extracted from ServerGameplay (compile via ServerGameplay.sqf)
+// ServerGameplayVehicles.sqf — extracted from ServerGameplay (compile via ServerGameplay.sqf)
 // =============================================================================
+
+// Client Vehicle GUI sends netId strings (reliable MP); legacy object refs still accepted.
+FADE_fnc_vehicleFromRpcParam = {
+    params ["_vehParam"];
+    if (_vehParam isEqualType objNull) exitWith { _vehParam };
+    if !(_vehParam isEqualType "") exitWith { objNull };
+    if (_vehParam == "") exitWith { objNull };
+    private _veh = objectFromNetId _vehParam;
+    if (isNull _veh) then { _veh = _vehParam call BIS_fnc_objectFromNetId };
+    _veh
+};
 
 // -----------------------------------------------------------------------------
 // Spawn helicopter (server). Called via remoteExec from client Vehicle GUI.
@@ -78,7 +89,9 @@ FADE_spawnHeli = {
 // Despawn any vehicle (server)
 // -----------------------------------------------------------------------------
 FADE_despawnVehicle = {
+    if (!isServer) exitWith {};
     params ["_veh", "_player"];
+    _veh = [_veh] call FADE_fnc_vehicleFromRpcParam;
     if ([_player, "FAC_playerCanUseVehicleGui", "Vehicle GUI access denied by lobby settings."] call FAC_lobbyParams_serverDenyUnless) exitWith {};
     if (isNull _veh) exitWith { ["INVALID VEHICLE."] remoteExec ["systemChat", _player] };
     private _dist = (getPosATL _veh) distance FADE_basePos;
@@ -161,7 +174,9 @@ FADE_serviceVehicle = {
 
 // Vehicle GUI: repair only, refuel only, or rearm only (same distance rules as FADE_serviceVehicle)
 FADE_serviceVehiclePart = {
+    if (!isServer) exitWith {};
     params ["_veh", "_player", ["_part", ""], ["_ratio", -1], ["_magClass", ""], ["_pylonIdx", -1]];
+    _veh = [_veh] call FADE_fnc_vehicleFromRpcParam;
     if ([_player, "FAC_playerCanUseVehicleGui", "Vehicle GUI access denied by lobby settings."] call FAC_lobbyParams_serverDenyUnless) exitWith {};
     if (isNull _veh) exitWith { ["INVALID VEHICLE."] remoteExec ["systemChat", _player] };
     if (!alive _veh) exitWith { ["VEHICLE DESTROYED."] remoteExec ["systemChat", _player] };
@@ -204,19 +219,21 @@ FADE_serviceVehiclePart = {
             };
         };
         case "rearm": {
-            if (_ratio >= 0 && {_pylonIdx >= 0}) then {
+            if (_ratio >= 0 && {_pylonIdx >= 1}) then {
                 if (_magClass == "") then {
                     private _pm = getPylonMagazines _veh;
-                    if (_pylonIdx < count _pm) then { _magClass = _pm select _pylonIdx };
+                    private _arrIdx = _pylonIdx - 1;
+                    if (_arrIdx >= 0 && {_arrIdx < count _pm}) then { _magClass = _pm select _arrIdx };
                 };
                 private _cfgMag = configFile >> "CfgMagazines" >> _magClass;
                 private _max = if (isClass _cfgMag) then { getNumber (_cfgMag >> "count") } else { 0 };
                 if (_max <= 0) then { _max = _veh ammoOnPylon _pylonIdx };
+                if (!(_max isEqualType 0)) then { _max = 1 };
                 if (_max <= 0) then { _max = 1 };
                 private _rounds = round (_max * _ratio);
                 _rounds = (_rounds max 0) min _max;
                 _veh setAmmoOnPylon [_pylonIdx, _rounds];
-                [format ["PYLON %1 AMMO SET (%2 / %3).", _pylonIdx + 1, _rounds, _max]] remoteExec ["systemChat", _player];
+                [format ["PYLON %1 AMMO SET (%2 / %3).", _pylonIdx, _rounds, _max]] remoteExec ["systemChat", _player];
             } else {
                 if (_ratio >= 0 && {_magClass isEqualType ""} && {_magClass != ""}) then {
                     private _didAny = false;
@@ -342,7 +359,9 @@ FADE_spawnLandVehicle = {
 // Duplicate a vehicle at base: fresh spawn (full fuel/damage default) via same rules as Vehicle GUI spawn.
 // -----------------------------------------------------------------------------
 FADE_duplicateVehicleAtBase = {
+    if (!isServer) exitWith {};
     params ["_src", "_player"];
+    _src = [_src] call FADE_fnc_vehicleFromRpcParam;
     if ([_player, "FAC_playerCanUseVehicleGui", "Vehicle GUI access denied by lobby settings."] call FAC_lobbyParams_serverDenyUnless) exitWith {};
     if (isNull _src) exitWith { ["INVALID VEHICLE."] remoteExec ["systemChat", _player] };
     if (!alive _src) exitWith { ["CANNOT DUPLICATE A DESTROYED VEHICLE."] remoteExec ["systemChat", _player] };

@@ -1,58 +1,28 @@
 // AUTO-EXTRACTED from Missions.sqf  -  run via FADE_runMission_* (compile once)
 if (!isServer) exitWith {};
 FADE_runMission_EscapeEvasion = {
-    private _missionType = missionNamespace getVariable ["FADE_missionRun_missionType", ""];
-    private _destPos = missionNamespace getVariable ["FADE_missionRun_destPos", [0,0,0]];
-    private _player = missionNamespace getVariable ["FADE_missionRun_player", objNull];
-    private _evadeePlayers = missionNamespace getVariable ["FADE_missionRun_evadeePlayers", []];
-    private _fromMapClick = missionNamespace getVariable ["FADE_missionRun_fromMapClick", false];
-    private _mapAnchor = missionNamespace getVariable ["FADE_missionRun_mapAnchor", []];
-    private _friendlyUnits = missionNamespace getVariable ["FADE_missionRun_friendlyUnits", []];
-    private _enemyUnits = missionNamespace getVariable ["FADE_missionRun_enemyUnits", []];
-    private _sideFriendly = missionNamespace getVariable ["FADE_missionRun_sideFriendly", west];
-    private _sideEnemy = missionNamespace getVariable ["FADE_missionRun_sideEnemy", east];
-    private _markerFriendly = missionNamespace getVariable ["FADE_missionRun_markerFriendly", "ColorWEST"];
-    private _markerEnemy = missionNamespace getVariable ["FADE_missionRun_markerEnemy", "ColorEAST"];
-    private _dryPos = missionNamespace getVariable ["FADE_surfaceIsDry", {}];
-    private _taskId = missionNamespace getVariable ["FADE_missionRun_taskId", ""];
-    private _operationName = missionNamespace getVariable ["FADE_missionRun_operationName", ""];
-    private _operationNameUpper = missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""];
-    private _briefGuiTail = missionNamespace getVariable ["FADE_missionRun_briefGuiTail", ""];
-    private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", {}];
-    private _enemyFactionName = missionNamespace getVariable ["FADE_missionRun_enemyFactionName", ""];
-    private _zeroAlphaDisplayName = missionNamespace getVariable ["FADE_missionRun_zeroAlphaDisplayName", ""];
-    private _isGlobalMission = missionNamespace getVariable ["FADE_missionRun_isGlobalMission", false];
-    private _basePos = missionNamespace getVariable ["FADE_missionRun_basePos", [0,0,0]];
-    private _unitCount = missionNamespace getVariable ["FADE_missionRun_unitCount", 6];
-    private _unitClasses = missionNamespace getVariable ["FADE_missionRun_unitClasses", []];
-    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {}];
-    private _fnc_createMissionTask = missionNamespace getVariable ["FADE_mission_createTask", {}];
-    private _showAssignedHint = missionNamespace getVariable ["FADE_mission_showAssignedHint", {}];
-    private _defaultSituationTaskText = missionNamespace getVariable ["FADE_missionRun_defaultSituationTaskText", ""];
-    private _defaultExecutionTaskText = missionNamespace getVariable ["FADE_missionRun_defaultExecutionTaskText", ""];
-    private _defaultAdminTaskText = missionNamespace getVariable ["FADE_missionRun_defaultAdminTaskText", ""];
-    private _defaultCommandTaskText = missionNamespace getVariable ["FADE_missionRun_defaultCommandTaskText", ""];
-    private _defaultSituationHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHtml", ""];
-    private _defaultSituationHintHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHintHtml", ""];
-    private _friendlyPlayerCount = missionNamespace getVariable ["FADE_missionRun_friendlyPlayerCount", 0];
-    private _friendlyFactionName = missionNamespace getVariable ["FADE_missionRun_friendlyFactionName", ""];
-    private _estimatedOpforCount = missionNamespace getVariable ["FADE_missionRun_estimatedOpforCount", 0];
-    private _opforCountFactor = missionNamespace getVariable ["FADE_missionRun_opforCountFactor", 1];
-    private _intelFormatter = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
-    private _topographyGrid = missionNamespace getVariable ["FADE_missionRun_topographyGrid", "UNKNOWN"];
-    private _topographyArea = missionNamespace getVariable ["FADE_missionRun_topographyArea", ""];
+    (call FADE_missionRun_getContext) params [
+        "_missionType", "_destPos", "_player", "_evadeePlayers", "_fromMapClick", "_mapAnchor",
+        "_friendlyUnits", "_enemyUnits", "_sideFriendly", "_sideEnemy", "_markerFriendly", "_markerEnemy",
+        "_dryPos", "_taskId", "_operationName", "_operationNameUpper", "_briefGuiTail",
+        "_mkrJitter", "_enemyFactionName", "_zeroAlphaDisplayName", "_isGlobalMission", "_basePos",
+        "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
+        "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
+        "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+    ];
     private _enemyUnitsEe = +_enemyUnits;
     _enemyUnitsEe = [_enemyUnitsEe] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsEe == 0) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No enemy units configured.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "No enemy units configured."] call FADE_missionErrorHint;
     };
     private _zoneCenter = +_destPos;
     if (count _zoneCenter < 3) then { _zoneCenter = [(_zoneCenter select 0), (_zoneCenter select 1), 0] };
     private _applyGrpEe = missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}];
     if (_applyGrpEe isEqualTo {}) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Scenario apply function missing.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "Scenario apply function missing."] call FADE_missionErrorHint;
     };
     private _allGroupsEe = [];
     private _eeVgFireObjs = [];
@@ -196,7 +166,7 @@ FADE_runMission_EscapeEvasion = {
     private _eePendingMen = if (!(_eeVgPend isEqualTo {})) then { [_misEe] call _eeVgPend } else { 0 };
     if (count _allGroupsEe == 0 && { _eePendingMen == 0 }) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not spawn Escape &amp; Evasion OPFOR.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "Could not spawn Escape &amp; Evasion OPFOR."] call FADE_missionErrorHint;
     };
 
     missionNamespace setVariable ["FADE_dynRb_escapeZone", +_zoneCenter];
@@ -326,7 +296,7 @@ FADE_runMission_EscapeEvasion = {
 
     if (count _allGroupsEe == 0) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Escape &amp; Evasion: no OPFOR left after spawn proximity cull.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "Escape &amp; Evasion: no OPFOR left after spawn proximity cull."] call FADE_missionErrorHint;
     };
 
     [_allGroupsEe, _basePos] call FADE_registerEnemyRetreat;
@@ -338,29 +308,16 @@ FADE_runMission_EscapeEvasion = {
     missionNamespace setVariable ["FADE_eeSearchHeli_" + _taskId, []];
 
     private _sfEe = missionNamespace getVariable ["FADE_sideFriendly", west];
-    private _taskBuilderEe = missionNamespace getVariable ["FADE_buildMissionTaskSmeacText", {}];
-    private _missionTxtEe = "Evadees: survive and return to base (within 1000 m). GPS removed. No task markers  -  use comms. Any evadee KIA fails the mission. OPFOR patrols the town area (SAFE / limited speed) and sends truck QRF after contact (10 min cooldown). When any evadee has moved far enough from the hostile area, OPFOR may launch a helicopter to search the town area (orbit only  -  not tasked on your position); long gap between sorties.";
-    private _taskDescFull = if (_taskBuilderEe isEqualTo {}) then {
-        _missionTxtEe
-    } else {
-        [
-            _missionTxtEe,
-            _basePos,
-            _defaultSituationTaskText,
-            _defaultExecutionTaskText,
-            _defaultAdminTaskText,
-            _defaultCommandTaskText,
-            true
-        ] call _taskBuilderEe
-    };
-    [_sfEe, _taskId, [_taskDescFull, "Escape & Evasion", ""], objNull, "CREATED", 1, true, "run", false] call BIS_fnc_taskCreate;
+    private _eeMissionTxt = "Separated personnel must survive and return to friendly base. Any evadee KIA fails the mission.";
+    private _eeExecTxt = "<t align='left' color='#C0C0C0'>GPS and map markers denied. Navigate by terrain; coordinate on assigned radio channels. Reach extraction within 1000 m of base.</t>";
+    [_player, _taskId, _eeMissionTxt, "Escape & Evasion", _zoneCenter, "run", "", _eeExecTxt, true] call _fnc_createMissionTask;
 
     private _eeGrid = if (count _zoneCenter >= 2) then { mapGridPosition _zoneCenter } else { "N/A" };
-    private _briefEe = format ["ESCAPE & EVASION%1%1Denied area (approx.): Grid %2%1%1Separated personnel must evade and reach extraction. No GPS  -  use radio and navigation. Rescue coordination, win conditions, and enemy behaviour are detailed on the task.", toString [10], _eeGrid] + _briefGuiTail;
+    private _briefEe = format ["ESCAPE & EVASION%1%1Denied area (approx.): Grid %2%1%1Separated personnel must evade and reach extraction. No GPS — use radio and navigation. Extraction coordination and ROE are on task.", toString [10], _eeGrid] + _briefGuiTail;
     if (!isNull _player) then {
         _player setVariable ["FADE_myMissionBrief", _briefEe, true];
     };
-    [format ["<t color='#FFFFFF'>Evadees teleported (dispersed). No grid given. RTB 1000 m / all alive.</t>"]] call _showAssignedHint;
+    [format ["<t color='#FFFFFF'>Evadees dispersed in the denied area. No grid given — navigate by terrain and comms. RTB within 1000 m; all must survive.</t>"]] call _showAssignedHint;
     [_player, "Escape & Evasion"] call FADE_notifyOthersMissionStarted;
 
     // OPFOR search helicopter: faction heli (or FADE_opforAir fallback list), orbit waypoints on zone geometry only  -  never player positions.
@@ -488,21 +445,9 @@ FADE_runMission_EscapeEvasion = {
         params ["_tid", "_detP", "_zc", "_baseQ", "_enemyUnitsLoc", "_applyLoc", "_sideEn"];
         [_tid] call _eeDeleteQrf;
         private _staging = _zc getPos [2200 + random 1800, random 360];
-        private _roads = _staging nearRoads 500;
-        private _roadsDry = _roads select { [getPosATL _x] call _dryPos };
-        private _roadPos = [];
-        if (count _roadsDry > 0) then {
-            _roadPos = getPosATL (selectRandom _roadsDry);
-        } else {
-            if (count _roads > 0) then {
-                _roadPos = getPosATL (selectRandom _roads);
-            };
-            if (count _roadPos < 2) then {
-                _roadPos = [[_staging, 0, 400, 15, 1, 0.35, 0, [], _staging], _staging] call FADE_findSafePosArray;
-            };
-        };
-        if (count _roadPos < 2) exitWith {};
-        if (count _roadPos < 3) then { _roadPos = [(_roadPos select 0), (_roadPos select 1), 0] };
+        private _roadHit = [_staging, 500, [], -1, [], getPosATL _detP] call FADE_findOpforGroundVehicleRoadSpawn;
+        if (_roadHit isEqualTo []) exitWith {};
+        _roadHit params ["_roadPos", "_dir"];
         if !([_roadPos] call _dryPos) exitWith {};
         private _flEe = missionNamespace getVariable ["FADE_qrfSpawnHintFlare", {}];
         if (!isNull _detP && { !(_flEe isEqualTo {}) }) then { [getPosATL _detP, 220] call _flEe };
@@ -525,12 +470,12 @@ FADE_runMission_EscapeEvasion = {
         };
         if (count _vehPick == 0) exitWith {};
         private _vClass = selectRandom _vehPick;
-        private _dir = [_roadPos, getPosATL _detP] call BIS_fnc_dirTo;
         private _vehGrp = createGroup _sideEn;
         private _veh = createVehicle [_vClass, _roadPos, [], 0, "NONE"];
         if (isNull _veh) exitWith { deleteGroup _vehGrp };
         _veh setPosATL _roadPos;
         _veh setDir _dir;
+        _veh setVectorUp surfaceNormal _roadPos;
         _veh engineOn true;
         private _driver = _vehGrp createUnit [selectRandom _enemyUnitsLoc, _roadPos, [], 0, "NONE"];
         if (!isNull _driver) then {
@@ -697,9 +642,8 @@ FADE_runMission_EscapeEvasion = {
         if ((_taskId call BIS_fnc_taskState) == "ASSIGNED" && { missionNamespace getVariable ["FADE_eeAborted_" + _taskId, false] }) then {
             [_taskId, "CANCELED"] call BIS_fnc_taskSetState;
         };
-        [_taskId, "", false] call FADE_cleanupMissionEntities;
         { if (!isNull _x) then { _x setVariable ["FADE_eeHeliAnchor", nil]; } } forEach _evadeePlayers;
-        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
+        [_taskId, "", _player, 0] call FADE_mission_completeCleanup;
     };
 };
 

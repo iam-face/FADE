@@ -124,6 +124,11 @@ FAC_jukebox_serverPlay = {
 
     if (_song != "") then {
         private _cur = (missionNamespace getVariable ["FAC_jukebox_activeSources", []]) select { (_x select 0) == _sourceKey };
+        private _sameSong = _cur select { (_x select 1) == _song };
+        if (count _sameSong > 0) exitWith {
+            [_sourceKey, _song, _vol, _dist] call FAC_jukebox_fnc_setActiveSourceSong;
+            [format ["SKIP: already playing %1 @ %2", _song, _sourceKey], _requester] call FAC_jukebox_serverDbg;
+        };
         private _wasPlaying = _cur select { (_x select 1) != "" };
         if (count _wasPlaying > 0) then {
             [_sourceKey, ""] call FAC_jukebox_fnc_setActiveSourceSong;

@@ -2,15 +2,15 @@
 // TroopInsertPickGui.sqf  -  Troop Insert / Extract: participants + wave slider (60002 overlay)
 // =============================================================================
 if (hasInterface) then {
-    FAC_tiPick_clr_panel = [0.05, 0.06, 0.09, 0.78];
-    FAC_tiPick_clr_list = [0.06, 0.08, 0.1, 0.95];
-    FAC_tiPick_clr_track = [0.06, 0.08, 0.1, 0.95];
-    FAC_tiPick_clr_hdr = [0.85, 0.9, 1, 1];
-    FAC_tiPick_clr_val = [0.75, 0.85, 1, 1];
-    FAC_tiPick_clr_btn = [0.18, 0.32, 0.48, 1];
-    FAC_tiPick_clr_btnAct = [0.22, 0.48, 0.78, 1];
-    FAC_tiPick_clr_start = [0.2, 0.45, 0.5, 1];
-    FAC_tiPick_clr_cancel = [0.55, 0.12, 0.12, 1];
+    FAC_tiPick_clr_panel = FAC_theme_bgMain;
+    FAC_tiPick_clr_list = FAC_theme_bgList;
+    FAC_tiPick_clr_track = FAC_theme_bgList;
+    FAC_tiPick_clr_hdr = FAC_theme_textHdr;
+    FAC_tiPick_clr_val = FAC_theme_textMuted;
+    FAC_tiPick_clr_btn = FAC_theme_btnNeutral;
+    FAC_tiPick_clr_btnAct = FAC_theme_tabActive;
+    FAC_tiPick_clr_start = FAC_theme_btnPrimary;
+    FAC_tiPick_clr_cancel = FAC_theme_btnDanger;
 
     FAC_troopInsertPickGui_fnc_destroyOverlay = {
         ["FAC_tiPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
@@ -53,14 +53,14 @@ if (hasInterface) then {
 
                 private _bg = _display ctrlCreate ["RscText", 60310];
                 _bg ctrlSetPosition [0.02, 0.09, 0.96, 0.78];
-                _bg ctrlSetBackgroundColor [0.06, 0.07, 0.1, 0.96];
+                _bg ctrlSetBackgroundColor FAC_theme_bgOverlay;
                 _bg ctrlCommit 0;
                 _controls pushBack _bg;
 
                 private _title = _display ctrlCreate ["RscText", 60311];
                 _title ctrlSetPosition [0.02, 0.09, 0.96, 0.048];
                 _title ctrlSetText format ["%1  -  PARTICIPATING TRANSPORTS", _titleBar];
-                _title ctrlSetBackgroundColor [0.15, 0.28, 0.42, 1];
+                _title ctrlSetBackgroundColor FAC_theme_bgOverlayTitle;
                 _title ctrlCommit 0;
                 _controls pushBack _title;
 
@@ -187,7 +187,7 @@ if (hasInterface) then {
 
                 private _ba = _display ctrlCreate ["RscButton", 60320];
                 _ba ctrlSetPosition [0.435, 0.48, 0.13, 0.042];
-                _ba ctrlSetText "Add  >>";
+                _ba ctrlSetText "Add →";
                 _ba ctrlSetBackgroundColor FAC_tiPick_clr_btnAct;
                 _ba ctrlCommit 0;
                 _ba ctrlAddEventHandler ["ButtonClick", { ["add", []] call (missionNamespace getVariable ["FAC_troopInsertPickGui_fnc", {}]) }];
@@ -195,7 +195,7 @@ if (hasInterface) then {
 
                 private _br = _display ctrlCreate ["RscButton", 60321];
                 _br ctrlSetPosition [0.435, 0.54, 0.13, 0.042];
-                _br ctrlSetText "<<  Remove";
+                _br ctrlSetText "← Remove";
                 _br ctrlSetBackgroundColor FAC_tiPick_clr_btn;
                 _br ctrlCommit 0;
                 _br ctrlAddEventHandler ["ButtonClick", { ["remove", []] call (missionNamespace getVariable ["FAC_troopInsertPickGui_fnc", {}]) }];
@@ -209,7 +209,7 @@ if (hasInterface) then {
 
                 private _footer = _display ctrlCreate ["RscText", 60336];
                 _footer ctrlSetPosition [0.04, 0.752, 0.92, 0.052];
-                _footer ctrlSetBackgroundColor [0.04, 0.05, 0.08, 0.85];
+                _footer ctrlSetBackgroundColor FAC_theme_bgOverlay;
                 _footer ctrlCommit 0;
                 _controls pushBack _footer;
 
@@ -223,7 +223,7 @@ if (hasInterface) then {
 
                 private _bs = _display ctrlCreate ["RscButton", 60322];
                 _bs ctrlSetPosition [0.76, 0.758, 0.18, 0.042];
-                _bs ctrlSetText "START";
+                _bs ctrlSetText "Start";
                 _bs ctrlSetBackgroundColor FAC_tiPick_clr_start;
                 _bs ctrlCommit 0;
                 _bs ctrlAddEventHandler ["ButtonClick", { ["confirm", []] call (missionNamespace getVariable ["FAC_troopInsertPickGui_fnc", {}]) }];

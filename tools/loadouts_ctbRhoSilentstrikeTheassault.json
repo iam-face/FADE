@@ -1,0 +1,27 @@
+[
+  {
+    "role": "Tanker - VC",
+    "description": "Tanker - VC",
+    "loadout": "[[[\"SPE_M3_GreaseGun\",\"\",\"\",\"\",[\"SPE_30Rnd_M3_GreaseGun_45ACP\",30],[],\"\"]],[],[],[\"U_SPE_US_Tank_Crew2\",[[\"kat_IFAK\",1]],[[\"SPE_30Rnd_M3_GreaseGun_45ACP\",2,30],[\"SPE_US_M18\",1,1]]],[\"V_SPE_US_Vest_45\",[]],[],\"H_SPE_US_Helmet_Tank_polar_tapes\",\"G_SPE_Binoculars\",[[\"SPE_Binocular_US\",\"\",\"\",\"\",[],[],\"\"]],[\"ItemMap\",\"\",\"ItemRadio\",\"SPE_US_ItemCompass\",\"SPE_US_ItemWatch\",\"\"]]"
+  },
+  {
+    "role": "Tanker - Gunner",
+    "description": "Tanker - Gunner",
+    "loadout": "[[[\"SPE_M3_GreaseGun\",\"\",\"\",\"\",[\"SPE_30Rnd_M3_GreaseGun_45ACP\",30],[],\"\"]],[],[],[\"U_SPE_US_Tank_Coverall_Trop\",[[\"kat_IFAK\",1]],[[\"SPE_30Rnd_M3_GreaseGun_45ACP\",2,30]]],[],[],\"H_SPE_US_Helmet_Tank_NG\",\"\",[[\"SPE_Binocular_US\",\"\",\"\",\"\",[],[],\"\"]],[\"ItemMap\",\"\",\"ItemRadio\",\"SPE_US_ItemCompass\",\"SPE_US_ItemWatch\",\"\"]]"
+  },
+  {
+    "role": "Tanker - Driver",
+    "description": "Tanker - Driver",
+    "loadout": "[[[\"SPE_M3_GreaseGun\",\"\",\"\",\"\",[\"SPE_30Rnd_M3_GreaseGun_45ACP\",30],[],\"\"]],[],[],[\"U_SPE_US_Tank_Crew\",[[\"kat_IFAK\",1]],[[\"SPE_30Rnd_M3_GreaseGun_45ACP\",2,30],[\"SPE_US_M18\",1,1]]],[],[],\"H_SPE_US_Helmet_Tank_NG\",\"\",[[\"SPE_Binocular_US\",\"\",\"\",\"\",[],[],\"\"]],[\"ItemMap\",\"\",\"ItemRadio\",\"SPE_US_ItemCompass\",\"SPE_US_ItemWatch\",\"\"]]"
+  },
+  {
+    "role": "Tanker - Radio Op",
+    "description": "Tanker - Radio Op",
+    "loadout": "[[[\"SPE_M3_GreaseGun\",\"\",\"\",\"\",[\"SPE_30Rnd_M3_GreaseGun_45ACP\",30],[],\"\"]],[],[],[\"U_SPE_US_Tank_Coverall\",[[\"kat_IFAK\",1]],[[\"SPE_30Rnd_M3_GreaseGun_45ACP\",2,30]]],[],[],\"H_SPE_US_Helmet_Tank_NG\",\"\",[[\"SPE_Binocular_US\",\"\",\"\",\"\",[],[],\"\"]],[\"ItemMap\",\"\",\"ItemRadio\",\"SPE_US_ItemCompass\",\"SPE_US_ItemWatch\",\"\"]]"
+  },
+  {
+    "role": "Tanker - Loader",
+    "description": "Tanker - Loader",
+    "loadout": "[[[\"SPE_M3_GreaseGun\",\"\",\"\",\"\",[\"SPE_30Rnd_M3_GreaseGun_45ACP\",30],[],\"\"]],[],[],[\"U_SPE_US_Tank_Coverall\",[[\"kat_IFAK\",1]],[[\"SPE_30Rnd_M3_GreaseGun_45ACP\",2,30]]],[],[],\"H_SPE_US_Helmet_Tank_NG\",\"\",[[\"SPE_Binocular_US\",\"\",\"\",\"\",[],[],\"\"]],[\"ItemMap\",\"\",\"ItemRadio\",\"SPE_US_ItemCompass\",\"SPE_US_ItemWatch\",\"\"]]"
+  }
+]

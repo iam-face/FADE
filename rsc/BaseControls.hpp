@@ -52,8 +52,8 @@ class RscListBox {
     colorDisabled[] = {1, 1, 1, 0.25};
     colorSelect[] = {1, 1, 1, 1};
     colorSelect2[] = {1, 1, 1, 1};
-    colorSelectBackground[] = {0.95, 0.95, 0.95, 0.3};
-    colorSelectBackground2[] = {1, 1, 1, 0.5};
+    colorSelectBackground[] = {0.28, 0.28, 0.32, 0.80};
+    colorSelectBackground2[] = {0.32, 0.32, 0.36, 0.85};
     font = "PuristaMedium";
     sizeEx = 0.04;
     rowHeight = 0.04;
@@ -110,7 +110,7 @@ class RscEdit {
     colorBackground[] = {0, 0, 0, 0.8};
     colorText[] = {1, 1, 1, 1};
     colorDisabled[] = {1, 1, 1, 0.25};
-    colorSelection[] = {0.2, 0.4, 0.6, 0.8};
+    colorSelection[] = {0.28, 0.28, 0.32, 0.8};
     font = "PuristaMedium";
     sizeEx = 0.04;
     text = "";
@@ -123,8 +123,8 @@ class RscListBoxVehicleDetails: RscListBox {
     colorText[] = {0.9, 0.9, 0.9, 1};
     colorSelect[] = {0.9, 0.9, 0.9, 1};
     colorSelect2[] = {0.9, 0.9, 0.9, 1};
-    colorSelectBackground[] = {0.12, 0.18, 0.26, 0.5};
-    colorSelectBackground2[] = {0.12, 0.18, 0.26, 0.5};
+    colorSelectBackground[] = {0.28, 0.28, 0.32, 0.80};
+    colorSelectBackground2[] = {0.32, 0.32, 0.36, 0.85};
     rowHeight = 0.028;
     sizeEx = 0.027;
     maxHistoryDelay = 0;
@@ -140,8 +140,8 @@ class RscCombo {
     colorDisabled[] = {1, 1, 1, 0.25};
     colorSelect[] = {1, 1, 1, 1};
     colorSelect2[] = {1, 1, 1, 1};
-    colorSelectBackground[] = {0.95, 0.95, 0.95, 0.3};
-    colorSelectBackground2[] = {1, 1, 1, 0.5};
+    colorSelectBackground[] = {0.28, 0.28, 0.32, 0.80};
+    colorSelectBackground2[] = {0.32, 0.32, 0.36, 0.85};
     font = "PuristaMedium";
     sizeEx = 0.04;
     wholeHeight = 0.35;

@@ -1,0 +1,87 @@
+[
+  {
+    "role": "Platoon Leader",
+    "description": "Platoon Leader@Bravo 2-0 - HQ",
+    "loadout": "[[[\"26th_USMC_M27_IAR_AFG\",\"\",\"26th_USMC_416_DEVICE_3_LASER\",\"USMC_optic_VCOG\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[],[[\"acwp_glock19_black\",\"\",\"\",\"\",[\"ACWP_19Rnd_9x21_Mag_glock\",19],[],\"\"]],[\"USMC_Cargo_G3_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_6_ATAK\",[[\"ItemAndroid\",1],[\"ACRE_PRC152\",1],[\"ACRE_PRC343\",1]],[[\"rhs_mag_an_m8hc\",2,1],[\"rhs_mag_m67\",3,1],[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30],[\"ACWP_19Rnd_9x21_Mag_glock\",2,19]]],[\"USMC_Backpack_FILBE_JPC\",[]],\"USMC_Opscore_FTHS_1_MPD\",\"rho_reconwrap_mc_07_glasses_blacklens\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Platoon Medic",
+    "description": "Platoon Medic",
+    "loadout": "[[[\"rhs_weap_m4a1_carryhandle\",\"\",\"26th_USMC_M38_DEVICE_1_LASER\",\"rhsusf_acc_ACOG2\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[],[[\"acwp_glock17_black\",\"\",\"\",\"\",[\"ACWP_19Rnd_9x21_Mag_glock\",19],[],\"\"]],[\"USMC_Cargo_MCCUU_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_8_ATAK\",[[\"ItemAndroid\",1],[\"ACRE_PRC343\",1]],[[\"MCC_PMAG_556_FDE_556_30_M855A1\",12,30],[\"rhs_mag_an_m8hc\",4,1]]],[\"USMC_Backpack_FILBE_JPC\",[[\"ACE_salineIV\",4],[\"ACE_salineIV_500\",6],[\"ACE_splint\",8],[\"ACE_suture\",1],[\"kat_MFAK\",1],[\"ACE_bodyBag\",10],[\"KJW_MedicalExpansion_IV\",1],[\"KJW_MedicalExpansion_SampleKit\",4],[\"ACE_adenosine\",2],[\"ACE_surgicalKit\",1],[\"ACE_personalAidKit\",1],[\"white_monster\",1]]],\"USMC_Opscore_FTHS_3_MPW\",\"G_tweed_tacticool_weiss\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "FO",
+    "description": "FO",
+    "loadout": "[[[\"ACWP_M4A5_145_7rail_GL_grip\",\"\",\"26th_USMC_M38_DEVICE_1_LASER\",\"rhsusf_acc_ACOG2\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[\"UGL_FlareCIR_F\",1],\"\"]],[],[[\"Worm_IZLIDB\",\"\",\"\",\"\",[],[],\"\"]],[\"USMC_G3_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_JPC_6_ATAK\",[[\"ACE_IR_Strobe_Item\",1],[\"ACE_CableTie\",2],[\"ACRE_PRC343\",1],[\"ACRE_PRC152\",1],[\"ItemcTab\",1]],[[\"rhs_mag_an_m8hc\",1,1],[\"Laserbatteries\",2,1],[\"rhs_mag_m67\",2,1],[\"rhs_mag_M433_HEDP\",6,1],[\"MCC_PMAG_556_FDE_556_30_M855A1\",12,30],[\"1Rnd_SmokeRed_Grenade_shell\",6,1]]],[\"USMC_Backpack_Radio_JPC\",[[\"ACE_WaterBottle\",1],[\"ACE_Flashlight_XL50\",1],[\"ACRE_PRC117F\",1]],[[\"acex_intelitems_notepad\",1,1],[\"rhs_mag_m713_Red\",8,1],[\"rhs_mag_m715_Green\",4,1],[\"1Rnd_SmokeGreen_Grenade_shell\",4,1],[\"1Rnd_SmokeBlue_Grenade_shell\",4,1],[\"1Rnd_SmokeRed_Grenade_shell\",10,1],[\"rhs_mag_M433_HEDP\",4,1],[\"SmokeShellRed\",2,1],[\"SmokeShellPurple\",2,1],[\"SmokeShellOrange\",2,1],[\"SmokeShellGreen\",2,1],[\"SmokeShellBlue\",2,1]]],\"USMC_Opscore_FTHS_1_MPW_COVER_LOOSE\",\"rho_reconwrap_mc_07_glasses_tan\",[[\"Laserdesignator_01_khk_F\",\"\",\"\",\"\",[],[],\"\"]],[\"ItemMap\",\"B_UavTerminal\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Platoon Sergeant",
+    "description": "Platoon Sergeant",
+    "loadout": "[[[\"26th_USMC_M27_IAR_AFG\",\"26th_USMC_RC_WRAPPED_TAN\",\"26th_USMC_M38_DEVICE_1_LASER\",\"USMC_optic_VCOG\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[],[[\"USMC_M45\",\"\",\"\",\"\",[\"11Rnd_M45_45ACP\",11],[],\"\"]],[\"USMC_Cargo_MCCUU_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_7_NB\",[[\"ItemAndroid\",1],[\"ACRE_PRC152\",1],[\"ACRE_PRC343\",1]],[[\"rhs_mag_an_m8hc\",1,1],[\"rhs_mag_m67\",4,1],[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30]]],[\"USMC_Fannypack\",[]],\"USMC_Opscore_FTHS_3_MPW_COVER\",\"\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Section Commander",
+    "description": "Section Commander@Bravo 2-1 - Rifles",
+    "loadout": "[[[\"26th_USMC_M27_IAR_VFG\",\"\",\"26th_USMC_416_DEVICE_3_LASER\",\"rhsusf_acc_ACOG3\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[[\"rhs_weap_m72a7\",\"\",\"\",\"\",[],[],\"\"]],[[\"acwp_glock19_black\",\"\",\"\",\"\",[\"ACWP_19Rnd_9x21_Mag_glock\",19],[],\"\"]],[\"USMC_G3_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_2_ATAK\",[[\"ACRE_PRC343\",1],[\"ACRE_PRC152\",1],[\"ItemAndroid\",1]],[[\"rhs_mag_an_m8hc\",2,1],[\"rhs_mag_m67\",4,1],[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30]]],[\"USMC_Backpack_Assault_JPC\",[]],\"USMC_Opscore_FTHS_3_MPW_COVER\",\"rho_reconwrap_mc_07_glasses_blacklens\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Rifleman CFA",
+    "description": "Rifleman CFA",
+    "loadout": "[[[\"rhs_weap_m4a1_carryhandle\",\"\",\"26th_USMC_M38_DEVICE_1_LASER\",\"rhsusf_acc_ACOG2\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[],[[\"acwp_glock17_black\",\"\",\"\",\"\",[\"ACWP_19Rnd_9x21_Mag_glock\",19],[],\"\"]],[\"USMC_Cargo_MCCUU_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_8\",[[\"ACRE_PRC343\",1]],[[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30],[\"rhs_mag_an_m8hc\",6,1],[\"ACWP_19Rnd_9x21_Mag_glock\",2,19]]],[\"USMC_Backpack_FILBE_JPC\",[[\"ACE_salineIV\",4],[\"ACE_salineIV_500\",6],[\"ACE_splint\",8],[\"ACE_suture\",1],[\"kat_MFAK\",1],[\"ACE_bodyBag\",6],[\"KJW_MedicalExpansion_IV\",1],[\"KJW_MedicalExpansion_SampleKit\",4],[\"ACE_adenosine\",2],[\"ACE_surgicalKit\",1],[\"ACE_personalAidKit\",1]]],\"USMC_Opscore_FTHS_3_MPW\",\"G_tweed_tacticool_weiss\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Rifleman (AT)",
+    "description": "Rifleman (AT)",
+    "loadout": "[[[\"26th_USMC_M27_IAR_AFG\",\"\",\"26th_USMC_416_DEVICE_3_LASER\",\"rhsusf_acc_ACOG2\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[[\"rhs_weap_m72a7\",\"\",\"\",\"\",[],[],\"\"]],[[\"acwp_glock19_black\",\"\",\"\",\"\",[\"ACWP_19Rnd_9x21_Mag_glock\",19],[],\"\"]],[\"USMC_Cargo_G3_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_3\",[[\"ACRE_PRC343\",1]],[[\"rhs_mag_an_m8hc\",2,1],[\"rhs_mag_m67\",4,1],[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30],[\"ACWP_19Rnd_9x21_Mag_glock\",2,19]]],[\"USMC_Backpack_Assault_JPC\",[],[[\"MCC_PMAG_556_FDE_556_30_M855A1\",20,30]]],\"USMC_Opscore_FTHS_3_MPW\",\"rho_reconwrap_mc_07_glasses\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Autorifleman",
+    "description": "Autorifleman",
+    "loadout": "[[[\"26th_USMC_M27_IAR_VFG\",\"\",\"26th_USMC_M38_DEVICE_1_LASER\",\"rhsusf_acc_ACOG3_USMC\",[\"26th_USMC_PMAG_TAN_556x45_M855A1\",30],[],\"\"]],[],[[\"acwp_glock19_black\",\"\",\"\",\"\",[\"ACWP_19Rnd_9x21_Mag_glock\",19],[],\"\"]],[\"USMC_Cargo_G3_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_1\",[[\"ACRE_PRC343\",1]],[[\"rhs_mag_an_m8hc\",2,1],[\"rhs_mag_m67\",4,1],[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30],[\"ACWP_19Rnd_9x21_Mag_glock\",2,19]]],[\"USMC_Backpack_Assault_JPC\",[],[[\"MCC_PMAG_556_FDE_556_30_M855A1\",16,30]]],\"USMC_Opscore_FTHS_3_MPW_COVER\",\"rho_reconwrap_04_glasses\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Grenadier",
+    "description": "Grenadier",
+    "loadout": "[[[\"26th_USMC_M27_IAR_AFG\",\"\",\"26th_USMC_M38_DEVICE_1_LASER\",\"USMC_optic_VCOG\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[],[[\"rhs_weap_M320\",\"\",\"\",\"\",[\"rhs_mag_M433_HEDP\",1],[],\"\"]],[\"USMC_Cargo_G3_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_4_NB\",[[\"ACRE_PRC343\",1]],[[\"MCC_PMAG_556_FDE_556_30_M855A1\",13,30],[\"rhs_mag_an_m8hc\",2,1],[\"rhs_mag_m67\",2,1]]],[\"USMC_M320_Belt_JPC\",[],[[\"rhs_mag_M433_HEDP\",20,1],[\"1Rnd_Smoke_Grenade_shell\",6,1],[\"1Rnd_RC40_shell_RF\",2,1],[\"1Rnd_RC40_HE_shell_RF\",2,1]]],\"USMC_Opscore_FTHS_2_MPW\",\"rho_reconwrap_mc_07_glasses\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Engineer",
+    "description": "Engineer",
+    "loadout": "[[[\"26th_USMC_M27_IAR_VFG\",\"\",\"26th_USMC_416_DEVICE_3_LASER\",\"rhsusf_acc_ACOG2_USMC\",[\"ACWP_30rnd_556x45_EPR_PMAG_tan\",30],[],\"\"]],[],[[\"USMC_M18\",\"\",\"\",\"\",[\"18Rnd_M18_9x19_FMJ\",18],[],\"\"]],[\"USMC_Cargo_G3_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_4\",[[\"ACRE_PRC343\",1]],[[\"rhs_mag_an_m8hc\",4,1],[\"rhs_mag_m67\",4,1],[\"MCC_PMAG_556_FDE_556_30_M855A1\",12,30],[\"18Rnd_M18_9x19_JHP\",2,18]]],[\"USMC_Backpack_FILBE_JPC\",[[\"tsp_breach_shock\",1],[\"ace_flags_blue\",8],[\"ace_marker_flags_purple\",10],[\"ACE_Clacker\",1],[\"ACE_wirecutter\",1]],[[\"DemoCharge_Remote_Mag\",6,1],[\"tsp_breach_linear_mag\",2,1],[\"tsp_breach_popper_auto_mag\",2,1],[\"OBS_Personal_Mag\",1,1],[\"rhs_mag_an_m8hc\",6,1]]],\"USMC_Opscore_FTHS_1_MPW_COVER\",\"rho_reconwrap_mc_05_glasses_blacklens\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Assist Gunner",
+    "description": "Assist Gunner",
+    "loadout": "[[[\"rhs_weap_m4a1_carryhandle\",\"\",\"26th_USMC_416_DEVICE_3_LASER\",\"rhsusf_acc_ACOG2\",[\"rhs_mag_30Rnd_556x45_M855A1_PMAG\",30],[],\"\"]],[[\"rhs_weap_m72a7\",\"\",\"\",\"\",[],[],\"\"]],[[\"acwp_glock19_black\",\"\",\"\",\"\",[\"ACWP_19Rnd_9x21_Mag_glock\",19],[],\"\"]],[\"USMC_Cargo_G3_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_2\",[[\"ACRE_PRC343\",1]],[[\"rhs_mag_an_m8hc\",2,1],[\"rhs_mag_m67\",4,1],[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30],[\"ACWP_19Rnd_9x21_Mag_glock\",2,19]]],[\"USMC_Backpack_FILBE_JPC\",[[\"ACE_Canteen\",2]],[[\"Tier1_250Rnd_762x51_Belt_M80A1_EPR\",2,250],[\"Tier1_100Rnd_762x51_Belt_M80A1_EPR\",4,100],[\"ACE_SpareBarrel\",1,1]]],\"USMC_Opscore_FTHS_2_MPW\",\"G_comba_2\",[[\"ACE_VectorDay\",\"\",\"\",\"\",[],[],\"\"]],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Machine Gunner",
+    "description": "Machine Gunner",
+    "loadout": "[[[\"26th_USMC_M240L\",\"\",\"26th_USMC_M240L_DEVICE_1_LASER\",\"USMC_SU230B\",[\"Tier1_250Rnd_762x51_Belt_M80A1_EPR\",250],[],\"\"]],[],[[\"acwp_glock19_black\",\"\",\"\",\"\",[\"ACWP_19Rnd_9x21_Mag_glock\",19],[],\"\"]],[\"USMC_G3_MCCUU_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_5\",[[\"ACRE_PRC343\",1],[\"white_monster\",6]],[[\"Tier1_100Rnd_762x51_Belt_M80A1_EPR\",1,100],[\"Tier1_250Rnd_762x51_Belt_M80A1_EPR\",2,250],[\"rhs_mag_an_m8hc\",1,1]]],[\"USMC_Backpanel_Mini\",[[\"ACE_Canteen\",2]],[[\"Tier1_250Rnd_762x51_Belt_M80A1_EPR\",1,250],[\"ACE_SpareBarrel\",1,1],[\"Tier1_100Rnd_762x51_Belt_M80A1_EPR\",1,100]]],\"USMC_Opscore_FTHS_1_MPW\",\"rho_reconwrap_mc_07_glasses\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "MAAWS Gunner",
+    "description": "MAAWS Gunner@MAAWS Att",
+    "loadout": "[[[\"26th_USMC_M27_IAR_AFG\",\"\",\"26th_USMC_416_DEVICE_3_LASER\",\"rhsusf_acc_ACOG2\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[[\"launch_MRAWS_green_F\",\"\",\"26th_USMC_M38_DEVICE_1_LASER\",\"\",[\"MRAWS_HEAT55_F\",1],[],\"\"]],[[\"acwp_glock19_black\",\"\",\"\",\"\",[\"ACWP_19Rnd_9x21_Mag_glock\",19],[],\"\"]],[\"USMC_Cargo_G3_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_2_ATAK\",[[\"ItemAndroid\",1],[\"ACRE_PRC343\",1],[\"ACRE_PRC152\",1]],[[\"rhs_mag_an_m8hc\",2,1],[\"rhs_mag_m67\",4,1],[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30],[\"ACWP_19Rnd_9x21_Mag_glock\",2,19]]],[\"USMC_Backpack_Assault_JPC\",[],[[\"MCC_PMAG_556_FDE_556_30_M855A1\",10,30],[\"MRAWS_HEAT55_F\",1,1],[\"BB_MAAWS_HE_AB\",1,1],[\"MAA_MAAWS_SMOKE469\",1,1]]],\"USMC_Opscore_FTHS_3_MPW\",\"rho_reconwrap_mc_07_glasses\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Assistant MAAWs",
+    "description": "Assistant MAAWs",
+    "loadout": "[[[\"26th_USMC_M27_IAR_AFG\",\"\",\"26th_USMC_M38_DEVICE_1_LASER\",\"USMC_optic_VCOG\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[],[[\"USMC_M18\",\"\",\"\",\"\",[\"18Rnd_M18_9x19_FMJ\",18],[],\"\"]],[\"USMC_Cargo_G3_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_7\",[[\"ACRE_PRC343\",1]],[[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30],[\"18Rnd_M18_9x19_JHP\",2,18],[\"rhs_mag_an_m8hc\",2,1],[\"rhs_mag_m67\",4,1]]],[\"USMC_Backpack_FILBE_JPC\",[],[[\"MAA_MAAWS_SMOKE469\",3,1],[\"BB_MAAWS_HE_AB\",3,1],[\"MRAWS_HEAT55_F\",3,1]]],\"USMC_Opscore_FTHS_2_MPW\",\"rho_reconwrap_mc_07_glasses\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Mortarman TL",
+    "description": "Mortarman TL",
+    "loadout": "[[[\"26th_USMC_M27_IAR_AFG\",\"\",\"26th_USMC_416_DEVICE_3_LASER\",\"rhsusf_acc_ACOG2\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[[\"ace_compat_sog_mortar_m2_carry\",\"\",\"\",\"\",[],[],\"\"]],[[\"acwp_glock19_black\",\"\",\"\",\"\",[\"ACWP_19Rnd_9x21_Mag_glock\",19],[],\"\"]],[\"USMC_Cargo_MCCUU_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_2_ATAK\",[[\"ItemAndroid\",1],[\"ACRE_PRC152\",1],[\"ACRE_PRC343\",1],[\"ACE_artilleryTable\",1],[\"ACE_MapTools\",1]],[[\"rhs_mag_an_m8hc\",2,1],[\"rhs_mag_m67\",2,1],[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30]]],[\"USMC_Backpack_SATL_JPC\",[],[[\"MCC_PMAG_556_FDE_556_30_M855A1\",10,30],[\"ace_compat_sog_60mm_he\",20,1],[\"ace_compat_sog_60mm_wp\",4,1]]],\"USMC_Opscore_FTHS_3_MPW\",\"rho_reconwrap_mc_07_glasses\",[[\"ACE_VectorDay\",\"\",\"\",\"\",[],[],\"\"]],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Mortarman",
+    "description": "Mortarman",
+    "loadout": "[[[\"26th_USMC_M27_IAR_AFG\",\"\",\"26th_USMC_M38_DEVICE_1_LASER\",\"USMC_optic_VCOG\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[[\"ace_csw_carryMortarBaseplate\",\"\",\"\",\"\",[],[],\"\"]],[[\"USMC_M18\",\"\",\"\",\"\",[\"18Rnd_M18_9x19_FMJ\",18],[],\"\"]],[\"USMC_Cargo_MCCUU_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_1\",[[\"ACRE_PRC343\",1]],[[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30],[\"rhs_mag_an_m8hc\",2,1],[\"rhs_mag_m67\",2,1]]],[\"USMC_Backpack_SATL_JPC\",[],[[\"ace_compat_sog_60mm_wp\",7,1],[\"ace_compat_sog_60mm_he\",20,1]]],\"USMC_Opscore_FTHS_2_MPW\",\"rho_reconwrap_mc_07_glasses\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  },
+  {
+    "role": "Rifleman",
+    "description": "Rifleman",
+    "loadout": "[[[\"26th_USMC_M27_IAR_AFG\",\"\",\"26th_USMC_416_DEVICE_3_LASER\",\"rhsusf_acc_ACOG2\",[\"MCC_PMAG_556_FDE_556_30_M855A1\",30],[],\"\"]],[[\"rhs_weap_m72a7\",\"\",\"\",\"\",[],[],\"\"]],[[\"acwp_glock19_black\",\"\",\"\",\"\",[\"ACWP_19Rnd_9x21_Mag_glock\",19],[],\"\"]],[\"USMC_Cargo_G3_MPW_1\",[[\"kat_IFAK\",1]]],[\"USMC_PCG3_3\",[[\"ACRE_PRC343\",1]],[[\"rhs_mag_an_m8hc\",2,1],[\"rhs_mag_m67\",4,1],[\"MCC_PMAG_556_FDE_556_30_M855A1\",14,30],[\"ACWP_19Rnd_9x21_Mag_glock\",2,19]]],[\"USMC_Backpack_Assault_JPC\",[],[[\"MCC_PMAG_556_FDE_556_30_M855A1\",20,30]]],\"USMC_Opscore_FTHS_3_MPW\",\"rho_reconwrap_mc_07_glasses\",[],[\"ItemMap\",\"\",\"\",\"ItemCompass\",\"ItemWatch\",\"USMC_PVS31_COVER_WIDE_STOW\"]]"
+  }
+]

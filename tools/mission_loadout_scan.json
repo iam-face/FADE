@@ -1,0 +1,315 @@
+[
+  {
+    "pbo": "__cur_mp.pbo",
+    "skipped": true,
+    "roles": 0,
+    "error": null,
+    "reason": "excluded"
+  },
+  {
+    "pbo": "CTB_CRU_Op_Red_Sparrow_v3.cup_Zargabad_a3.pbo",
+    "skipped": false,
+    "roles": 0,
+    "error": null,
+    "role_names": []
+  },
+  {
+    "pbo": "CTB_FAC_FADE_2026-05-15.Altis.pbo",
+    "skipped": true,
+    "roles": 0,
+    "error": null,
+    "reason": "excluded"
+  },
+  {
+    "pbo": "ctb_fac_fade_5maybe.altis.pbo",
+    "skipped": true,
+    "roles": 0,
+    "error": null,
+    "reason": "excluded"
+  },
+  {
+    "pbo": "CTB_FAC_FADE_b5.Altis.pbo",
+    "skipped": true,
+    "roles": 0,
+    "error": null,
+    "reason": "excluded"
+  },
+  {
+    "pbo": "ctb_fac_fade_b5forreal.altis.pbo",
+    "skipped": true,
+    "roles": 0,
+    "error": null,
+    "reason": "excluded"
+  },
+  {
+    "pbo": "CTB_FAC_FADE_BETA04.Altis.pbo",
+    "skipped": true,
+    "roles": 0,
+    "error": null,
+    "reason": "excluded"
+  },
+  {
+    "pbo": "CTB_FAC_FADE_Beta_v3.SefrouRamal.pbo",
+    "skipped": true,
+    "roles": 0,
+    "error": null,
+    "reason": "excluded"
+  },
+  {
+    "pbo": "CTB_FAC_FADE_HeliOps.SefrouRamal.pbo",
+    "skipped": true,
+    "roles": 0,
+    "error": null,
+    "reason": "excluded"
+  },
+  {
+    "pbo": "CTB_JUK_CAMLAONAM_FIRES_V07.Cam_Lao_Nam.pbo",
+    "skipped": false,
+    "roles": 16,
+    "error": null,
+    "role_names": [
+      "J.T Sloan",
+      "Jane Fuller",
+      "Matt Bandero (Top Bunk Masturbater)",
+      "Recruit McCoy",
+      "Jake Armstrong",
+      "Tony De Serigo (Jamal)",
+      "Luke Savage",
+      "Drax Kelly",
+      "Van Darkholme (Leatherman)",
+      "Mark Woff (Gym Boss)",
+      "Vince Bandero",
+      "Marcus Iron",
+      "S\u00f8ren Damgaard Mikkelsen (Bondage Slave)",
+      "Steven Gauvin  (Man with Gun)",
+      "Rob Steele (Narrator)",
+      "TJ Cummings"
+    ],
+    "era_key": "ctbJukCamlaonamFires",
+    "era_dn": "CTB JUK CAMLAONAM FIRES V07 Cam Lao Nam BLUFOR"
+  },
+  {
+    "pbo": "CTB_RHO_BITTER_HARVEST.gc_krayina.pbo",
+    "skipped": false,
+    "roles": 0,
+    "error": null,
+    "role_names": []
+  },
+  {
+    "pbo": "CTB_RHO_BROKEN_WINGS_M3_2026_v4.kunduz_valley.pbo",
+    "skipped": false,
+    "roles": 20,
+    "error": null,
+    "role_names": [
+      "Platoon Leader",
+      "Platoon Medic",
+      "JTAC",
+      "Platoon Sergeant",
+      "Section Commander",
+      "Rifleman CFA",
+      "3: Rifleman (AT)",
+      "4: Autorifleman",
+      "5: Grenadier",
+      "Breacher",
+      "Ammo Bearer (mk48)",
+      "Machine Gunner (mk48)",
+      "Ammo Bearer (240)",
+      "Machine Gunner (240)",
+      "Sniper A",
+      "Sniper B",
+      "Pilot",
+      "Co-Pilot",
+      "Crew Chief",
+      "Crew"
+    ],
+    "era_key": "ctbRhoBrokenWings",
+    "era_dn": "CTB RHO BROKEN WINGS M3 2026 v4 kunduz valley BLUFOR"
+  },
+  {
+    "pbo": "ctb_rho_dead_star_v2.Farabad.pbo",
+    "skipped": false,
+    "roles": 19,
+    "error": null,
+    "role_names": [
+      "Platoon Leader",
+      "Platoon Medic",
+      "JTAC",
+      "Platoon Sergeant",
+      "Section Commander",
+      "Rifleman CFA",
+      "Rifleman (AT)",
+      "Autorifleman",
+      "Grenadier",
+      "Engineer",
+      "Assist Gunner",
+      "Machine Gunner",
+      "MAAWS Gunner",
+      "Assistant MAAWs",
+      "Rifleman",
+      "Pilot",
+      "Co-Pilot",
+      "Crew Chief",
+      "Gunner"
+    ],
+    "era_key": "ctbRhoDeadStar",
+    "era_dn": "ctb rho dead star v2 Farabad BLUFOR"
+  },
+  {
+    "pbo": "CTB_RHO_DIVIDED_HOUSE.cup_chernarus_A3.pbo",
+    "skipped": true,
+    "roles": 0,
+    "error": null,
+    "reason": "excluded"
+  },
+  {
+    "pbo": "CTB_RHO_GILDED_TRIDENT.Altis.pbo",
+    "skipped": false,
+    "roles": 18,
+    "error": null,
+    "role_names": [
+      "Platoon Leader",
+      "Platoon Medic",
+      "JTAC",
+      "Platoon Sergeant",
+      "Section Leader",
+      "Rifleman CFA",
+      "Rifleman (AT)",
+      "Autorifleman",
+      "Grenadier",
+      "Breacher",
+      "Ammo Bearer",
+      "Machine Gunner",
+      "AT Gunner",
+      "Asst. AT Gunner",
+      "Pilot",
+      "Co-Pilot",
+      "Crew Chief",
+      "Crew"
+    ],
+    "era_key": "ctbRhoGildedTrident",
+    "era_dn": "CTB RHO GILDED TRIDENT Altis BLUFOR"
+  },
+  {
+    "pbo": "CTB_RHO_OP_SILVER_LANCE.Cam_Lao_Nam.pbo",
+    "skipped": false,
+    "roles": 15,
+    "error": null,
+    "role_names": [
+      "Platoon Leader",
+      "PL Medic",
+      "Radio Operator",
+      "Joint Fires Observer",
+      "Squad Leader",
+      "Scout",
+      "Rifleman",
+      "Rifleman 2IC",
+      "Machine Gunner",
+      "Machine Gunner Assistant",
+      "Machine Gunner Assistant 2IC",
+      "Grenadier (M79)",
+      "Pilot",
+      "Crew chief",
+      "Mortarman"
+    ],
+    "era_key": "ctbRhoOpSilver",
+    "era_dn": "CTB RHO OP SILVER LANCE Cam Lao Nam BLUFOR"
+  },
+  {
+    "pbo": "CTB_RHO_OP_WHETSTONE_30.IslaPera.pbo",
+    "skipped": false,
+    "roles": 17,
+    "error": null,
+    "role_names": [
+      "Platoon Leader",
+      "Platoon Medic",
+      "JTAC",
+      "Platoon Sergeant",
+      "Section Leader",
+      "Rifleman CFA",
+      "Rifleman (AT)",
+      "Autorifleman",
+      "Grenadier",
+      "Breacher",
+      "Ammo Bearer (mk48)",
+      "Machine Gunner (mk48)",
+      "Ammo Bearer (240)",
+      "Machine Gunner (240)",
+      "Drone Operator",
+      "Sniper A",
+      "Sniper B"
+    ],
+    "era_key": "ctbRhoOpWhetstone",
+    "era_dn": "CTB RHO OP WHETSTONE 30 IslaPera BLUFOR"
+  },
+  {
+    "pbo": "CTB_RHO_RESURGENT_DAWN_V2.cup_chernarus_A3.pbo",
+    "skipped": false,
+    "roles": 17,
+    "error": null,
+    "role_names": [
+      "Platoon Leader",
+      "Platoon Medic",
+      "FO",
+      "Platoon Sergeant",
+      "Section Commander",
+      "Rifleman CFA",
+      "Rifleman (AT)",
+      "Autorifleman",
+      "Grenadier",
+      "Engineer",
+      "Assist Gunner",
+      "Machine Gunner",
+      "MAAWS Gunner",
+      "Assistant MAAWs",
+      "Mortarman TL",
+      "Mortarman",
+      "Rifleman"
+    ],
+    "era_key": "ctbRhoResurgentDawn",
+    "era_dn": "CTB RHO RESURGENT DAWN V2 cup chernarus A3 BLUFOR"
+  },
+  {
+    "pbo": "CTB_RHO_SILENTSTRIKE_THEASSAULT_2026.SPEX_Carentan.pbo",
+    "skipped": false,
+    "roles": 8,
+    "error": null,
+    "role_names": [
+      "Platoon Leader",
+      "2: Medic",
+      "3: Radioman",
+      "Tanker - VC",
+      "Tanker - Gunner",
+      "Tanker - Driver",
+      "Tanker - Radio Op",
+      "Tanker - Loader"
+    ],
+    "era_key": "ctbRhoSilentstrikeTheassault",
+    "era_dn": "CTB RHO SILENTSTRIKE THEASSAULT 2026 SPEX Carentan BLUFOR"
+  },
+  {
+    "pbo": "CTB_RHO_SILENTSTRIKE_THEASSAULT_WAITINGROOM_2026.SPEX_Carentan.pbo",
+    "skipped": false,
+    "roles": 5,
+    "error": null,
+    "role_names": [
+      "Tanker - VC",
+      "Tanker - Gunner",
+      "Tanker - Driver",
+      "Tanker - Radio Op",
+      "Tanker - Loader"
+    ],
+    "era_key": "ctbRhoSilentstrikeTheassault",
+    "era_dn": "CTB RHO SILENTSTRIKE THEASSAULT WAITINGROOM 2026 SPEX Carentan B"
+  },
+  {
+    "pbo": "CTB_RHO_WAITINGROOM_2025.Malden.pbo",
+    "skipped": false,
+    "roles": 1,
+    "error": null,
+    "role_names": [
+      "Operator"
+    ],
+    "era_key": "ctbRhoWaitingroomMalden",
+    "era_dn": "CTB RHO WAITINGROOM 2025 Malden BLUFOR"
+  }
+]

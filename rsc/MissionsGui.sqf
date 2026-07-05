@@ -18,18 +18,33 @@ private _missionListRaw = [
     ["Hostage", "Hostage", "Rescue civilians held by hostiles in dense terrain. Move fast, control the scene, and separate civilians from combatants. [G]", "Global"],
     ["HVT", "HVT", "Locate and neutralise or capture a priority target in built-up areas. Secure the target and extract them to base. [G]", "Global"],
     ["Intercept Convoy", "InterceptConvoy", "Ambush and stop a moving enemy column before it reaches its destination. Expect escorts and rapid reactions. [G]", "Global"],
+    ["Invasion", "Invasion", "Defend against an OPFOR beachhead push. Retake the INVASION zone to win. [G]", "Global"],
     ["Mine Clearing", "MineClearing", "Clear a short road segment of mines or IEDs. Use deliberate recon and proven clearance procedures. [S]", "Single"],
     ["Operation", "Operation", "Linked fights across several zones. Clear, hold, and prevent enemy movement between areas. [G]", "Global"],
+    ["Raid", "Raid", "Three objectives across the map — mixed task types linked to one enemy network. Approximate intel refines on recon. [G]", "Global"],
     ["Search & Destroy", "SearchDestroy", "Search a marked zone for enemy ammo caches (burning barrels mark sites). Task states how many to find and what % must be destroyed. [G]", "Global"],
     ["Troop Extract", "TroopExtract", "Pick up a ground team and return them to base. LZ discipline and calm loading are essential. [S]", "Single"],
     ["Troop Insert", "TroopInsert", "Insert troops into a surveyed LZ from base. Aim for clear, safe landings and quick dismounts. [S]", "Single"]
 ];
+private _disabledTypes = missionNamespace getVariable ["FADE_disabledMissionTypes", []];
+_missionListRaw = _missionListRaw select { !((_x select 1) in _disabledTypes) };
 private _sorted = [_missionListRaw, [], { _x select 0 }, "ASCEND"] call BIS_fnc_sortBy;
 if (isNil "_sorted" || { !(_sorted isEqualType []) }) then { _sorted = _missionListRaw };
 missionNamespace setVariable ["FAC_missionsGui_missionList", _sorted];
 
 // Default intro when no mission selected
 FAC_missionsGui_defaultDesc = "Select a mission to see the commander’s intent and expected tasks. After you start, check your Tasks panel and map markers for full orders, grids, and completion criteria.";
+
+// Scrollable read-only description (one lbAdd per line; RscEdit does not scroll when disabled).
+FAC_missionsGui_setDescList = {
+    params ["_lb", ["_text", ""]];
+    lbClear _lb;
+    if (_text isEqualTo "") exitWith { _lb lbSetCurSel -1 };
+    private _flat = (_text splitString (toString [13])) joinString "";
+    private _lines = _flat splitString (toString [10]);
+    { _lb lbAdd _x } forEach _lines;
+    _lb lbSetCurSel -1;
+};
 
 // Remove first line of server brief when it duplicates the mission type already shown in "OpName (Type)" header.
 FAC_missionsGui_stripDuplicateBriefHeader = {
@@ -54,6 +69,27 @@ FAC_missionsGui_stripDuplicateBriefHeader = {
     while { count _lines > 0 && { (_lines select 0) == "" } } do { _lines deleteAt 0 };
     if (count _lines == 0) exitWith { "" };
     _lines joinString _nl
+};
+
+FAC_missionsGui_tabBrowseIdcs = [60133, 60110, 60111, 60120, 60131, 60121];
+FAC_missionsGui_tabActiveIdcs = [60112, 60113, 60114, 60115, 60130, 60134, 60135, 60136, 60150, 60151, 60152, 60153];
+
+FAC_missionsGui_syncTabs = {
+    private _d = findDisplay 60002;
+    if (isNull _d) exitWith {};
+    private _tab = missionNamespace getVariable ["FAC_missionsGui_tab", "browse"];
+    {
+        private _c = _d displayCtrl _x;
+        if (!isNull _c) then { _c ctrlShow (_tab == "browse") };
+    } forEach FAC_missionsGui_tabBrowseIdcs;
+    {
+        private _c = _d displayCtrl _x;
+        if (!isNull _c) then { _c ctrlShow (_tab == "active") };
+    } forEach FAC_missionsGui_tabActiveIdcs;
+    // Header chrome always visible when dialog is open (overlay hide may have turned these off).
+    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow true } } forEach [60101, 60160, 60161, 60141, 60142];
+    [_d displayCtrl 60160, _tab == "browse"] call FAC_theme_applyTab;
+    [_d displayCtrl 60161, _tab == "active"] call FAC_theme_applyTab;
 };
 
 FADE_receiveCopilotState = {
@@ -108,9 +144,20 @@ FAC_missionsGui_fnc = {
             };
             ["refreshStatus", []] call FAC_missionsGui_fnc;
             ["updateButtons", []] call FAC_missionsGui_fnc;
+            missionNamespace setVariable ["FAC_missionsGui_tab", "browse"];
+            [] call FAC_missionsGui_syncTabs;
+        };
+        case "setTab": {
+            if (isNull _display) exitWith {};
+            private _tab = _params param [0, "browse"];
+            if !(_tab in ["browse", "active"]) then { _tab = "browse" };
+            missionNamespace setVariable ["FAC_missionsGui_tab", _tab];
+            [] call FAC_missionsGui_syncTabs;
+            if (_tab == "active") then { ["refreshStatus", []] call FAC_missionsGui_fnc };
         };
         case "headerRefresh": {
             ["refreshStatus", []] call FAC_missionsGui_fnc;
+            [] call FAC_missionsGui_syncTabs;
         };
         case "abortSlot": {
             if (isNull _display) exitWith {};
@@ -203,11 +250,6 @@ FAC_missionsGui_fnc = {
                 if (!(_operationName isEqualType "") && { _operationName != "" }) exitWith { format ["Operation %1", _operationName] };
                 [_type] call _displayName
             };
-            private _entryTypeLabel = {
-                params ["_entry"];
-                private _type = _entry param [0, ""];
-                [_type] call _displayName
-            };
             private _ownerStr = {
                 params ["_o"];
                 if (!isNull _o) then { name _o } else { "?" }
@@ -220,7 +262,7 @@ FAC_missionsGui_fnc = {
                 if (_mType == "InterceptConvoy") exitWith { "Route: start/end markers, corridor dots, and a route line show the expected convoy path." };
                 if (_mType == "Operation") exitWith { "AO: multiple zones  -  capture rules in Tasks." };
                 if (_pos isEqualType [] && { count _pos >= 2 } && { !(_pos isEqualTo [0, 0, 0]) }) exitWith {
-                    "Approx. area grid: " + (mapGridPosition _pos) + "  -  detail in Tasks."
+                    "Grid " + (mapGridPosition _pos)
                 };
                 "Focus: see Tasks / markers."
             };
@@ -229,11 +271,10 @@ FAC_missionsGui_fnc = {
             if (!isNull _slotGlobal) then {
                 if (count _global >= 2) then {
                     private _title = [_global] call _entryTitle;
-                    private _typeLabel = [_global] call _entryTypeLabel;
                     private _owner = _global select 1;
                     private _oStr = [_owner] call _ownerStr;
                     private _focus = [_global] call _slotFocusLine;
-                    _slotGlobal ctrlSetText (_title + _nl + _typeLabel + _nl + _focus + _nl + "Started by: " + _oStr);
+                    _slotGlobal ctrlSetText (_title + _nl + _focus + _nl + "Started by " + _oStr);
                 } else {
                     _slotGlobal ctrlSetText ("No mission active." + _nl + "(Global slot is free.)");
                 };
@@ -247,10 +288,9 @@ FAC_missionsGui_fnc = {
                     if (count _entry >= 2) then {
                         _entry params ["", "_o"];
                         private _n = [_entry] call _entryTitle;
-                        private _typeLabel = [_entry] call _entryTypeLabel;
                         private _oStr = [_o] call _ownerStr;
                         private _focus = [_entry] call _slotFocusLine;
-                        _c ctrlSetText (_n + _nl + _typeLabel + _nl + _focus + _nl + "Started by: " + _oStr);
+                        _c ctrlSetText (_n + _nl + _focus + _nl + "Started by " + _oStr);
                     } else {
                         _c ctrlSetText ("No mission in this slot.");
                     };
@@ -267,6 +307,7 @@ FAC_missionsGui_fnc = {
             } forEach [60151, 60152, 60153];
             ["refreshDescription", []] call FAC_missionsGui_fnc;
             ["updateButtons", []] call FAC_missionsGui_fnc;
+            [] call FAC_missionsGui_syncTabs;
         };
         case "updateButtons": {
             if (isNull _display) exitWith {};
@@ -355,11 +396,12 @@ FAC_missionsGui_fnc = {
                 };
             };
             if (count _text > 0) then {
-                _descCtrl ctrlSetText _text;
+                [_descCtrl, _text] call FAC_missionsGui_setDescList;
             } else {
-                _descCtrl ctrlSetText FAC_missionsGui_defaultDesc;
+                [_descCtrl, FAC_missionsGui_defaultDesc] call FAC_missionsGui_setDescList;
             };
-            _descCtrl ctrlEnable false;
         };
     };
 };
+missionNamespace setVariable ["FAC_missionsGui_fnc", FAC_missionsGui_fnc];
+missionNamespace setVariable ["FAC_missionsGui_syncTabs", FAC_missionsGui_syncTabs];

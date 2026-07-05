@@ -450,7 +450,7 @@ Rhodesy's office opens <font color='#90EE90'>Manage Scenario</font>. The GUI is 
 Set time of day, time compression, weather preset / weather sliders, gear limits, preset-loadout limits, civilians enabled, civilian density / max alive, and faction picks for friendly, enemy and civilian spawns.<br/><br/>
 
 <font color='#87CEEB'>ENEMY OPTIONS</font><br/>
-Enemy controls include patrols, AI skill, routing / retreat behaviour, AAA level (<font color='#90EE90'>Off</font>, <font color='#90EE90'>AAA</font>, <font color='#90EE90'>AAA+MANPADS</font>), OPFOR AT prevalence, OPFOR population scaling, OPFOR air, and Operation zone count. Area of Operations strength comes from lobby / startup settings, not a live Scenario GUI slider.<br/><br/>
+Enemy controls include patrols, AI skill, routing / retreat behaviour, AAA level (<font color='#90EE90'>Off</font>, <font color='#90EE90'>AAA</font>, <font color='#90EE90'>AAA+MANPADS</font> — spawns missile AA / MANPADS threats around sustained airborne flight and actively engages), OPFOR AT prevalence, OPFOR population scaling, OPFOR air (<font color='#90EE90'>Off</font> / <font color='#90EE90'>Low</font> / <font color='#90EE90'>Normal</font> / <font color='#90EE90'>High</font>), OPFOR drones (same tiers — faction UAV patrol; spots ground players and may vector truck QRF), and Operation / Invasion zone count. OPFOR population uses fixed stepped multipliers on mission spawn counts: <font color='#90EE90'>Very Low</font> 0.25×, <font color='#90EE90'>Low</font> 0.5×, <font color='#90EE90'>Normal</font> 1×, <font color='#90EE90'>High</font> 1.5×, <font color='#90EE90'>Very High</font> 2×, <font color='#90EE90'>Insane</font> 4×. Area of Operations strength comes from lobby / startup settings, not a live Scenario GUI slider.<br/><br/>
 
 <font color='#87CEEB'>CIVILIANS AND INTEL</font><br/>
 Ambient civilians and traffic use civilian zones. If civilian talk is enabled, use <font color='#90EE90'>Talk to civilian</font> on foot civilians or the base NPC to open dialogue. Actionable civilian tips append timestamped reports to <font color='#FFD700'>Intel</font>. Building intel props can appear with virtual garrisons; <font color='#90EE90'>Read intel</font> may reveal live OPFOR, vehicles, garrisons, checkpoints or mission context. Scenario policies can restrict civilian talk to interpreters and intel reading to specialists.<br/><br/>
@@ -485,8 +485,13 @@ Most missions open a location overlay: choose <font color='#90EE90'>Random locat
 - <font color='#90EE90'>Hostage</font>  - Rescue civilians held in urban buildings and return survivors near base; too many hostage deaths fail the mission.<br/>
 - <font color='#90EE90'>HVT</font>  - Locate a high-value target in an urban building. Kill or capture; captured HVTs must be brought back near base.<br/>
 - <font color='#90EE90'>Intercept Convoy</font>  - Stop a moving road convoy before it reaches the end zone. At least 60 percent of convoy vehicles must be destroyed or immobilised.<br/>
-- <font color='#90EE90'>Operation</font>  - Multi-zone fight across civilian zones. Zones capture once OPFOR are cleared, then can be contested again if OPFOR return; evaluation runs about every 60 s.<br/>
+- <font color='#90EE90'>Invasion</font>  - Defensive multi-zone fight: OPFOR seizes a beachhead and pushes through the nearest civil zones. Retake the INVASION beachhead to win; lose if OPFOR holds every zone.<br/>
+- <font color='#90EE90'>Operation</font>  - Multi-zone fight across civilian zones. Zones capture once OPFOR are cleared, then can be contested again if OPFOR return; evaluation runs about every 5 s.<br/>
+- <font color='#90EE90'>Raid</font> — Three objectives across the map (recover object, HVT kill/capture, or hostage) tied to one enemy network. Each site gets a codename marker (e.g. HAMMER, TRIDENT); clear them in any order. Intel starts approximate and refines on recon.<br/>
 - <font color='#90EE90'>Search &amp; Destroy</font>  - Search a marked 250 m town zone for ammo caches in garrisoned buildings. Burning barrels mark cache buildings; task text states cache count and required destroy percentage.<br/><br/>
+
+<font color='#87CEEB'>MISSION BACKGROUND (LORE)</font><br/>
+Most missions include a short procedural background paragraph in the assigned intro, SMEAC Situation block, and an <font color='#FFD700'>Intel</font> diary entry. Flavour only — no gameplay effect.<br/><br/>
 
 <font color='#87CEEB'>SINGLE [S]</font><br/>
 - <font color='#90EE90'>Cargo / Resupply</font>  - Sling-load or deliver supplies from CargoPoint_1 to a friendly camp and land to complete. Non-combat logistics task.<br/>

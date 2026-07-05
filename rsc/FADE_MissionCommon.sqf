@@ -67,6 +67,13 @@ missionNamespace setVariable ["FADE_getTopographySummary", {
     };
     [_grid, _areaName]
 }];
+
+// Player-facing SMEAC / lore friendly label (not scenario spawn faction classname).
+FADE_smeacFriendlyLabel = "CTB";
+FADE_getSmeacFriendlyLabel = { missionNamespace getVariable ["FADE_smeacFriendlyLabel", "CTB"] };
+missionNamespace setVariable ["FADE_smeacFriendlyLabel", FADE_smeacFriendlyLabel];
+missionNamespace setVariable ["FADE_getSmeacFriendlyLabel", FADE_getSmeacFriendlyLabel];
+
 missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
     params [
         "_missionType",
@@ -82,9 +89,10 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
         "_topographyArea",
         ["_bodyColorHex", ""]
     ];
+    _friendlyFactionDisplay = [] call FADE_getSmeacFriendlyLabel;
     private _topoBodyCol = if (_bodyColorHex isEqualTo "") then { "#B0B0B0" } else { _bodyColorHex };
     private _bodyCol = if (_bodyColorHex isEqualTo "") then { "#A0A0A0" } else { _bodyColorHex };
-    private _estQual = if (_opforCountFactor < 1) then { " (estimate may be low)" } else { " (estimate may be high)" };
+    private _estQual = "";
     private _n = _estimatedOpforCount max 0;
     private _echelon = switch (true) do {
         case (_n <= 0): { "none confirmed" };
@@ -104,44 +112,69 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
         case "Reduced": { "Anti-armour present but below full table of equipment." };
         default { "Expect RPG / light AT teams in the infantry mix." };
     };
-    private _airSet = missionNamespace getVariable ["FADE_opforAirSetting", "Off"];
+    private _airSet = [missionNamespace getVariable ["FADE_opforAirSetting", "Off"]] call FADE_normalizeOpforThreatSetting;
     private _airLine = if (_airSet isEqualTo "Off") then {
         "Hostile air is unlikely."
     } else {
-        "Hostile rotary-wing may respond to detected friendly activity."
+        format ["Hostile rotary-wing may be committed if the enemy gains situational awareness (%1).", toLower _airSet]
     };
-    private _commsLine = if (_missionType in ["HVT", "Hostage", "ClearArea", "SearchDestroy", "CASEVAC", "CSAR", "Operation", "AreaOfOperations", "AssetRetrieval", "AssetRetrievalVeh", "InterceptConvoy", "EscapeEvasion"]) then {
-        "Reinforcement (QRF) is possible after sustained contact."
+    private _droneSet = [missionNamespace getVariable ["FADE_opforDroneSetting", "Off"]] call FADE_normalizeOpforThreatSetting;
+    private _droneLine = if (_droneSet isEqualTo "Off") then {
+        "Enemy UAV patrols are unlikely."
+    } else {
+        format ["Enemy UAVs may patrol the battlespace and vector ground QRF onto detected foot mobile (%1).", toLower _droneSet]
+    };
+    private _commsLine = if (_missionType in ["HVT", "Hostage", "ClearArea", "SearchDestroy", "CASEVAC", "CSAR", "Operation", "AreaOfOperations", "AssetRetrieval", "AssetRetrievalVeh", "InterceptConvoy", "EscapeEvasion", "Raid"]) then {
+        "Enemy may request reinforcements after sustained or reported contact."
     } else {
         "Reinforcement is unlikely; expect local contacts only."
     };
-    private _specBlock = [_atLine, _airLine, _commsLine] joinString "<br/>";
+    private _specBlock = [_atLine, _airLine, _droneLine, _commsLine] joinString "<br/>";
     private _mlcoa = switch (_missionType) do {
-        case "TroopInsert": { "Likely action: local security reacts to noise; minor harassing fire possible en route to LZ." };
-        case "TroopExtract": { "Likely action: enemy may probe the pickup zone and try to delay embarkation." };
-        case "CASEVAC": { "Likely action: enemy near the casualty site maintains pressure while you load." };
-        case "CSAR": { "Likely action: search teams sweep toward the survivor; defend until extraction." };
-        case "Cargo": { "Likely action: sporadic contacts on approach; garrison stays defensive at the drop site." };
-        case "CAS": { "Likely action: enemy continues pressure on friendly positions and seeks cover when engaged from the air." };
-        case "HVT": { "Likely action: guards protect the HVT; outer patrols try to canalise you into kill zones." };
-        case "Hostage": { "Likely action: captors barricade structures and use hostages as cover while returning fire." };
-        case "ClearArea": { "Likely action: garrison fights for the town; withdraws in fragments once cohesion breaks." };
-        case "SearchDestroy": { "Likely action: garrisoned buildings hold ammo caches inside; outer guards and patrols reinforce toward gunfire." };
-        case "InterceptConvoy": { "Likely action: escorts suppress flanks and push through; vehicles button up and run the route." };
-        case "MineClearing": { "Likely action: minimal manoeuvre; treat the area as contaminated until cleared." };
-        case "AssetRetrieval": { "Likely action: house team holds the objective; outer patrols counter-attack toward the building." };
-        case "AssetRetrievalVeh": { "Likely action: dismounted security holds the road site; patrols screen approaches." };
-        case "AreaOfOperations": { "Likely action: objective garrisons defend in place; patrols and QRF may shift between objectives." };
-        case "Operation": { "Likely action: zone garrisons hold built-up areas; vehicles may move between zones." };
-        case "EscapeEvasion": { "Likely action: dismounted patrols sweep the area; road QRF vectors on confirmed contact." };
-        default { "Likely action: defend key ground on contact, adjust on flanks, or break contact once cohesion is lost." };
+        case "TroopInsert": { "Local security may react to aircraft noise; expect minor harassing fire en route to the LZ." };
+        case "TroopExtract": { "Enemy may probe the pickup zone and try to delay embarkation." };
+        case "CASEVAC": { "Enemy near the casualty site may maintain pressure during loading." };
+        case "CSAR": { "Search teams may sweep toward the survivor; defend the site until extraction." };
+        case "Cargo": { "Non-combat resupply; expect friendly receiving party and local camp security only." };
+        case "CAS": { "Enemy may continue pressure on friendly positions and seek cover when engaged from the air." };
+        case "HVT": { "Bodyguards will protect the HVT; outer patrols may try to canalise approach routes." };
+        case "Hostage": { "Captors may barricade structures and use hostages as cover while returning fire." };
+        case "ClearArea": { "Garrison may fight for the town and withdraw in fragments once cohesion breaks." };
+        case "SearchDestroy": { "Garrisoned buildings may hold caches; outer guards may move toward gunfire." };
+        case "InterceptConvoy": { "Escorts may suppress flanks and attempt to push through; expect vehicles to button up." };
+        case "MineClearing": { "Minimal enemy manoeuvre expected; treat the area as contaminated until cleared." };
+        case "AssetRetrieval": { "House team may hold the objective; patrols may counter-attack toward the building." };
+        case "AssetRetrievalVeh": { "Dismounted security may hold the road site; patrols may screen approaches." };
+        case "AreaOfOperations": { "Objective garrisons will defend in place; enemy may shift forces between objectives under pressure." };
+        case "Operation": { "Zone garrisons will hold built-up areas; enemy may move vehicles between sectors." };
+        case "Raid": { "Each objective appears independently defended; assault on one site may draw enemy attention elsewhere." };
+        case "Invasion": { "OPFOR pushes zone-by-zone from the beachhead; heliborne waves continue while they hold it. Retake INVASION to win." };
+        case "EscapeEvasion": { "Dismounted patrols sweep the area; enemy may follow up after confirmed contact." };
+        default { "Expect defenders to hold key ground on contact, adjust on flanks, or break contact once cohesion is lost." };
     };
-    private _mdcoa = "Possible reinforcement: multi-axis ground or air QRF if the enemy still has capacity.";
+    private _mdcoa = "Enemy reserves may commit additional troops or vehicles if local forces become decisively engaged.";
     private _civOn = missionNamespace getVariable ["FADE_civiliansEnabled", true];
     private _civLine = if (_civOn) then {
         "Civilians may be present; unknown individuals may observe or report activity."
     } else {
         "Civilian presence is not expected in the area."
+    };
+    if (_missionType == "Cargo") exitWith {
+        private _bodyTag = format ["<t align='left' color='%1'>", _bodyCol];
+        private _bodyEnd = "</t>";
+        private _enemyPart = format [
+            "<t align='left' color='#FFD166'>ENEMY</t><br/>" +
+            _bodyTag + "No hostile forces are task-organized for this resupply run." + _bodyEnd + "<br/>" +
+            _bodyTag + "Route is not expected to be contested." + _bodyEnd
+        ];
+        private _friendlyPart = format [
+            "<br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/>" +
+            _bodyTag + "Forward camp with receiving party and local security patrols." + _bodyEnd + "<br/>" +
+            _bodyTag + "%1 — task-organized from base." + _bodyEnd,
+            _friendlyFactionDisplay
+        ];
+        _enemyPart + _friendlyPart +
+            "<br/><br/><t align='left' color='#FFD166'>CIVILIAN</t><br/>" + _bodyTag + _civLine + _bodyEnd
     };
     if (_missionType == "EscapeEvasion") exitWith {
         private _tag = format ["<t align='left' color='%1'>", _bodyCol];
@@ -162,24 +195,16 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
         ];
         private _friendlyPart = format [
             "<br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/>" +
-            _tag + "%1 - %2 players committed." + _end,
-            _friendlyFactionDisplay,
-            _friendlyPlayerCount
+            _tag + "%1 — task-organized from base." + _end,
+            _friendlyFactionDisplay
         ];
         _enemyPart + _friendlyPart +
             "<br/><br/><t align='left' color='#FFD166'>CIVILIAN</t><br/>" + _tag + _civLine + _end
     };
     private _bodyTag = format ["<t align='left' color='%1'>", _bodyCol];
-    private _topoTag = format ["<t align='left' color='%1'>", _topoBodyCol];
     private _bodyEnd = "</t>";
-    private _locationPart = format [
-        "<t align='left' color='#FFD166'>LOCATION</t><br/>" +
-        _topoTag + "Grid %1 - %2" + _bodyEnd,
-        _topographyGrid,
-        _topographyArea
-    ];
     private _enemyPart = format [
-        "<br/><br/><t align='left' color='#FFD166'>ENEMY</t><br/>" +
+        "<t align='left' color='#FFD166'>ENEMY</t><br/>" +
         _bodyTag + "%1 - ~%2 troops (%3%4)." + _bodyEnd + "<br/>" +
         _bodyTag + "%5" + _bodyEnd + "<br/>" +
         _bodyTag + "%6" + _bodyEnd + "<br/>" +
@@ -194,11 +219,10 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
     ];
     private _friendlyPart = format [
         "<br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/>" +
-        _bodyTag + "%1 - %2 players committed." + _bodyEnd,
-        _friendlyFactionDisplay,
-        _friendlyPlayerCount
+        _bodyTag + "%1 — task-organized from base." + _bodyEnd,
+        _friendlyFactionDisplay
     ];
-    _locationPart + _enemyPart + _friendlyPart +
+    _enemyPart + _friendlyPart +
         "<br/><br/><t align='left' color='#FFD166'>CIVILIAN</t><br/>" + _bodyTag + _civLine + _bodyEnd
 }];
 
@@ -224,8 +248,7 @@ FADE_missionComputeBriefingDefaults = {
         "_zeroAlphaDisplayName"
     ];
     private _friendlyPlayerCount = [_sideFriendly] call (missionNamespace getVariable ["FADE_countFriendlyPlayers", { 0 }]);
-    private _friendlyFactionClass = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"];
-    private _friendlyFactionName = [_friendlyFactionClass] call (missionNamespace getVariable ["FADE_getFactionDisplayName", { _this select 0 }]);
+    private _friendlyFactionName = [] call FADE_getSmeacFriendlyLabel;
     private _acreChannelSummary = [] call (missionNamespace getVariable ["FADE_getAcreChannelSummary", { "ACRE channel names unavailable" }]);
     private _topographyData = [_destPos] call (missionNamespace getVariable ["FADE_getTopographySummary", { ["UNKNOWN", "Unknown area"] }]);
     private _topographyGrid = _topographyData param [0, "UNKNOWN"];
@@ -247,16 +270,22 @@ FADE_missionComputeBriefingDefaults = {
         case "AssetRetrieval": { 14 };
         case "AreaOfOperations": { 30 };
         case "Operation": { 36 };
+        case "Raid": { 28 };
+        case "Invasion": { 40 };
         case "EscapeEvasion": { 22 };
         default { 10 };
     };
-    private _opforBaseline = if (_actualOpforCount > 0) then { _actualOpforCount } else { _fallbackOpforBaseline };
+    private _opforBaseline = if (_missionType == "Cargo") then {
+        0
+    } else {
+        if (_actualOpforCount > 0) then { _actualOpforCount } else { _fallbackOpforBaseline }
+    };
     private _opforCountFactor = if (random 1 < 0.5) then { 0.8 } else { 1.2 };
     private _estimatedOpforCount = (round (_opforBaseline * _opforCountFactor)) max 0;
     private _intelFormatter = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
     private _defaultSituationHtml = if (_intelFormatter isEqualTo {}) then {
         format [
-            "<t align='left' color='#B0B0B0'>Topography: Grid %2 | Area: %3</t><br/><t align='left' color='#B0B0B0'>Enemy: %1</t><br/><t align='left' color='#B0B0B0'>Friendly package active from base.</t>",
+            "<t align='left' color='#B0B0B0'>Topography: Grid %2 | Area: %3</t><br/><t align='left' color='#B0B0B0'>Enemy: %1</t><br/><t align='left' color='#B0B0B0'>CTB task-organized from base.</t>",
             _enemyFactionName,
             _topographyGrid,
             _topographyArea
@@ -278,7 +307,7 @@ FADE_missionComputeBriefingDefaults = {
     };
     private _defaultSituationHintHtml = if (_intelFormatter isEqualTo {}) then {
         format [
-            "<t align='left' color='#FFFFFF'>Topography: Grid %2 | Area: %3</t><br/><t align='left' color='#FFFFFF'>Enemy: %1</t><br/><t align='left' color='#FFFFFF'>Friendly package active from base.</t>",
+            "<t align='left' color='#FFFFFF'>Topography: Grid %2 | Area: %3</t><br/><t align='left' color='#FFFFFF'>Enemy: %1</t><br/><t align='left' color='#FFFFFF'>CTB task-organized from base.</t>",
             _enemyFactionName,
             _topographyGrid,
             _topographyArea
@@ -322,7 +351,74 @@ FADE_missionComputeBriefingDefaults = {
 };
 missionNamespace setVariable ["FADE_missionComputeBriefingDefaults", FADE_missionComputeBriefingDefaults];
 
+// Recompute SMEAC location/lore at the resolved objective (many runners refine _destPos after Missions.sqf bootstrap).
+FADE_missionRefreshBriefingAtPos = {
+    params [
+        "_missionType",
+        "_objectivePos",
+        "_sideFriendly",
+        "_sideEnemy",
+        "_enemyFactionName",
+        "_zeroAlphaDisplayName",
+        ["_operationName", ""]
+    ];
+    if (!(_objectivePos isEqualType []) || { count _objectivePos < 2 }) exitWith { createHashMap };
+    private _briefDefaults = [
+        _missionType, _objectivePos, _sideFriendly, _sideEnemy, _enemyFactionName, _zeroAlphaDisplayName
+    ] call FADE_missionComputeBriefingDefaults;
+    private _loreShort = "";
+    private _loreLong = "";
+    private _loreSmeacHtml = "";
+    if (!isNil "FADE_lore_generate" && { _operationName isEqualType "" } && { _operationName != "" }) then {
+        private _loreResult = [_missionType, _objectivePos, _operationName] call FADE_lore_generate;
+        if (_loreResult isEqualType [] && { count _loreResult >= 3 }) then {
+            _loreResult params ["_ls", "_ldiary", "_lsmeac"];
+            _loreShort = _ls;
+            _loreLong = _ldiary;
+            _loreSmeacHtml = _lsmeac;
+        };
+    };
+    private _situationHtml = _briefDefaults getOrDefault ["defaultSituationHtml", ""];
+    private _sitHint = _briefDefaults getOrDefault ["defaultSituationHintHtml", ""];
+    if (_loreLong != "") then {
+        _sitHint = _sitHint + format ["<br/><br/><t align='left' color='#8BA4BE'>%1</t>", _loreLong];
+        _briefDefaults set ["defaultSituationHintHtml", _sitHint];
+    };
+    _briefDefaults set ["defaultSituationTaskText", _situationHtml];
+    _briefDefaults set ["loreShort", _loreShort];
+    _briefDefaults set ["loreLong", _loreLong];
+    _briefDefaults set ["loreSmeacHtml", _loreSmeacHtml];
+    if (isServer) then {
+        private _boardFn = missionNamespace getVariable ["FADE_hqMainBoard_setObjectiveBrief", {}];
+        if (_boardFn isEqualType {} && { !(_boardFn isEqualTo {}) }) then {
+            [_objectivePos] call _boardFn;
+        };
+    };
+    _briefDefaults
+};
+missionNamespace setVariable ["FADE_missionRefreshBriefingAtPos", FADE_missionRefreshBriefingAtPos];
+
 // Full SMEAC text for BI Task only (FADE_buildMissionTaskSmeacText). Assigned intro: FADE_showMissionAssignedIntro (typeText + Task hint).
+FADE_smeac_formatBackgroundFallback = {
+    params [["_enemyFactionName", "Hostile forces"]];
+    format [
+        "<t align='left' color='#FFD166'>BACKGROUND</t><br/>" +
+        "<t align='left' color='#8BA4BE'>- %1 operating in the objective area.</t><br/>" +
+        "<t align='left' color='#B0B0B0'>- Threat assessment: Local posture uncertain; treat all contacts as hostile until identified.</t><br/>" +
+        "<t align='left' color='#B0B0B0'>- Commander's intent: Execute assigned objectives IAW task execution.</t>",
+        _enemyFactionName
+    ]
+};
+missionNamespace setVariable ["FADE_smeac_formatBackgroundFallback", FADE_smeac_formatBackgroundFallback];
+
+FADE_smeac_wrapMissionHtml = {
+    params ["_text"];
+    if (_text isEqualTo "") exitWith { "" };
+    if ((_text find "<t") >= 0) exitWith { _text };
+    format ["<t align='left' color='#C0C0C0'>%1</t>", _text]
+};
+missionNamespace setVariable ["FADE_smeac_wrapMissionHtml", FADE_smeac_wrapMissionHtml];
+
 missionNamespace setVariable ["FADE_buildMissionTaskSmeacText", {
     params [
         "_missionText",
@@ -331,48 +427,150 @@ missionNamespace setVariable ["FADE_buildMissionTaskSmeacText", {
         ["_executionText", ""],
         ["_adminText", ""],
         ["_commandText", ""],
-        ["_omitAppendedTopography", false]
+        ["_withholdGrid", false]
     ];
     private _br = "<br/>";
-    if (_situationText isEqualTo "") then { _situationText = "No intel available." };
-    if (_executionText isEqualTo "") then { _executionText = "Follow map markers and task updates." };
-    if (_adminText isEqualTo "") then { _adminText = "Mission lead: Zero Alpha." };
-    if (_commandText isEqualTo "") then { _commandText = "Use assigned radio channels." };
-    private _topoData = [_pos] call (missionNamespace getVariable ["FADE_getTopographySummary", { ["UNKNOWN", "Unknown area"] }]);
-    private _grid = _topoData param [0, "UNKNOWN"];
-    private _areaName = _topoData param [1, "Unknown area"];
-    private _sitHasLocation = ((_situationText find "LOCATION") >= 0) || { (_situationText find "TOPOGRAPHY") >= 0 };
-    if (_sitHasLocation) exitWith {
-        format [
-            "<t align='left' color='#FFD166'>SITUATION</t>%1%2%1%1<t align='left' color='#FFD166'>MISSION</t>%1%3%1%1<t align='left' color='#FFD166'>EXECUTION</t>%1%4%1%1<t align='left' color='#FFD166'>ADMIN</t>%1%5%1%1<t align='left' color='#FFD166'>COMMAND</t>%1%6",
-            _br,
-            _situationText,
-            _missionText,
-            _executionText,
-            _adminText,
-            _commandText
-        ]
+    private _bodyCol = "#B0B0B0";
+    private _hdrCol = "#E8E8E8";
+    private _sectionCol = "#FFD166";
+    private _opName = missionNamespace getVariable ["FADE_missionRun_operationName", "Operation"];
+    if (_opName isEqualTo "") then { _opName = "Operation" };
+    if (_situationText isEqualTo "") then { _situationText = "<t align='left' color='#B0B0B0'>No situation picture available.</t>" };
+    if (_executionText isEqualTo "") then { _executionText = "<t align='left' color='#C0C0C0'>Follow map markers and task updates.</t>" };
+    if (_adminText isEqualTo "") then { _adminText = "<t align='left' color='#FFFFFF'>Mission lead: Zero Alpha.</t>" };
+    if (_commandText isEqualTo "") then { _commandText = "<t align='left' color='#FFFFFF'>Use assigned radio channels.</t>" };
+    private _backgroundHtml = missionNamespace getVariable ["FADE_missionRun_loreSmeacHtml", ""];
+    if (_backgroundHtml isEqualTo "") then {
+        private _enemyName = missionNamespace getVariable ["FADE_missionRun_enemyFactionName", "Hostile forces"];
+        _backgroundHtml = [_enemyName] call FADE_smeac_formatBackgroundFallback;
     };
-    if (_omitAppendedTopography) exitWith {
-        format [
-            "<t align='left' color='#FFD166'>SITUATION</t>%1%2%1%1<t align='left' color='#FFD166'>MISSION</t>%1%3%1%1<t align='left' color='#FFD166'>EXECUTION</t>%1%4%1%1<t align='left' color='#FFD166'>ADMIN</t>%1%5%1%1<t align='left' color='#FFD166'>COMMAND</t>%1%6",
-            _br,
-            _situationText,
-            _missionText,
-            _executionText,
-            _adminText,
-            _commandText
-        ]
+    private _grid = missionNamespace getVariable ["FADE_missionRun_topographyGrid", "UNKNOWN"];
+    private _areaName = missionNamespace getVariable ["FADE_missionRun_topographyArea", "Unknown area"];
+    if (_pos isEqualType [] && { count _pos >= 2 }) then {
+        private _topoData = [_pos] call (missionNamespace getVariable ["FADE_getTopographySummary", { ["UNKNOWN", "Unknown area"] }]);
+        _grid = _topoData param [0, _grid];
+        _areaName = _topoData param [1, _areaName];
     };
+    private _gridLine = if (_withholdGrid) then {
+        format ["<t align='left' color='%1'>Grid withheld — map-reconnaissance drill</t>", _bodyCol]
+    } else {
+        format ["<t align='left' color='%1'>Grid %2 — %3</t>", _bodyCol, _grid, _areaName]
+    };
+    private _missionHtml = [_missionText] call FADE_smeac_wrapMissionHtml;
     format [
-        "<t align='left' color='#FFD166'>SITUATION</t>%1%2%1<t align='left' color='#B0B0B0'>Grid %3 - %8</t>%1%1<t align='left' color='#FFD166'>MISSION</t>%1%4%1%1<t align='left' color='#FFD166'>EXECUTION</t>%1%5%1%1<t align='left' color='#FFD166'>ADMIN</t>%1%6%1%1<t align='left' color='#FFD166'>COMMAND</t>%1%7",
+        "<t align='left' color='%1' size='1.05'>%2</t>%3%4%3%3" +
+        "%5%3%3" +
+        "<t align='left' color='%6'>SITUATION</t>%3%7%3%3" +
+        "<t align='left' color='%6'>MISSION</t>%3%8%3%3" +
+        "<t align='left' color='%6'>EXECUTION</t>%3%9%3%3" +
+        "<t align='left' color='%6'>ADMIN</t>%3%10%3%3" +
+        "<t align='left' color='%6'>COMMAND</t>%3%11",
+        _hdrCol,
+        _opName,
         _br,
+        _gridLine,
+        _backgroundHtml,
+        _sectionCol,
         _situationText,
-        _grid,
-        _missionText,
+        _missionHtml,
         _executionText,
         _adminText,
-        _commandText,
-        _areaName
+        _commandText
     ]
 }];
+
+// Alive human players (server loops — build once per tick, reuse in sub-calls).
+FADE_getAlivePlayers = {
+    private _out = [];
+    { if (alive _x && { isPlayer _x }) then { _out pushBack _x } } forEach allPlayers;
+    _out
+};
+
+FADE_getAlivePlayerPositions = {
+    private _out = [];
+    {
+        if (alive _x && { isPlayer _x }) then { _out pushBack (getPosATL _x) };
+    } forEach allPlayers;
+    _out
+};
+
+// Standard mission runner context (set by FADE_runMission in Missions.sqf before dispatch).
+FADE_missionRun_getContext = {
+    [
+        missionNamespace getVariable ["FADE_missionRun_missionType", ""],
+        missionNamespace getVariable ["FADE_missionRun_destPos", [0, 0, 0]],
+        missionNamespace getVariable ["FADE_missionRun_player", objNull],
+        missionNamespace getVariable ["FADE_missionRun_evadeePlayers", []],
+        missionNamespace getVariable ["FADE_missionRun_fromMapClick", false],
+        missionNamespace getVariable ["FADE_missionRun_mapAnchor", []],
+        missionNamespace getVariable ["FADE_missionRun_friendlyUnits", []],
+        missionNamespace getVariable ["FADE_missionRun_enemyUnits", []],
+        missionNamespace getVariable ["FADE_missionRun_sideFriendly", west],
+        missionNamespace getVariable ["FADE_missionRun_sideEnemy", east],
+        missionNamespace getVariable ["FADE_missionRun_markerFriendly", "ColorWEST"],
+        missionNamespace getVariable ["FADE_missionRun_markerEnemy", "ColorEAST"],
+        missionNamespace getVariable ["FADE_surfaceIsDry", {}],
+        missionNamespace getVariable ["FADE_missionRun_taskId", ""],
+        missionNamespace getVariable ["FADE_missionRun_operationName", ""],
+        missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""],
+        missionNamespace getVariable ["FADE_missionRun_briefGuiTail", ""],
+        missionNamespace getVariable ["FADE_jitterMarkerPos", {}],
+        missionNamespace getVariable ["FADE_missionRun_enemyFactionName", ""],
+        missionNamespace getVariable ["FADE_missionRun_zeroAlphaDisplayName", ""],
+        missionNamespace getVariable ["FADE_missionRun_isGlobalMission", false],
+        missionNamespace getVariable ["FADE_missionRun_basePos", [0, 0, 0]],
+        missionNamespace getVariable ["FADE_missionRun_unitCount", 6],
+        missionNamespace getVariable ["FADE_missionRun_unitClasses", []],
+        missionNamespace getVariable ["FADE_scaleOpforCount", {}],
+        missionNamespace getVariable ["FADE_mission_createTask", {}],
+        missionNamespace getVariable ["FADE_mission_showAssignedHint", {}],
+        missionNamespace getVariable ["FADE_missionRun_defaultSituationTaskText", ""],
+        missionNamespace getVariable ["FADE_missionRun_defaultExecutionTaskText", ""],
+        missionNamespace getVariable ["FADE_missionRun_defaultAdminTaskText", ""],
+        missionNamespace getVariable ["FADE_missionRun_defaultCommandTaskText", ""],
+        missionNamespace getVariable ["FADE_missionRun_defaultSituationHtml", ""],
+        missionNamespace getVariable ["FADE_missionRun_defaultSituationHintHtml", ""],
+        missionNamespace getVariable ["FADE_missionRun_friendlyPlayerCount", 0],
+        missionNamespace getVariable ["FADE_missionRun_friendlyFactionName", ""],
+        missionNamespace getVariable ["FADE_missionRun_estimatedOpforCount", 0],
+        missionNamespace getVariable ["FADE_missionRun_opforCountFactor", 1],
+        missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}],
+        missionNamespace getVariable ["FADE_missionRun_topographyGrid", "UNKNOWN"],
+        missionNamespace getVariable ["FADE_missionRun_topographyArea", ""]
+    ]
+};
+
+// Post-monitor cleanup tail (marker delete + clear active + scheduled entity cleanup).
+FADE_mission_completeCleanup = {
+    params ["_taskId", "_markerName", "_player", ["_delay", 60], ["_extraMarkers", []]];
+    if (_markerName != "") then { [_markerName] call FADE_deleteMarkerSafe };
+    { if (_x != "") then { [_x] call FADE_deleteMarkerSafe } } forEach _extraMarkers;
+    if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then {
+        [_player] call FADE_clearActiveMission;
+    };
+    [_taskId, _delay, _player] call FADE_missionEnt_scheduledCleanup;
+};
+
+// AO sustain: points with no friendly infantry nearby (cheaper than per-point nearEntities when few BLUFOR).
+FADE_ao_pointsWithoutFriendlies = {
+    params ["_points", "_captureRadius", "_sideFriendly", ["_friendlyUnits", []]];
+    if (_friendlyUnits isEqualTo []) then {
+        _friendlyUnits = allUnits select { side _x == _sideFriendly && { alive _x } };
+    };
+    private _out = [];
+    {
+        private _pt = _x;
+        private _empty = true;
+        {
+            if (alive _x && { _x distance _pt < _captureRadius }) exitWith { _empty = false };
+        } forEach _friendlyUnits;
+        if (_empty) then { _out pushBack _pt };
+    } forEach _points;
+    _out
+};
+
+missionNamespace setVariable ["FADE_getAlivePlayers", FADE_getAlivePlayers];
+missionNamespace setVariable ["FADE_getAlivePlayerPositions", FADE_getAlivePlayerPositions];
+missionNamespace setVariable ["FADE_missionRun_getContext", FADE_missionRun_getContext];
+missionNamespace setVariable ["FADE_mission_completeCleanup", FADE_mission_completeCleanup];
+missionNamespace setVariable ["FADE_ao_pointsWithoutFriendlies", FADE_ao_pointsWithoutFriendlies];

@@ -17,7 +17,7 @@ if (isNil "FADE_roadblock_spawnBundle") exitWith {
 };
 
 private _poll = missionNamespace getVariable ["FADE_dynamicRoadblockPollSec", 14];
-private _minBase = missionNamespace getVariable ["FADE_dynamicRoadblockMinDistFromBase", 1500];
+private _minBase = missionNamespace getVariable ["FADE_dynamicRoadblockMinDistFromBase", 2000];
 private _spawnMin = missionNamespace getVariable ["FADE_dynamicRoadblockSpawnMinM", 750];
 private _spawnMax = missionNamespace getVariable ["FADE_dynamicRoadblockSpawnMaxM", 2800];
 private _despawnDist = missionNamespace getVariable ["FADE_dynamicRoadblockDespawnM", 3600];
@@ -30,7 +30,7 @@ private _raySamples = missionNamespace getVariable ["FADE_dynamicRoadblockPlayer
 private _rayMaxPl = missionNamespace getVariable ["FADE_dynamicRoadblockPlayerRayMaxPlayers", 3];
 private _aggMin = missionNamespace getVariable ["FADE_dynamicRoadblockAggressiveMinM", 180];
 private _aggMax = missionNamespace getVariable ["FADE_dynamicRoadblockAggressiveMaxM", 950];
-private _aggMinFromBase = missionNamespace getVariable ["FADE_dynamicRoadblockAggressiveMinDistFromBase", 400];
+private _aggMinFromBase = missionNamespace getVariable ["FADE_dynamicRoadblockAggressiveMinDistFromBase", 2000];
 private _aggChance = missionNamespace getVariable ["FADE_dynamicRoadblockAggressiveChance", 0.34];
 private _eeTMin = missionNamespace getVariable ["FADE_dynamicRoadblockEeTMin", 0.2];
 private _eeTMax = missionNamespace getVariable ["FADE_dynamicRoadblockEeTMax", 0.96];
@@ -70,6 +70,22 @@ FADE_dynamicRoadblocks_despawnAll = {
         };
     } forEach (keys _st);
     missionNamespace setVariable ["FADE_dynamicRoadblockState", createHashMap];
+};
+
+FADE_dynamicRoadblocks_despawnForZone = {
+    params ["_zId"];
+    if (_zId isEqualTo "") exitWith {};
+    private _st = missionNamespace getVariable ["FADE_dynamicRoadblockState", createHashMap];
+    private _remove = [];
+    {
+        private _e = _st get _x;
+        if (_e isEqualType [] && { count _e >= 3 } && { (_e select 2) isEqualTo _zId }) then {
+            if (count _e >= 2) then { [_e select 1] call FADE_roadblock_despawnBundle };
+            _remove pushBack _x;
+        };
+    } forEach (keys _st);
+    { _st deleteAt _x } forEach _remove;
+    missionNamespace setVariable ["FADE_dynamicRoadblockState", _st];
 };
 
 private _eligiblePlayers = {
@@ -398,6 +414,8 @@ private _minDistToStates = {
 private _spawnAt = {
     params ["_center", ["_dirOverride", -1], ["_zoneId", ""]];
     if (count _center < 3) then { _center = [(_center select 0), (_center select 1), 0] };
+    private _base = [missionNamespace getVariable ["FADE_basePos", [0, 0, 0]]] call _norm2;
+    if (count _base >= 2 && { (_center distance2D _base) < _minBase }) exitWith {};
     private _dir = if (_dirOverride >= 0) then { _dirOverride } else { [_center, random 360] call FADE_roadblock_dirFromPos };
     private _bundle = [_center, _dir] call FADE_roadblock_spawnBundle;
     private _nid = missionNamespace getVariable ["FADE_dynamicRoadblockNextId", 0];
@@ -474,6 +492,7 @@ private _tryCivZoneSpawn = {
     {
         if (_spawned) exitWith {};
         private _zid = _x;
+        if (!isNil "FADE_civ_isZonePinned" && { [_zid] call FADE_civ_isZonePinned }) then { } else {
         if ([_zid] call _zoneHasRoadblock) then { } else {
             if (random 1 > _civRollChance) then { } else {
             private _zt = missionNamespace getVariable [_zid, objNull];
@@ -504,6 +523,7 @@ private _tryCivZoneSpawn = {
             };
             };
         };
+        };
     } forEach _ids;
     _spawned
 };
@@ -511,7 +531,7 @@ private _tryCivZoneSpawn = {
 while { true } do {
     private _state = missionNamespace getVariable ["FADE_dynamicRoadblockState", createHashMap];
     private _enabled = missionNamespace getVariable ["FADE_dynamicRoadblocksEnabled", false];
-    private _patrols = missionNamespace getVariable ["FADE_scenarioPatrols", false];
+    private _patrols = missionNamespace getVariable ["FADE_scenarioPatrols", true];
 
     if (!_enabled || { !_patrols }) then {
         if (count keys _state > 0) then {

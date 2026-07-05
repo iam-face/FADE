@@ -52,7 +52,7 @@ FADE_runMission_InterceptConvoy = {
     _enemyUnitsConv = [_enemyUnitsConv] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsConv == 0) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No enemy units configured for convoy crew.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "No enemy units configured for convoy crew."] call FADE_missionErrorHint;
     };
     private _soft = [];
     private _armored = [];
@@ -63,10 +63,10 @@ FADE_runMission_InterceptConvoy = {
     } forEach _convoyVehicles;
     if (count _soft == 0 && { count _armored == 0 }) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Enemy faction has no land vehicles. Choose a faction with cars/trucks or light armour.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "Enemy faction has no land vehicles. Choose a faction with cars/trucks or light armour."] call FADE_missionErrorHint;
     };
     if (isNil "FADE_interceptConvoyRoadRoute") exitWith {
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Convoy route helper not loaded.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "Convoy route helper not loaded."] call FADE_missionErrorHint;
     };
     private _route = if ([_convoyEndRaw] call FADE_fnc_isValidMapClickPos) then {
         [_basePos, -1, _mapAnchor, _mapPickResolvedR, _convoyEndRaw] call FADE_interceptConvoyRoadRoute
@@ -84,7 +84,7 @@ FADE_runMission_InterceptConvoy = {
         } else {
             format ["Could not find a suitable convoy route (roads at least %1 m apart). Try again.", round (missionNamespace getVariable ["FADE_convoyMinRouteM", 5000])]
         };
-        [format ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>%1</t>", _msg]] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", _msg] call FADE_missionErrorHint;
     };
     private _startPos = _route select 0;
     private _endPos = _route select 1;
@@ -132,6 +132,7 @@ FADE_runMission_InterceptConvoy = {
     private _convoyWp = objNull;
     private _leadGrp = grpNull;
     private _dir = [_startPos, _endPos] call BIS_fnc_dirTo;
+    private _fncRoadSpawn = missionNamespace getVariable ["FADE_findOpforGroundVehicleRoadSpawn", {}];
     private _setupConvoyFollow = {
         params ["_vehGrp", "_leadVehicle"];
         if (isNull _vehGrp || { isNull _leadVehicle }) exitWith {};
@@ -145,17 +146,53 @@ FADE_runMission_InterceptConvoy = {
     };
     private _findConvoySafeSpawn = {
         params ["_desiredPos", ["_minVehGap", 12], ["_buildingGap", 10]];
-        private _hit = [_desiredPos, 250, _convoyVehiclesSpawned, -1, [], _endPos, _minVehGap, 8, _buildingGap] call FADE_findOpforGroundVehicleRoadSpawn;
-        if (_hit isEqualTo []) exitWith { [] };
-        _hit select 0
+        private _out = [];
+        private _pos = [];
+        private _candidate = [];
+        private _tooCloseVeh = false;
+        private _nearBuildings = [];
+        if (count _desiredPos < 3) then { _desiredPos = [(_desiredPos select 0), (_desiredPos select 1), 0] };
+        if (!(_fncRoadSpawn isEqualTo {})) then {
+            private _thisRoadHit = [_desiredPos, 250, _convoyVehiclesSpawned, -1, [], _endPos, _minVehGap, 8, _buildingGap] call _fncRoadSpawn;
+            if (_thisRoadHit isEqualType [] && { count _thisRoadHit >= 1 }) then {
+                _pos = _thisRoadHit select 0;
+                if (_pos isEqualType [] && { count _pos >= 2 }) then { _out = _pos };
+            };
+        };
+        if (_out isEqualTo []) then {
+            private _fallback = _desiredPos;
+            for "_try" from 0 to 9 do {
+                if (_out isEqualTo []) then {
+                    _candidate = [[_desiredPos, 0, 16, 6, 1, 0.3, 0, [], _fallback], _fallback] call FADE_findSafePosArray;
+                    if (count _candidate < 2) then { _candidate = _fallback };
+                    if (count _candidate < 3) then { _candidate = [(_candidate select 0), (_candidate select 1), 0] };
+                    _tooCloseVeh = false;
+                    {
+                        if (!isNull _x && { alive _x } && { (_x distance2D _candidate) < _minVehGap }) then { _tooCloseVeh = true };
+                    } forEach _convoyVehiclesSpawned;
+                    if (!_tooCloseVeh) then {
+                        _nearBuildings = nearestTerrainObjects [_candidate, ["HOUSE", "BUILDING", "WALL", "FENCE"], _buildingGap, false, true];
+                        if (count _nearBuildings == 0) then { _out = _candidate };
+                    };
+                };
+            };
+        };
+        if (_out isEqualTo []) then { _out = _desiredPos };
+        if (count _out < 3) then { _out = [(_out select 0), (_out select 1), 0] };
+        _out
     };
     private _spawnConvoyVehicle = {
         params ["_vClass", "_spawnPos"];
         if (_spawnPos isEqualTo [] || { count _spawnPos < 2 }) exitWith { [objNull, grpNull, grpNull] };
         if (count _spawnPos < 3) then { _spawnPos = [(_spawnPos select 0), (_spawnPos select 1), 0] };
-        private _roadHit = [_spawnPos, 250, _convoyVehiclesSpawned, -1, [], _endPos] call FADE_findOpforGroundVehicleRoadSpawn;
-        if (_roadHit isEqualTo []) exitWith { [objNull, grpNull, grpNull] };
-        _roadHit params ["_spawnPos", "_spawnDir"];
+        private _spawnDir = _dir;
+        if (!(_fncRoadSpawn isEqualTo {})) then {
+            private _thisRoadHit = [_spawnPos, 250, _convoyVehiclesSpawned, -1, [], _endPos] call _fncRoadSpawn;
+            if (_thisRoadHit isEqualType [] && { count _thisRoadHit >= 2 }) then {
+                _spawnPos = _thisRoadHit select 0;
+                _spawnDir = _thisRoadHit select 1;
+            };
+        };
         private _veh = createVehicle [_vClass, _spawnPos, [], 0, "NONE"];
         if (isNull _veh) exitWith { [objNull, grpNull, grpNull] };
         _veh setPosATL _spawnPos;
@@ -196,8 +233,9 @@ FADE_runMission_InterceptConvoy = {
 
     // Spawn lead vehicle first, then stagger followers to reduce spawn-gridlock.
     if (count _vehicleClasses > 0) then {
-        private _leadSpawn = [_startPos, 14, 12] call _findConvoySafeSpawn;
-        if !( _leadSpawn isEqualTo [] ) then {
+        private _leadSpawn = [];
+        _leadSpawn = [_startPos, 14, 12] call _findConvoySafeSpawn;
+        if !(_leadSpawn isEqualTo []) then {
         private _leadResult = [(_vehicleClasses select 0), _leadSpawn] call _spawnConvoyVehicle;
         private _leadVeh = _leadResult select 0;
         _leadGrp = _leadResult select 1;
@@ -225,7 +263,7 @@ FADE_runMission_InterceptConvoy = {
                 0
             ];
             private _safeBehind = [_desired, 12, 10] call _findConvoySafeSpawn;
-            if (_safeBehind isEqualTo []) then { continue };
+            if !(_safeBehind isEqualTo []) then {
             private _res = [_vClass, _safeBehind] call _spawnConvoyVehicle;
             private _veh = _res select 0;
             private _vehGrp = _res select 1;
@@ -235,6 +273,7 @@ FADE_runMission_InterceptConvoy = {
                 private _cg2 = _res select 2;
                 if (!isNull _cg2) then { _cargoGroups pushBack _cg2 };
                 _convoySpawnEntries pushBack [_veh, _vClass, _safeBehind, false, _cg2, _vehGrp];
+            };
             };
         };
         };
@@ -298,7 +337,7 @@ FADE_runMission_InterceptConvoy = {
         { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } forEach _convoyVehicleGroups;
         { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } forEach _cargoGroups;
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not spawn convoy vehicles.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "Could not spawn convoy vehicles."] call FADE_missionErrorHint;
     };
     // Lead MOVE wp (refreshed after recovery / follow chain so respawned lead still drives).
     _leadGrp = (_convoySpawnEntries param [0, []]) param [5, grpNull];
@@ -343,12 +382,12 @@ FADE_runMission_InterceptConvoy = {
     private _markerNameEnd = "FADE_convoy_end_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerNameStart, true];
     _player setVariable ["FADE_myMissionMarkerEnd", _markerNameEnd, true];
-    private _markerStart = createMarker [_markerNameStart, [_startPos, 100] call _mkrJitter];
+    private _markerStart = createMarker [_markerNameStart, [_startPos] call FADE_normPos3];
     [_taskId, _markerNameStart] call FADE_missionEnt_registerMarker;
     _markerStart setMarkerType "mil_arrow";
     _markerStart setMarkerColor _markerEnemy;
     _markerStart setMarkerText _operationName;
-    private _markerEnd = createMarker [_markerNameEnd, [_endPos, 100] call _mkrJitter];
+    private _markerEnd = createMarker [_markerNameEnd, [_endPos] call FADE_normPos3];
     [_taskId, _markerNameEnd] call FADE_missionEnt_registerMarker;
     _markerEnd setMarkerType "mil_end";
     _markerEnd setMarkerColor _markerEnemy;
@@ -431,10 +470,7 @@ FADE_runMission_InterceptConvoy = {
                 true
             } else { false };
         };
-        [_markerNameStart] call FADE_deleteMarkerSafe;
-        [_markerNameEnd] call FADE_deleteMarkerSafe;
-        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
-        [_taskId, 60, _player] call FADE_missionEnt_scheduledCleanup;
+        [_taskId, _markerNameStart, _player, 60, [_markerNameEnd]] call FADE_mission_completeCleanup;
     };
 };
 

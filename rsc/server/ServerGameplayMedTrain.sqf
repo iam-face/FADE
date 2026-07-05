@@ -370,6 +370,8 @@ FADE_cleanupMissionEntities = {
         if (_missionType == "EscapeEvasion") then { missionNamespace setVariable ["FADE_eeAborted_" + _taskId, true] };
         if (_missionType == "GeoGuesser") then { missionNamespace setVariable ["FADE_ggAborted_" + _taskId, true] };
         if (_missionType == "AssetRetrieval") then { missionNamespace setVariable ["FADE_assetAborted_" + _taskId, true] };
+        if (_missionType == "Raid") then { missionNamespace setVariable ["FADE_raidAborted_" + _taskId, true] };
+        if (_missionType == "Invasion") then { missionNamespace setVariable ["FADE_invasionAborted_" + _taskId, true] };
         if (_missionType in ["TroopInsert", "TroopExtract"]) then {
             private _abortKey = if (_missionType == "TroopInsert") then {
                 "FADE_troopInsertAborted_" + _taskId

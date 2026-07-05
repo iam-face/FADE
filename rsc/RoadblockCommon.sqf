@@ -5,8 +5,8 @@
 //   FADE_roadblock_relToWorld, FADE_roadblock_dirFromPos,
 //   FADE_roadblock_spawnBundle, FADE_roadblock_despawnBundle
 // Props: one random barricade (Land_Barricade_01_10m_F, Land_Barricade_01_4m_F,
-//   Fort_Barricade  -  invalid classes skipped). Infantry on the road + garrison in
-//   enterable buildings within 25 m. No vehicles or other props.
+//   Fort_Barricade  -  invalid classes skipped). Infantry offset from the road (ambush)
+//   + garrison in enterable buildings within 25 m. No vehicles or other props.
 // =============================================================================
 
 if (!isServer) exitWith {};
@@ -61,6 +61,9 @@ FADE_roadblock_spawnBundle = {
     };
     private _garrisonRadius = missionNamespace getVariable ["FADE_roadblockGarrisonRadiusM", 25];
     private _garrisonMax = missionNamespace getVariable ["FADE_roadblockGarrisonMax", 16];
+    private _infOffMin = missionNamespace getVariable ["FADE_roadblockInfOffRoadMinM", 6];
+    private _infOffMax = missionNamespace getVariable ["FADE_roadblockInfOffRoadMaxM", 14];
+    private _infAlongSpread = missionNamespace getVariable ["FADE_roadblockInfAlongRoadSpreadM", 10];
     private _dryFn = missionNamespace getVariable ["FADE_surfaceIsDry", { params ["_p"]; count _p >= 2 && { !surfaceIsWater [_p select 0, _p select 1] } }];
 
     if (count _center < 3) then { _center = [(_center select 0), (_center select 1), 0] };
@@ -90,9 +93,21 @@ FADE_roadblock_spawnBundle = {
     _groups pushBack _infGrp;
     {
         if (alive _x) then {
-            private _ang = random 360;
-            private _rad = 4 + random 8;
-            private _uPos = [(_center select 0) + (sin _ang) * _rad, (_center select 1) + (cos _ang) * _rad, 0];
+            private _side = if (_forEachIndex % 2 == 0) then { 1 } else { -1 };
+            if (random 1 < 0.2) then { _side = -_side };
+            private _uPos = [];
+            private _try = 0;
+            while { _try < 8 && { count _uPos < 2 } } do {
+                private _off = _infOffMin + random ((_infOffMax - _infOffMin) max 0.1);
+                private _along = (-_infAlongSpread) + random (_infAlongSpread * 2);
+                private _candidate = [_center, _dir, [_along, _side * _off]] call FADE_roadblock_relToWorld;
+                if ([_candidate] call _dryFn) then { _uPos = _candidate };
+                _try = _try + 1;
+            };
+            if (count _uPos < 2) then {
+                private _off = (_infOffMin + _infOffMax) * 0.5;
+                _uPos = [_center, _dir, [0, _side * _off]] call FADE_roadblock_relToWorld;
+            };
             _x setPosATL _uPos;
             _x setDir ([_uPos, _center] call BIS_fnc_dirTo);
             _x setUnitPos "AUTO";
@@ -105,18 +120,12 @@ FADE_roadblock_spawnBundle = {
     {
         private _b = _x;
         if (isNull _b) then { } else {
-            private _test0 = _b buildingPos 0;
-            if (!(_test0 isEqualTo [0, 0, 0])) then {
-                private _i = 0;
-                while { true } do {
-                    private _bp = _b buildingPos _i;
-                    if (_bp isEqualTo [0, 0, 0]) exitWith {};
-                    if ((_bp distance2D _center) <= _garrisonRadius && { [_bp] call _dryFn }) then {
-                        _slots pushBack [_b, _bp];
-                    };
-                    _i = _i + 1;
+            {
+                private _bp = _x;
+                if (!(_bp isEqualTo [0, 0, 0]) && { (_bp distance2D _center) <= _garrisonRadius } && { [_bp] call _dryFn }) then {
+                    _slots pushBack [_b, _bp];
                 };
-            };
+            } forEach (_b buildingPos -1);
         };
     } forEach _houses;
 

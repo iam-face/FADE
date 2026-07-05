@@ -177,11 +177,124 @@ missionNamespace setVariable ["FADE_civRoadPoints", _roadPoints];
 
 FADE_civZoneState = createHashMap;
 if (isNil "FADE_civZoneMeta" || { !(FADE_civZoneMeta isEqualType createHashMap) }) then { FADE_civZoneMeta = createHashMap };
+// Mission-pinned zones (e.g. Invasion sectors): always spawned; exempt from max-active cap and player-distance despawn.
+FADE_civPinnedZones = createHashMap;
+
+FADE_civ_isZonePinned = {
+    params ["_zoneId"];
+    if (isNil "FADE_civPinnedZones") exitWith { false };
+    private _n = FADE_civPinnedZones get _zoneId;
+    !isNil "_n" && { _n > 0 }
+};
+
+FADE_civ_countActiveNonPinnedZones = {
+    if (isNil "FADE_civZoneState") exitWith { 0 };
+    private _n = 0;
+    { if !([_x] call FADE_civ_isZonePinned) then { _n = _n + 1 } } forEach (keys FADE_civZoneState);
+    _n
+};
+
+FADE_civ_ensurePinnedZonesSpawned = {
+    if (isNil "FADE_civPinnedZones") exitWith {};
+    {
+        private _name = _x;
+        if !([_name] call FADE_civ_isZonePinned) then { continue };
+        private _trigger = missionNamespace getVariable [_name, objNull];
+        if (isNull _trigger) then { continue };
+        if (isNil { FADE_civZoneState get _name }) then {
+            [_trigger, _name] call FADE_civ_spawnZone;
+        };
+    } forEach (keys FADE_civPinnedZones);
+};
+
+FADE_civ_pinZones = {
+    params [["_zoneIds", []]];
+    if !(isServer) exitWith {};
+    if (isNil "FADE_civPinnedZones") then { FADE_civPinnedZones = createHashMap };
+    {
+        private _id = _x;
+        if (_id isEqualType "" && { _id != "" }) then {
+            private _n = FADE_civPinnedZones getOrDefault [_id, 0];
+            FADE_civPinnedZones set [_id, _n + 1];
+            if (!isNil "FADE_enemyPatrol_despawnForZone") then { [_id] call FADE_enemyPatrol_despawnForZone };
+            if (!isNil "FADE_dynamicRoadblocks_despawnForZone") then { [_id] call FADE_dynamicRoadblocks_despawnForZone };
+        };
+    } forEach _zoneIds;
+    [_zoneIds] spawn {
+        params [["_zoneIds", []]];
+        sleep 0.1;
+        call FADE_civ_ensurePinnedZonesSpawned;
+    };
+};
+
+FADE_civ_unpinZones = {
+    params [["_zoneIds", []]];
+    if !(isServer) exitWith {};
+    if (isNil "FADE_civPinnedZones") exitWith {};
+    {
+        private _id = _x;
+        if (_id isEqualType "" && { _id != "" } && { !isNil { FADE_civPinnedZones get _id } }) then {
+            private _n = (FADE_civPinnedZones get _id) - 1;
+            if (_n <= 0) then {
+                FADE_civPinnedZones deleteAt _id;
+            } else {
+                FADE_civPinnedZones set [_id, _n];
+            };
+        };
+    } forEach _zoneIds;
+};
 FADE_roadVehicles = [];
 FADE_civAmbientAircraft = [];
 FADE_enemyPatrolZoneState = createHashMap;
 
-// Despawn all patrol entities for a zone (groups, vehicle groups, vehicles, garrison groups, barrels)
+FADE_unitClassIsOpforSniper = {
+    params ["_class"];
+    if (!(_class isEqualType "") || { !isClass (configFile >> "CfgVehicles" >> _class) }) exitWith { false };
+    private _dn = toLower getText (configFile >> "CfgVehicles" >> _class >> "displayName");
+    if ((_dn find "sniper" >= 0) || { _dn find "marksman" >= 0 }) exitWith { true };
+    private _hit = false;
+    {
+        private _w = toLower _x;
+        if ((_w find "srifle" >= 0) || { _w find "gm6" >= 0 } || { _w find "cyrus" >= 0 } || { _w find "dmr" >= 0 }) exitWith { _hit = true };
+    } forEach (getArray (configFile >> "CfgVehicles" >> _class >> "weapons"));
+    _hit
+};
+
+FADE_resolveEnemySniperClasses = {
+    private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", []];
+    private _snipers = _enemyUnits select { [_x] call FADE_unitClassIsOpforSniper };
+    if (_snipers isEqualTo [] && { !isNil "FADE_getUnitsForFaction" }) then {
+        private _fac = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
+        private _sn = missionNamespace getVariable ["FADE_scenarioEnemySideNum", 0];
+        private _all = [_fac, _sn] call FADE_getUnitsForFaction;
+        _snipers = _all select { [_x] call FADE_unitClassIsOpforSniper };
+    };
+    if (_snipers isEqualTo []) then {
+        private _fb = ["O_sniper_F", "O_T_Soldier_F"];
+        { if (isClass (configFile >> "CfgVehicles" >> _x)) exitWith { _snipers = [_x] } } forEach _fb;
+    };
+    _snipers
+};
+
+FADE_enemyPatrol_pickSniperRoofPos = {
+    params ["_buildings", ["_minDistPlayers", 400]];
+    if (_buildings isEqualTo [] || { isNil "FADE_buildingRoofPos" }) exitWith { [] };
+    private _tries = missionNamespace getVariable ["FADE_enemyPatrolSniperBuildingTries", 8];
+    private _pool = +_buildings;
+    _pool = _pool call BIS_fnc_arrayShuffle;
+    if (count _pool > _tries) then { _pool = _pool select [0, _tries] };
+    private _roof = [];
+    {
+        if (count _roof >= 2) exitWith {};
+        private _candidate = [_x] call FADE_buildingRoofPos;
+        if (count _candidate < 2) then { continue };
+        if (({ alive _x && { isPlayer _x } && { (getPosATL _x) distance2D _candidate < _minDistPlayers } } count allPlayers) > 0) then { continue };
+        _roof = _candidate;
+    } forEach _pool;
+    _roof
+};
+
+// Despawn all patrol entities for a zone (groups, vehicle groups, vehicles, garrison groups, sniper groups, barrels)
 FADE_enemyPatrol_despawnForZone = {
     params ["_zoneId"];
     private _state = FADE_enemyPatrolZoneState get _zoneId;
@@ -194,6 +307,8 @@ FADE_enemyPatrol_despawnForZone = {
     if (isNil "_vehicles") then { _vehicles = [] };
     private _garrisonGroups = _state get "garrisonGroups";
     if (isNil "_garrisonGroups") then { _garrisonGroups = [] };
+    private _sniperGroups = _state get "sniperGroups";
+    if (isNil "_sniperGroups") then { _sniperGroups = [] };
     private _barrels = _state get "barrels";
     if (isNil "_barrels") then { _barrels = [] };
     private _vgX = missionNamespace getVariable ["FADE_vg_cancelPendingByOwner", {}];
@@ -203,7 +318,7 @@ FADE_enemyPatrol_despawnForZone = {
             { if (!isNull _x) then { deleteVehicle _x } } forEach units _x;
             deleteGroup _x;
         };
-    } forEach (_groups + _vehicleGroups + _garrisonGroups);
+    } forEach (_groups + _vehicleGroups + _garrisonGroups + _sniperGroups);
     { if (!isNull _x) then { deleteVehicle _x } } forEach _vehicles;
     { if (!isNull _x) then { deleteVehicle _x } } forEach _barrels;
     FADE_enemyPatrolZoneState deleteAt _zoneId;
@@ -212,7 +327,8 @@ FADE_enemyPatrol_despawnForZone = {
 // Spawn enemy patrol: infantry groups, 1-2 road vehicles (car type) with cargo and cycle waypoints, 2-4 garrisoned buildings with burning barrel
 FADE_enemyPatrol_spawnForZone = {
     params ["_center", "_zoneId"];
-    if (!(missionNamespace getVariable ["FADE_scenarioPatrols", false])) exitWith {};
+    if (!(missionNamespace getVariable ["FADE_scenarioPatrols", true])) exitWith {};
+    if (!isNil "FADE_civ_isZonePinned" && { [_zoneId] call FADE_civ_isZonePinned }) exitWith {};
     if (!(isNil { FADE_enemyPatrolZoneState get _zoneId })) exitWith {};
     // Never spawn ambient patrol within 1 km of player base (BASE_1)
     private _basePos = missionNamespace getVariable ["FADE_basePos", []];
@@ -225,16 +341,17 @@ FADE_enemyPatrol_spawnForZone = {
     private _vehicleGroups = [];
     private _vehicles = [];
     private _garrisonGroups = [];
+    private _sniperGroups = [];
     private _barrels = [];
     private _zoneRadius = missionNamespace getVariable ["FADE_civSpawnRadius", 1000];
     if (_zoneRadius > 900) then { _zoneRadius = 800 };
     private _patrolPlClearM = missionNamespace getVariable ["FADE_enemyPatrolMinDistFromPlayersM", 400];
     private _patrolFarFromPlayers = {
-        params ["_pos", "_minD"];
+        params [["_pos", [0, 0, 0]], ["_minD", 400]];
         if (count _pos < 2) exitWith { false };
         private _ok = true;
         {
-            if (alive _x && { isPlayer _x } && { (getPosATL _x) distance2D _pos < _minD }) exitWith { _ok = false };
+            if (alive _x && { isPlayer _x } && { (getPosATL _x) distance2D _pos < _minD }) then { _ok = false };
         } forEach allPlayers;
         _ok
     };
@@ -261,9 +378,7 @@ FADE_enemyPatrol_spawnForZone = {
         if (_units isEqualTo []) exitWith {};
         private _grp = [_sp, _sideEnemy, _units] call BIS_fnc_spawnGroup;
         if (isNull _grp || { count units _grp == 0 }) then { continue };
-        if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
-            { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
-        };
+        [_grp] call FAC_applyEnemyScenarioToGroup;
         _grp setBehaviour "SAFE";
         _grp setCombatMode "YELLOW";
         for "_w" from 0 to 3 do {
@@ -295,36 +410,52 @@ FADE_enemyPatrol_spawnForZone = {
     { if ((_x isEqualType "") && { isClass (configFile >> "CfgVehicles" >> _x) }) then { if (_x isKindOf "Car") then { _carClasses pushBack _x } } } forEach _enemyVehList;
     if (_carClasses isEqualTo [] && { count _enemyVehList > 0 }) then { _carClasses = _enemyVehList };
     if (!(_carClasses isEqualTo []) && { count _enemyUnits > 0 }) then {
-        private _roadPositions = [_center, _zoneRadius, 15] call FADE_civ_getRoadPositions;
-        if (count _roadPositions >= 1) then {
-            private _roadOk = _roadPositions select { count _x >= 2 && { [_x, _patrolPlClearM] call _patrolFarFromPlayers } };
-            private _numVeh = (1 + floor random 2) min count _roadOk;
-            for "_v" from 0 to (_numVeh - 1) do {
-                private _roadPos = _roadOk select (_v min (count _roadOk - 1));
-                if (count _roadPos < 3) then { _roadPos set [2, 0] };
-                private _carClass = selectRandom _carClasses;
-                private _veh = createVehicle [_carClass, _roadPos, [], 0, "NONE"];
-                if (isNull _veh) then { continue };
-                _veh setPosATL _roadPos;
-                _veh setDir (random 360);
-                private _vehGrp = createGroup _sideEnemy;
-                private _driverCls = selectRandom _enemyUnits;
-                private _driver = _vehGrp createUnit [_driverCls, _roadPos, [], 0, "NONE"];
+        private _numVeh = 1 + floor random 2;
+        private _spawnedPatrolVehs = [];
+        private _roadHit = [];
+        private _roadPos = [0, 0, 0];
+        private _roadDir = 0;
+        private _carClass = "";
+        private _veh = objNull;
+        private _vehGrp = grpNull;
+        private _driverCls = "";
+        private _driver = objNull;
+        private _cargoSeats = 0;
+        private _cls = "";
+        private _u = objNull;
+        private _wpPosA = [0, 0, 0];
+        for "_v" from 0 to (_numVeh - 1) do {
+            _roadHit = [_center, _zoneRadius, _spawnedPatrolVehs, -1, [], _center] call FADE_findOpforGroundVehicleRoadSpawn;
+            if (!(_roadHit isEqualType []) || { count _roadHit < 2 }) then { continue };
+            _roadPos = +(_roadHit param [0, []]);
+            _roadDir = _roadHit param [1, 0];
+            if (count _roadPos < 2) then { continue };
+            if !([_roadPos, _patrolPlClearM] call _patrolFarFromPlayers) then { continue };
+            _carClass = selectRandom _carClasses;
+            _veh = createVehicle [_carClass, _roadPos, [], 0, "NONE"];
+            if (isNull _veh) then { continue };
+            _veh setPosATL _roadPos;
+            _veh setDir _roadDir;
+            _veh setVectorUp surfaceNormal _roadPos;
+            _spawnedPatrolVehs pushBack _veh;
+                _vehGrp = createGroup _sideEnemy;
+                _driverCls = selectRandom _enemyUnits;
+                _driver = _vehGrp createUnit [_driverCls, _roadPos, [], 0, "NONE"];
                 if (isNull _driver) then { deleteVehicle _veh; deleteGroup _vehGrp; continue };
                 _driver assignAsDriver _veh;
                 _driver moveInDriver _veh;
-                private _cargoSeats = [_veh] call FADE_getCargoSeats;
+                _cargoSeats = [_veh] call FADE_getCargoSeats;
                 if (isNil "_cargoSeats") then { _cargoSeats = 0 };
                 _cargoSeats = (_cargoSeats min 6) max 0;
                 for "_c" from 0 to (_cargoSeats - 1) do {
-                    private _cls = selectRandom _enemyUnits;
-                    private _u = _vehGrp createUnit [_cls, _roadPos, [], 0, "NONE"];
+                    _cls = selectRandom _enemyUnits;
+                    _u = _vehGrp createUnit [_cls, _roadPos, [], 0, "NONE"];
                     if (!isNull _u) then { _u assignAsCargo _veh; _u moveInCargo _veh };
                 };
                 [_veh, _enemyUnits] call FADE_ensureEnemyVehicleGunner;
                 _vehGrp setBehaviour "SAFE";
                 _vehGrp setSpeedMode "LIMITED";
-                private _wpPosA = [_center, _zoneRadius * 0.6] call FADE_civ_findSpawnPos;
+                _wpPosA = [_center, _zoneRadius * 0.6] call FADE_civ_findSpawnPos;
                 private _wp1 = _vehGrp addWaypoint [_wpPosA, 0];
                 _wp1 setWaypointType "MOVE";
                 _wp1 setWaypointSpeed "LIMITED";
@@ -333,7 +464,6 @@ FADE_enemyPatrol_spawnForZone = {
                 _wp2 setWaypointSpeed "LIMITED";
                 _vehicleGroups pushBack _vehGrp;
                 _vehicles pushBack _veh;
-            };
         };
     };
 
@@ -391,7 +521,7 @@ FADE_enemyPatrol_spawnForZone = {
                     _garrisonGroups pushBack _garrisonGrp;
                     private _bldCenter = getPosATL _bld;
                     if (count _bldCenter < 3) then { _bldCenter = [(_bldCenter select 0), (_bldCenter select 1), 0] };
-                    private _barrelPos = [[_bldCenter, 8, 22, 2, 1, 0.3, 0, [], _bldCenter], _bldCenter] call FADE_findSafePosArray;
+                    private _barrelPos = [_bldCenter] call FADE_findOutdoorHintPos;
                     if (_barrelPos isEqualType [] && { count _barrelPos >= 2 }) then {
                         _barrelPos = [(_barrelPos select 0), (_barrelPos select 1), (if (count _barrelPos > 2) then { _barrelPos select 2 } else { 0 })];
                         if ([_barrelPos, _patrolPlClearM] call _patrolFarFromPlayers) then {
@@ -407,15 +537,54 @@ FADE_enemyPatrol_spawnForZone = {
         };
     };
 
-    if (count _patrolGroups > 0 || { count _vehicles > 0 } || { count _garrisonGroups > 0 }) then {
+    // Rooftop snipers in garrisoned towns (elevated positions; requires enterable buildings in zone).
+    if (count _buildingsWithPos > 0) then {
+        private _snZoneChance = missionNamespace getVariable ["FADE_enemyPatrolSniperZoneChance", 0.45];
+        if (random 1 <= _snZoneChance) then {
+            private _sniperClasses = call FADE_resolveEnemySniperClasses;
+            if !(_sniperClasses isEqualTo []) then {
+                private _maxSn = (missionNamespace getVariable ["FADE_enemyPatrolSniperMaxPerZone", 2]) max 1;
+                private _numSn = 1 + floor random _maxSn;
+                private _usedRoofs = [];
+                for "_sn" from 1 to _numSn do {
+                    private _roof = [_buildingsWithPos, _patrolPlClearM] call FADE_enemyPatrol_pickSniperRoofPos;
+                    if (count _roof < 2) then { continue };
+                    private _tooClose = false;
+                    { if ((_roof distance2D _x) < 25) exitWith { _tooClose = true } } forEach _usedRoofs;
+                    if (_tooClose) then { continue };
+                    _usedRoofs pushBack _roof;
+                    private _snGrp = createGroup _sideEnemy;
+                    private _cls = selectRandom _sniperClasses;
+                    private _u = _snGrp createUnit [_cls, _roof, [], 0, "NONE"];
+                    if (isNull _u) then {
+                        deleteGroup _snGrp;
+                        continue;
+                    };
+                    _u setPosATL _roof;
+                    _u setUnitPos "MIDDLE";
+                    _u disableAI "PATH";
+                    _u enableAI "TARGET";
+                    _u enableAI "AUTOTARGET";
+                    _u doWatch (_center getPos [250 + random 200, random 360]);
+                    [_snGrp] call FAC_applyEnemyScenarioToGroup;
+                    _snGrp setBehaviour "AWARE";
+                    _snGrp setCombatMode "RED";
+                    _sniperGroups pushBack _snGrp;
+                };
+            };
+        };
+    };
+
+    if (count _patrolGroups > 0 || { count _vehicles > 0 } || { count _garrisonGroups > 0 } || { count _sniperGroups > 0 }) then {
         private _state = createHashMap;
         _state set ["groups", _patrolGroups];
         _state set ["vehicleGroups", _vehicleGroups];
         _state set ["vehicles", _vehicles];
         _state set ["garrisonGroups", _garrisonGroups];
+        _state set ["sniperGroups", _sniperGroups];
         _state set ["barrels", _barrels];
         FADE_enemyPatrolZoneState set [_zoneId, _state];
-        [format ["PATROL ZONE %1: %2 group(s), %3 vehicle(s), %4 garrison(s)", _zoneId, count _patrolGroups, count _vehicles, count _garrisonGroups]] call FADE_civ_debugChat;
+        [format ["PATROL ZONE %1: %2 group(s), %3 vehicle(s), %4 garrison(s), %5 sniper(s)", _zoneId, count _patrolGroups, count _vehicles, count _garrisonGroups, count _sniperGroups]] call FADE_civ_debugChat;
     };
 };
 
@@ -978,10 +1147,13 @@ FADE_civ_spawnZone = {
         [_zoneId, _center, _parkedWant] call FADE_civ_spawnZoneParkedVehicles;
     };
 
-    // Spawn ambient enemy patrol if enabled (25% chance per zone)
-    [_center, _zoneId] call FADE_enemyPatrol_spawnForZone;
-    // Legacy hook: EnemyAAA now handles dynamic airborne-triggered spawning globally.
-    if (!isNil "FADE_aaa_maybeSpawnManpadsInZone") then { [_zoneId, _center] call FADE_aaa_maybeSpawnManpadsInZone };
+    // Spawn ambient enemy patrol if enabled (25% chance per zone; skip mission-pinned zones e.g. Invasion sectors)
+    if (!([_zoneId] call FADE_civ_isZonePinned)) then {
+        [_center, _zoneId] call FADE_enemyPatrol_spawnForZone;
+    };
+    if (!([_zoneId] call FADE_civ_isZonePinned) && { !isNil "FADE_aaa_maybeSpawnManpadsInZone" }) then {
+        [_zoneId, _center] call FADE_aaa_maybeSpawnManpadsInZone;
+    };
 
     if (_targetCount > 0 && { count _civClasses > 0 }) then {
         [ _zoneId, _targetCount, _civClasses, _center, _footSpawnRadius, _footMinSep, _wanderRadius, _firedNearHandler, _staggerDelay, _batchSize ] spawn {
@@ -1214,10 +1386,12 @@ FADE_civ_deleteAmbientVehicle = {
 
 // Despawn ambient civ road + aircraft too far from any player (frees sim when nobody can see them)
 FADE_civ_cleanupDistantVehicles = {
+    params [["_players", []]];
+    if (_players isEqualTo []) then {
+        { if (alive _x && { isPlayer _x }) then { _players pushBack _x } } forEach allPlayers;
+    };
     private _distMax = missionNamespace getVariable ["FADE_civVehCleanupDist", 4500];
     if (_distMax <= 0) exitWith {};
-    private _players = [];
-    { if (alive _x && { isPlayer _x }) then { _players pushBack _x } } forEach allPlayers;
     private _nearest = {
         params ["_pos"];
         if (_players isEqualTo []) exitWith { 1e12 };
@@ -1278,10 +1452,12 @@ FADE_civ_cleanupDistantVehicles = {
 
 // Delete walking civ groups whose leader is farther than FADE_civUnitCullDist from every player
 FADE_civ_cullDistantFootGroups = {
+    params [["_players", []]];
     private _dCull = missionNamespace getVariable ["FADE_civUnitCullDist", 0];
     if (_dCull <= 0) exitWith {};
-    private _players = [];
-    { if (alive _x && { isPlayer _x }) then { _players pushBack _x } } forEach allPlayers;
+    if (_players isEqualTo []) then {
+        { if (alive _x && { isPlayer _x }) then { _players pushBack _x } } forEach allPlayers;
+    };
     if (_players isEqualTo []) exitWith {};
     private _nearDist = {
         params ["_pos"];
@@ -1291,6 +1467,7 @@ FADE_civ_cullDistantFootGroups = {
     };
     {
         private _zid = _x;
+        if ([_zid] call FADE_civ_isZonePinned) then { continue };
         private _st = FADE_civZoneState get _zid;
         if (isNil "_st") then { continue };
         private _grps = _st get "groups";
@@ -1315,21 +1492,24 @@ FADE_civ_cullDistantFootGroups = {
     } forEach (keys FADE_civZoneState);
 };
 
-// Trim ambient foot civs down to FADE_civGlobalMaxAlive (removes farthest first)
+// Trim ambient foot civs down to FADE_civGlobalMaxAlive (removes farthest first; non-pinned zones first)
 FADE_civ_enforceGlobalFootCap = {
+    params [["_players", []]];
     private _cap = missionNamespace getVariable ["FADE_civGlobalMaxAlive", 0];
     if (_cap <= 0) exitWith {};
-    private _players = [];
-    { if (alive _x && { isPlayer _x }) then { _players pushBack _x } } forEach allPlayers;
+    if (_players isEqualTo []) then {
+        { if (alive _x && { isPlayer _x }) then { _players pushBack _x } } forEach allPlayers;
+    };
     if (_players isEqualTo []) exitWith {};
-    private _safety = 0;
-    while { ([] call FADE_civ_countAmbientFootCivs) > _cap && { _safety < 250 } } do {
-        _safety = _safety + 1;
+
+    private _fnc_trimOne = {
+        params [["_pinnedOk", false]];
         private _bestD = -1;
         private _bestGrp = grpNull;
         private _bestZid = "";
         {
             private _zid = _x;
+            if (!_pinnedOk && { [_zid] call FADE_civ_isZonePinned }) then { continue };
             private _st = FADE_civZoneState get _zid;
             if (!isNil "_st") then {
                 private _gl = _st get "groups";
@@ -1350,7 +1530,7 @@ FADE_civ_enforceGlobalFootCap = {
                 } forEach _gl;
             };
         } forEach (keys FADE_civZoneState);
-        if (isNull _bestGrp || { count units _bestGrp == 0 }) exitWith {};
+        if (isNull _bestGrp || { count units _bestGrp == 0 }) exitWith { false };
         private _u = selectRandom (units _bestGrp);
         if (!isNull _u) then { deleteVehicle _u };
         if (count units _bestGrp == 0) then {
@@ -1360,6 +1540,14 @@ FADE_civ_enforceGlobalFootCap = {
                 _st2 set ["groups", (_st2 get "groups") select { !isNull _x && { (count units _x) > 0 } }];
             };
         };
+        true
+    };
+
+    private _safety = 0;
+    while { ([] call FADE_civ_countAmbientFootCivs) > _cap && { _safety < 250 } } do {
+        _safety = _safety + 1;
+        if ([false] call _fnc_trimOne) then { continue };
+        if !([true] call _fnc_trimOne) exitWith {};
     };
 };
 
@@ -1368,27 +1556,30 @@ FADE_civ_enforceGlobalFootCap = {
 // -----------------------------------------------------------------------------
 FADE_civ_checkZones = {
     if (!(missionNamespace getVariable ["FADE_civiliansEnabled", true])) exitWith {};
-    call FADE_civ_cleanupDistantVehicles;
     private _players = [];
     { if (alive _x && { isPlayer _x }) then { _players pushBack _x } } forEach allPlayers;
     if (_players isEqualTo []) exitWith {};
+    [_players] call FADE_civ_cleanupDistantVehicles;
+    call FADE_civ_ensurePinnedZonesSpawned;
 
     private _activateDist = missionNamespace getVariable ["FADE_civPlayerActivateDist", 800];
     private _deactivateDist = missionNamespace getVariable ["FADE_civPlayerDeactivateDist", 1200];
     private _zoneActivationDist = missionNamespace getVariable ["FADE_civZoneActivationDist", _activateDist];
     private _triggerNames = missionNamespace getVariable ["FADE_civTriggerNames", []];
     private _numPlayers = count _players;
+    private _zoneKeys = keys FADE_civZoneState;
 
     for "_t" from 0 to (count _triggerNames - 1) do {
         private _name = _triggerNames select _t;
         private _trigger = missionNamespace getVariable [_name, objNull];
         if (!isNull _trigger) then {
+            private _pinned = [_name] call FADE_civ_isZonePinned;
             private _center = getPosATL _trigger;
             private _minPlayerDist = 1e12;
             {
                 _minPlayerDist = _minPlayerDist min (_x distance2D _center);
             } forEach _players;
-            if (_minPlayerDist > _zoneActivationDist) then { continue };
+            if (_minPlayerDist > _zoneActivationDist && { !_pinned }) then { continue };
             private _nearCount = 0;
             private _farCount = 0;
             for "_p" from 0 to (_numPlayers - 1) do {
@@ -1396,38 +1587,39 @@ FADE_civ_checkZones = {
                 if ((_pl distance _center) < _activateDist) then { _nearCount = _nearCount + 1 };
                 if ((_pl distance _center) > _deactivateDist) then { _farCount = _farCount + 1 };
             };
-            if (_nearCount > 0) then {
+            if (_nearCount > 0 || { _pinned }) then {
                 private _alreadyActive = !(isNil { FADE_civZoneState get _name });
                 private _maxZ = missionNamespace getVariable ["FADE_civMaxActiveZones", 4];
-                if (!_alreadyActive) then {
+                if (!_alreadyActive && { !_pinned }) then {
                     private _guard = 0;
-                    while { count (keys FADE_civZoneState) >= _maxZ && { _guard < 8 } } do {
+                    while { ([] call FADE_civ_countActiveNonPinnedZones) >= _maxZ && { _guard < 8 } } do {
                         _guard = _guard + 1;
                         private _evict = "";
                         private _evictScore = -1;
                         {
                             private _zid = _x;
+                            if ([_zid] call FADE_civ_isZonePinned) then { continue };
                             private _zt = missionNamespace getVariable [_zid, objNull];
                             if (isNull _zt) then { continue };
                             private _zc = getPosATL _zt;
                             private _dClose = 1e12;
                             { _dClose = _dClose min (_zc distance2D _x) } forEach _players;
                             if (_dClose > _evictScore) then { _evictScore = _dClose; _evict = _zid };
-                        } forEach (keys FADE_civZoneState);
+                        } forEach _zoneKeys;
                         if (_evict == "") exitWith {};
                         [_evict] call FADE_civ_despawnZone;
                     };
                 };
-                if (_alreadyActive || { count (keys FADE_civZoneState) < _maxZ }) then {
+                if (_alreadyActive || { _pinned } || { ([] call FADE_civ_countActiveNonPinnedZones) < _maxZ }) then {
                     [_trigger, _name] call FADE_civ_spawnZone;
                 };
             };
-            if (_farCount == _numPlayers) then { [_name] call FADE_civ_despawnZone };
+            if (_farCount == _numPlayers && { !_pinned }) then { [_name] call FADE_civ_despawnZone };
         };
     };
 
-    call FADE_civ_cullDistantFootGroups;
-    call FADE_civ_enforceGlobalFootCap;
+    [_players] call FADE_civ_cullDistantFootGroups;
+    [_players] call FADE_civ_enforceGlobalFootCap;
 
     private _validRoad = [];
     for "_i" from 0 to (count FADE_roadVehicles - 1) do {

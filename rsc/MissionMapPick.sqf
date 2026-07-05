@@ -26,21 +26,9 @@ FAC_missionMapPick_fnc_buildHint = {
     params ["_rem"];
     private _mt = missionNamespace getVariable ["FAC_missionMapPick_type", ""];
     private _timeout = missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20];
-    if (_rem < 0) then {
-        format [
-            "Click the map for mission area.%1%2You have %3 seconds - mission aborts if you do not click.",
-            toString [10, 10],
-            [_mt, false] call FAC_missionMapPick_fnc_missionTypeHintSuffix,
-            _timeout
-        ]
-    } else {
-        format [
-            "Click the map for mission area.%1%2%3 s remaining - mission aborts if you do not click.",
-            toString [10, 10],
-            [_mt, true, _rem] call FAC_missionMapPick_fnc_missionTypeHintSuffix,
-            _rem
-        ]
-    }
+    private _suffix = [_mt, _rem >= 0, _rem] call FAC_missionMapPick_fnc_missionTypeHintSuffix;
+    private _intro = ["Click the map for mission area.", _suffix];
+    [_rem, _intro, "", _timeout] call FADE_mapPick_formatCountdownHint
 };
 
 FAC_missionMapPick_fnc_onValidClick = {
@@ -69,6 +57,12 @@ FAC_missionMapPick_fnc_start = {
     };
     if (_missionType in ["TroopInsert", "TroopExtract"]) exitWith {
         systemChat "TROOP INSERT / EXTRACT: random location only — map click is not supported.";
+    };
+    if (_missionType == "InterceptConvoy") exitWith {
+        systemChat "INTERCEPT CONVOY: use Map click (choose start and end) from the location picker.";
+    };
+    if (_missionType == "Raid") exitWith {
+        systemChat "RAID: use Map click (choose all objective zones) from the location picker.";
     };
     if (missionNamespace getVariable ["FAC_missionMapPick_active", false]) exitWith {
         systemChat "MISSION: map location pick already in progress.";

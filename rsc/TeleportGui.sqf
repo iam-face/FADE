@@ -13,6 +13,134 @@ FAC_teleportGui_destBtnIdcLast = 60639;
 FAC_teleportGui_destBtnTextNormal = [1, 1, 1, 1];
 FAC_teleportGui_destBtnTextConfirm = [1, 0.2, 0.2, 1];
 
+FAC_teleportGui_tabDestIdcs = [60605];
+FAC_teleportGui_tabPlayersIdcs = [60616, 60611, 60614, 60615, 60612];
+
+FAC_teleportGui_syncDestButtonsVisible = {
+    params ["_show"];
+    private _d = findDisplay 60600;
+    if (isNull _d) exitWith {};
+    {
+        _x params ["_idc"];
+        private _c = _d displayCtrl _idc;
+        if (!isNull _c) then { _c ctrlShow _show };
+    } forEach (uiNamespace getVariable ["FAC_teleportGui_destButtonMeta", []]);
+};
+
+FAC_teleportGui_syncTabs = {
+    private _d = findDisplay 60600;
+    if (isNull _d) exitWith {};
+    private _tab = missionNamespace getVariable ["FAC_teleportGui_tab", "dest"];
+    private _isDest = _tab == "dest";
+    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow _isDest } } forEach FAC_teleportGui_tabDestIdcs;
+    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow (!_isDest) } } forEach FAC_teleportGui_tabPlayersIdcs;
+    [_isDest] call FAC_teleportGui_syncDestButtonsVisible;
+    [_d displayCtrl 60609, _isDest] call FAC_theme_applyTab;
+    [_d displayCtrl 60619, !_isDest] call FAC_theme_applyTab;
+};
+
+FAC_teleportGui_fnc_buildDestButtons = {
+    params ["_display"];
+    if (isNull _display) exitWith {};
+    [_display] call FAC_teleportGui_fnc_destroyDestButtons;
+    missionNamespace setVariable ["FAC_teleportGui_pendingObj", ""];
+    private _defaultObjName = missionNamespace getVariable ["FAC_teleportGui_defaultDest", ""];
+
+    private _sorted = +FAC_teleportGui_destinations;
+    _sorted sort true;
+    private _count = count _sorted;
+    if (_count > (FAC_teleportGui_destBtnIdcLast - FAC_teleportGui_destBtnIdcFirst + 1)) then {
+        diag_log "[FAC] Teleport GUI: destination count exceeds button idc range.";
+    };
+
+    private _meta = [];
+    private _idc = FAC_teleportGui_destBtnIdcFirst;
+    private _gx0 = 0.04;
+    private _gx1 = 0.96;
+    private _gy0 = 0.148;
+    private _gy1 = 0.82;
+    private _gapH = 0.01;
+    private _gapV = 0.01;
+    private _totalW = _gx1 - _gx0;
+    private _totalH = _gy1 - _gy0;
+    private _cols = ((ceil (sqrt _count)) max 1) min 5;
+    if (_count > 16) then { _cols = 5; };
+    private _rows = ceil (_count / _cols);
+    private _cellW = (_totalW - _gapH * (_cols - 1)) / _cols;
+    private _cellH = (_totalH - _gapV * (_rows - 1)) / _rows;
+    private _gi = 0;
+    {
+        if (_idc > FAC_teleportGui_destBtnIdcLast) exitWith {};
+        _x params ["_label", "_objName"];
+        private _row = floor (_gi / _cols);
+        private _col = _gi % _cols;
+        private _xPos = _gx0 + _col * (_cellW + _gapH);
+        private _yPos = _gy0 + _row * (_cellH + _gapV);
+        private _ctrl = _display ctrlCreate ["RscButton", _idc];
+        _ctrl ctrlSetPosition [_xPos, _yPos, _cellW, _cellH];
+        _ctrl ctrlCommit 0;
+        _ctrl ctrlSetText _label;
+        _ctrl ctrlSetBackgroundColor FAC_theme_tabActive;
+        _ctrl ctrlSetForegroundColor FAC_teleportGui_destBtnTextNormal;
+        private _act = format [
+            "['destBtn', ['%1']] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);",
+            _objName
+        ];
+        _ctrl buttonSetAction _act;
+        _meta pushBack [_idc, _objName, _label];
+        _idc = _idc + 1;
+        _gi = _gi + 1;
+    } forEach _sorted;
+    uiNamespace setVariable ["FAC_teleportGui_destButtonMeta", _meta];
+    if (_defaultObjName != "") then {
+        {
+            _x params ["_idc", "_ob", "_lab"];
+            if (_ob isEqualTo _defaultObjName) exitWith {
+                private _hc = _display displayCtrl _idc;
+                if (!isNull _hc) then { _hc ctrlSetBackgroundColor FAC_theme_btnPrimaryA; };
+            };
+        } forEach _meta;
+    };
+    missionNamespace setVariable ["FAC_teleportGui_defaultDest", ""];
+};
+
+FAC_teleportGui_fnc_ensureDestButtons = {
+    private _display = findDisplay 60600;
+    if (isNull _display) exitWith {};
+    private _meta = uiNamespace getVariable ["FAC_teleportGui_destButtonMeta", []];
+    private _needsBuild = count _meta == 0;
+    if (!_needsBuild) then {
+        private _firstIdc = (_meta select 0) select 0;
+        _needsBuild = isNull (_display displayCtrl _firstIdc);
+    };
+    if (_needsBuild) then {
+        [_display] call FAC_teleportGui_fnc_buildDestButtons;
+    };
+};
+
+FAC_teleportGui_fnc_refreshPlayersList = {
+    private _display = findDisplay 60600;
+    if (isNull _display) exitWith {};
+    private _list = _display displayCtrl 60611;
+    if (isNull _list) exitWith {};
+    lbClear _list;
+    private _entries = call FAC_teleportGui_fnc_buildPlayerDestinations;
+    {
+        _x params ["_name", "_key"];
+        private _idx = _list lbAdd _name;
+        _list lbSetData [_idx, _key];
+    } forEach _entries;
+    if (lbSize _list > 0) then {
+        _list lbSetCurSel 0;
+        ["selChangedPlayers", []] call FAC_teleportGui_fnc;
+    } else {
+        private _title = _display displayCtrl 60614;
+        private _details = _display displayCtrl 60615;
+        if (!isNull _title) then { _title ctrlSetStructuredText parseText "<t align='center' color='#FFAAAA' size='1.05'>No active players</t>"; };
+        if (!isNull _details) then { _details ctrlSetStructuredText parseText "<t color='#BBBBBB'>No connected players found.</t>"; };
+    };
+};
+
 FAC_teleportGui_fnc_destroyDestButtons = {
     params ["_display"];
     if (isNull _display) exitWith {};
@@ -27,7 +155,7 @@ FAC_teleportGui_fnc_destroyDestButtons = {
 FAC_teleportGui_fnc_resetDestButtonVisuals = {
     private _display = findDisplay 60600;
     if (isNull _display) exitWith {};
-    private _defBg = [0.2, 0.4, 0.62, 1];
+    private _defBg = +FAC_theme_tabActive;
     {
         _x params ["_idc", "_objNameMeta", "_label"];
         private _c = _display displayCtrl _idc;
@@ -293,93 +421,52 @@ FAC_teleportGui_fnc_updatePlayerPreview = {
 FAC_teleportGui_fnc = {
     params ["_action", "_params"];
     private _displayMain = findDisplay 60600;
-    private _displayPlayers = findDisplay 60610;
-    if (isNull _displayMain && { isNull _displayPlayers } && { !(_action in ["open", "openPlayers"]) }) exitWith {};
+    if (isNull _displayMain && { !(_action in ["open"]) }) exitWith {};
 
     switch _action do {
         case "open": {
             private _defaultObjName = if (_params isEqualType [] && { (count _params) > 0 }) then { _params select 0 } else { "" };
             missionNamespace setVariable ["FAC_teleportGui_defaultDest", _defaultObjName];
             if (!createDialog "RscDisplayTeleport") then {
-                systemChat "TELEPORT GUI: RESOURCE NOT FOUND.";
+                ["Teleport"] call FAC_theme_guiResourceMissing;
             };
         };
         case "headerRefresh": {
             private _display = findDisplay 60600;
             if (isNull _display) exitWith {};
-            ["onLoad", []] call FAC_teleportGui_fnc;
+            private _tab = missionNamespace getVariable ["FAC_teleportGui_tab", "dest"];
+            if (_tab == "players") then {
+                [] call FAC_teleportGui_fnc_refreshPlayersList;
+            } else {
+                [] call FAC_teleportGui_fnc_ensureDestButtons;
+            };
+            [] call FAC_teleportGui_syncTabs;
         };
         case "headerRefreshPlayers": {
-            private _display = findDisplay 60610;
-            if (isNull _display) exitWith {};
-            ["onLoadPlayers", []] call FAC_teleportGui_fnc;
+            ["headerRefresh", []] call FAC_teleportGui_fnc;
         };
         case "onLoad": {
             private _display = findDisplay 60600;
             if (isNull _display) exitWith {};
             missionNamespace setVariable ["FAC_teleportGui_fnc", FAC_teleportGui_fnc];
             uinamespace setVariable ["FAC_teleportGui_fnc", FAC_teleportGui_fnc];
-
-            missionNamespace setVariable ["FAC_teleportGui_pendingObj", ""];
-            [_display] call FAC_teleportGui_fnc_destroyDestButtons;
-            private _defaultObjName = missionNamespace getVariable ["FAC_teleportGui_defaultDest", ""];
-
-            private _sorted = +FAC_teleportGui_destinations;
-            _sorted sort true;
-            private _count = count _sorted;
-            if (_count > (FAC_teleportGui_destBtnIdcLast - FAC_teleportGui_destBtnIdcFirst + 1)) then {
-                diag_log "[FAC] Teleport GUI: destination count exceeds button idc range.";
+            missionNamespace setVariable ["FAC_teleportGui_tab", "dest"];
+            [_display] call FAC_teleportGui_fnc_buildDestButtons;
+            [] call FAC_teleportGui_syncTabs;
+        };
+        case "setTab": {
+            _params params [["_tab", "dest"]];
+            if !(_tab in ["dest", "players"]) exitWith {};
+            if (_tab == "players" && { !(["FAC_playerCanTeleportToPlayers"] call FAC_lobbyParams_callAccess) }) exitWith {
+                systemChat "Teleport to player is SL-only (admin/Zeus override).";
             };
-
-            private _meta = [];
-            private _idc = FAC_teleportGui_destBtnIdcFirst;
-            private _gx0 = 0.04;
-            private _gx1 = 0.96;
-            private _gy0 = 0.122;
-            private _gy1 = 0.772;
-            private _gapH = 0.01;
-            private _gapV = 0.01;
-            private _totalW = _gx1 - _gx0;
-            private _totalH = _gy1 - _gy0;
-            private _cols = ((ceil (sqrt _count)) max 1) min 5;
-            if (_count > 16) then { _cols = 5; };
-            private _rows = ceil (_count / _cols);
-            private _cellW = (_totalW - _gapH * (_cols - 1)) / _cols;
-            private _cellH = (_totalH - _gapV * (_rows - 1)) / _rows;
-            private _gi = 0;
-            {
-                if (_idc > FAC_teleportGui_destBtnIdcLast) exitWith {};
-                _x params ["_label", "_objName"];
-                private _row = floor (_gi / _cols);
-                private _col = _gi % _cols;
-                private _xPos = _gx0 + _col * (_cellW + _gapH);
-                private _yPos = _gy0 + _row * (_cellH + _gapV);
-                private _ctrl = _display ctrlCreate ["RscButton", _idc];
-                _ctrl ctrlSetPosition [_xPos, _yPos, _cellW, _cellH];
-                _ctrl ctrlCommit 0;
-                _ctrl ctrlSetText _label;
-                _ctrl ctrlSetBackgroundColor [0.2, 0.4, 0.62, 1];
-                _ctrl ctrlSetForegroundColor FAC_teleportGui_destBtnTextNormal;
-                private _act = format [
-                    "['destBtn', ['%1']] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);",
-                    _objName
-                ];
-                _ctrl buttonSetAction _act;
-                _meta pushBack [_idc, _objName, _label];
-                _idc = _idc + 1;
-                _gi = _gi + 1;
-            } forEach _sorted;
-            uiNamespace setVariable ["FAC_teleportGui_destButtonMeta", _meta];
-            if (_defaultObjName != "") then {
-                {
-                    _x params ["_idc", "_ob", "_lab"];
-                    if (_ob isEqualTo _defaultObjName) exitWith {
-                        private _hc = _display displayCtrl _idc;
-                        if (!isNull _hc) then { _hc ctrlSetBackgroundColor [0.28, 0.52, 0.78, 1]; };
-                    };
-                } forEach _meta;
+            missionNamespace setVariable ["FAC_teleportGui_tab", _tab];
+            if (_tab == "players") then {
+                [] call FAC_teleportGui_fnc_refreshPlayersList;
+            } else {
+                [] call FAC_teleportGui_fnc_ensureDestButtons;
             };
-            missionNamespace setVariable ["FAC_teleportGui_defaultDest", ""];
+            [] call FAC_teleportGui_syncTabs;
         };
         case "destBtn": {
             _params params ["_objName"];
@@ -419,44 +506,20 @@ FAC_teleportGui_fnc = {
                         if (!isNull _c) then {
                             _c ctrlSetText "Are you sure?";
                             _c ctrlSetForegroundColor FAC_teleportGui_destBtnTextConfirm;
-                            _c ctrlSetBackgroundColor [0.22, 0.1, 0.1, 1];
+                            _c ctrlSetBackgroundColor FAC_theme_btnDanger;
                         };
                     };
                 } forEach (uiNamespace getVariable ["FAC_teleportGui_destButtonMeta", []]);
             };
         };
         case "openPlayers": {
-            if (!(["FAC_playerCanTeleportToPlayers"] call FAC_lobbyParams_callAccess)) exitWith {
-                systemChat "Teleport to player is SL-only (admin/Zeus override).";
-            };
-            if (!isNull (findDisplay 60600)) then { closeDialog 0; };
-            if (!createDialog "RscDisplayTeleportPlayers") then {
-                systemChat "TELEPORT PLAYERS GUI: RESOURCE NOT FOUND.";
-            };
+            ["setTab", ["players"]] call FAC_teleportGui_fnc;
         };
         case "onLoadPlayers": {
-            private _display = findDisplay 60610;
-            if (isNull _display) exitWith {};
-            private _list = _display displayCtrl 60611;
-            lbClear _list;
-            private _entries = call FAC_teleportGui_fnc_buildPlayerDestinations;
-            {
-                _x params ["_name", "_key"];
-                private _idx = _list lbAdd _name;
-                _list lbSetData [_idx, _key];
-            } forEach _entries;
-            if (lbSize _list > 0) then {
-                _list lbSetCurSel 0;
-                ["selChangedPlayers", []] call FAC_teleportGui_fnc;
-            } else {
-                private _title = _display displayCtrl 60614;
-                private _details = _display displayCtrl 60615;
-                if (!isNull _title) then { _title ctrlSetStructuredText parseText "<t align='center' color='#FFAAAA'>No active players</t>"; };
-                if (!isNull _details) then { _details ctrlSetStructuredText parseText "<t color='#BBBBBB'>No connected players found.</t>"; };
-            };
+            ["setTab", ["players"]] call FAC_teleportGui_fnc;
         };
         case "selChangedPlayers": {
-            private _display = findDisplay 60610;
+            private _display = findDisplay 60600;
             if (isNull _display) exitWith {};
             private _list = _display displayCtrl 60611;
             private _cur = lbCurSel _list;
@@ -467,14 +530,13 @@ FAC_teleportGui_fnc = {
             [_display, _uid] call FAC_teleportGui_fnc_updatePlayerPreview;
         };
         case "backToMain": {
-            if (!isNull (findDisplay 60610)) then { closeDialog 0; };
-            ["open", [FAC_teleportGui_destBaseKey]] call FAC_teleportGui_fnc;
+            ["setTab", ["dest"]] call FAC_teleportGui_fnc;
         };
         case "teleportPlayer": {
             if (!(["FAC_playerCanTeleportToPlayers"] call FAC_lobbyParams_callAccess)) exitWith {
                 systemChat "Teleport to player is SL-only (admin/Zeus override).";
             };
-            private _display = findDisplay 60610;
+            private _display = findDisplay 60600;
             if (isNull _display) exitWith {};
             private _list = _display displayCtrl 60611;
             private _cur = lbCurSel _list;

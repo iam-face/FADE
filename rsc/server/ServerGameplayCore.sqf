@@ -1,5 +1,5 @@
 // =============================================================================
-// ServerGameplayCore.sqf — extracted from ServerGameplay (compile via ServerGameplay.sqf)
+// ServerGameplayCore.sqf ï¿½ extracted from ServerGameplay (compile via ServerGameplay.sqf)
 // =============================================================================
 
 publicVariable "FADE_heliClasses";
@@ -40,6 +40,34 @@ FADE_rangeStartSession = {
 };
 publicVariable "FADE_rangeStartSession";
 
+FADE_rangeEndSession = {
+    [] call FADE_lazyLoadRangeServers;
+    private _impl = missionNamespace getVariable ["FADE_rangeEndSession_impl", {}];
+    if (_impl isEqualType {}) then { _this call _impl };
+};
+publicVariable "FADE_rangeEndSession";
+
+FADE_rangeRequestAtWeaponState = {
+    [] call FADE_lazyLoadRangeServers;
+    private _impl = missionNamespace getVariable ["FADE_rangeRequestAtWeaponState_impl", {}];
+    if (_impl isEqualType {}) then { _this call _impl };
+};
+publicVariable "FADE_rangeRequestAtWeaponState";
+
+FADE_rangeSpawnFriendlyLandAtSlot = {
+    [] call FADE_lazyLoadRangeServers;
+    private _impl = missionNamespace getVariable ["FADE_rangeSpawnFriendlyLandAtSlot_impl", {}];
+    if (_impl isEqualType {}) then { _this call _impl };
+};
+publicVariable "FADE_rangeSpawnFriendlyLandAtSlot";
+
+FADE_rangeDespawnFriendlyLandAtSlot = {
+    [] call FADE_lazyLoadRangeServers;
+    private _impl = missionNamespace getVariable ["FADE_rangeDespawnFriendlyLandAtSlot_impl", {}];
+    if (_impl isEqualType {}) then { _this call _impl };
+};
+publicVariable "FADE_rangeDespawnFriendlyLandAtSlot";
+
 FADE_sniperStartSession = {
     [] call FADE_lazyLoadRangeServers;
     private _impl = missionNamespace getVariable ["FADE_sniperStartSession_impl", {}];
@@ -77,6 +105,7 @@ addMissionEventHandler ["HandleDisconnect", {
 publicVariable "FADE_loadoutBoxes";
 publicVariable "FADE_loadoutBox";
 publicVariable "FADE_loadoutBox2";
+publicVariable "FADE_workbench";
 publicVariable "FADE_basePos";
 publicVariable "FADE_bSpPoints";
 publicVariable "FADE_mapMin";

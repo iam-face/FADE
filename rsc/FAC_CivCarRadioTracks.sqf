@@ -32,6 +32,7 @@ FAC_civRadio_trackClassnames = [
     "Sig_Buttrock_16",
     "Sig_Buttrock_17",
     "Sig_Buttrock_18",
+    "Sig_Buttrock_19",
     "Sig_CNC_Gen_CHI_Mix",
     "Sig_CNC_Gen_GLA_Mix",
     "Sig_CNC_Gen_USA_Mix",

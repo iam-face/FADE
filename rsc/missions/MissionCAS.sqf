@@ -1,53 +1,26 @@
 // AUTO-EXTRACTED from Missions.sqf  -  run via FADE_runMission_* (compile once)
 if (!isServer) exitWith {};
 FADE_runMission_CAS = {
-    private _missionType = missionNamespace getVariable ["FADE_missionRun_missionType", ""];
-    private _destPos = missionNamespace getVariable ["FADE_missionRun_destPos", [0,0,0]];
-    private _player = missionNamespace getVariable ["FADE_missionRun_player", objNull];
-    private _evadeePlayers = missionNamespace getVariable ["FADE_missionRun_evadeePlayers", []];
-    private _fromMapClick = missionNamespace getVariable ["FADE_missionRun_fromMapClick", false];
-    private _mapAnchor = missionNamespace getVariable ["FADE_missionRun_mapAnchor", []];
-    private _friendlyUnits = missionNamespace getVariable ["FADE_missionRun_friendlyUnits", []];
-    private _enemyUnits = missionNamespace getVariable ["FADE_missionRun_enemyUnits", []];
-    private _sideFriendly = missionNamespace getVariable ["FADE_missionRun_sideFriendly", west];
-    private _sideEnemy = missionNamespace getVariable ["FADE_missionRun_sideEnemy", east];
-    private _markerFriendly = missionNamespace getVariable ["FADE_missionRun_markerFriendly", "ColorWEST"];
-    private _markerEnemy = missionNamespace getVariable ["FADE_missionRun_markerEnemy", "ColorEAST"];
-    private _dryPos = missionNamespace getVariable ["FADE_surfaceIsDry", {}];
-    private _taskId = missionNamespace getVariable ["FADE_missionRun_taskId", ""];
-    private _operationName = missionNamespace getVariable ["FADE_missionRun_operationName", ""];
-    private _operationNameUpper = missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""];
-    private _briefGuiTail = missionNamespace getVariable ["FADE_missionRun_briefGuiTail", ""];
-    private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", {}];
-    private _enemyFactionName = missionNamespace getVariable ["FADE_missionRun_enemyFactionName", ""];
-    private _zeroAlphaDisplayName = missionNamespace getVariable ["FADE_missionRun_zeroAlphaDisplayName", ""];
-    private _isGlobalMission = missionNamespace getVariable ["FADE_missionRun_isGlobalMission", false];
-    private _basePos = missionNamespace getVariable ["FADE_missionRun_basePos", [0,0,0]];
-    private _unitCount = missionNamespace getVariable ["FADE_missionRun_unitCount", 6];
-    private _unitClasses = missionNamespace getVariable ["FADE_missionRun_unitClasses", []];
-    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {}];
-    private _fnc_createMissionTask = missionNamespace getVariable ["FADE_mission_createTask", {}];
-    private _showAssignedHint = missionNamespace getVariable ["FADE_mission_showAssignedHint", {}];
-    private _defaultSituationTaskText = missionNamespace getVariable ["FADE_missionRun_defaultSituationTaskText", ""];
-    private _defaultExecutionTaskText = missionNamespace getVariable ["FADE_missionRun_defaultExecutionTaskText", ""];
-    private _defaultAdminTaskText = missionNamespace getVariable ["FADE_missionRun_defaultAdminTaskText", ""];
-    private _defaultCommandTaskText = missionNamespace getVariable ["FADE_missionRun_defaultCommandTaskText", ""];
-    private _defaultSituationHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHtml", ""];
-    private _defaultSituationHintHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHintHtml", ""];
-    private _friendlyPlayerCount = missionNamespace getVariable ["FADE_missionRun_friendlyPlayerCount", 0];
-    private _friendlyFactionName = missionNamespace getVariable ["FADE_missionRun_friendlyFactionName", ""];
-    private _estimatedOpforCount = missionNamespace getVariable ["FADE_missionRun_estimatedOpforCount", 0];
-    private _opforCountFactor = missionNamespace getVariable ["FADE_missionRun_opforCountFactor", 1];
-    private _intelFormatter = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
-    private _topographyGrid = missionNamespace getVariable ["FADE_missionRun_topographyGrid", "UNKNOWN"];
-    private _topographyArea = missionNamespace getVariable ["FADE_missionRun_topographyArea", ""];
+    (call FADE_missionRun_getContext) params [
+        "_missionType", "_destPos", "_player", "_evadeePlayers", "_fromMapClick", "_mapAnchor",
+        "_friendlyUnits", "_enemyUnits", "_sideFriendly", "_sideEnemy", "_markerFriendly", "_markerEnemy",
+        "_dryPos", "_taskId", "_operationName", "_operationNameUpper", "_briefGuiTail",
+        "_mkrJitter", "_enemyFactionName", "_zeroAlphaDisplayName", "_isGlobalMission", "_basePos",
+        "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
+        "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
+        "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+    ];
     if (count _enemyUnits == 0) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No enemy units configured.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "No enemy units configured."] call FADE_missionErrorHint;
     };
 
     // Friendly position first (200-400m from objective center); enemies spawn min 750m from friendlies
+    private _ensureDry = missionNamespace getVariable ["FADE_ensureDryLandPos", {}];
+    private _spawnEnemyGrp = missionNamespace getVariable ["FADE_spawnEnemyGroupAt", BIS_fnc_spawnGroup];
     private _friendlyPos = [[_destPos, 200, 400, 5, 1, 0, 0, [], _destPos], _destPos] call FADE_findSafePosArray;
+    if (!(_ensureDry isEqualTo {})) then { _friendlyPos = [_friendlyPos, _destPos] call _ensureDry };
     private _minEnemyDistFromFriendlies = 750;
     private _numGroups = [2 + floor random 3, 1] call _scaleOpforCount;  // 2 to 4 groups
     private _enemyGroups = [];
@@ -59,13 +32,14 @@ FADE_runMission_CAS = {
         private _grpPos = _friendlyPos getPos [_dist, _angle];
         _grpPos = [[_grpPos, 0, 25, 3, 1, 0.4, 0, [], _grpPos], _grpPos] call FADE_findSafePosArray;
         if (count _grpPos < 2) then { _grpPos = _friendlyPos getPos [_dist, _angle] };
+        if (!(_ensureDry isEqualTo {})) then { _grpPos = [_grpPos, _friendlyPos] call _ensureDry };
 
         private _grpSize = [4 + floor random 7, 2] call _scaleOpforCount;  // 4 to 10 units
         private _shuffled = _enemyUnits call BIS_fnc_arrayShuffle;
         private _grpUnits = (_shuffled select [0, _grpSize min count _shuffled]);
         if (count _grpUnits == 0) then { _grpUnits = [_enemyUnits select 0] };
 
-        private _grp = [_grpPos, _sideEnemy, _grpUnits] call BIS_fnc_spawnGroup;
+        private _grp = [_grpPos, _sideEnemy, _grpUnits, _destPos] call _spawnEnemyGrp;
         [_grp] call FAC_applyEnemyScenarioToGroup;
         if (!isNull _grp && { count units _grp > 0 }) then {
             _grp setBehaviour "AWARE";
@@ -87,11 +61,11 @@ FADE_runMission_CAS = {
     private _casFriendlyCount = count units _friendlyGroup;
     private _casMarkingLine = "Friendly marking on your arrival (within 1 km): green smoke by day, IR strobes at night (NVG).";
 
-    [_player, _taskId, "Provide fire support to friendly forces at the objective. Mission fails if friendly forces are eliminated.", "CAS / Fire Support", _destPos, "attack"] call _fnc_createMissionTask;
+    [_player, _taskId, "Provide fire support to friendly forces at the objective. Supported element must not be overrun.", "CAS / Fire Support", _destPos, "attack"] call _fnc_createMissionTask;
 
     private _markerName = "FADE_cas_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    private _marker = createMarker [_markerName, [_destPos, 100] call _mkrJitter];
+    private _marker = createMarker [_markerName, [_destPos] call FADE_normPos3];
     [_taskId, _markerName] call FADE_missionEnt_registerMarker;
     _marker setMarkerType "mil_objective";
     _marker setMarkerColor "ColorRed";
@@ -107,7 +81,7 @@ FADE_runMission_CAS = {
         _casMarkingLine
     ];
     private _casExecutionHtml = format [
-        "<t align='left' color='#C0C0C0'>Proceed to AO Grid %1 and support %2 in contact. Prioritise hostiles pressing friendly positions. Mission fails if %2 is eliminated.</t>",
+        "<t align='left' color='#C0C0C0'>Proceed to AO Grid %1 and support %2 in contact. Prioritise hostiles pressing friendly positions. Do not allow %2 to be overrun.</t>",
         _grid,
         _casCallsign
     ];
@@ -119,8 +93,8 @@ FADE_runMission_CAS = {
     [_player, "CAS / Fire Support"] call FADE_notifyOthersMissionStarted;
 
     // Initial air support request from friendly leader at mission start
-    [_friendlyGroup, _taskId, _destPos] spawn {
-        params ["_grp", "_taskId", "_objPos"];
+    [_friendlyGroup, _taskId] spawn {
+        params ["_grp", "_taskId"];
         sleep 5;
         if (isNull _grp || { count units _grp == 0 }) exitWith {};
         if ((_taskId call BIS_fnc_taskState) in ["SUCCEEDED","CANCELED","FAILED"]) exitWith {};
@@ -128,7 +102,7 @@ FADE_runMission_CAS = {
         private _capable = (units _grp) select { alive _x && { !(_x getVariable ["ACE_isUnconscious", false]) } };
         if (count _capable == 0) exitWith {};
         private _speaker = _capable select 0;
-        private _grid = mapGridPosition _objPos;
+        private _grid = mapGridPosition (getPosATL _speaker);
         [_speaker, format ["All callsigns, this is %1. Requesting immediate close air support at Grid %2. Standby for 5-line. Over.", _callsign, _grid]] call FADE_aiSideChat;
     };
 
@@ -209,7 +183,7 @@ FADE_runMission_CAS = {
             } else { 0 };
             if (_friendlyAlive == 0) exitWith {
                 [_taskId, "FAILED"] call BIS_fnc_taskSetState;
-                ["<t size='1.2' color='#FF6666'>MISSION FAILED</t><br/><br/><t color='#E0E0E0'>Friendly forces have been eliminated.</t>"] remoteExec ["FADE_showMissionHint", _player];
+                [_player, "Friendly forces have been eliminated."] call FADE_missionFailHint;
                 true
             };
             private _aliveCount = 0;
@@ -227,8 +201,7 @@ FADE_runMission_CAS = {
             };
             false
         };
-        [_markerName] call FADE_deleteMarkerSafe;
-        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
+        [_taskId, _markerName, _player, 60] call FADE_mission_completeCleanup;
         [_taskId, _friendlyGroup] spawn {
             params ["_taskId", "_friendlyGroup"];
             sleep 60;

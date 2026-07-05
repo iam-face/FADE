@@ -3,8 +3,7 @@
 // =============================================================================
 
 FAC_scenarioGui_IDD = 60003;
-FAC_scenarioGui_act = [0.22, 0.48, 0.78, 1];
-FAC_scenarioGui_inact = [0.07, 0.11, 0.20, 1];
+// Tab/toggle colors: FAC_theme_tabActive / FAC_theme_tabIdle (FAC_Theme.sqf)
 
 // Preset id -> [overcast, rain, fogD, fogDecay, fogBase, windStr, windDir, gusts, waves] (matches server FADE_getWeatherParamsForPresetName)
 FAC_scenarioGui_getWeatherParamsForPresetId = {
@@ -32,7 +31,7 @@ FAC_scenarioGui_weatherPresets = [
 
 FAC_scenarioGui_scenarioContentIdcs = [
     60804, 60805, 60820, 60821, 60822,
-    60942,
+    60942, 60952, 60953,
     60844, 60845, 60846, 60847, 60848,
     60850, 60851, 60852, 60853, 60854, 60855, 60856, 60857, 60858, 60859, 60860, 60861, 60862,
     60950, 60951, 60650, 60651, 60652, 60653,
@@ -48,7 +47,8 @@ FAC_scenarioGui_weatherContentIdcs = [
 FAC_scenarioGui_factionsContentIdcs = [
     60910, 60911, 60912, 60913, 60914, 60915, 60916, 60917, 60918, 60919, 60920, 60921,
     60870, 60871, 60872, 60873, 60874, 60875, 60876, 60877, 60878, 60879, 60880,
-    60881, 60882, 60883, 60884, 60885, 60886, 60887, 60888, 60889, 60890, 60891, 60892, 60893, 60894,
+    60881, 60882, 60883, 60884, 60886, 60887, 60888, 60889, 60890, 60891, 60892, 60893, 60894, 60957,
+    60958, 60959, 60960, 60961, 60962,
     60310, 60311, 60312
 ];
 
@@ -371,7 +371,7 @@ FAC_scenarioGui_syncIntelReadBtns = {
 FAC_scenarioGui_syncPatrolBtns = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
-    private _on = missionNamespace getVariable ["FAC_scenarioGui_patrols", false];
+    private _on = missionNamespace getVariable ["FAC_scenarioGui_patrols", true];
     private _b0 = _d displayCtrl 60870;
     private _b1 = _d displayCtrl 60871;
     if (!isNull _b0 && { !isNull _b1 }) then {
@@ -423,8 +423,8 @@ FAC_scenarioGui_syncLauncherBtns = {
 FAC_scenarioGui_syncOpforPopBtns = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
-    private _v = missionNamespace getVariable ["FAC_scenarioGui_opforPop", "Auto"];
-    private _map = [["Auto", 60885], ["VeryLow", 60886], ["Low", 60887], ["Normal", 60888], ["High", 60889], ["VeryHigh", 60890], ["Insane", 60891]];
+    private _v = missionNamespace getVariable ["FAC_scenarioGui_opforPop", "Low"];
+    private _map = [["VeryLow", 60886], ["Low", 60887], ["Normal", 60888], ["High", 60889], ["VeryHigh", 60890], ["Insane", 60891]];
     {
         _x params ["_name", "_idc"];
         private _c = _d displayCtrl _idc;
@@ -437,8 +437,22 @@ FAC_scenarioGui_syncOpforPopBtns = {
 FAC_scenarioGui_syncOpforAirBtns = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
-    private _v = missionNamespace getVariable ["FAC_scenarioGui_opforAir", "Off"];
-    private _map = [["Off", 60892], ["Low", 60893], ["Medium", 60894]];
+    private _v = [missionNamespace getVariable ["FAC_scenarioGui_opforAir", "Off"]] call FADE_normalizeOpforThreatSetting;
+    private _map = [["Off", 60892], ["Low", 60893], ["Normal", 60894], ["High", 60957]];
+    {
+        _x params ["_name", "_idc"];
+        private _c = _d displayCtrl _idc;
+        if (!isNull _c) then {
+            _c ctrlSetBackgroundColor (if (_name == _v) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        };
+    } forEach _map;
+};
+
+FAC_scenarioGui_syncOpforDroneBtns = {
+    private _d = findDisplay FAC_scenarioGui_IDD;
+    if (isNull _d) exitWith {};
+    private _v = [missionNamespace getVariable ["FAC_scenarioGui_opforDrone", "Off"]] call FADE_normalizeOpforThreatSetting;
+    private _map = [["Off", 60959], ["Low", 60960], ["Normal", 60961], ["High", 60962]];
     {
         _x params ["_name", "_idc"];
         private _c = _d displayCtrl _idc;
@@ -468,7 +482,7 @@ FAC_scenarioGui_updateTownsLabel = {
     if (isNull _sl || { isNull _lb }) exitWith {};
     private _z = 2 + round (sliderPosition _sl);
     _z = _z max 2 min 10;
-    _lb ctrlSetText format ["Number of target towns in Operation mission: %1", _z];
+    _lb ctrlSetText format ["Operation + Invasion zone count: %1", _z];
 };
 
 // Sliders: foot cap 0-300 (0 = unlimited); density 25-250 -> 0.25-2.5x
@@ -550,7 +564,7 @@ FAC_scenarioGui_fnc = {
             missionNamespace setVariable ["FAC_scenarioGui_tpMode", missionNamespace getVariable ["FADE_teleportToPlayerMode", 0]];
             missionNamespace setVariable ["FAC_scenarioGui_civTalkInterpOnly", missionNamespace getVariable ["FADE_civTalkInterpretersOnly", false]];
             missionNamespace setVariable ["FAC_scenarioGui_intelSpecialistsOnly", missionNamespace getVariable ["FADE_intelSpecialistsOnly", false]];
-            missionNamespace setVariable ["FAC_scenarioGui_patrols", missionNamespace getVariable ["FADE_scenarioPatrols", false]];
+            missionNamespace setVariable ["FAC_scenarioGui_patrols", missionNamespace getVariable ["FADE_scenarioPatrols", true]];
             missionNamespace setVariable ["FAC_scenarioGui_routing", (missionNamespace getVariable ["FADE_enemyRouting", 0]) > 0];
             private _aaaSetting = missionNamespace getVariable ["FADE_enemyAAALevel", "Off"];
             private _aaaNorm = switch (toUpper _aaaSetting) do {
@@ -565,8 +579,9 @@ FAC_scenarioGui_fnc = {
             };
             missionNamespace setVariable ["FAC_scenarioGui_aaa", _aaaNorm];
             missionNamespace setVariable ["FAC_scenarioGui_launcher", missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"]];
-            missionNamespace setVariable ["FAC_scenarioGui_opforPop", missionNamespace getVariable ["FADE_opforPopulationSetting", "Auto"]];
-            missionNamespace setVariable ["FAC_scenarioGui_opforAir", missionNamespace getVariable ["FADE_opforAirSetting", "Off"]];
+            missionNamespace setVariable ["FAC_scenarioGui_opforPop", missionNamespace getVariable ["FADE_opforPopulationSetting", "Low"]];
+            missionNamespace setVariable ["FAC_scenarioGui_opforAir", [missionNamespace getVariable ["FADE_opforAirSetting", "Off"]] call FADE_normalizeOpforThreatSetting];
+            missionNamespace setVariable ["FAC_scenarioGui_opforDrone", [missionNamespace getVariable ["FADE_opforDroneSetting", "Off"]] call FADE_normalizeOpforThreatSetting];
             private _aoLobby = missionNamespace getVariable ["FADE_aoStrength", "Mid"];
             if (_aoLobby == "Mid") then { _aoLobby = "Medium" };
             missionNamespace setVariable ["FAC_scenarioGui_aoStrength", _aoLobby];
@@ -633,17 +648,17 @@ FAC_scenarioGui_fnc = {
             private _scenHelp = _d displayCtrl 60940;
             if (!isNull _scenHelp) then {
                 _scenHelp ctrlSetStructuredText parseText (
-                    "<t color='#c8d8e8' size='1'>" +
-                    "Presets snap the weather sliders; moving a slider switches the list to <t color='#a8d8ff'>Custom</t>.<br/>" +
-                    "<t color='#a8d8ff'>Apply and Close</t> commits time, weather, rules, and faction picks from this dialog.<br/>" +
-                    "Weather presets and fine sliders are on <t color='#a8d8ff'>Weather</t>; enemy AI and spawn factions under <t color='#a8d8ff'>Factions</t>; Zeus and cleanup under <t color='#a8d8ff'>Admin</t>." +
+                    "<t color='#d8d8dc' size='1'>" +
+                    "Presets snap the weather sliders; moving a slider switches the list to <t color='#e8e8ec'>Custom</t>.<br/>" +
+                    "<t color='#e8e8ec'>Apply and Close</t> commits time, weather, rules, and faction picks from this dialog.<br/>" +
+                    "Weather presets and fine sliders are on <t color='#e8e8ec'>Weather</t>; enemy AI and spawn factions under <t color='#e8e8ec'>Factions</t>; Zeus and cleanup under <t color='#e8e8ec'>Admin</t>." +
                     "</t>"
                 );
             };
 
             private _sk = _d displayCtrl 60872;
             if (!isNull _sk) then {
-                private _skv = missionNamespace getVariable ["FADE_enemySkill", 0.2];
+                private _skv = missionNamespace getVariable ["FADE_enemySkill", 0.0];
                 _sk sliderSetRange [0, 1];
                 _sk sliderSetSpeed [0.05, 0.1];
                 _sk sliderSetPosition ((_skv max 0) min 1);
@@ -707,6 +722,7 @@ FAC_scenarioGui_fnc = {
             [] call FAC_scenarioGui_syncLauncherBtns;
             [] call FAC_scenarioGui_syncOpforPopBtns;
             [] call FAC_scenarioGui_syncOpforAirBtns;
+            [] call FAC_scenarioGui_syncOpforDroneBtns;
             [] call FAC_scenarioGui_syncAdminTabAccess;
 
             ["setTab", ["scenario"]] call FAC_scenarioGui_fnc;
@@ -839,8 +855,15 @@ FAC_scenarioGui_fnc = {
         };
         case "setOpforAir": {
             _params params ["_v"];
+            if !(_v in ["Off", "Low", "Normal", "High"]) then { _v = "Off" };
             missionNamespace setVariable ["FAC_scenarioGui_opforAir", _v];
             [] call FAC_scenarioGui_syncOpforAirBtns;
+        };
+        case "setOpforDrone": {
+            _params params ["_v"];
+            if !(_v in ["Off", "Low", "Normal", "High"]) then { _v = "Off" };
+            missionNamespace setVariable ["FAC_scenarioGui_opforDrone", _v];
+            [] call FAC_scenarioGui_syncOpforDroneBtns;
         };
 
         case "headerRefresh": {
@@ -922,14 +945,15 @@ FAC_scenarioGui_fnc = {
 
             private _limitGear = missionNamespace getVariable ["FAC_scenarioGui_limitGear", false];
             private _presetOnly = missionNamespace getVariable ["FAC_scenarioGui_preset", false];
-            private _patrolsEnabled = missionNamespace getVariable ["FAC_scenarioGui_patrols", false];
+            private _patrolsEnabled = missionNamespace getVariable ["FAC_scenarioGui_patrols", true];
             private _enemySkill = sliderPosition (_d displayCtrl 60872);
             _enemySkill = (_enemySkill max 0) min 1;
             private _enemyRouting = if (missionNamespace getVariable ["FAC_scenarioGui_routing", false]) then { 0.5 } else { 0 };
             private _enemyAAA = missionNamespace getVariable ["FAC_scenarioGui_aaa", "Off"];
             private _opforLauncherSetting = missionNamespace getVariable ["FAC_scenarioGui_launcher", "Normal"];
-            private _opforAirSetting = missionNamespace getVariable ["FAC_scenarioGui_opforAir", "Off"];
-            private _opforPopulationSetting = missionNamespace getVariable ["FAC_scenarioGui_opforPop", "Auto"];
+            private _opforAirSetting = [missionNamespace getVariable ["FAC_scenarioGui_opforAir", "Off"]] call FADE_normalizeOpforThreatSetting;
+            private _opforDroneSetting = [missionNamespace getVariable ["FAC_scenarioGui_opforDrone", "Off"]] call FADE_normalizeOpforThreatSetting;
+            private _opforPopulationSetting = missionNamespace getVariable ["FAC_scenarioGui_opforPop", "Low"];
             private _timeCompressionScale = missionNamespace getVariable ["FAC_scenarioGui_timeScale", 1];
             private _teleportToPlayerMode = missionNamespace getVariable ["FAC_scenarioGui_tpMode", 0];
             private _civiliansEnabled = missionNamespace getVariable ["FAC_scenarioGui_civs", true];
@@ -964,6 +988,7 @@ FAC_scenarioGui_fnc = {
             missionNamespace setVariable ["FADE_opforPopulationSetting", _opforPopulationSetting];
             missionNamespace setVariable ["FADE_opforLauncherSetting", _opforLauncherSetting];
             missionNamespace setVariable ["FADE_opforAirSetting", _opforAirSetting];
+            missionNamespace setVariable ["FADE_opforDroneSetting", _opforDroneSetting];
             missionNamespace setVariable ["FADE_operationZoneCount", _operationZoneCount];
             missionNamespace setVariable ["FADE_timeCompressionScale", _timeCompressionScale];
             missionNamespace setVariable ["FADE_teleportToPlayerMode", _teleportToPlayerMode];
@@ -981,7 +1006,7 @@ FAC_scenarioGui_fnc = {
                 _timeCompressionScale, _opforPopulationSetting, _teleportToPlayerMode, _opforLauncherSetting,
                 _opforAirSetting, _operationZoneCount, _weatherParams,
                 _civGlobalMaxAlive, _civDensityScale,
-                _civTalkInterpretersOnly, _intelSpecialistsOnly
+                _civTalkInterpretersOnly, _intelSpecialistsOnly, _opforDroneSetting
             ];
             [_scenarioApplyArgs] remoteExec ["FADE_applyScenarioSettings", 2];
             closeDialog 0;

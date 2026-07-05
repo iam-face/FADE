@@ -1,7 +1,78 @@
 // =============================================================================
 // MedicalTrainingGui.sqf  -  medical training dummies (client; ACE + KAM assumed)
 // terminalMedical addAction. Server: FADE_medTrain_* in initServer.sqf
+// Single layout: dummy list (left) + injury controls (right); no tabs.
 // =============================================================================
+
+FAC_medicalTrainingGui_applyLayout = {
+    private _d = findDisplay 60800;
+    if (isNull _d) exitWith {};
+    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow false } } forEach [60890, 60891];
+    private _injuryIdcs = [
+        60892, 60802, 60830, 60836, 60894, 60895, 60896, 60897, 60898, 60899, 60900, 60901, 60902, 60903, 60904, 60905,
+        60860, 60861, 60862, 60863, 60871, 60864, 60872, 60865, 60866, 60867, 60868, 60869, 60870,
+        60803, 60804, 60806, 60805, 60807, 60831, 60832, 60833, 60834, 60835, 60850
+    ];
+    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow true } } forEach _injuryIdcs;
+    private _set = {
+        params ["_idc", "_x", "_y", "_w", "_h"];
+        private _c = _d displayCtrl _idc;
+        if (!isNull _c) then { _c ctrlSetPosition [_x, _y, _w, _h]; _c ctrlCommit 0 };
+    };
+    [60880, 0.04, 0.105, 0.28, 0.028] call _set;
+    [60801, 0.04, 0.135, 0.28, 0.52] call _set;
+    [60814, 0.04, 0.665, 0.28, 0.036] call _set;
+    [60815, 0.04, 0.708, 0.28, 0.036] call _set;
+    [60816, 0.04, 0.751, 0.28, 0.036] call _set;
+    [60893, 0.04, 0.794, 0.28, 0.048] call _set;
+    [60892, 0.34, 0.105, 0.62, 0.028] call _set;
+    [60802, 0.34, 0.132, 0.62, 0.034] call _set;
+    [60830, 0.34, 0.172, 0.30, 0.036] call _set;
+    [60836, 0.66, 0.172, 0.32, 0.036] call _set;
+    [60894, 0.34, 0.216, 0.62, 0.022] call _set;
+    [60895, 0.34, 0.240, 0.30, 0.018] call _set;
+    [60860, 0.34, 0.260, 0.30, 0.032] call _set;
+    [60896, 0.66, 0.240, 0.30, 0.018] call _set;
+    [60861, 0.66, 0.260, 0.30, 0.032] call _set;
+    [60897, 0.34, 0.298, 0.30, 0.018] call _set;
+    [60862, 0.34, 0.318, 0.30, 0.032] call _set;
+    [60898, 0.66, 0.298, 0.30, 0.018] call _set;
+    [60863, 0.66, 0.318, 0.30, 0.032] call _set;
+    [60871, 0.34, 0.356, 0.62, 0.018] call _set;
+    [60864, 0.34, 0.376, 0.62, 0.028] call _set;
+    [60872, 0.34, 0.410, 0.62, 0.018] call _set;
+    [60865, 0.34, 0.430, 0.62, 0.028] call _set;
+    [60899, 0.34, 0.464, 0.30, 0.018] call _set;
+    [60866, 0.34, 0.484, 0.30, 0.032] call _set;
+    [60900, 0.66, 0.464, 0.30, 0.018] call _set;
+    [60867, 0.66, 0.484, 0.30, 0.032] call _set;
+    [60868, 0.34, 0.524, 0.62, 0.036] call _set;
+    [60901, 0.34, 0.568, 0.62, 0.022] call _set;
+    [60869, 0.34, 0.592, 0.44, 0.034] call _set;
+    [60870, 0.80, 0.592, 0.16, 0.034] call _set;
+    [60902, 0.34, 0.634, 0.62, 0.022] call _set;
+    [60903, 0.34, 0.658, 0.30, 0.018] call _set;
+    [60803, 0.34, 0.678, 0.30, 0.032] call _set;
+    [60904, 0.66, 0.658, 0.30, 0.018] call _set;
+    [60804, 0.66, 0.678, 0.30, 0.032] call _set;
+    [60806, 0.34, 0.716, 0.62, 0.018] call _set;
+    [60805, 0.34, 0.736, 0.62, 0.028] call _set;
+    [60905, 0.34, 0.770, 0.30, 0.018] call _set;
+    [60807, 0.34, 0.790, 0.30, 0.032] call _set;
+    [60831, 0.66, 0.770, 0.30, 0.052] call _set;
+    [60832, 0.34, 0.832, 0.30, 0.036] call _set;
+    [60833, 0.66, 0.832, 0.30, 0.036] call _set;
+    [60834, 0.34, 0.876, 0.30, 0.036] call _set;
+    [60835, 0.66, 0.876, 0.30, 0.036] call _set;
+    [60850, 0.34, 0.920, 0.62, 0.028] call _set;
+    private _legacyLabels = [
+        "Airway / chest (Zeus parity)", "Obstruction", "Occluded", "Hemopneumothorax", "Tension PTX",
+        "PTX deteriorate", "Deep penetrating", "Cardiac rhythm", "Bleeding wound / part", "Body part", "Wound type", "Depth"
+    ];
+    {
+        if ((ctrlIDC _x) == -1 && { (ctrlText _x) in _legacyLabels }) then { _x ctrlShow false };
+    } forEach (allControls _d);
+};
 
 FAC_medicalTrainingGui_fnc = {
     params ["_action", "_params"];
@@ -82,6 +153,36 @@ FAC_medicalTrainingGui_fnc = {
                 if (_fi >= 0) then { _newSel = _fi };
             };
             _lb lbSetCurSel _newSel;
+        };
+        [] call _fncUpdateSelectedTarget;
+    };
+
+    private _fncUpdateSelectedTarget = {
+        private _display = findDisplay 60800;
+        if (isNull _display) exitWith {};
+        private _lb = _display displayCtrl 60801;
+        private _tgt = _display displayCtrl 60893;
+        private _hdr = _display displayCtrl 60880;
+        private _i = lbCurSel _lb;
+        private _line = if (_i < 0 || { lbSize _lb < 1 }) then {
+            "Target: (none — select a dummy)"
+        } else {
+            format ["Target: %1", _lb lbText _i]
+        };
+        if (!isNull _tgt) then {
+            _tgt ctrlSetText _line;
+            if (_i < 0) then {
+                _tgt ctrlSetTextColor [0.72, 0.76, 0.82, 1];
+            } else {
+                _tgt ctrlSetTextColor [1, 0.92, 0.55, 1];
+            };
+        };
+        if (!isNull _hdr) then {
+            if (_i < 0) then {
+                _hdr ctrlSetText "Training dummies";
+            } else {
+                _hdr ctrlSetText format ["Training dummies — %1", _lb lbText _i];
+            };
         };
     };
 
@@ -242,13 +343,21 @@ FAC_medicalTrainingGui_fnc = {
             _sl sliderSetRange [0, 100];
             _sl sliderSetPosition 30;
             [] call _fncUpdateBleedLabel;
-            private _info = "<t color='#a8d4cc'><t color='#FFD700'>Apply airway / chest</t> sets obstruction, occlusion, hemopneumothorax, tension PTX, PTX level, SpO2/PaO2 slot, deterioration, and deep penetrating injury (Zeus <t color='#888'>Manage Airways</t> parity). <t color='#FFD700'>Apply cardiac</t> matches Zeus <t color='#888'>Change Cardiac State</t>.<br/><br/><t color='#FFD700'>Apply preset</t>  -  packaged scenarios (includes KAT Surgery fractures if loaded). <t color='#FFD700'>Apply wound</t>  -  bleeding wound on the selected body part.<br/><br/><t color='#FFD700'>Heal part</t> clears open wounds and KAT fracture on that part. <t color='#FFD700'>Heal all</t> clears KAM breathing/circulation/vitals locals then ACE full heal.</t>";
+            private _info = format [
+                "<t size='0.85' color='%1'>Injuries apply to the <t color='%2'>selected dummy</t> (left). Presets, airway/chest, cardiac, and wounds match Zeus/KAT training tools.</t>",
+                FAC_theme_htmlBody, FAC_theme_htmlEmphasis
+            ];
             (_display displayCtrl 60850) ctrlSetStructuredText parseText _info;
+            [] call FAC_medicalTrainingGui_applyLayout;
             [player] remoteExec ["FADE_medTrain_requestList", 2];
             [] spawn {
                 sleep 0.35;
                 ["refreshListOnly", []] call FAC_medicalTrainingGui_fnc;
             };
+            [] call _fncUpdateSelectedTarget;
+        };
+        case "dummySelChanged": {
+            [] call _fncUpdateSelectedTarget;
         };
         case "headerRefresh": {
             [player] remoteExec ["FADE_medTrain_requestList", 2];

@@ -77,10 +77,9 @@ private _tryRouteFromStart = {
     private _okEnds = _roadsEnd select {
         private _ep = getPosATL _x;
         if (count _ep < 3) then { _ep = [(_ep select 0), (_ep select 1), 0] };
-        if (surfaceIsWater _ep) exitWith { false };
-        if ((_ep distance2D _sp) < _minRouteM) exitWith { false };
-        if ((_ep distance2D _basePos) < _minFromBase) exitWith { false };
-        true
+        !surfaceIsWater _ep
+        && { (_ep distance2D _sp) >= _minRouteM }
+        && { (_ep distance2D _basePos) >= _minFromBase }
     };
     if (count _okEnds == 0) exitWith { [] };
     private _pick = selectRandom _okEnds;

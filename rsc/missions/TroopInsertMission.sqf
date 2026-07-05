@@ -13,7 +13,7 @@ _waveCount = (_waveCount max 1) min 10;
 
 if (([] call FADE_resolveScenarioFriendlyUnits) isEqualTo []) exitWith {
     if (!isNull _player) then { [_player] call FADE_clearActiveMission };
-    ["MISSION ERROR: No friendly units for the scenario faction. Apply scenario settings or pick a faction with infantry."] remoteExec ["systemChat", _player];
+    [_player, "MISSION ERROR", "No friendly units for the scenario faction. Apply scenario settings or pick a faction with infantry."] call FADE_missionErrorHint;
 };
 private _markerFriendly = missionNamespace getVariable ["FADE_markerColorFriendly", "ColorWEST"];
 private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", { params [["_p", [0, 0, 0]]]; [_p] call FADE_normPos3 }];
@@ -38,51 +38,22 @@ private _pairs = [];
 private _markerName = "";
 private _prevLzSites = [];
 
-private _fnc_metaChat = {
-    params ["_msg"];
-    { [_msg] remoteExec ["systemChat", _x] } forEach _participants;
-};
+private _fnc_metaChat = { [_participants, _this select 0] call FADE_troopMission_metaChat; };
 
 private _fnc_deleteGroups = {
     params ["_groups"];
-    {
-        if (!isNull _x) then {
-            _x setVariable ["FADE_troopInsertCleanupDone", true, true];
-            { if (!isNull _x) then { detach _x; deleteVehicle _x } } forEach (_x getVariable ["FADE_irStrobes", []]);
-            { if (!isNull _x) then { deleteVehicle _x } } forEach units _x;
-            deleteGroup _x;
-        };
-    } forEach _groups;
+    [_groups, "FADE_troopInsertCleanupDone"] call FADE_troopMission_deleteFriendlyGroups;
 };
 
 private _pickupMarkers = [];
-private _fnc_clearPickupMarkers = {
-    {
-        _x params ["_mkrName", "_owner"];
-        if (!isNull _owner) then {
-            [_mkrName] remoteExec ["FAC_troopInsertClient_deletePickupMarker", _owner];
-        };
-    } forEach _pickupMarkers;
-    _pickupMarkers = [];
-};
+private _fnc_clearPickupMarkers = { [_pickupMarkers] call FADE_troopMission_clearPickupMarkers; };
 
 private _fnc_createPickupMarker = {
     params ["_owner", "_pos", "_label"];
-    if (isNull _owner) exitWith { "" };
-    private _mkr = format ["FADE_ti_pick_%1_%2", _taskId, getPlayerUID _owner];
-    private _labelOut = if (_label != "") then { _label } else { "Squad link-up" };
-    [_mkr, _pos, _labelOut, _markerFriendly] remoteExec ["FAC_troopInsertClient_createPickupMarker", _owner];
-    _pickupMarkers pushBack [_mkr, _owner];
-    _mkr
+    [_taskId, "ti", _markerFriendly, _pickupMarkers, _owner, _pos, _label] call FADE_troopMission_createPickupMarker
 };
 
-private _fnc_squadRadio = {
-    params ["_grp", "_msg"];
-    if (isNull _grp || { count units _grp == 0 }) exitWith {};
-    private _ldr = leader _grp;
-    if (isNull _ldr || { !alive _ldr }) exitWith {};
-    [_ldr, _msg] call FADE_aiSideChat;
-};
+private _fnc_squadRadio = { [_this select 0, _this select 1] call FADE_troopMission_squadRadio; };
 
 private _fnc_squadPickupSideChat = {
     params ["_grp", "_atPos"];
@@ -94,12 +65,7 @@ private _fnc_squadPickupSideChat = {
 private _fnc_unitClassesForParticipant = {
     params ["_participant"];
     private _units = [] call FADE_resolveScenarioFriendlyUnits;
-    if (isNull _participant || { !alive _participant }) exitWith { _units };
-    private _cfgRoot = configFile >> "CfgVehicles";
-    private _pFac = getText (_cfgRoot >> typeOf _participant >> "faction");
-    if (_pFac == "") exitWith { _units };
-    private _matched = _units select { getText (_cfgRoot >> _x >> "faction") == _pFac };
-    if (count _matched > 0) then { _matched } else { _units }
+    [_participant, _units] call FADE_troopMission_unitClassesForParticipant
 };
 
 private _fnc_spawnSquadAtBase = {
@@ -161,47 +127,11 @@ private _fnc_pickInsertLz = {
 
 private _fnc_runTransportWave = {
     params ["_pairs", "_drop", "_waveIdx", "_waveTotal"];
-    if (_missionEnded) exitWith { [] };
     private _runFn = missionNamespace getVariable ["FADE_troopInsert_runTransport", nil];
-    if (isNil "_runFn") exitWith { [] };
-    missionNamespace setVariable [_claimedVehKey, [], true];
-    private _waveOkKeyPrefix = "FADE_tiWaveOk_" + _taskId + "_";
-    private _scripts = [];
-    private _waveStart = time;
-    {
-        _x params ["_grp", "_owner", ["_pick", []], ["_pickMkr", ""]];
-        private _pickupPos = if (count _pick >= 2) then { _pick } else { _basePickupRef };
-        if (!isNull _owner) then {
-            _owner setVariable [_waveOkKeyPrefix + str _waveIdx, false, false];
-        };
-        if (!isNull _grp && { count units _grp > 0 }) then {
-            _grp setVariable ["FADE_troopInsertTransportDone", false, true];
-            private _scr = [_grp, _owner, _pickupPos, _drop, _taskId, _markerName, _abortFlag, _claimedVehKey, _pickMkr, _waveIdx, _waveTotal] spawn _runFn;
-            _scripts pushBack [_scr, _grp, _owner];
-        };
-    } forEach _pairs;
-    if (count _scripts == 0) exitWith { _scripts };
-    waitUntil {
-        sleep 2;
-        if (_missionEnded || { missionNamespace getVariable [_abortFlag, false] }) exitWith { true };
-        ({ scriptDone (_x select 0) } count _scripts) == count _scripts || { time - _waveStart > _waveTimeout }
-    };
-    {
-        _x params ["_scr", "_grp", "_owner"];
-        private _ownerOk = !isNull _owner && { _owner getVariable [_waveOkKeyPrefix + str _waveIdx, false] };
-        private _grpOk = !isNull _grp && { _grp getVariable ["FADE_troopInsertTransportDone", false] };
-        if (!_ownerOk && { !_grpOk }) then {
-            if (!isNull _grp && { !(_grp getVariable ["FADE_troopInsertCleanupDone", false]) }) then {
-                { if (!isNull _x) then { detach _x; deleteVehicle _x } } forEach (_grp getVariable ["FADE_irStrobes", []]);
-                { if (!isNull _x) then { deleteVehicle _x } } forEach units _grp;
-                deleteGroup _grp;
-            };
-            if (!isNull _owner) then {
-                [format ["TROOP INSERT: Your squad transport failed or timed out (wave %1/%2).", _waveIdx, _waveTotal]] remoteExec ["systemChat", _owner];
-            };
-        };
-    } forEach _scripts;
-    _scripts
+    [
+        _pairs, _waveIdx, _waveTotal, _runFn, _taskId, _markerName, _abortFlag, _claimedVehKey, _waveTimeout, _missionEnded,
+        "ti", "FADE_troopInsertTransportDone", "FADE_troopInsertCleanupDone", _drop, _basePickupRef
+    ] call FADE_troopMission_runTransportWave
 };
 
 private _fnc_finishMission = {
@@ -218,15 +148,7 @@ private _fnc_finishMission = {
     [] call _fnc_clearPickupMarkers;
     if (_markerName != "") then { [_markerName] call FADE_deleteMarkerSafe };
     if (_taskId != "") then { [_taskId, "TroopInsert", false] call FADE_cleanupMissionEntities };
-    {
-        if (!isNull _x) then {
-            _x setVariable ["FADE_myMission", "", true];
-            _x setVariable ["FADE_myMissionTaskId", nil, true];
-            _x setVariable ["FADE_myMissionMarker", nil, true];
-            _x setVariable ["FADE_myMissionMarkerEnd", nil, true];
-            _x setVariable ["FADE_myMissionBrief", nil, true];
-        };
-    } forEach _participants;
+    [_participants] call FADE_troopMission_clearParticipantMissionVars;
     if (!isNull _player) then { [_player, _taskId] call FADE_clearActiveMission };
     missionNamespace setVariable [_abortFlag, nil];
     missionNamespace setVariable [_claimedVehKey, nil, true];
@@ -237,23 +159,10 @@ private _fnc_finishMission = {
 
 private _fnc_waveAllTransportOk = {
     params ["_pairList", "_waveIdx"];
-    if (_pairList isEqualTo []) exitWith { false };
-    private _waveOkKey = "FADE_tiWaveOk_" + _taskId + "_" + str _waveIdx;
-    private _ok = true;
-    {
-        _x params ["_grp", "_owner"];
-        private _ownerOk = !isNull _owner && { _owner getVariable [_waveOkKey, false] };
-        private _grpOk = !isNull _grp && { _grp getVariable ["FADE_troopInsertTransportDone", false] };
-        if (!_ownerOk && { !_grpOk }) then { _ok = false };
-    } forEach _pairList;
-    _ok
+    [_pairList, _waveIdx, _taskId, "ti", "FADE_troopInsertTransportDone"] call FADE_troopMission_waveAllTransportOk
 };
 
-private _fnc_liveParticipants = {
-    private _live = [];
-    { if (!isNull _x && { alive _x }) then { _live pushBack _x } } forEach _participants;
-    _live
-};
+private _fnc_liveParticipants = { [_participants] call FADE_troopMission_liveParticipants };
 
 // --- Mission setup ---
 if (!isNull _player) then {
@@ -283,17 +192,24 @@ _prevLzSites pushBack _dropPos;
 
 private _waveLabel = format ["%1 wave(s)", _waveCount];
 private _sf = missionNamespace getVariable ["FADE_sideFriendly", west];
+private _createTask = missionNamespace getVariable ["FADE_mission_createTask", {}];
 private _taskDesc = format [
     "Insert friendly squads at the marked LZ. %1 participating transport(s). %2. Pick up at base; insert at LZ; RTB between waves.",
     count _participants,
     _waveLabel
 ];
-[_sf, _taskId, [_taskDesc, "Troop Insert", ""], _dropPos, "CREATED", 1, true, "move", true] call BIS_fnc_taskCreate;
+if (_createTask isEqualTo {}) then {
+    [_sf, _taskId, [_taskDesc, "Troop Insert", ""], _dropPos, "CREATED", 1, true, "move", true] call BIS_fnc_taskCreate;
+} else {
+    [_player, _taskId, _taskDesc, "Troop Insert", _dropPos, "move"] call _createTask;
+};
 
 {
     if (!isNull _x) then { _x setVariable ["FADE_myMissionMarker", _markerName, true] };
 } forEach _participants;
-private _marker = createMarker [_markerName, [_dropPos, 100] call _mkrJitter];
+private _insertLzRadius = 500;
+[_taskId, _markerName + "_zone", _dropPos, _insertLzRadius, _markerFriendly] call FADE_mission_createRadiusMarker;
+private _marker = createMarker [_markerName, [_dropPos] call FADE_normPos3];
 [_taskId, _markerName] call FADE_missionEnt_registerMarker;
 _marker setMarkerType "mil_pickup";
 _marker setMarkerColor _markerFriendly;
@@ -323,8 +239,9 @@ for "_waveIndex" from 1 to _waveCount do {
             ["SUCCEEDED", format ["TROOP INSERT ENDED: No valid LZ for wave %1/%2.", _waveIndex, _waveCount]] call _fnc_finishMission;
         };
         _prevLzSites pushBack _dropPos;
-        private _mkPos = [_dropPos, 100] call _mkrJitter;
+        private _mkPos = [_dropPos] call FADE_normPos3;
         _marker setMarkerPos _mkPos;
+        [_markerName + "_zone", _mkPos, _insertLzRadius] call FADE_mission_setRadiusMarkerGeometry;
         [_taskId, _dropPos] call BIS_fnc_taskSetDestination;
         _grid = mapGridPosition _dropPos;
         [format [

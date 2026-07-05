@@ -27,6 +27,39 @@ FAC_loadoutGui_normalizePresetLoadoutArray = {
     _lo
 };
 
+// Eden Inventory exports use [[weapon]] per slot; ACE/Crusty presets use flat ["class",...].
+// Flatten single-weapon wrappers so setUnitLoadout matches working preset shape.
+FAC_loadoutGui_flattenPresetWeaponSlot = {
+    params ["_slot"];
+    if (!(_slot isEqualType [])) exitWith { [] };
+    if ((count _slot) == 0) exitWith { [] };
+    if ((_slot select 0) isEqualType "") exitWith { _slot };
+    if (
+        { (count _slot) == 1 } &&
+        { (_slot select 0) isEqualType [] } &&
+        { count (_slot select 0) > 0 } &&
+        { ((_slot select 0) select 0) isEqualType "" }
+    ) exitWith {
+        _slot select 0
+    };
+    _slot
+};
+
+// Crusty/ACE presets use [class, [cargo]]; Eden import uses [class, [items], [mags]].
+FAC_loadoutGui_flattenPresetContainerSlot = {
+    params ["_slot"];
+    if (!(_slot isEqualType []) || { count _slot < 2 }) exitWith { _slot };
+    if ((count _slot) == 2) exitWith { _slot };
+    if ((count _slot) >= 3 && { (_slot select 0) isEqualType "" }) exitWith {
+        private _items = _slot select 1;
+        private _mags = _slot select 2;
+        if (!(_items isEqualType [])) then { _items = [] };
+        if (!(_mags isEqualType [])) then { _mags = [] };
+        [_slot select 0, _items + _mags]
+    };
+    _slot
+};
+
 FAC_loadoutGui_unwrapPresetLoadoutArray = {
     params ["_lo"];
     if (!(_lo isEqualType [])) exitWith { [] };
@@ -61,7 +94,14 @@ FAC_loadoutGui_resolvePresetLoadoutArray = {
         };
     };
     _lo = [_lo] call FAC_loadoutGui_unwrapPresetLoadoutArray;
-    [_lo] call FAC_loadoutGui_normalizePresetLoadoutArray
+    _lo = [_lo] call FAC_loadoutGui_normalizePresetLoadoutArray;
+    {
+        _lo set [_x, [_lo select _x] call FAC_loadoutGui_flattenPresetWeaponSlot];
+    } forEach [0, 1, 2, 8];
+    {
+        _lo set [_x, [_lo select _x] call FAC_loadoutGui_flattenPresetContainerSlot];
+    } forEach [3, 4, 5];
+    _lo
 };
 
 FAC_loadoutGui_getPresetLoadoutByKey = {
@@ -131,15 +171,58 @@ FAC_loadoutGui_getPresetRoleTraits = {
     private _medic = 0;
     private _eng = false;
     private _exp = false;
-    if (_roleDn == "Medic") then {
+    if (_roleDn == "Medic" || { _roleDn find "Medic" >= 0 }) then {
         _medic = missionNamespace getVariable ["FAC_loadoutGui_presetMedicTraitLevel", 2];
     };
-    if (_roleDn == "Engineer") then {
+    if (_roleDn == "Engineer" || { _roleDn find "Engineer" >= 0 }) then {
         _eng = true;
         _exp = true;
     };
-    if (_roleDn == "Demolition") then {
+    if (_roleDn == "Demolition" || { _roleDn find "Breacher" >= 0 }) then {
         _exp = true;
+        if (_roleDn find "Breacher" >= 0) then { _eng = true };
     };
     [_medic, _eng, _exp]
+};
+
+// Server-side strip + apply (recruited AI, med training dummies, etc.).
+FAC_loadoutGui_stripUnitForLoadoutServer = {
+    params [["_u", objNull]];
+    if (isNull _u || {!alive _u}) exitWith {};
+    { _u removeMagazine _x } forEach (magazines _u);
+    removeAllWeapons _u;
+    removeAllAssignedItems _u;
+    removeUniform _u;
+    removeVest _u;
+    removeBackpack _u;
+    removeHeadgear _u;
+    removeGoggles _u;
+};
+
+FAC_loadoutGui_syncRoleTraitsServer = {
+    params ["_u", "_medic", "_engineer", "_explosive"];
+    if (isNull _u || {!alive _u}) exitWith {};
+    if (_medic isEqualTo false || {_medic isEqualTo 0}) then {
+        _u setUnitTrait ["Medic", false];
+    } else {
+        private _mv = _medic;
+        if (_medic isEqualTo true) then { _mv = 1 };
+        _u setUnitTrait ["Medic", _mv];
+    };
+    private _engOn = _engineer isEqualTo true || { (typeName _engineer == "SCALAR") && { _engineer > 0 } };
+    _u setUnitTrait ["Engineer", _engOn];
+    private _expOn = _explosive isEqualTo true || { (typeName _explosive == "SCALAR") && { _explosive > 0 } };
+    _u setUnitTrait ["explosiveSpecialist", _expOn];
+};
+
+FAC_loadoutGui_applyLoadoutToUnitServer = {
+    params [["_u", objNull], ["_loadout", []], ["_medic", 0], ["_engineer", false], ["_explosive", false]];
+    if (isNull _u || {!alive _u}) exitWith { false };
+    if (!(_loadout isEqualType []) || { (count _loadout) < 10 }) exitWith { false };
+    private _norm = [_loadout] call FAC_loadoutGui_resolvePresetLoadoutArray;
+    if ((count _norm) < 10) exitWith { false };
+    [_u] call FAC_loadoutGui_stripUnitForLoadoutServer;
+    _u setUnitLoadout _norm;
+    [_u, _medic, _engineer, _explosive] call FAC_loadoutGui_syncRoleTraitsServer;
+    true
 };
