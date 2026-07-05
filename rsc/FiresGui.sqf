@@ -116,11 +116,11 @@ FAC_firesGui_applyPage = {
     private _tabD = _d displayCtrl 60741;
     if (!isNull _tabR && {!isNull _tabD}) then {
         if (_page == 0) then {
-            _tabR ctrlSetBackgroundColor [0.22, 0.48, 0.78, 1];
-            _tabD ctrlSetBackgroundColor [0.14, 0.16, 0.22, 1];
+            _tabR ctrlSetBackgroundColor FAC_theme_tabActive;
+            _tabD ctrlSetBackgroundColor FAC_theme_tabIdle;
         } else {
-            _tabR ctrlSetBackgroundColor [0.14, 0.16, 0.22, 1];
-            _tabD ctrlSetBackgroundColor [0.22, 0.48, 0.78, 1];
+            _tabR ctrlSetBackgroundColor FAC_theme_tabIdle;
+            _tabD ctrlSetBackgroundColor FAC_theme_tabActive;
         };
         _tabR ctrlCommit 0;
         _tabD ctrlCommit 0;

@@ -233,6 +233,8 @@ FADE_adminCleanupAction = {
             ["Admin cleanup complete: civilians despawned."] remoteExec ["systemChat", _requester];
         };
         case "despawnOpfor": {
+            if (!isNil "FADE_opforAir_despawnAll") then { call FADE_opforAir_despawnAll };
+            if (!isNil "FADE_opforDrone_despawnAll") then { call FADE_opforDrone_despawnAll };
             {
                 if (!isNull _x && { side _x == east }) then { deleteVehicle _x };
             } forEach allUnits;

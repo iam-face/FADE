@@ -18,13 +18,16 @@
 // Dispatcher: compiled once at server boot (FADE_installMissionModules).
 FADE_runMission = {
 // Params from FADE_missionParams (set by FADE_startMission / FADE_startEscapeEvasion before compile)
-// pickMeta (6th): [rawClick, resolvedAnchor, snappedCenter, resolvedRadius] — per-mission, not missionNamespace globals.
+// pickMeta (7th): [rawClick, resolvedAnchor, snappedCenter, resolvedRadius, convoyEndRaw, convoyEndResolved, raidZoneClicks] — per-mission, not missionNamespace globals.
 if (isNil "FADE_missionParams" || { count FADE_missionParams < 3 }) exitWith {};
 FADE_missionParams params ["_missionType", "_destPos", ["_player", objNull], ["_evadeePlayers", []], ["_fromMapClick", false], ["_pickMeta", []]];
 private _rawAnchor = _pickMeta param [0, []];
 private _mapAnchor = _pickMeta param [1, []];
 private _snappedCenter = _pickMeta param [2, []];
 private _resolvedRadius = _pickMeta param [3, -1];
+private _convoyEndRaw = _pickMeta param [4, []];
+private _convoyEndAnchor = _pickMeta param [5, []];
+private _raidZoneClicks = _pickMeta param [6, []];
 if (!([_mapAnchor] call FADE_fnc_isValidMapClickPos)) then {
     _mapAnchor = if (_fromMapClick) then { +_destPos } else { [] };
     _fromMapClick = [_mapAnchor] call FADE_fnc_isValidMapClickPos;
@@ -32,18 +35,23 @@ if (!([_mapAnchor] call FADE_fnc_isValidMapClickPos)) then {
 if (!isServer) exitWith {};
 
 // Validate mission type (Global + Single types)
-private _validTypes = ["TroopInsert", "TroopExtract", "CAS", "Cargo", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "MineClearing", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "EscapeEvasion", "GeoGuesser"];
+private _validTypes = ["TroopInsert", "TroopExtract", "CAS", "Cargo", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "MineClearing", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion", "GeoGuesser"];
 if !(_missionType in _validTypes) exitWith {
     if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
-    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Unknown mission type.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "MISSION ERROR", "Unknown mission type."] call FADE_missionErrorHint;
+};
+if (_missionType in (missionNamespace getVariable ["FADE_disabledMissionTypes", []])) exitWith {
+    if (!isNull _player) then { [_player] call FADE_clearActiveMission };
+    private _lbl = [_missionType] call (missionNamespace getVariable ["FADE_missionTypeDisplayName", { _this select 0 }]);
+    [_player, "MISSION UNAVAILABLE", format ["%1 is temporarily disabled.", _lbl]] call FADE_missionErrorHint;
 };
 if (_missionType == "EscapeEvasion" && { count _evadeePlayers == 0 }) exitWith {
     if (!isNull _player) then { [_player] call FADE_clearActiveMission };
-    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No evadees for Escape &amp; Evasion.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "MISSION ERROR", "No evadees for Escape &amp; Evasion."] call FADE_missionErrorHint;
 };
 if (_missionType == "GeoGuesser" && { count _evadeePlayers == 0 }) exitWith {
     if (!isNull _player) then { [_player] call FADE_clearActiveMission };
-    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No participants for Geo-Guesser.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "MISSION ERROR", "No participants for Geo-Guesser."] call FADE_missionErrorHint;
 };
 
 // Single source: scenario-applied unit lists (initServer FADE_resolveScenario* helpers)
@@ -57,7 +65,7 @@ private _dryPos = missionNamespace getVariable ["FADE_surfaceIsDry", { params ["
 private _fallbackEnemyInf = +(missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"]]);
 if (count _friendlyUnits == 0) exitWith {
     if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
-    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No friendly units configured.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "MISSION ERROR", "No friendly units configured."] call FADE_missionErrorHint;
 };
 
 private _isGlobalMission = _missionType in (missionNamespace getVariable ["FADE_globalMissionTypes", []]);
@@ -97,12 +105,55 @@ if (!isNull _player) then {
     };
 };
 private _operationNameUpper = toUpper _operationName;
-// Appended to FADE_myMissionBrief (Missions GUI description while mission runs): grid/intent only; task + markers hold execution detail.
+
+// Appended to FADE_myMissionBrief
 private _briefGuiTail = toString [10] + toString [10] + "See your Tasks panel and map markers for objectives, routes, and completion criteria.";
 private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", { params [["_p", [0, 0, 0]]]; [_p] call FADE_normPos3 }];
 private _enemyFactionClass = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
 private _enemyFactionName = [_enemyFactionClass] call (missionNamespace getVariable ["FADE_getFactionDisplayName", { _this select 0 }]);
 private _zeroAlphaDisplayName = [] call (missionNamespace getVariable ["FADE_getZeroAlphaDisplayName", { "UNASSIGNED" }]);
+
+private _showAssignedHint = {
+    params [["_missionHtml", ""], ["_situationHtml", ""], ["_executionHtml", ""], ["_adminHtml", ""], ["_commandHtml", ""]];
+    private _hintTarget = if (_isGlobalMission) then { 0 } else { _player };
+    private _starterName = if (isNull _player) then { "Unknown" } else { name _player };
+    if (_loreShort != "") then {
+        [_operationNameUpper, _starterName, _loreShort] remoteExec ["FADE_showMissionAssignedIntro", _hintTarget];
+    } else {
+        [_operationNameUpper, _starterName] remoteExec ["FADE_showMissionAssignedIntro", _hintTarget];
+    };
+    if (_loreLong != "") then {
+        private _whenStr = format ["Mission start +%1 min", floor (time / 60) max 0];
+        [_operationName, _whenStr, _loreLong, "Background"] remoteExec ["FADE_client_appendMissionBackground", _hintTarget];
+    };
+};
+private _basePos = FADE_basePos;
+
+// Refine position: LZ missions use small refinement; HVT/ClearArea/InterceptConvoy handle position themselves
+private _needsLZ = _missionType in ["TroopInsert", "TroopExtract", "Cargo", "CASEVAC", "CSAR"];
+if (_missionType != "HVT" && { _missionType != "Hostage" } && { _missionType != "ClearArea" } && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" } && { _missionType != "SearchDestroy" } && { _missionType != "Operation" } && { _missionType != "Raid" } && { _missionType != "Invasion" } && { _missionType != "AssetRetrieval" } && { _missionType != "MineClearing" } && { _missionType != "EscapeEvasion" } && { _missionType != "GeoGuesser" }) then {
+    private _refineMax = if (_needsLZ) then { 10 } else { 50 };
+    private _refineObj = if (_needsLZ) then { 15 } else { 5 };
+    _destPos = [[_destPos, 0, _refineMax, _refineObj, 1, 0.5, 0, [], _destPos], _destPos] call FADE_findSafePosArray;
+};
+if ((!(_destPos isEqualType []) || { count _destPos < 2 }) && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" } && { _missionType != "Operation" } && { _missionType != "Raid" } && { _missionType != "Invasion" } && { _missionType != "GeoGuesser" }) exitWith {
+    if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
+    [_player, "MISSION ERROR", "No valid area of operations found."] call FADE_missionErrorHint;
+};
+
+// Bootstrap SMEAC from anchor _destPos; runners that resolve a different objective refresh at task creation.
+private _loreShort = "";
+private _loreLong = "";
+private _loreSmeacHtml = "";
+if (!isNil "FADE_lore_generate") then {
+    private _loreResult = [_missionType, _destPos, _operationName] call FADE_lore_generate;
+    if (_loreResult isEqualType [] && { count _loreResult >= 3 }) then {
+        _loreResult params ["_ls", "_ldiary", "_lsmeac"];
+        _loreShort = _ls;
+        _loreLong = _ldiary;
+        _loreSmeacHtml = _lsmeac;
+    };
+};
 
 private _briefDefaults = [
     _missionType, _destPos, _sideFriendly, _sideEnemy, _enemyFactionName, _zeroAlphaDisplayName
@@ -123,25 +174,13 @@ private _defaultExecutionTaskText = _briefDefaults getOrDefault ["defaultExecuti
 private _defaultAdminTaskText = _briefDefaults getOrDefault ["defaultAdminTaskText", ""];
 private _defaultCommandTaskText = _briefDefaults getOrDefault ["defaultCommandTaskText", ""];
 
-private _showAssignedHint = {
-    params [["_missionHtml", ""], ["_situationHtml", ""], ["_executionHtml", ""], ["_adminHtml", ""], ["_commandHtml", ""]];
-    private _hintTarget = if (_isGlobalMission) then { 0 } else { _player };
-    private _starterName = if (isNull _player) then { "Unknown" } else { name _player };
-    [_operationNameUpper, _starterName] remoteExec ["FADE_showMissionAssignedIntro", _hintTarget];
+if (_loreSmeacHtml != "") then {
+    _defaultSituationHintHtml = _defaultSituationHintHtml + format [
+        "<br/><br/><t align='left' color='#8BA4BE'>%1</t>",
+        _loreLong
+    ];
 };
-private _basePos = FADE_basePos;
-
-// Refine position: LZ missions use small refinement; HVT/ClearArea/InterceptConvoy handle position themselves
-private _needsLZ = _missionType in ["TroopInsert", "TroopExtract", "Cargo", "CASEVAC", "CSAR"];
-if (_missionType != "HVT" && { _missionType != "Hostage" } && { _missionType != "ClearArea" } && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" } && { _missionType != "SearchDestroy" } && { _missionType != "Operation" } && { _missionType != "AssetRetrieval" } && { _missionType != "MineClearing" } && { _missionType != "EscapeEvasion" } && { _missionType != "GeoGuesser" }) then {
-    private _refineMax = if (_needsLZ) then { 10 } else { 50 };
-    private _refineObj = if (_needsLZ) then { 15 } else { 5 };
-    _destPos = [[_destPos, 0, _refineMax, _refineObj, 1, 0.5, 0, [], _destPos], _destPos] call FADE_findSafePosArray;
-};
-if ((!(_destPos isEqualType []) || { count _destPos < 2 }) && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" } && { _missionType != "Operation" } && { _missionType != "GeoGuesser" }) exitWith {
-    if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
-    ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No valid area of operations found.</t>"] remoteExec ["FADE_showMissionHint", _player];
-};
+_defaultSituationTaskText = _defaultSituationHtml;
 
 // Unit count: use player's vehicle cargo seats if in a heli, else default 6
 private _unitCount = 6;
@@ -167,12 +206,42 @@ private _fnc_createMissionTask = {
         "_pos",
         "_taskType",
         ["_situationOverride", ""],
-        ["_executionOverride", ""]
+        ["_executionOverride", ""],
+        ["_omitAppendedTopography", false]
     ];
+    private _withholdGrid = _omitAppendedTopography;
     private _sf = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _taskBuilder = missionNamespace getVariable ["FADE_buildMissionTaskSmeacText", {}];
-    private _sitT = _defaultSituationTaskText;
+    private _sitT = _defaultSituationHtml;
+    if (_sitT isEqualTo "") then { _sitT = _defaultSituationTaskText };
     private _execT = _defaultExecutionTaskText;
+    // Custom situation overrides (Raid, Asset Retrieval, etc.) already embed correct topography.
+    if (_situationOverride isEqualTo "" && { _pos isEqualType [] } && { count _pos >= 2 }) then {
+        private _refreshFn = missionNamespace getVariable ["FADE_missionRefreshBriefingAtPos", {}];
+        if (!(_refreshFn isEqualTo {})) then {
+            private _ref = [
+                _missionType, _pos, _sideFriendly, _sideEnemy, _enemyFactionName, _zeroAlphaDisplayName, _operationName
+            ] call _refreshFn;
+            if (count _ref > 0) then {
+                _sitT = _ref getOrDefault ["defaultSituationTaskText", _sitT];
+                private _newLoreShort = _ref getOrDefault ["loreShort", ""];
+                private _newLoreLong = _ref getOrDefault ["loreLong", ""];
+                private _newLoreSmeac = _ref getOrDefault ["loreSmeacHtml", ""];
+                if (_newLoreShort != "") then { _loreShort = _newLoreShort };
+                if (_newLoreLong != "") then { _loreLong = _newLoreLong };
+                if (_newLoreSmeac != "") then {
+                    _loreSmeacHtml = _newLoreSmeac;
+                    missionNamespace setVariable ["FADE_missionRun_loreSmeacHtml", _newLoreSmeac];
+                };
+                _topographyGrid = _ref getOrDefault ["topographyGrid", _topographyGrid];
+                _topographyArea = _ref getOrDefault ["topographyArea", _topographyArea];
+                missionNamespace setVariable ["FADE_missionRun_topographyGrid", _topographyGrid];
+                missionNamespace setVariable ["FADE_missionRun_topographyArea", _topographyArea];
+                _defaultSituationHtml = _sitT;
+                _defaultSituationTaskText = _sitT;
+            };
+        };
+    };
     if !(_situationOverride isEqualTo "") then { _sitT = _situationOverride };
     if !(_executionOverride isEqualTo "") then { _execT = _executionOverride };
     private _taskDesc = if (_taskBuilder isEqualTo {}) then {
@@ -184,7 +253,8 @@ private _fnc_createMissionTask = {
             _sitT,
             _execT,
             _defaultAdminTaskText,
-            _defaultCommandTaskText
+            _defaultCommandTaskText,
+            _omitAppendedTopography
         ] call _taskBuilder
     };
     [_sf, _taskId, [_taskDesc, _title, ""], _pos, "CREATED", 1, true, _taskType, true] call BIS_fnc_taskCreate;
@@ -211,6 +281,9 @@ private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount",
     missionNamespace setVariable ["FADE_missionRun_mapPickRawAnchor", _rawAnchor];
     missionNamespace setVariable ["FADE_missionRun_mapPickSnappedCenter", _snappedCenter];
     missionNamespace setVariable ["FADE_missionRun_mapPickResolvedRadius", _resolvedRadius];
+    missionNamespace setVariable ["FADE_missionRun_convoyEndRaw", _convoyEndRaw];
+    missionNamespace setVariable ["FADE_missionRun_convoyEndAnchor", _convoyEndAnchor];
+    missionNamespace setVariable ["FADE_missionRun_raidZoneClicks", _raidZoneClicks];
     missionNamespace setVariable ["FADE_missionRun_friendlyUnits", _friendlyUnits];
     missionNamespace setVariable ["FADE_missionRun_enemyUnits", _enemyUnits];
     missionNamespace setVariable ["FADE_missionRun_sideFriendly", _sideFriendly];
@@ -239,6 +312,9 @@ private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount",
     missionNamespace setVariable ["FADE_missionRun_opforCountFactor", _opforCountFactor];
     missionNamespace setVariable ["FADE_missionRun_topographyGrid", _topographyGrid];
     missionNamespace setVariable ["FADE_missionRun_topographyArea", _topographyArea];
+    missionNamespace setVariable ["FADE_missionRun_loreShort", _loreShort];
+    missionNamespace setVariable ["FADE_missionRun_loreLong", _loreLong];
+    missionNamespace setVariable ["FADE_missionRun_loreSmeacHtml", _loreSmeacHtml];
     missionNamespace setVariable ["FADE_mission_createTask", _fnc_createMissionTask];
     missionNamespace setVariable ["FADE_mission_showAssignedHint", _showAssignedHint];
 

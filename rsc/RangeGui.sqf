@@ -18,7 +18,7 @@ FAC_rangeGui_getSlotDisplayName = {
 FAC_rangeGui_tabRangeIdcs = [
     60962, 60923, 60970, 60934, 60935, 60966, 60967, 60928, 60929, 60968, 60930, 60931, 60969, 60932, 60933,
     60971, 60936, 60937, 60973, 60939, 60940, 60941, 60942, 60943, 60963, 60964, 60924, 60925, 60965, 60926, 60927,
-    60938
+    60948, 60938
 ];
 FAC_rangeGui_tabEquipmentIdcs = [
     60993, 60982, 60983, 60989, 60949, 60990, 60950, 60984, 60951, 60952, 60948
@@ -28,17 +28,44 @@ FAC_rangeGui_syncMainTabs = {
     private _d = findDisplay FAC_rangeGui_IDD;
     if (isNull _d) exitWith {};
     private _tab = missionNamespace getVariable ["FAC_rangeGui_tab", "range"];
-    private _act = [0.22, 0.48, 0.78, 1];
-    private _inact = [0.07, 0.11, 0.20, 1];
+    private _act = FAC_theme_tabActive;
+    private _inact = FAC_theme_tabIdle;
     (_d displayCtrl 60960) ctrlSetBackgroundColor (if (_tab == "range") then { _act } else { _inact });
     (_d displayCtrl 60978) ctrlSetBackgroundColor (if (_tab == "equipment") then { _act } else { _inact });
+};
+
+// Reposition controls when RangeDialog.hpp cannot be hot-reloaded (Arma locks the file).
+FAC_rangeGui_applyLayout = {
+    private _d = findDisplay FAC_rangeGui_IDD;
+    if (isNull _d) exitWith {};
+    private _set = {
+        params ["_idc", "_x", "_y", "_w", "_h"];
+        private _c = _d displayCtrl _idc;
+        if (!isNull _c) then { _c ctrlSetPosition [_x, _y, _w, _h]; _c ctrlCommit 0 };
+    };
+    [60938, 0.04, 0.808, 0.92, 0.042] call _set;
+    [60949, 0.04, 0.194, 0.40, 0.56] call _set;
+    [60984, 0.46, 0.194, 0.48, 0.30] call _set;
+    [60950, 0.46, 0.526, 0.48, 0.228] call _set;
+    [60951, 0.04, 0.778, 0.40, 0.040] call _set;
+    [60952, 0.46, 0.778, 0.48, 0.040] call _set;
+    private _tab = missionNamespace getVariable ["FAC_rangeGui_tab", "range"];
+    private _info = _d displayCtrl 60948;
+    if (!isNull _info) then {
+        if (_tab == "range") then {
+            _info ctrlSetPosition [0.04, 0.56, 0.92, 0.21];
+        } else {
+            _info ctrlSetPosition [0.04, 0.828, 0.92, 0.048];
+        };
+        _info ctrlCommit 0;
+    };
 };
 
 FAC_rangeGui_fnc = {
     params ["_action", ["_params", []]];
 
-    private _btnSel = [0.22, 0.48, 0.78, 1];
-    private _btnIdle = [0.07, 0.11, 0.20, 1];
+    private _btnSel = FAC_theme_tabActive;
+    private _btnIdle = FAC_theme_tabIdle;
 
     private _refreshThreat = {
         private _d = findDisplay 60920; if (isNull _d) exitWith {};
@@ -75,7 +102,7 @@ FAC_rangeGui_fnc = {
             _s ctrlSetTextColor [1, 0.82, 0.45, 1];
         } else {
             _s ctrlSetText "INACTIVE";
-            _s ctrlSetTextColor [0.55, 0.95, 0.7, 1];
+            _s ctrlSetTextColor FAC_theme_textOk;
         };
     };
     private _refreshSessionBtn = {
@@ -86,7 +113,7 @@ FAC_rangeGui_fnc = {
             _btn ctrlSetBackgroundColor [0.55, 0.22, 0.14, 1];
         } else {
             _btn ctrlSetText "Start session";
-            _btn ctrlSetBackgroundColor [0.22, 0.48, 0.78, 1];
+            _btn ctrlSetBackgroundColor FAC_theme_tabActive;
         };
     };
     private _refreshCounts = {
@@ -148,11 +175,16 @@ FAC_rangeGui_fnc = {
         };
         lbClear _vl;
         lbClear _sl;
-        {
-            _x params ["_label", "_cls"];
-            private _i = _vl lbAdd _label;
-            _vl lbSetData [_i, _cls];
-        } forEach _rows;
+        if (_rows isEqualTo [] && { _full isEqualTo [] }) then {
+            private _i = _vl lbAdd "Loading equipment list...";
+            _vl lbSetData [_i, ""];
+        } else {
+            {
+                _x params ["_label", "_cls"];
+                private _i = _vl lbAdd _label;
+                _vl lbSetData [_i, _cls];
+            } forEach _rows;
+        };
         private _slotState = missionNamespace getVariable ["FADE_rangeFriendlySlotStateClient", []];
         {
             _x params ["_slot", "_state"];
@@ -237,10 +269,18 @@ FAC_rangeGui_fnc = {
             [] call _refreshSessionBtn;
             [] call _refreshInteractivity;
             [] call _refreshInfo;
+            [] call FAC_rangeGui_applyLayout;
             private _t0 = missionNamespace getVariable ["FAC_rangeGui_tab", "range"];
             if (_t0 in ["opfor", "weapons", "friendly"]) then { _t0 = if (_t0 == "friendly") then { "equipment" } else { "range" } };
             missionNamespace setVariable ["FAC_rangeGui_tab", _t0];
             ["setTab", [_t0]] call FAC_rangeGui_fnc;
+            [] spawn {
+                sleep 0.35;
+                if (isNull (findDisplay FAC_rangeGui_IDD)) exitWith {};
+                if ((missionNamespace getVariable ["FADE_rangeFriendlyLandListClient", []]) isEqualTo []) then {
+                    [player] remoteExec ["FADE_rangeRequestAtWeaponState", 2];
+                };
+            };
         };
         case "setTab": {
             _params params [["_tab", "range"]];
@@ -259,6 +299,16 @@ FAC_rangeGui_fnc = {
                 private _c = _d displayCtrl _x;
                 if (!isNull _c) then { _c ctrlShow _isE };
             } forEach FAC_rangeGui_tabEquipmentIdcs;
+            private _info = _d displayCtrl 60948;
+            if (!isNull _info) then {
+                if (_isR) then {
+                    _info ctrlSetPosition [0.04, 0.56, 0.92, 0.21];
+                } else {
+                    _info ctrlSetPosition [0.04, 0.828, 0.92, 0.048];
+                };
+                _info ctrlCommit 0;
+            };
+            [] call FAC_rangeGui_applyLayout;
             [] call FAC_rangeGui_syncMainTabs;
             [] call _refreshSessionBtn;
             if (_isE) then {

@@ -20,9 +20,12 @@ FAC_loadoutGui_buildLoadoutTextFromArray = {
     params ["_loadout"];
     if (!(_loadout isEqualType [])) exitWith { "Preset loadout (invalid format)." };
     if ((count _loadout) < 10) exitWith { "Preset loadout (invalid length)." };
-    private _primary = (((_loadout select 0) param [0, ""]) call FAC_loadoutGui_getItemDisplayName);
-    private _launcher = (((_loadout select 1) param [0, ""]) call FAC_loadoutGui_getItemDisplayName);
-    private _handgun = (((_loadout select 2) param [0, ""]) call FAC_loadoutGui_getItemDisplayName);
+    private _primarySlot = [_loadout select 0] call FAC_loadoutGui_flattenPresetWeaponSlot;
+    private _launcherSlot = [_loadout select 1] call FAC_loadoutGui_flattenPresetWeaponSlot;
+    private _handgunSlot = [_loadout select 2] call FAC_loadoutGui_flattenPresetWeaponSlot;
+    private _primary = ((_primarySlot param [0, ""]) call FAC_loadoutGui_getItemDisplayName);
+    private _launcher = ((_launcherSlot param [0, ""]) call FAC_loadoutGui_getItemDisplayName);
+    private _handgun = ((_handgunSlot param [0, ""]) call FAC_loadoutGui_getItemDisplayName);
     private _uniform = ((_loadout select 3) param [0, ""]);
     private _vest = (_loadout select 4);
     private _backpack = (_loadout select 5);
@@ -57,10 +60,33 @@ FAC_loadoutGui_vehicleClassToType = [
     ["MenStory", "Story"]
 ];
 
-// Build list of infantry unit classes for player's side
+// Player's config faction (unit faction, then scenario friendly fallback).
+FAC_loadoutGui_getPlayerFaction = {
+    private _f = faction player;
+    if (_f != "") exitWith { _f };
+    missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]
+};
+
+// Build one unit row from classname.
+FAC_loadoutGui_classToUnitRow = {
+    params ["_class"];
+    private _cfg = configFile >> "CfgVehicles" >> _class;
+    if (!isClass _cfg) exitWith { [] };
+    private _displayName = getText (_cfg >> "displayName");
+    if (_displayName == "") then { _displayName = _class };
+    private _faction = getText (_cfg >> "faction");
+    private _factionDn = if (_faction != "") then { [_faction] call FAC_loadoutGui_getFactionDisplayName } else { "Unknown" };
+    private _vc = getText (_cfg >> "vehicleClass");
+    private _typeDn = "Infantry";
+    { if ((_x select 0) == _vc) exitWith { _typeDn = _x select 1 } } forEach FAC_loadoutGui_vehicleClassToType;
+    if (_vc != "" && { _typeDn == "Infantry" } && { _vc != "Men" }) then { _typeDn = _vc };
+    [_class, _displayName, _faction, _factionDn, _typeDn]
+};
+
+// Build list of infantry unit classes for player's side (full scan — use only for "All factions").
 // Returns: [[classname, displayName, faction, factionDisplayName, typeDisplayName], ...]
 FAC_loadoutGui_getUnitsForSide = {
-    params ["_side"];
+    params ["_side", ["_factionFilter", ""]];
     private _sideNum = _side call BIS_fnc_sideID;
     private _result = [];
     {
@@ -75,15 +101,11 @@ FAC_loadoutGui_getUnitsForSide = {
         if (_isMan && { getNumber (_cfg >> "side") == _sideNum }) then {
             private _scope = getNumber (_cfg >> "scope");
             if (_scope >= 1) then {  // Exclude scope 0 (private)
-                private _displayName = getText (_cfg >> "displayName");
-                if (_displayName == "") then { _displayName = _class };
                 private _faction = getText (_cfg >> "faction");
-                private _factionDn = if (_faction != "") then { [_faction] call FAC_loadoutGui_getFactionDisplayName } else { "Unknown" };
-                private _vc = getText (_cfg >> "vehicleClass");
-                private _typeDn = "Infantry";
-                { if ((_x select 0) == _vc) exitWith { _typeDn = _x select 1 } } forEach FAC_loadoutGui_vehicleClassToType;
-                if (_vc != "" && { _typeDn == "Infantry" } && { _vc != "Men" }) then { _typeDn = _vc };
-                _result pushBack [_class, _displayName, _faction, _factionDn, _typeDn];
+                if (_factionFilter == "" || { _faction == _factionFilter }) then {
+                    private _row = [_class] call FAC_loadoutGui_classToUnitRow;
+                    if (count _row > 0) then { _result pushBack _row };
+                };
             };
         };
     } forEach ("true" configClasses (configFile >> "CfgVehicles"));
@@ -99,9 +121,24 @@ FAC_loadoutGui_getFactionDisplayName = {
     _faction
 };
 
-// Config-based unit rows only (respects scenario gear limit); no preset merge.
+// Config-based unit rows; optional faction scope ("" = all factions on player side — slow).
 FAC_loadoutGui_buildStdUnits = {
-    private _allUnits = [side player] call FAC_loadoutGui_getUnitsForSide;
+    params [["_factionScope", ""]];
+    private _allUnits = [];
+    if (_factionScope == "") then {
+        _allUnits = [side player] call FAC_loadoutGui_getUnitsForSide;
+    } else {
+        if (!isNil "FADE_getUnitsForFaction") then {
+            private _sideNum = side player call BIS_fnc_sideID;
+            private _classes = [_factionScope, _sideNum] call FADE_getUnitsForFaction;
+            {
+                private _row = [_x] call FAC_loadoutGui_classToUnitRow;
+                if (count _row > 0) then { _allUnits pushBack _row };
+            } forEach _classes;
+        } else {
+            _allUnits = [side player, _factionScope] call FAC_loadoutGui_getUnitsForSide;
+        };
+    };
     if (missionNamespace getVariable ["FADE_limitGearToFriendlyFaction", false]) then {
         private _allowed = missionNamespace getVariable ["FADE_friendlyUnits", []];
         if (count _allowed > 0) then {
@@ -111,19 +148,49 @@ FAC_loadoutGui_buildStdUnits = {
     _allUnits
 };
 
+FAC_loadoutGui_selectStdFaction = {
+    params ["_display", "_faction"];
+    private _factionList = _display displayCtrl 60210;
+    private _idx = -1;
+    for "_i" from 0 to (lbSize _factionList - 1) do {
+        if ((_factionList lbData _i) == _faction) exitWith { _idx = _i };
+    };
+    if (_idx < 0) then { _idx = if (lbSize _factionList > 1) then { 1 } else { 0 } };
+    _factionList lbSetCurSel _idx;
+};
+
+// Faction keys for std-mode filter (CfgFactionClasses on player side — no unit scan).
+FAC_loadoutGui_collectStdFactionKeys = {
+    private _sideNum = side player call BIS_fnc_sideID;
+    private _keys = [];
+    {
+        if (getNumber (_x >> "side") == _sideNum) then {
+            _keys pushBack (configName _x);
+        };
+    } forEach ("true" configClasses (configFile >> "CfgFactionClasses"));
+    _keys
+};
+
 FAC_loadoutGui_populateStdFactionList = {
-    params ["_display"];
-    private _allUnits = missionNamespace getVariable ["FAC_loadoutGui_allUnits", []];
-    private _factions = [];
-    { if ((_x select 2) != "" && { !((_x select 2) in _factions) }) then { _factions pushBack (_x select 2) } } forEach _allUnits;
+    params ["_display", ["_selectFaction", ""]];
+    if (_selectFaction == "") then { _selectFaction = [] call FAC_loadoutGui_getPlayerFaction };
+    private _factions = [] call FAC_loadoutGui_collectStdFactionKeys;
     private _factionRows = _factions apply { [[_x] call FAC_loadoutGui_getFactionDisplayName, _x] };
     _factionRows sort true;
     private _factionList = _display displayCtrl 60210;
     lbClear _factionList;
     private _idx = _factionList lbAdd "All factions";
     _factionList lbSetData [_idx, ""];
-    _factionList lbSetCurSel 0;
     { _x params ["_dn", "_key"]; _idx = _factionList lbAdd _dn; _factionList lbSetData [_idx, _key] } forEach _factionRows;
+    [_display, _selectFaction] call FAC_loadoutGui_selectStdFaction;
+};
+
+FAC_loadoutGui_loadStdMode = {
+    params ["_display", ["_factionScope", ""]];
+    if (_factionScope == "") then { _factionScope = [] call FAC_loadoutGui_getPlayerFaction };
+    missionNamespace setVariable ["FAC_loadoutGui_stdLoadedScope", _factionScope];
+    missionNamespace setVariable ["FAC_loadoutGui_allUnits", [_factionScope] call FAC_loadoutGui_buildStdUnits];
+    [_display, _factionScope] call FAC_loadoutGui_populateStdFactionList;
 };
 
 FAC_loadoutGui_populatePresetFactionList = {
@@ -236,10 +303,13 @@ FAC_loadoutGui_buildLoadoutText = {
 FAC_loadoutGui_getUnitPicture = {
     params ["_class"];
     private _cfg = configFile >> "CfgVehicles" >> _class;
-    if (!isClass _cfg) exitWith { "" };
+    if (!isClass _cfg) exitWith { "\a3\ui_f\data\map\markers\nato\b_inf.paa" };
     private _pic = getText (_cfg >> "picture");
     if (_pic == "") then { _pic = getText (_cfg >> "icon") };
-    if (_pic == "") then { _pic = "\a3\ui_f\data\map\markers\nato\b_inf.paa" };  // Fallback: NATO infantry icon
+    private _fallback = "\a3\ui_f\data\map\markers\nato\b_inf.paa";
+    if (_pic == "" || { (toLower _pic find ".paa") < 0 && { (toLower _pic find ".pac") < 0 } && { _pic find "\" < 0 } }) then {
+        _pic = _fallback;
+    };
     _pic
 };
 
@@ -460,8 +530,8 @@ FAC_loadoutGui_fillSquadMemberList = {
 FAC_loadoutGui_updateSourceButtons = {
     params ["_display"];
     private _mode = missionNamespace getVariable ["FAC_loadoutGui_listMode", "preset"];
-    private _active = [0.2, 0.45, 0.65, 1];
-    private _idle = [0.22, 0.22, 0.26, 1];
+    private _active = FAC_theme_tabActive;
+    private _idle = FAC_theme_tabIdle;
     private _bPreset = _display displayCtrl 60213;
     private _bStd = _display displayCtrl 60214;
     if (_mode == "preset") then {
@@ -481,8 +551,7 @@ FAC_loadoutGui_populateWorker = {
     private _btnStd = _display displayCtrl 60214;
     _btnPreset ctrlShow true;
     _btnStd ctrlShow true;
-    _btnPreset ctrlSetPosition [0.18, 0.082, 0.40, 0.042];
-    _btnStd ctrlSetPosition [0.59, 0.082, 0.39, 0.042];
+    [_display] call FAC_loadoutGui_updateSourceButtons;
     _btnPreset ctrlCommit 0;
     _btnStd ctrlCommit 0;
 
@@ -493,15 +562,14 @@ FAC_loadoutGui_populateWorker = {
 
     if (_forceStd) then {
         _btnPreset ctrlShow false;
-        _btnStd ctrlSetPosition [0.18, 0.082, 0.80, 0.042];
+        _btnStd ctrlSetPosition [0.24, 0.036, 0.40, 0.046];
         _btnStd ctrlCommit 0;
         missionNamespace setVariable ["FAC_loadoutGui_listMode", "std"];
-        missionNamespace setVariable ["FAC_loadoutGui_allUnits", [] call FAC_loadoutGui_buildStdUnits];
-        [_display] call FAC_loadoutGui_populateStdFactionList;
+        [_display] call FAC_loadoutGui_loadStdMode;
     } else {
         if (_forcePreset) then {
             _btnStd ctrlShow false;
-            _btnPreset ctrlSetPosition [0.18, 0.082, 0.80, 0.042];
+            _btnPreset ctrlSetPosition [0.24, 0.036, 0.40, 0.046];
             _btnPreset ctrlCommit 0;
         };
         missionNamespace setVariable ["FAC_loadoutGui_listMode", "preset"];
@@ -619,9 +687,19 @@ FAC_loadoutGui_fnc = {
             if (!_limitToBlu && { _limitToPreset } && { _mode != "preset" }) exitWith { systemChat "Loadouts are limited to preset loadouts."; };
             missionNamespace setVariable ["FAC_loadoutGui_listMode", _mode];
 
+            private _unitLb = _display displayCtrl 60201;
+            lbClear _unitLb;
+            _unitLb lbAdd "Loading...";
+            _unitLb lbSetCurSel 0;
+
             if (_mode == "std") then {
-                missionNamespace setVariable ["FAC_loadoutGui_allUnits", [] call FAC_loadoutGui_buildStdUnits];
-                [_display] call FAC_loadoutGui_populateStdFactionList;
+                [_display] call FAC_loadoutGui_updateSourceButtons;
+                [] spawn {
+                    private _display = findDisplay 60200;
+                    if (isNull _display) exitWith {};
+                    [_display] call FAC_loadoutGui_loadStdMode;
+                    ["filterChanged", []] call FAC_loadoutGui_fnc;
+                };
             } else {
                 if (!([] call FAC_loadoutGui_ensurePresetData)) then {
                     systemChat "[Loadout] Presets failed to load  -  check RPT and rsc\\PresetLoadouts.sqf.";
@@ -630,18 +708,47 @@ FAC_loadoutGui_fnc = {
                     missionNamespace setVariable ["FAC_loadoutGui_allUnits", [] call FAC_loadoutGui_buildPresetEntries];
                 };
                 [_display] call FAC_loadoutGui_populatePresetFactionList;
+                [_display] call FAC_loadoutGui_updateSourceButtons;
+                ["filterChanged", []] call FAC_loadoutGui_fnc;
             };
-            [_display] call FAC_loadoutGui_updateSourceButtons;
-            ["filterChanged", []] call FAC_loadoutGui_fnc;
         };
         case "filterChanged": {
             if (isNull _display) exitWith {};
-            private _allUnits = missionNamespace getVariable ["FAC_loadoutGui_allUnits", []];
             private _listMode = missionNamespace getVariable ["FAC_loadoutGui_listMode", "preset"];
             private _factionList = _display displayCtrl 60210;
             private _filterFaction = "";
             private _sel = lbCurSel _factionList;
             if (_sel >= 0) then { _filterFaction = _factionList lbData _sel };
+
+            private _deferFilterPopulate = false;
+            if (_listMode == "std") then {
+                private _loadedScope = missionNamespace getVariable ["FAC_loadoutGui_stdLoadedScope", ""];
+                private _needScope = if (_filterFaction == "") then { "__ALL__" } else { _filterFaction };
+                if (_needScope != _loadedScope) then {
+                    private _unitLb = _display displayCtrl 60201;
+                    lbClear _unitLb;
+                    _unitLb lbAdd (if (_filterFaction == "") then { "Loading all factions..." } else { "Loading..." });
+                    _unitLb lbSetCurSel 0;
+                    private _asyncFaction = _filterFaction;
+                    [_asyncFaction] spawn {
+                        params ["_asyncFaction"];
+                        private _display = findDisplay 60200;
+                        if (isNull _display) exitWith {};
+                        if (_asyncFaction == "") then {
+                            missionNamespace setVariable ["FAC_loadoutGui_stdLoadedScope", "__ALL__"];
+                            missionNamespace setVariable ["FAC_loadoutGui_allUnits", [""] call FAC_loadoutGui_buildStdUnits];
+                        } else {
+                            missionNamespace setVariable ["FAC_loadoutGui_stdLoadedScope", _asyncFaction];
+                            missionNamespace setVariable ["FAC_loadoutGui_allUnits", [_asyncFaction] call FAC_loadoutGui_buildStdUnits];
+                        };
+                        ["filterChanged", []] call FAC_loadoutGui_fnc;
+                    };
+                    _deferFilterPopulate = true;
+                };
+            };
+
+            if (!_deferFilterPopulate) then {
+            private _allUnits = missionNamespace getVariable ["FAC_loadoutGui_allUnits", []];
 
             private _searchBox = _display displayCtrl 60211;
             private _searchText = toLower (ctrlText _searchBox);
@@ -696,6 +803,7 @@ FAC_loadoutGui_fnc = {
                 _unitLb lbSetTooltip [_idx, _loadoutTip];
             } forEach _filtered;
             if (lbSize _unitLb > 0) then { _unitLb lbSetCurSel 0 };
+            };
         };
         case "unitSelChanged": {
             // No-op: loadout info shown via lbSetTooltip on hover

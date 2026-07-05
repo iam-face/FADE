@@ -18,8 +18,10 @@ missionNamespace setVariable ["FAC_missionTypeLabels", [
     ["Hostage", "Hostage"],
     ["HVT", "HVT"],
     ["Intercept Convoy", "InterceptConvoy"],
+    ["Invasion", "Invasion"],
     ["Mine Clearing", "MineClearing"],
     ["Operation", "Operation"],
+    ["Raid", "Raid"],
     ["Search & Destroy", "SearchDestroy"],
     ["Troop Extract", "TroopExtract"],
     ["Troop Insert", "TroopInsert"]

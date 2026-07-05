@@ -135,11 +135,11 @@ if !([_destPos] call _dryFn) then {
 };
 if ((_destPos distance _basePos) < _minDistFromBase) exitWith {
     [_player, _taskId] call FADE_clearActiveMission;
-    [format ["<t size='1.2' color='#FF6666'>AO ERROR</t><br/><br/><t color='#E0E0E0'>No area of operations found at least %1 m from base. Try again.</t>", _minDistFromBase]] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "AO ERROR", format ["No area of operations found at least %1 m from base. Try again.", _minDistFromBase], "#FF6666"] call FADE_missionOutcomeHint;
 };
 if !([_destPos] call _dryFn) exitWith {
     [_player, _taskId] call FADE_clearActiveMission;
-    ["<t size='1.2' color='#FF6666'>AO ERROR</t><br/><br/><t color='#E0E0E0'>Could not anchor the AO on dry land (area was over water). Try again.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "AO ERROR", "Could not anchor the AO on dry land (area was over water). Try again.", "#FF6666"] call FADE_missionOutcomeHint;
 };
 
 // 2 km x 2 km square AO; BLUFOR spawn on one edge, assault along depth axis
@@ -148,15 +148,32 @@ private _zoneHalfDepth = 1000;
 private _captureRadius = 50;
 private _attackDir = (floor random 4) * 90;  // Random cardinal: 0=E, 90=S, 180=W, 270=N - BLUFOR spawn on this edge, attack toward opposite
 
+// #region agent log
+private _fnc_dbgAoLandFrac = {
+    params ["_center", "_halfD", "_halfW", "_dir", "_dryFnLocal"];
+    private _dryN = 0;
+    private _totalN = 0;
+    for "_fi" from -2 to 2 do {
+        for "_ri" from -2 to 2 do {
+            private _fwd = (_fi / 2) * _halfD * 2;
+            private _lat = (_ri / 2) * _halfW * 2;
+            private _p = if (_fwd == 0 && { _lat == 0 }) then { +_center } else {
+                private _pF = [_center, _fwd, _dir] call BIS_fnc_relPos;
+                if (_lat == 0) then { _pF } else { [_pF, _lat, _dir + 90] call BIS_fnc_relPos };
+            };
+            _totalN = _totalN + 1;
+            if ([_p] call _dryFnLocal) then { _dryN = _dryN + 1 };
+        };
+    };
+    if (_totalN < 1) then { 0 } else { _dryN / _totalN }
+};
+diag_log format ["#DBG89f3ea {""sessionId"":""89f3ea"",""hypothesisId"":""H1"",""location"":""AOMission.sqf:destPos"",""message"":""AO anchor after dry snap"",""data"":{""destPos"":%1,""centerDry"":%2,""fromMapClick"":%3,""grid"":""%4""},""timestamp"":%5}", _destPos, [_destPos] call _dryFn, _fromMapClick, mapGridPosition _destPos, diag_tickTime];
+diag_log format ["#DBG89f3ea {""sessionId"":""89f3ea"",""hypothesisId"":""H5"",""location"":""AOMission.sqf:zone"",""message"":""AO zone land sample"",""data"":{""attackDir"":%1,""landFrac"":%2,""halfSize"":%3},""timestamp"":%4}", _attackDir, [_destPos, _zoneHalfDepth, _zoneHalfWidth, _attackDir, _dryFn] call _fnc_dbgAoLandFrac, _zoneHalfDepth, diag_tickTime];
+// #endregion
+
 // Task: side-visible so all players can join the AO with the same SMEAC task details.
 private _taskBuilderAo = missionNamespace getVariable ["FADE_buildMissionTaskSmeacText", {}];
-private _countFriendlyPlayersAo = missionNamespace getVariable ["FADE_countFriendlyPlayers", {
-    params [["_friendlySide", west]];
-    private _n = 0;
-    { if (isPlayer _x && { side group _x == _friendlySide }) then { _n = _n + 1 } } forEach allPlayers;
-    _n
-}];
-private _friendlyPlayerCountAo = [_sideFriendly] call _countFriendlyPlayersAo;
+private _friendlyPlayerCountAo = [_sideFriendly] call (missionNamespace getVariable ["FADE_countFriendlyPlayers", { 0 }]);
 private _acreSummaryAo = [] call (missionNamespace getVariable ["FADE_getAcreChannelSummary", { "ACRE channel names unavailable" }]);
 private _actualOpforCountAo = [_sideEnemy] call FADE_getEnemyMenCount;
 private _opforBaselineAo = if (_actualOpforCountAo > 0) then { _actualOpforCountAo } else { 30 };
@@ -172,6 +189,15 @@ private _friendlyFactionClassAo = missionNamespace getVariable ["FADE_scenarioFr
 private _friendlyFactionNameAo = getText (configFile >> "CfgFactionClasses" >> _friendlyFactionClassAo >> "displayName");
 if (_friendlyFactionNameAo == "") then { _friendlyFactionNameAo = _friendlyFactionClassAo };
 private _intelFormatterAo = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
+private _operationNameAo = _operationName;
+if (!isNil "FADE_lore_generate") then {
+    private _loreAo = ["AreaOfOperations", _destPos, _operationNameAo] call FADE_lore_generate;
+    if (_loreAo isEqualType [] && { count _loreAo >= 3 }) then {
+        missionNamespace setVariable ["FADE_missionRun_loreSmeacHtml", _loreAo select 2];
+        missionNamespace setVariable ["FADE_missionRun_loreShort", _loreAo select 0];
+        missionNamespace setVariable ["FADE_missionRun_loreLong", _loreAo select 1];
+    };
+};
 private _situationIntelAo = if (_intelFormatterAo isEqualTo {}) then {
     format [
         "<t align='left' color='#B0B0B0'>Topography: Grid %1 | Area: %2</t><br/><t align='left' color='#B0B0B0'>Enemy: %3 | Strength: ~%4 personnel (estimated).</t>",
@@ -195,6 +221,8 @@ private _situationIntelAo = if (_intelFormatterAo isEqualTo {}) then {
         _topoAreaAo
     ] call _intelFormatterAo
 };
+private _loreAppendFn = missionNamespace getVariable ["FADE_lore_appendSituationHtml", { params ["_s"]; _this select 0 }];
+_situationIntelAo = [_situationIntelAo] call _loreAppendFn;
 private _situationIntelAoHint = if (_intelFormatterAo isEqualTo {}) then {
     format [
         "<t align='left' color='#FFFFFF'>Topography: Grid %1 | Area: %2</t><br/><t align='left' color='#FFFFFF'>Enemy: %3 | Strength: ~%4 personnel (estimated).</t>",
@@ -219,20 +247,24 @@ private _situationIntelAoHint = if (_intelFormatterAo isEqualTo {}) then {
         "#FFFFFF"
     ] call _intelFormatterAo
 };
+private _defaultAdminAo = missionNamespace getVariable ["FADE_missionRun_defaultAdminTaskText", ""];
+private _defaultCommandAo = missionNamespace getVariable ["FADE_missionRun_defaultCommandTaskText", ""];
 private _zeroAlphaNameAo = [] call (missionNamespace getVariable ["FADE_getZeroAlphaDisplayName", { "UNASSIGNED" }]);
 private _taskDescAo = if (_taskBuilderAo isEqualTo {}) then {
     "Capture all 3 objective points (OBJ 1 -> OBJ 2 -> OBJ 3 in order)."
 } else {
     [
-        format ["AO objective belt at Grid %1. Capture OBJ 1 -> OBJ 2 -> OBJ 3 in sequence.", mapGridPosition _destPos],
+        format ["AO objective belt at Grid %1 (%2). Capture OBJ 1 -> OBJ 2 -> OBJ 3 in sequence.", mapGridPosition _destPos, _topoAreaAo],
         _destPos,
         _situationIntelAo,
         "Insert from AO edge, clear objective depth in order, and hold each objective until secured.",
-        format ["Zero Alpha (%1).", _zeroAlphaNameAo],
-        format ["ACRE channels: %1", _acreSummaryAo]
+        _defaultAdminAo,
+        _defaultCommandAo
     ] call _taskBuilderAo
 };
 [_sideFriendly, _taskId, [_taskDescAo, "AO: Capture objectives", ""], _destPos, "CREATED", 1, true, "attack", true] call BIS_fnc_taskCreate;
+private _hqBoardFnAo = missionNamespace getVariable ["FADE_hqMainBoard_setObjectiveBrief", {}];
+if (_hqBoardFnAo isEqualType {} && { !(_hqBoardFnAo isEqualTo {}) }) then { [_destPos] call _hqBoardFnAo };
 
 // Zone marker: 2 km x 2 km square; BLUFOR spawn 100 m outside edge in _attackDir. Thick black border (outer band + inner border).
 // Rectangle stays on true AO center; point/icon markers use jitter so labels are not exactly on objectives.
@@ -273,6 +305,8 @@ private _objSpecs = [
     if (_aoObjPlacementFailed) exitWith {};
     _x params ["_dist", "_dir"];
     private _pos = [];
+    private _tryBeforeLand = [];
+    private _tryBeforeDry = false;
     for "_try" from 0 to 29 do {
         private _latOffset = if (_forEachIndex == 1) then { (random 101) - 50 } else { (random 1000) - 500 };
         private _tryPos = if (_dist <= 0) then {
@@ -282,16 +316,29 @@ private _objSpecs = [
             [_p, _latOffset, _dir + 90] call BIS_fnc_relPos
         };
         if (_tryPos isEqualType [] && { count _tryPos < 3 }) then { _tryPos set [2, 0] };
+        // #region agent log
+        _tryBeforeLand = +_tryPos;
+        _tryBeforeDry = [_tryBeforeLand] call _dryFn;
+        // #endregion
         _tryPos = [_tryPos, 25, 120, 5, 1, 0.4, 0, [], _tryPos] call _fnc_findLandPos;
+        // #region agent log
+        if (_try == 0 || { _try == 29 }) then {
+            diag_log format ["#DBG89f3ea {""sessionId"":""89f3ea"",""hypothesisId"":""H2"",""location"":""AOMission.sqf:objLoop"",""message"":""objective land find"",""data"":{""objIdx"":%1,""tryN"":%2,""before"":%3,""beforeDry"":%4,""after"":%5,""afterDry"":%6},""timestamp"":%7}", _forEachIndex, _try, _tryBeforeLand, _tryBeforeDry, _tryPos, if (_tryPos isEqualType [] && { count _tryPos >= 2 }) then { [_tryPos] call _dryFn } else { false }, diag_tickTime];
+        };
+        // #endregion
         if (_tryPos isEqualType [] && { count _tryPos >= 2 } && { [_tryPos] call _dryFn }) exitWith { _pos = _tryPos };
     };
     if (count _pos < 2 || { !([_pos] call _dryFn) }) then { _pos = [_destPos, 50, 600] call _fnc_findLandPos };
     if (count _pos < 2 || { !([_pos] call _dryFn) }) then { _pos = [_destPos, 100, 1200] call _fnc_findLandPos };
+    // #region agent log
+    private _mkrTest = if (count _pos >= 2) then { [_pos, 100] call _mkrJitter } else { [] };
+    diag_log format ["#DBG89f3ea {""sessionId"":""89f3ea"",""hypothesisId"":""H4"",""location"":""AOMission.sqf:objFinal"",""message"":""objective final pos"",""data"":{""objIdx"":%1,""pos"":%2,""posDry"":%3,""usedDestFallback"":%4,""markerJitter"":%5,""markerDry"":%6},""timestamp"":%7}", _forEachIndex, _pos, if (count _pos >= 2) then { [_pos] call _dryFn } else { false }, (count _pos >= 2 && { _pos distance2D _destPos < 5 }), _mkrTest, if (count _mkrTest >= 2) then { [_mkrTest] call _dryFn } else { false }, diag_tickTime];
+    // #endregion
     if (count _pos < 2 || { !([_pos] call _dryFn) }) then { _aoObjPlacementFailed = true } else { _points pushBack _pos };
 } forEach _objSpecs;
 if (_aoObjPlacementFailed || { count _points < 3 }) exitWith {
     [_player, _taskId] call FADE_clearActiveMission;
-    ["<t size='1.2' color='#FF6666'>AO ERROR</t><br/><br/><t color='#E0E0E0'>Could not place objectives on dry land. Try again.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "AO ERROR", "Could not place objectives on dry land. Try again.", "#FF6666"] call FADE_missionOutcomeHint;
 };
 
 // Composition at OBJ 1 and OBJ 3 only (Cargo-style: [classname, dist, angle, dirOffset]). OBJ 2 is urban - no composition.
@@ -410,11 +457,7 @@ private _fnc_aliveAoVehicles = {
     _n
 };
 
-// Spawn OPFOR vehicle on clear ground near _anchorPos; crew holds at _holdPos. Returns [veh, crewGrp] or [].
-// _roadCandidates (optional): pre-scanned list of road segments to prefer for placement (e.g. nearRoads around an OBJ).
-// When provided, picks roads from this pool; vehicles don't need to share the same road (each attempt picks fresh).
-// Already-spawned vehicles are excluded via nearestObjects + findSafePos blacklist, so vehicles won't clip into each
-// other or buildings (objectDistance 9 m). Falls back to off-road search if no road slot validates.
+// Spawn OPFOR vehicle on the nearest clear road near _anchorPos; crew holds at _holdPos. Returns [veh, crewGrp] or [].
 private _fnc_spawnAoOpforVehicle = {
     params ["_tid", "_anchorPos", "_holdPos", ["_vehClass", ""], ["_facePos", []], ["_roadCandidates", []]];
     if (count _aoMobileVehicles == 0) exitWith { [] };
@@ -423,86 +466,31 @@ private _fnc_spawnAoOpforVehicle = {
     if (_vehClass == "") then { _vehClass = selectRandom _aoMobileVehicles };
     if (!([_vehClass] call _fnc_isAoMovableVehicle)) exitWith { [] };
     private _face = if (count _facePos >= 2) then { _facePos } else { _holdPos };
-    private _vehPos = [];
-    private _spawnedOnRoad = false;
-    private _objClear = 9;
-    private _vehClear = 9;
+    private _existingAoVehs = missionNamespace getVariable ["FADE_aoVehicles_" + _tid, []];
+    private _roadSpawnFn = missionNamespace getVariable ["FADE_findOpforGroundVehicleRoadSpawn", { [] }];
     private _useRoadPool = _roadCandidates isEqualType [] && { count _roadCandidates > 0 };
-    private _roadPool = if (_useRoadPool) then {
-        private _p = +_roadCandidates;
-        _p = _p call BIS_fnc_arrayShuffle;
-        _p
-    } else { [] };
-    private _maxTries = if (_useRoadPool) then { (count _roadPool) min 16 } else { 12 };
-    for "_try" from 0 to (_maxTries - 1) do {
-        private _onRoadAttempt = false;
-        private _cand = if (_useRoadPool) then {
-            _onRoadAttempt = true;
-            getPos (_roadPool select (_try mod (count _roadPool)))
-        } else {
-            private _c = [_anchorPos, 20 + random 25, random 360] call BIS_fnc_relPos;
-            private _roads = (_c nearRoads 80) select { [_x] call _dryFn };
-            if (count _roads > 0) then {
-                _c = getPos (selectRandom _roads);
-                _onRoadAttempt = true;
-            };
-            _c
+    private _roadHit = [];
+    private _roadCand = [];
+    private _poolIdx = 0;
+    private _poolCount = 0;
+    if (_useRoadPool) then {
+        private _pool = _roadCandidates call BIS_fnc_arrayShuffle;
+        _poolCount = count _pool;
+        while { _poolIdx < _poolCount && { count _roadHit < 2 } } do {
+            _roadCand = [getPos (_pool select _poolIdx), 150, _existingAoVehs, -1, [], _face] call _roadSpawnFn;
+            if (_roadCand isEqualType [] && { count _roadCand >= 2 }) then { _roadHit = _roadCand };
+            _poolIdx = _poolIdx + 1;
         };
-        private _nearVeh = nearestObjects [_cand, ["LandVehicle", "Air", "Static"], _vehClear + 5];
-        private _blacklist = [];
-        { if (!isNull _x && { alive _x }) then { _blacklist pushBack [(getPosATL _x) select 0, (getPosATL _x) select 1, _vehClear] } } forEach _nearVeh;
-        // When the candidate was snapped to a road, keep findSafePos drift small so we don't slide off the road.
-        private _safeMin = if (_onRoadAttempt) then { 0 } else { 8 };
-        private _safeMax = if (_onRoadAttempt) then { 6 } else { 40 };
-        private _probe = [[_cand, _safeMin, _safeMax, _objClear, 1, 0.45, 0, _blacklist, _cand], _cand] call FADE_findSafePosArray;
-        if (_probe isEqualType [] && { count _probe >= 2 } && { [_probe] call _dryFn }) then {
-            private _block = nearestObjects [_probe, ["LandVehicle", "Air"], _vehClear] select { alive _x };
-            if (count _block == 0) exitWith {
-                _vehPos = _probe;
-                _spawnedOnRoad = _onRoadAttempt;
-            };
-        };
+    } else {
+        _roadHit = [_anchorPos, 250, _existingAoVehs, -1, [], _face] call _roadSpawnFn;
     };
-    // Off-road fallback when the road pool was exhausted without a clear slot.
-    if (count _vehPos < 2 && _useRoadPool) then {
-        for "_try" from 0 to 11 do {
-            private _cand = [_anchorPos, 20 + random 25, random 360] call BIS_fnc_relPos;
-            private _nearVeh = nearestObjects [_cand, ["LandVehicle", "Air", "Static"], _vehClear + 5];
-            private _blacklist = [];
-            { if (!isNull _x && { alive _x }) then { _blacklist pushBack [(getPosATL _x) select 0, (getPosATL _x) select 1, _vehClear] } } forEach _nearVeh;
-            private _probe = [[_cand, 8, 40, _objClear, 1, 0.45, 0, _blacklist, _cand], _cand] call FADE_findSafePosArray;
-            if (_probe isEqualType [] && { count _probe >= 2 } && { [_probe] call _dryFn }) then {
-                private _block = nearestObjects [_probe, ["LandVehicle", "Air"], _vehClear] select { alive _x };
-                if (count _block == 0) exitWith { _vehPos = _probe };
-            };
-        };
-    };
-    if (count _vehPos < 2) exitWith { [] };
-    if (count _vehPos < 3) then { _vehPos set [2, 0] };
+    if (!(_roadHit isEqualType []) || { count _roadHit < 2 }) exitWith { [] };
+    _roadHit params ["_vehPos", "_vehDir"];
     private _veh = createVehicle [_vehClass, _vehPos, [], 0, "NONE"];
     if (isNull _veh) exitWith { [] };
     _veh setPosATL _vehPos;
-    // Align with the underlying road segment when parked on a road; otherwise face the hold/blu axis.
-    private _alignedToRoad = false;
-    if (_spawnedOnRoad) then {
-        private _roadHit = (_vehPos nearRoads 8) select { [_x] call _dryFn };
-        if (count _roadHit > 0) then {
-            private _r0 = _roadHit select 0;
-            private _conn = roadsConnectedTo _r0;
-            if (count _conn > 0) then {
-                private _roadDir = [getPosATL _r0, getPosATL (_conn select 0)] call BIS_fnc_dirTo;
-                // Pick the road heading (or its reverse) that points more toward _face so the vehicle looks outbound.
-                private _faceDir = (getPosATL _veh) getDir _face;
-                private _delta = ((_roadDir - _faceDir + 540) mod 360) - 180;
-                if (abs _delta > 90) then { _roadDir = (_roadDir + 180) mod 360 };
-                _veh setDir _roadDir;
-                _alignedToRoad = true;
-            };
-        };
-    };
-    if (!_alignedToRoad) then {
-        _veh setDir ((getPosATL _veh) getDir _face);
-    };
+    _veh setDir _vehDir;
+    _veh setVectorUp surfaceNormal _vehPos;
     private _crewGrp = createGroup _sideEnemy;
     private _driver = _crewGrp createUnit [(_enemyUnits select 0), _vehPos, [], 0, "NONE"];
     if (isNull _driver) then {
@@ -579,27 +567,13 @@ private _bluEdgeCenter = [_destPos, _zoneHalfDepth + 100, _attackDir] call BIS_f
         private _nPatrol = [_patrolMin + floor random ((_patrolMax - _patrolMin) + 1), 1] call _scaleOpforCount;
         private _patrolClasses = [];
         for "_i" from 0 to (_nPatrol - 1) do { _patrolClasses pushBack (_enemyUnits select (_i % _enemyCount)) };
-        private _patrolGrp = [_patrolPos, _sideEnemy, _patrolClasses] call BIS_fnc_spawnGroup;
-        [_patrolGrp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
-        _patrolGrp setBehaviour "SAFE";
-        _patrolGrp setCombatMode "YELLOW";
-        for "_w" from 0 to 3 do {
-            private _wpDist = 150 + random 50;  // waypoints at least 150 m from OBJ center
-            private _wpDir = _w * 90 + random 45;
-            private _wpPos = [_objPos, _wpDist, _wpDir] call BIS_fnc_relPos;
-            _wpPos = [_wpPos, random 100, random 360] call BIS_fnc_relPos;  // 0-100 m dispersion per waypoint so groups don't share same path
-            if (!(_wpPos isEqualType []) || { count _wpPos < 2 }) then { _wpPos = [_objPos, _wpDist, _wpDir] call BIS_fnc_relPos };
-            if (_wpPos isEqualType [] && { count _wpPos >= 2 }) then {
-                private _wpSafe = [[_wpPos, 0, 15, 2, 1, 0.4, 0, [], _wpPos], _wpPos] call FADE_findSafePosArray;
-                if (_wpSafe isEqualType [] && { count _wpSafe >= 2 }) then { _wpPos = _wpSafe };
-            };
-            private _wp = _patrolGrp addWaypoint [_wpPos, 0];
-            _wp setWaypointType "MOVE";
-            _wp setWaypointSpeed "LIMITED";
-            if (_w == 3) then { _wp setWaypointType "CYCLE" };
+        private _patrolGrp = [_patrolPos, _sideEnemy, _patrolClasses] call FADE_missionCreateInfantryGroupAt;
+        if (!isNull _patrolGrp) then {
+            [_patrolGrp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
+            [_patrolGrp, _objPos, 150, 220, 4, random 360, 90] call FADE_missionApplyPatrolCycle;
+            _opforGroups pushBack _patrolGrp;
+            [_taskId, _patrolGrp] call FADE_aoRegisterGroup;
         };
-        _opforGroups pushBack _patrolGrp;
-        [_taskId, _patrolGrp] call FADE_aoRegisterGroup;
     };
 
     // Static turrets (Mid and High): 2 per objective; not counted in FADE_aoVehicles_ cap. Face BLUFOR assault axis at spawn, then after 10s hull + doWatch toward nearest friendly
@@ -702,7 +676,7 @@ if (!(_bluSpawn isEqualType []) || { count _bluSpawn < 2 } || { !([_bluSpawn] ca
 };
 if (!(_bluSpawn isEqualType []) || { count _bluSpawn < 2 } || { !([_bluSpawn] call _dryFn) }) exitWith {
     [_player, _taskId] call FADE_clearActiveMission;
-    ["<t size='1.2' color='#FF6666'>AO ERROR</t><br/><br/><t color='#E0E0E0'>Could not place BLUFOR spawn on dry land. Try again.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "AO ERROR", "Could not place BLUFOR spawn on dry land. Try again.", "#FF6666"] call FADE_missionOutcomeHint;
 };
 if (count _bluSpawn < 3) then { _bluSpawn set [2, 0] };
 private _bluSpawnMarkerName = "FADE_ao_bluSpawn_" + _taskId;
@@ -723,8 +697,7 @@ for "_g" from 0 to (1 + floor random 2) do {
     _grp setFormation "LINE";
     _grp setBehaviour "AWARE";
     _grp setCombatMode "RED";
-    private _objectivesToTake = [];
-    { if ((_x nearEntities ["Man", _captureRadius]) select { side _x == _sideFriendly && { alive _x } } isEqualTo []) then { _objectivesToTake pushBack _x } } forEach _points;
+    private _objectivesToTake = [_points, _captureRadius, _sideFriendly] call FADE_ao_pointsWithoutFriendlies;
     { _grp addWaypoint [_x, 0] } forEach _objectivesToTake;
     _bluGroups pushBack _grp;
     [_taskId, _grp] call FADE_aoRegisterGroup;
@@ -748,7 +721,7 @@ missionNamespace setVariable ["FADE_aoEntities_" + _taskId, [_aoAllGroups, _aoCo
             private _targetSquads = 2 + floor random 3;
             private _numToSpawn = ((_targetSquads - _squadsWithAlive) max 1) min 4;
             private _objectivesToTake = [];
-            { if ((_x nearEntities ["Man", _captureRadius]) select { side _x == _sideFriendly && { alive _x } } isEqualTo []) then { _objectivesToTake pushBack _x } } forEach _points;
+            private _objectivesToTake = [_points, _captureRadius, _sideFriendly] call FADE_ao_pointsWithoutFriendlies;
             for "_s" from 0 to (_numToSpawn - 1) do {
                 if !([_taskId, _startTime, _timeout] call FADE_aoMissionActive) exitWith {};
                 private _pos = [_bluSpawn, 25 + random 50, random 360] call BIS_fnc_relPos;
@@ -804,8 +777,7 @@ missionNamespace setVariable ["FADE_aoEntities_" + _taskId, [_aoAllGroups, _aoCo
         { if (count (units _x select { alive _x }) > 0) then { _squadsWithAlive = _squadsWithAlive + 1 } } forEach _opforGroups;
         if (_squadsWithAlive < _opforTargetCount && { count _enemyUnits > 0 }) then {
             private _numToSpawn = [((_opforTargetCount - _squadsWithAlive) max 1) min 6, 1] call _scaleOpforCount;
-            private _objectivesToReinforce = [];
-            { if (count ((_x nearEntities ["Man", _captureRadius]) select { side _x == _sideFriendly && { alive _x } }) == 0) then { _objectivesToReinforce pushBack _x } } forEach _points;
+            private _objectivesToReinforce = [_points, _captureRadius, _sideFriendly] call FADE_ao_pointsWithoutFriendlies;
             if (count _objectivesToReinforce > 0) then {
                 for "_s" from 0 to (_numToSpawn - 1) do {
                     if !([_taskId, _startTime, _timeout] call FADE_aoMissionActive) exitWith {};
@@ -833,8 +805,7 @@ missionNamespace setVariable ["FADE_aoEntities_" + _taskId, [_aoAllGroups, _aoCo
             && { count _aoMobileVehicles > 0 }
             && { !(_spawnVehFn isEqualTo {}) }
         ) then {
-            private _objectivesToReinforce = [];
-            { if (count ((_x nearEntities ["Man", _captureRadius]) select { side _x == _sideFriendly && { alive _x } }) == 0) then { _objectivesToReinforce pushBack _x } } forEach _points;
+            private _objectivesToReinforce = [_points, _captureRadius, _sideFriendly] call FADE_ao_pointsWithoutFriendlies;
             if (count _objectivesToReinforce > 0) then {
                 private _holdObj = selectRandom _objectivesToReinforce;
                 private _opforEdge = missionNamespace getVariable ["FADE_aoOpforSpawnPos_" + _taskId, [_destPos, _zoneHalfDepth + 100, _attackDir + 180] call BIS_fnc_relPos];
@@ -934,23 +905,23 @@ if (missionNamespace getVariable ["FADE_aoAborted_" + _taskId, false]) exitWith 
     if !(missionNamespace getVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], false]) then {
         [_taskId, "AreaOfOperations", false] call FADE_cleanupMissionEntities;
     };
-    [_player, _taskId] call FADE_clearActiveMission;
+    [_taskId, "", _player, 0] call FADE_mission_completeCleanup;
     missionNamespace setVariable ["FADE_aoSpawnVehFn_" + _taskId, nil];
     missionNamespace setVariable ["FADE_aoVehicles_" + _taskId, nil];
 };
 
 if (time - _startTime <= _timeout) then {
     [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
-    [format ["<t size='1.2' color='#90EE90'>AO CAPTURED</t><br/><br/><t color='#E0E0E0'>All 3 objectives secured. Mission complete.</t>"] ] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "AO CAPTURED", "All 3 objectives secured. Mission complete.", "#90EE90"] call FADE_missionOutcomeHint;
 } else {
     [_taskId, "FAILED"] call BIS_fnc_taskSetState;
-    ["<t size='1.2' color='#FF6666'>AO TIMEOUT</t><br/><br/><t color='#E0E0E0'>60-minute time limit reached. Mission failed.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    [_player, "AO TIMEOUT", "60-minute time limit reached. Mission failed.", "#FF6666"] call FADE_missionOutcomeHint;
 };
 
 [_taskId, "AreaOfOperations", false] call FADE_cleanupMissionEntities;
 missionNamespace setVariable ["FADE_aoSpawnVehFn_" + _taskId, nil];
 missionNamespace setVariable ["FADE_aoVehicles_" + _taskId, nil];
-[_player, _taskId] call FADE_clearActiveMission;
+[_taskId, "", _player, 0] call FADE_mission_completeCleanup;
 missionNamespace setVariable ["FADE_currentMissionType", ""];
 missionNamespace setVariable ["FADE_currentMissionPlayer", objNull];
 [] call FADE_missionSlots_publish;

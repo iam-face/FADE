@@ -67,9 +67,20 @@ FAC_ensureMedicalTrainingGui = {
     missionNamespace setVariable ["FAC_clientGui_medical", true];
 };
 
+FAC_ensureMissionsGui_mapPicks = {
+    if (isNil "FAC_convoyMapPick_fnc_start") then {
+        call compile preprocessFileLineNumbers "rsc\MissionConvoyMapPick.sqf";
+    };
+    if (isNil "FAC_raidMapPick_fnc_start") then {
+        call compile preprocessFileLineNumbers "rsc\MissionRaidMapPick.sqf";
+    };
+};
+
 FAC_ensureMissionsGui = {
     call FAC_ensureLobbyParams;
-    if (missionNamespace getVariable ["FAC_clientGui_missions", false]) exitWith {};
+    if (missionNamespace getVariable ["FAC_clientGui_missions", false]) exitWith {
+        [] call FAC_ensureMissionsGui_mapPicks;
+    };
     call compile preprocessFileLineNumbers "rsc\MissionPickOverlay.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionsGui.sqf";
     call compile preprocessFileLineNumbers "rsc\EscapeEvasionPickGui.sqf";
@@ -79,6 +90,8 @@ FAC_ensureMissionsGui = {
     call compile preprocessFileLineNumbers "rsc\TroopInsertPickGui.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionLocationPickGui.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionMapPick.sqf";
+    call compile preprocessFileLineNumbers "rsc\MissionConvoyMapPick.sqf";
+    call compile preprocessFileLineNumbers "rsc\MissionRaidMapPick.sqf";
     missionNamespace setVariable ["FAC_missionsGui_fnc", FAC_missionsGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_missions", true];
 };
@@ -187,6 +200,14 @@ FAC_ensureTeleportGui = {
     missionNamespace setVariable ["FAC_clientGui_teleport", true];
 };
 
+FAC_ensureRecruitGui = {
+    call FAC_ensureLobbyParams;
+    if (missionNamespace getVariable ["FAC_clientGui_recruit", false]) exitWith {};
+    call FAC_ensureLoadoutGui;
+    call compile preprocessFileLineNumbers "rsc\RecruitGui.sqf";
+    missionNamespace setVariable ["FAC_clientGui_recruit", true];
+};
+
 missionNamespace setVariable ["FAC_ensureLoadoutGui", FAC_ensureLoadoutGui];
 missionNamespace setVariable ["FAC_ensureVehicleGui", FAC_ensureVehicleGui];
 missionNamespace setVariable ["FAC_ensureFiresGui", FAC_ensureFiresGui];
@@ -199,3 +220,4 @@ missionNamespace setVariable ["FAC_ensureCQBGui", FAC_ensureCQBGui];
 missionNamespace setVariable ["FAC_ensureSniperGui", FAC_ensureSniperGui];
 missionNamespace setVariable ["FAC_ensureRangeGui", FAC_ensureRangeGui];
 missionNamespace setVariable ["FAC_ensureTeleportGui", FAC_ensureTeleportGui];
+missionNamespace setVariable ["FAC_ensureRecruitGui", FAC_ensureRecruitGui];

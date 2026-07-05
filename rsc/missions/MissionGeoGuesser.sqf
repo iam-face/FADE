@@ -122,11 +122,11 @@ FADE_runMission_GeoGuesser = {
 
     if (count _participants < 1) exitWith {
         if (!isNull _player) then { [_player] call FADE_clearActiveMission };
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No participants for Geo-Guesser.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "No participants for Geo-Guesser."] call FADE_missionErrorHint;
     };
     if (count _dropPos < 2) exitWith {
         if (!isNull _player) then { [_player] call FADE_clearActiveMission };
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not find a valid drop location.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "Could not find a valid drop location."] call FADE_missionErrorHint;
     };
 
     missionNamespace setVariable ["FADE_ggAborted_" + _taskId, false];
@@ -145,12 +145,21 @@ FADE_runMission_GeoGuesser = {
     missionNamespace setVariable ["FADE_ggRound_" + _taskId, _state];
 
     private _sf = missionNamespace getVariable ["FADE_sideFriendly", west];
-    private _taskTxt = format [
-        "GEO-GUESSER (%1, %2 s): dropped at an unknown location. Look around, then open your map (M) and click where you think you are. Faster guesses earn a score bonus. No task marker shows your drop point. Results when the timer ends or all players have guessed.",
+    private _createTask = missionNamespace getVariable ["FADE_mission_createTask", {}];
+    private _ggMissionTxt = format [
+        "GEO-GUESSER (%1, %2 s): identify your drop position on the map.",
         _difficulty,
         _timeSec
     ];
-    [_sf, _taskId, [_taskTxt, "Geo-Guesser", ""], objNull, "CREATED", 1, true, "search", false] call BIS_fnc_taskCreate;
+    private _ggSituationTxt = missionNamespace getVariable ["FADE_missionRun_defaultSituationTaskText", ""];
+    private _ggExecTxt = format [
+        "<t align='left' color='#C0C0C0'>Look around at the drop site, then open your map (M) and click your estimated position. Faster accurate guesses score higher. No task marker shows the drop point. Results when the timer ends or all players have guessed.</t>"
+    ];
+    if (_createTask isEqualTo {}) then {
+        [_sf, _taskId, [_ggMissionTxt, "Geo-Guesser", ""], objNull, "CREATED", 1, true, "search", false] call BIS_fnc_taskCreate;
+    } else {
+        [_player, _taskId, _ggMissionTxt, "Geo-Guesser", objNull, "search", _ggSituationTxt, _ggExecTxt, true] call _createTask;
+    };
 
     private _brief = format [
         "GEO-GUESSER%1%1Difficulty: %2  |  Round: %3 s%1%1Navigation drill  -  map click marks your guess. Score = accuracy x speed bonus.",
@@ -195,7 +204,7 @@ FADE_runMission_GeoGuesser = {
         missionNamespace setVariable ["FADE_ggRun_timeSec", nil];
         missionNamespace setVariable ["FADE_ggRun_difficulty", nil];
         if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then {
-            [_player, _taskId] call FADE_clearActiveMission;
+            [_taskId, "", _player, 0] call FADE_mission_completeCleanup;
         };
     };
 
@@ -268,7 +277,7 @@ FADE_runMission_GeoGuesser = {
         missionNamespace setVariable ["FADE_ggRun_timeSec", nil];
         missionNamespace setVariable ["FADE_ggRun_difficulty", nil];
         if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then {
-            [_player, _taskId] call FADE_clearActiveMission;
+            [_taskId, "", _player, 0] call FADE_mission_completeCleanup;
         };
     };
 
@@ -332,6 +341,6 @@ FADE_runMission_GeoGuesser = {
     missionNamespace setVariable ["FADE_ggRun_difficulty", nil];
 
     if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then {
-        [_player, _taskId] call FADE_clearActiveMission;
+        [_taskId, "", _player, 0] call FADE_mission_completeCleanup;
     };
 };

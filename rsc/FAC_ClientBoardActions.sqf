@@ -48,7 +48,7 @@ FAC_clientInstallHotkeys = {
                 true
             };
             if (_key == 0x28 && { _shift } && { _ctrl }) exitWith {
-                if (isNull (findDisplay 60600) && { isNull (findDisplay 60610) }) then {
+                if (isNull (findDisplay 60600)) then {
                     call FAC_ensureTeleportGui;
                     ["open", []] call FAC_teleportGui_fnc;
                 };
@@ -317,6 +317,7 @@ private _teleportBoardMap = [
 } forEach _teleportBoardMap;
 
 // Add loadout actions to all loadout boxes (Manage My Loadout, Save loadout, ACE Arsenal). Run after short delay so we run after ACE/other inits that may strip actions.
+// objWorkbench: Save loadout + attachments-only ACE Arsenal (no Manage My Loadout).
 [] spawn {
     sleep 0.5;
     call FAC_ensureLoadoutGui;
@@ -325,26 +326,30 @@ private _teleportBoardMap = [
         _boxes = [missionNamespace getVariable "FADE_loadoutBox"];
         if (!isNull (missionNamespace getVariable ["FADE_loadoutBox2", objNull])) then { _boxes pushBack (missionNamespace getVariable "FADE_loadoutBox2") };
     };
+    private _workbench = missionNamespace getVariable ["FADE_workbench", missionNamespace getVariable [missionNamespace getVariable ["FADE_workbenchEdenName", "objWorkbench"], objNull]];
     {
         private _box = _x;
         if (isNull _box) then { continue };
+        private _isWorkbench = !isNull _workbench && { _box isEqualTo _workbench };
         removeAllActions _box;
-        _box addAction [
-            "<t color='#00BFFF'>Manage My Loadout</t>",
-            {
-                if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
-                    systemChat "Loadout GUI access denied by lobby settings.";
-                };
-                [] spawn { call FAC_ensureLoadoutGui; sleep 0.2; ["open", []] call FAC_loadoutGui_fnc };
-            },
-            [],
-            6,
-            false,
-            true,
-            "",
-            "",
-            3
-        ];
+        if (!_isWorkbench) then {
+            _box addAction [
+                "<t color='#00BFFF'>Manage My Loadout</t>",
+                {
+                    if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
+                        systemChat "Loadout GUI access denied by lobby settings.";
+                    };
+                    [] spawn { call FAC_ensureLoadoutGui; sleep 0.2; ["open", []] call FAC_loadoutGui_fnc };
+                },
+                [],
+                6,
+                false,
+                true,
+                "",
+                "",
+                3
+            ];
+        };
         _box addAction [
             "<t color='#98FB98'>Save my loadout</t>",
             {
@@ -366,7 +371,7 @@ private _teleportBoardMap = [
         if (isClass (configFile >> "CfgPatches" >> "ace_arsenal")) then {
             if ((missionNamespace getVariable ["FAC_param_enableAceArsenalActions", 1]) > 0 && { ["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess }) then {
                 _box addAction [
-                    "<t color='#FF8C00'>Open ACE Arsenal</t>",
+                    if (_isWorkbench) then { "<t color='#FF8C00'>Use Crusty's Workbench</t>" } else { "<t color='#FF8C00'>Open ACE Arsenal</t>" },
                     { [(_this select 0), (_this select 1)] call ace_arsenal_fnc_openBox },  // target, caller
                     [],
                     5,
@@ -379,6 +384,31 @@ private _teleportBoardMap = [
             };
         };
     } forEach _boxes;
+};
+
+// HQ recruit board (Eden: hqRecruitBoard)
+[] spawn {
+    sleep 0.55;
+    private _board = missionNamespace getVariable ["FADE_hqRecruitBoard", objNull];
+    if (isNull _board) then { _board = missionNamespace getVariable ["hqRecruitBoard", objNull] };
+    if (isNull _board) exitWith {};
+    removeAllActions _board;
+    _board addAction [
+        "<t color='#7CFC00'>Recruit units</t>",
+        {
+            if !(["FAC_playerCanUseRecruitGui"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Recruit GUI access denied by lobby settings.";
+            };
+            [] spawn { call FAC_ensureRecruitGui; sleep 0.2; ["open", []] call FAC_recruitGui_fnc };
+        },
+        [],
+        6,
+        false,
+        true,
+        "",
+        "",
+        3
+    ];
 };
 
 // Jukebox: Radio_1..Radio_4 (Eden names); each source gets its own playback slot

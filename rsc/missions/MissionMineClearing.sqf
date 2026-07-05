@@ -1,46 +1,16 @@
 // AUTO-EXTRACTED from Missions.sqf  -  run via FADE_runMission_* (compile once)
 if (!isServer) exitWith {};
 FADE_runMission_MineClearing = {
-    private _missionType = missionNamespace getVariable ["FADE_missionRun_missionType", ""];
-    private _destPos = missionNamespace getVariable ["FADE_missionRun_destPos", [0,0,0]];
-    private _player = missionNamespace getVariable ["FADE_missionRun_player", objNull];
-    private _evadeePlayers = missionNamespace getVariable ["FADE_missionRun_evadeePlayers", []];
-    private _fromMapClick = missionNamespace getVariable ["FADE_missionRun_fromMapClick", false];
-    private _mapAnchor = missionNamespace getVariable ["FADE_missionRun_mapAnchor", []];
-    private _friendlyUnits = missionNamespace getVariable ["FADE_missionRun_friendlyUnits", []];
-    private _enemyUnits = missionNamespace getVariable ["FADE_missionRun_enemyUnits", []];
-    private _sideFriendly = missionNamespace getVariable ["FADE_missionRun_sideFriendly", west];
-    private _sideEnemy = missionNamespace getVariable ["FADE_missionRun_sideEnemy", east];
-    private _markerFriendly = missionNamespace getVariable ["FADE_missionRun_markerFriendly", "ColorWEST"];
-    private _markerEnemy = missionNamespace getVariable ["FADE_missionRun_markerEnemy", "ColorEAST"];
-    private _dryPos = missionNamespace getVariable ["FADE_surfaceIsDry", {}];
-    private _taskId = missionNamespace getVariable ["FADE_missionRun_taskId", ""];
-    private _operationName = missionNamespace getVariable ["FADE_missionRun_operationName", ""];
-    private _operationNameUpper = missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""];
-    private _briefGuiTail = missionNamespace getVariable ["FADE_missionRun_briefGuiTail", ""];
-    private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", {}];
-    private _enemyFactionName = missionNamespace getVariable ["FADE_missionRun_enemyFactionName", ""];
-    private _zeroAlphaDisplayName = missionNamespace getVariable ["FADE_missionRun_zeroAlphaDisplayName", ""];
-    private _isGlobalMission = missionNamespace getVariable ["FADE_missionRun_isGlobalMission", false];
-    private _basePos = missionNamespace getVariable ["FADE_missionRun_basePos", [0,0,0]];
-    private _unitCount = missionNamespace getVariable ["FADE_missionRun_unitCount", 6];
-    private _unitClasses = missionNamespace getVariable ["FADE_missionRun_unitClasses", []];
-    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {}];
-    private _fnc_createMissionTask = missionNamespace getVariable ["FADE_mission_createTask", {}];
-    private _showAssignedHint = missionNamespace getVariable ["FADE_mission_showAssignedHint", {}];
-    private _defaultSituationTaskText = missionNamespace getVariable ["FADE_missionRun_defaultSituationTaskText", ""];
-    private _defaultExecutionTaskText = missionNamespace getVariable ["FADE_missionRun_defaultExecutionTaskText", ""];
-    private _defaultAdminTaskText = missionNamespace getVariable ["FADE_missionRun_defaultAdminTaskText", ""];
-    private _defaultCommandTaskText = missionNamespace getVariable ["FADE_missionRun_defaultCommandTaskText", ""];
-    private _defaultSituationHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHtml", ""];
-    private _defaultSituationHintHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHintHtml", ""];
-    private _friendlyPlayerCount = missionNamespace getVariable ["FADE_missionRun_friendlyPlayerCount", 0];
-    private _friendlyFactionName = missionNamespace getVariable ["FADE_missionRun_friendlyFactionName", ""];
-    private _estimatedOpforCount = missionNamespace getVariable ["FADE_missionRun_estimatedOpforCount", 0];
-    private _opforCountFactor = missionNamespace getVariable ["FADE_missionRun_opforCountFactor", 1];
-    private _intelFormatter = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
-    private _topographyGrid = missionNamespace getVariable ["FADE_missionRun_topographyGrid", "UNKNOWN"];
-    private _topographyArea = missionNamespace getVariable ["FADE_missionRun_topographyArea", ""];
+    (call FADE_missionRun_getContext) params [
+        "_missionType", "_destPos", "_player", "_evadeePlayers", "_fromMapClick", "_mapAnchor",
+        "_friendlyUnits", "_enemyUnits", "_sideFriendly", "_sideEnemy", "_markerFriendly", "_markerEnemy",
+        "_dryPos", "_taskId", "_operationName", "_operationNameUpper", "_briefGuiTail",
+        "_mkrJitter", "_enemyFactionName", "_zeroAlphaDisplayName", "_isGlobalMission", "_basePos",
+        "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
+        "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
+        "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+    ];
     private _useMines = random 1 < 0.5;
     private _need = if (_useMines) then { 2 + (floor random 4) } else { 1 + (floor random 3) };
     private _minSep = 20;
@@ -109,7 +79,7 @@ FADE_runMission_MineClearing = {
 
     if (count _positions < _need) then {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not place hazards along roads in this area. Try again.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "Could not place hazards along roads in this area. Try again."] call FADE_missionErrorHint;
     } else {
         private _nPlaced = count _positions;
         private _sx = 0;
@@ -147,7 +117,7 @@ FADE_runMission_MineClearing = {
         if (count _hazards < _need) then {
             { if (!isNull _x) then { deleteVehicle _x } } forEach _hazards;
             [_player] call FADE_clearActiveMission;
-            ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not spawn all hazards. Try again.</t>"] remoteExec ["FADE_showMissionHint", _player];
+            [_player, "MISSION ERROR", "Could not spawn all hazards. Try again."] call FADE_missionErrorHint;
         } else {
             private _hazardWord = if (_useMines) then {
                 if (_need == 1) then { "mine" } else { "mines" }
@@ -164,7 +134,12 @@ FADE_runMission_MineClearing = {
 
             private _markerName = "FADE_mines_" + _taskId;
             _player setVariable ["FADE_myMissionMarker", _markerName, true];
-            private _mkr = createMarker [_markerName, [_centerPos, 30] call _mkrJitter];
+            private _hazardRadius = 50;
+            { private _d = _centerPos distance2D _x; if (_d > _hazardRadius) then { _hazardRadius = _d } } forEach _positions;
+            _hazardRadius = (_hazardRadius + 40) max 80;
+            private _mineMarkerColor = missionNamespace getVariable ["FADE_markerColorEnemy", "ColorEAST"];
+            [_taskId, _markerName + "_zone", _centerPos, _hazardRadius, _mineMarkerColor] call FADE_mission_createRadiusMarker;
+            private _mkr = createMarker [_markerName, [_centerPos] call FADE_normPos3];
             [_taskId, _markerName] call FADE_missionEnt_registerMarker;
             _mkr setMarkerType "mil_warning";
             _mkr setMarkerColor (missionNamespace getVariable ["FADE_markerColorEnemy", "ColorEAST"]);
@@ -210,16 +185,13 @@ FADE_runMission_MineClearing = {
                     } forEach _hazards;
                 };
                 [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
-                private _doneMsg = if (_useMines) then {
-                    "<t size='1.2' color='#90EE90'>MINES CLEARED</t><br/><br/><t color='#E0E0E0'>All mines neutralised.</t>"
+                if (_useMines) then {
+                    [_player, "MINES CLEARED", "All mines neutralised.", "#90EE90"] call FADE_missionOutcomeHint;
                 } else {
-                    "<t size='1.2' color='#90EE90'>IEDs CLEARED</t><br/><br/><t color='#E0E0E0'>All devices neutralised.</t>"
+                    [_player, "IEDs CLEARED", "All devices neutralised.", "#90EE90"] call FADE_missionOutcomeHint;
                 };
-                [_doneMsg] remoteExec ["FADE_showMissionHint", _player];
                 sleep 5;
-                [_markerName] call FADE_deleteMarkerSafe;
-                if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
-                [_taskId, 60, _player] call FADE_missionEnt_scheduledCleanup;
+                [_taskId, _markerName, _player, 60] call FADE_mission_completeCleanup;
             };
         };
     };

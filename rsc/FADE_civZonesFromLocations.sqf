@@ -2,10 +2,10 @@
 // FADE_civZonesFromLocations.sqf  -  build CIV_T_* zone anchors from map Locations
 // =============================================================================
 // Server-only. Loaded from initServer after FADE_basePos is set.
-// Per-zone metadata in FADE_civZoneMeta (HashMap): locType, hasAmbientPop (buildings
-// within FADE_civZoneBuildingRadius), parkedVehicles (2-6 by tier), footMult for
-// walking civ count scaling. Zones with no buildings in radius get no foot/parked
-// ambient spawns (anchor kept for missions: AO, Operation, etc.).
+// Per-zone metadata in FADE_civZoneMeta (HashMap): locType, hasAmbientPop, buildingCount,
+// parkedVehicles (2-6 by tier), footMult for walking civ count scaling.
+// Named locations with fewer than FADE_civZoneMinBuildings House/Building within
+// FADE_civZoneBuildingRadius are not designated as civ zones (no CIV_T_* anchor).
 // =============================================================================
 
 if (!isServer) exitWith {};
@@ -18,6 +18,7 @@ FADE_civZonesFromLocations_build = {
     private _skipWater = missionNamespace getVariable ["FADE_civZoneSkipWater", true];
     private _anchorClass = missionNamespace getVariable ["FADE_civZoneAnchorClass", "Land_HelipadEmpty_F"];
     private _bldRadius = missionNamespace getVariable ["FADE_civZoneBuildingRadius", if (!isNil "FADE_civZoneBuildingRadius") then { FADE_civZoneBuildingRadius } else { 500 }];
+    private _minBld = missionNamespace getVariable ["FADE_civZoneMinBuildings", if (!isNil "FADE_civZoneMinBuildings") then { FADE_civZoneMinBuildings } else { 10 }];
 
     private _base = missionNamespace getVariable ["FADE_basePos", []];
     if (count _base < 2) exitWith {
@@ -63,10 +64,18 @@ FADE_civZonesFromLocations_build = {
     FADE_civZoneMeta = createHashMap;
 
     private _created = 0;
+    private _skippedBld = 0;
     {
         _x params ["_location", "_posATL"];
         private _lt = type _location;
         private _nBld = count (nearestObjects [_posATL, ["House", "Building"], _bldRadius]);
+        if (_nBld < _minBld) then {
+            _skippedBld = _skippedBld + 1;
+            diag_log format [
+                "[FADE_civZonesFromLocations] Skip '%1' (%2): %3 building(s) in %4m (need >= %5).",
+                text _location, _lt, _nBld, _bldRadius, _minBld
+            ];
+        } else {
         private _hasPop = _nBld > 0;
 
         private _parked = 0;
@@ -98,6 +107,7 @@ FADE_civZonesFromLocations_build = {
             _meta set ["footMult", _footMult];
             FADE_civZoneMeta set [_zname, _meta];
         };
+        };
     } forEach _accepted;
 
     missionNamespace setVariable ["FADE_civTriggerIndexMax", _created];
@@ -106,7 +116,10 @@ FADE_civZonesFromLocations_build = {
         private _m = FADE_civZoneMeta get _x;
         if (!isNil "_m" && { _m get "hasAmbientPop" }) then { _popN = _popN + 1 };
     } forEach (keys FADE_civZoneMeta);
-    diag_log format ["[FADE_civZonesFromLocations] Anchors %1 | zones with buildings in %2m: %3", _created, _bldRadius, _popN];
+    diag_log format [
+        "[FADE_civZonesFromLocations] Anchors %1 | skipped (<%2 buildings in %3m): %4 | zones with ambient pop: %5",
+        _created, _minBld, _bldRadius, _skippedBld, _popN
+    ];
 };
 
 true

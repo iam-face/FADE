@@ -15,8 +15,8 @@
 // Debug: set true to show systemChat for every key interaction (cursorTarget, cursorObject, etc.)
 FAC_surrenderChallenge_debugKeys = false;
 
-// Config (same as server) so FADE_* flags e.g. FADE_debugBIScp apply before optional BIS CP stubs
-call compile preprocessFileLineNumbers "rsc\Config.sqf";
+// Config (client subset) so FADE_* flags e.g. FADE_debugBIScp apply before optional BIS CP stubs
+call compile preprocessFileLineNumbers "rsc\ConfigClient.sqf";
 call compile preprocessFileLineNumbers "rsc\FAC_MissionTypeLabels.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_ClientCommon.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_MissionSlots.sqf";
@@ -91,7 +91,7 @@ FADE_resolveAssignedIntroMissionTypeId = {
 // alone, or params mis-reads line 2 as posX/posY and shows the literal format token (e.g. "PLAIN DOWN").
 // Each line is [text, structuredFormatWith%1, blinkCount]; only `text` is typed — wrapper stays valid XML.
 FADE_showMissionAssignedIntro = {
-    params ["_operationName", "_legacyStarterName"];
+    params ["_operationName", "_legacyStarterName", ["_loreShort", ""]];
     if (!hasInterface) exitWith {};
     private _tid = [_operationName] call FADE_resolveAssignedIntroMissionTypeId;
     private _missionTypeLabel = if !(_tid isEqualTo "") then {
@@ -103,29 +103,35 @@ FADE_showMissionAssignedIntro = {
     private _taskHint = parseText "<t color='#E0E0E0'>Read your <t color='#FFCC00'>Task</t> panel for the full SMEAC.</t>";
     private _fmtTitle = "<t align='center' shadow='1' size='1.15' font='PuristaBold' color='#FFD700'>%1</t><br/>";
     private _fmtSub = "<t align='center' shadow='1' size='0.9' color='#D0D0D0'>%1</t><br/>";
+    // Lore headline: hint only — BIS_fnc_typeText corrupts a third line (format %1 vs long text).
     private _lines = [
         [_operationName, _fmtTitle, 5],
         [_lineByPlain, _fmtSub, 5]
     ];
+    private _escapeFmt = missionNamespace getVariable ["FADE_lore_escapeForFormat", { _this select 0 }];
     if (isNil "BIS_fnc_typeText") exitWith {
         hint parseText format [
-            "<t align='center' size='1.4' font='PuristaBold' color='#FFD700'>%1</t><br/><br/><t align='center' size='0.95' color='#D0D0D0'>%2</t><br/><br/><t color='#E0E0E0'>Read your <t color='#FFCC00'>Task</t> panel for the full SMEAC.</t>",
+            "<t align='center' size='1.4' font='PuristaBold' color='#FFD700'>%1</t><br/><br/><t align='center' size='0.95' color='#D0D0D0'>%2</t>%3<br/><br/><t color='#E0E0E0'>Read your <t color='#FFCC00'>Task</t> panel for the full SMEAC.</t>",
             _operationName,
-            _missionTypeLabel
+            _missionTypeLabel,
+            if (_loreShort isEqualType "" && { _loreShort != "" }) then {
+                format ["<br/><br/><t align='center' size='0.82' color='#A8C4E0'>%1</t>", [_loreShort] call _escapeFmt]
+            } else { "" }
         ];
     };
     private _holdSec = 4;
-    [_lines, _taskHint, _operationName, _missionTypeLabel, _holdSec] spawn {
-        params ["_lines", "_taskHint", "_operationName", "_missionTypeLabel", "_holdSec"];
+    [_lines, _taskHint, _operationName, _missionTypeLabel, _holdSec, _loreShort, _escapeFmt] spawn {
+        params ["_lines", "_taskHint", "_operationName", "_missionTypeLabel", "_holdSec", "_loreShort", "_escapeFmt"];
         private _h = [_lines] spawn BIS_fnc_typeText;
         waitUntil { sleep 0.05; scriptDone _h };
-        // typeText exits quickly after cursor blinks; hold the same two lines ~_holdSec s before SMEAC hint.
-        // titleText: plain String shows raw <t> markup on-screen; parseText was rejected as wrong type for titleText in RPT.
-        // hint parseText matches FADE_showMissionHint and renders structured text correctly.
+        private _loreHtml = if (_loreShort isEqualType "" && { _loreShort != "" }) then {
+            format ["<br/><t align='center' shadow='1' size='0.82' color='#A8C4E0'>%1</t>", [_loreShort] call _escapeFmt]
+        } else { "" };
         private _holdParsed = parseText format [
-            "<t align='center' shadow='1' size='1.15' font='PuristaBold' color='#FFD700'>%1</t><br/><t align='center' shadow='1' size='0.9' color='#D0D0D0'>%2</t>",
+            "<t align='center' shadow='1' size='1.15' font='PuristaBold' color='#FFD700'>%1</t><br/><t align='center' shadow='1' size='0.9' color='#D0D0D0'>%2</t>%3",
             _operationName,
-            _missionTypeLabel
+            _missionTypeLabel,
+            _loreHtml
         ];
         hint _holdParsed;
         sleep _holdSec;
@@ -314,6 +320,7 @@ FAC_surrenderChallenge_fnc_activate = {
 
 // Lazy GUI loaders — compile dialogs on first open (rsc\FAC_ClientGuiEnsure.sqf) for faster lobby → map.
 private _iplEnsureT = if (missionNamespace getVariable ["FADE_profileMissionLoad", false]) then { diag_tickTime } else { -1 };
+call compile preprocessFileLineNumbers "rsc\FAC_Theme.sqf";
 call compile preprocessFileLineNumbers "rsc\FAC_ClientGuiEnsure.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_MapClickPick.sqf";
 call compile preprocessFileLineNumbers "rsc\GeoGuesserClient.sqf";
@@ -359,7 +366,6 @@ FAC_guiScheduleHeaderRefresh = {
         if (!isNull (findDisplay 60400)) then { call FAC_ensureJukeboxGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_jukeboxGui_fnc") };
         if (!isNull (findDisplay 60500)) then { call FAC_ensureCQBGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_cqbGui_fnc") };
         if (!isNull (findDisplay 60600)) then { call FAC_ensureTeleportGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_teleportGui_fnc") };
-        if (!isNull (findDisplay 60610)) then { call FAC_ensureTeleportGui; ["headerRefreshPlayers", []] call (missionNamespace getVariable "FAC_teleportGui_fnc") };
         if (!isNull (findDisplay 60700)) then { call FAC_ensureFiresGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_firesGui_fnc") };
         if (!isNull (findDisplay 60800)) then { call FAC_ensureMedicalTrainingGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_medicalTrainingGui_fnc") };
         if (!isNull (findDisplay 60910)) then { call FAC_ensureSniperGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_sniperGui_fnc") };

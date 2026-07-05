@@ -1,13 +1,9 @@
 // =============================================================================
-// FAC_LobbyParamsDebugPatch.sqf  -  lobby indices 18-20 (DEBUG markers / spawn print)
+// FAC_LobbyParamsDebugPatch.sqf  -  DEBUG lobby params (indices 11-14; see FAC_LobbyParams.sqf)
 // Load immediately after FAC_LobbyParams.sqf (ServerBootstrap, FAC_ensureLobbyParams).
 // =============================================================================
 
 if (missionNamespace getVariable ["FAC_lobbyParams_debugPatch_installed", false]) exitWith {};
-
-FAC_LOBBY_IDX_DEBUG_VG_MARKERS   = 18;
-FAC_LOBBY_IDX_DEBUG_CIV_TOWNS    = 19;
-FAC_LOBBY_IDX_DEBUG_PRINT_SPAWNS = 20;
 
 missionNamespace setVariable ["FAC_lobbyParams_read_preDebugPatch", FAC_lobbyParams_read];
 FAC_lobbyParams_read = {

@@ -6,138 +6,106 @@ class Header {
 
 class Params
 {
-    class FAC_MissionsGuiAccess
-    {
-        title = "Missions GUI access";
-        values[] = {0, 1};
-        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
-        default = 0;
-    };
-    class FAC_ScenarioGuiAccess
-    {
-        title = "Scenario GUI access";
-        values[] = {0, 1};
-        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
-        default = 0;
-    };
+    // ACCESS (alphabetical)
     class FAC_EnableAceArsenalActions
     {
-        title = "Loadout box ACE Arsenal action";
+        title = "ACCESS: Loadout box ACE Arsenal";
         values[] = {0, 1};
         texts[] = {"Disabled", "Enabled"};
         default = 1;
     };
-    class FAC_VehicleGuiAccess
-    {
-        title = "Vehicle GUI access";
-        values[] = {0, 1};
-        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
-        default = 0;
-    };
     class FAC_FastTravelToPlayer
     {
-        title = "Fast Travel — teleport to player";
+        title = "ACCESS: Fast Travel — teleport to player";
         values[] = {0, 1};
         texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
         default = 0;
     };
-    class FAC_ScenarioAdminAccess
+    class FAC_JukeboxAccess
     {
-        title = "Scenario GUI — Admin tab";
-        values[] = {0, 1, 2};
-        texts[] = {"All with Scenario access", "Group leaders only (admin/Zeus override)", "Disabled (admin/Zeus override only)"};
+        title = "ACCESS: Jukebox";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
         default = 0;
     };
     class FAC_LoadoutGuiAccess
     {
-        title = "Loadout GUI access";
+        title = "ACCESS: Loadout GUI";
         values[] = {0, 1};
         texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
         default = 0;
     };
+    class FAC_MissionsGuiAccess
+    {
+        title = "ACCESS: Missions GUI";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_RecruitGuiAccess
+    {
+        title = "ACCESS: Who can recruit and dismiss units?";
+        values[] = {0, 1, 2};
+        texts[] = {"Everyone", "Group leaders only (admin/Zeus override)", "Admin only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_ScenarioAdminAccess
+    {
+        title = "ACCESS: Scenario Admin tab";
+        values[] = {0, 1, 2};
+        texts[] = {"All with Scenario access", "Group leaders only (admin/Zeus override)", "Disabled (admin/Zeus override only)"};
+        default = 0;
+    };
+    class FAC_ScenarioGuiAccess
+    {
+        title = "ACCESS: Scenario GUI";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_VehicleGuiAccess
+    {
+        title = "ACCESS: Vehicle GUI";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    // CIVILIANS (alphabetical)
     class FAC_CiviliansAtStart
     {
-        title = "Ambient civilians at start";
+        title = "CIVILIANS: Ambient civilians";
         values[] = {0, 1};
         texts[] = {"Off", "On"};
         default = 1;
     };
-    class FAC_OpforThreat
-    {
-        title = "Default OPFOR threat";
-        values[] = {0, 1, 2, 3};
-        texts[] = {"Off", "Light", "Standard", "Heavy"};
-        default = 2;
-    };
-    class FAC_GearPolicy
-    {
-        title = "Gear policy at start";
-        values[] = {0, 1, 2};
-        texts[] = {"Unrestricted", "Friendly faction only", "Preset loadouts only"};
-        default = 0;
-    };
-    class FAC_StartingTime
-    {
-        title = "Starting time of day";
-        values[] = {0, 1, 2, 3, 4};
-        texts[] = {"Default (Config)", "0800", "1200", "1800", "2200"};
-        default = 0;
-    };
-    class FAC_StartingWeather
-    {
-        title = "Starting weather";
-        values[] = {0, 1, 2, 3, 4, 5, 6};
-        texts[] = {"Default (Config)", "Clear", "Overcast", "Foggy", "Rain", "Storm", "Face Mission"};
-        default = 0;
-    };
     class FAC_CivTalkPolicy
     {
-        title = "Civilian talk at start";
+        title = "CIVILIANS: Who can interrogate civilians?";
         values[] = {0, 1};
         texts[] = {"Everyone", "Interpreters only"};
         default = 0;
     };
     class FAC_IntelReadPolicy
     {
-        title = "Building intel at start";
+        title = "CIVILIANS: Who can read intel?";
         values[] = {0, 1};
         texts[] = {"Everyone", "Specialists only"};
         default = 0;
     };
-    class FAC_AoStrength
+    // DEBUG (alphabetical)
+    class FAC_DebugPrintSpawns
     {
-        title = "AO mission strength at start";
-        values[] = {0, 1, 2};
-        texts[] = {"Low", "Mid", "High"};
-        default = 1;
+        title = "DEBUG: Print spawns";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 0;
     };
     class FAC_DebugTools
     {
-        title = "Script debug tools (Zeus self-assign via Admin tab)";
+        title = "DEBUG: Script debug tools (Zeus via Admin tab)";
         values[] = {0, 1, 2};
         texts[] = {"Off", "Logged admin only", "Server admin"};
         default = 2;
-    };
-    class FAC_JukeboxAccess
-    {
-        title = "Jukebox — start / change music";
-        values[] = {0, 1};
-        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
-        default = 0;
-    };
-    class FAC_HqAutoHeal
-    {
-        title = "HQ auto-heal near base";
-        values[] = {0, 1};
-        texts[] = {"Off", "On"};
-        default = 1;
-    };
-    class FAC_DebugVgMarkers
-    {
-        title = "DEBUG: Show garrison buildings";
-        values[] = {0, 1};
-        texts[] = {"Off", "On"};
-        default = 0;
     };
     class FAC_DebugCivTownMarkers
     {
@@ -146,11 +114,64 @@ class Params
         texts[] = {"Off", "On"};
         default = 0;
     };
-    class FAC_DebugPrintSpawns
+    class FAC_DebugVgMarkers
     {
-        title = "DEBUG: Print spawns";
+        title = "DEBUG: Show garrison buildings";
         values[] = {0, 1};
         texts[] = {"Off", "On"};
+        default = 0;
+    };
+    // GAMEPLAY (alphabetical)
+    class FAC_GearPolicy
+    {
+        title = "GAMEPLAY: Gear policy";
+        values[] = {0, 1, 2};
+        texts[] = {"Unrestricted", "Friendly faction only", "Preset loadouts only"};
+        default = 0;
+    };
+    class FAC_HqAutoHeal
+    {
+        title = "GAMEPLAY: HQ auto-heal";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 1;
+    };
+    // MISSIONS
+    class FAC_AoStrength
+    {
+        title = "MISSIONS: AO mission strength";
+        values[] = {0, 1, 2};
+        texts[] = {"Low", "Mid", "High"};
+        default = 1;
+    };
+    // OPFOR (alphabetical)
+    class FAC_OpforPatrols
+    {
+        title = "OPFOR: Patrols";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 1;
+    };
+    class FAC_OpforThreat
+    {
+        title = "OPFOR: Population multiplier";
+        values[] = {0, 1, 2, 3, 4, 5};
+        texts[] = {"Very Low", "Low", "Normal", "High", "Very High", "Insane"};
+        default = 1;
+    };
+    // WORLD (alphabetical)
+    class FAC_StartingTime
+    {
+        title = "WORLD: Starting time";
+        values[] = {0, 1, 2, 3, 4, 5, 6};
+        texts[] = {"Random", "Night (00:00)", "Dawn (04:00)", "Morning (06:00)", "Midday (12:00)", "Afternoon (15:00)", "Evening (19:00)"};
+        default = 0;
+    };
+    class FAC_StartingWeather
+    {
+        title = "WORLD: Starting weather";
+        values[] = {0, 1, 2, 3, 4, 5, 6};
+        texts[] = {"Random", "Clear", "Overcast", "Foggy", "Rain", "Storm", "Face Mission"};
         default = 0;
     };
 };
@@ -170,6 +191,8 @@ enableDebugConsole = 2;
 
 // Face's Dynamic Sandbox GUI -- base controls (import can fail with some mod combinations)
 #include "rsc\BaseControls.hpp"
+#include "rsc\FAC_Theme.hpp"
+#include "rsc\FAC_DialogChrome.hpp"
 
 // Display base -- must be defined before use (game class can be undefined with mod combos)
 class RscDisplayEmpty { idd = -1; movingEnable = 1; enableSimulation = 1; };
@@ -205,95 +228,98 @@ class RscDisplayVehicle: RscDisplayEmpty {
     onLoad = "0 spawn { private _d = findDisplay 60001; if (!isNull _d) then { ['onLoadVehicle', [_d]] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]); }; };";
     class controlsBackground {
         // Tighter frame: content stacks to ~0.86; avoids large dead band at bottom on both tabs.
-        class Background: RscText { idc = -1; x = 0.02; y = 0.025; w = 0.96; h = 0.855; colorBackground[] = {0.05, 0.06, 0.09, 0.98}; };
+        class Background: RscText { idc = -1; x = 0.02; y = 0.025; w = 0.96; h = 0.855; colorBackground[] = FAC_COLOR_BG_PANEL; };
     };
     class controls {
-        class MainContentPanel: RscText { idc = 61901; x = 0.03; y = 0.092; w = 0.94; h = 0.768; colorBackground[] = {0.03, 0.04, 0.07, 0.55}; };
+        class MainContentPanel: RscText { idc = 61901; x = 0.03; y = 0.092; w = 0.94; h = 0.768; colorBackground[] = FAC_COLOR_BG_MAIN; };
         // --- Spawn (New): left column ---
-        class BtnCatAircraft: RscButton { idc = 61116; text = "Aircraft"; x = 0.04; y = 0.105; w = 0.395; h = 0.042; sizeEx = 0.032; colorBackground[] = {0.22, 0.48, 0.78, 1}; colorText[] = {1, 1, 1, 1}; action = "['spawnCategorySet', ['aircraft']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class BtnCatLand: RscButton { idc = 61117; text = "Land Vehicles"; x = 0.04; y = 0.153; w = 0.395; h = 0.042; sizeEx = 0.03; colorBackground[] = {0.07, 0.11, 0.20, 1}; colorText[] = {0.95, 0.95, 0.95, 1}; action = "['spawnCategorySet', ['land']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class FACWhitelistBtn: RscButton { idc = 61118; text = "Aircraft whitelist: ON"; x = 0.04; y = 0.198; w = 0.395; h = 0.038; sizeEx = 0.026; colorBackground[] = {0.12, 0.22, 0.38, 1}; colorText[] = {0.95, 0.95, 0.95, 1}; action = "['spawnWhitelistClick', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class SearchLabel: RscText { idc = 61112; text = "Search..."; x = 0.04; y = 0.244; w = 0.395; h = 0.020; sizeEx = 0.024; colorText[] = {0.65, 0.68, 0.75, 1}; };
-        class SearchEdit: RscEdit { idc = 61102; x = 0.04; y = 0.267; w = 0.395; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.02, 0.03, 0.05, 0.95}; colorText[] = {0.95, 0.95, 0.95, 1}; onKeyUp = "['spawnFilterChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class VehicleListLabel: RscText { idc = 61113; text = "Select vehicle"; x = 0.04; y = 0.311; w = 0.395; h = 0.020; sizeEx = 0.024; colorText[] = {0.65, 0.68, 0.75, 1}; };
-        class VehicleList: RscListBox { idc = 61103; x = 0.04; y = 0.334; w = 0.395; h = 0.318; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = {0.02, 0.03, 0.05, 0.95}; colorSelectedBackground[] = {0.15, 0.35, 0.55, 0.75}; onLBSelChanged = "['spawnVehicleSel', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class SpawnBtn: RscButton { idc = 61107; text = "Spawn"; x = 0.04; y = 0.658; w = 0.395; h = 0.048; sizeEx = 0.034; colorBackground[] = {0.22, 0.48, 0.78, 1}; colorBackgroundActive[] = {0.28, 0.55, 0.88, 1}; action = "['spawn', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class PadListLabel: RscText { idc = 61114; text = "Spawn location"; x = 0.04; y = 0.714; w = 0.395; h = 0.020; sizeEx = 0.024; colorText[] = {0.65, 0.68, 0.75, 1}; };
-        class PadList: RscListBox { idc = 61106; x = 0.04; y = 0.737; w = 0.395; h = 0.135; rowHeight = 0.030; sizeEx = 0.026; colorBackground[] = {0.02, 0.03, 0.05, 0.95}; colorSelectedBackground[] = {0.15, 0.35, 0.55, 0.75}; onLBSelChanged = "['spawnPadSel', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class BtnCatAircraft: RscButton { idc = 61116; text = "Aircraft"; x = 0.04; y = 0.105; w = 0.395; h = 0.042; sizeEx = 0.032; colorBackground[] = FAC_COLOR_TAB_ACTIVE; colorText[] = {1, 1, 1, 1}; action = "['spawnCategorySet', ['aircraft']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class BtnCatLand: RscButton { idc = 61117; text = "Land Vehicles"; x = 0.04; y = 0.153; w = 0.395; h = 0.042; sizeEx = 0.03; colorBackground[] = FAC_COLOR_TAB_IDLE; colorText[] = {0.95, 0.95, 0.95, 1}; action = "['spawnCategorySet', ['land']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class FACWhitelistBtn: RscButton { idc = 61118; text = "Aircraft whitelist: ON"; x = 0.04; y = 0.198; w = 0.395; h = 0.038; sizeEx = 0.026; colorBackground[] = FAC_COLOR_BG_HEADER; colorText[] = {0.95, 0.95, 0.95, 1}; action = "['spawnWhitelistClick', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class SearchLabel: RscText { idc = 61112; text = "Search..."; x = 0.04; y = 0.244; w = 0.395; h = 0.020; sizeEx = 0.024; colorText[] = FAC_COLOR_TEXT_MUTED; };
+        class SearchEdit: RscEdit { idc = 61102; x = 0.04; y = 0.267; w = 0.395; h = 0.036; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; colorText[] = {0.95, 0.95, 0.95, 1}; onKeyUp = "['spawnFilterChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class VehicleListLabel: RscText { idc = 61113; text = "Select vehicle"; x = 0.04; y = 0.311; w = 0.395; h = 0.020; sizeEx = 0.024; colorText[] = FAC_COLOR_TEXT_MUTED; };
+        class VehicleList: RscListBox { idc = 61103; x = 0.04; y = 0.334; w = 0.395; h = 0.318; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; colorSelectedBackground[] = FAC_COLOR_LIST_SEL; onLBSelChanged = "['spawnVehicleSel', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class SpawnBtn: RscButton { idc = 61107; text = "Spawn"; x = 0.04; y = 0.658; w = 0.395; h = 0.048; sizeEx = 0.034; colorBackground[] = FAC_COLOR_TAB_ACTIVE; colorBackgroundActive[] = FAC_COLOR_BTN_PRIMARY_A; action = "['spawn', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class PadListLabel: RscText { idc = 61114; text = "Spawn location"; x = 0.04; y = 0.714; w = 0.395; h = 0.020; sizeEx = 0.024; colorText[] = FAC_COLOR_TEXT_MUTED; };
+        class PadList: RscListBox { idc = 61106; x = 0.04; y = 0.737; w = 0.395; h = 0.135; rowHeight = 0.030; sizeEx = 0.026; colorBackground[] = FAC_COLOR_BG_LIST; colorSelectedBackground[] = FAC_COLOR_LIST_SEL; onLBSelChanged = "['spawnPadSel', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
         // --- Spawn: right column (faction filter, preview, details) ---
-        class FactionList: RscListBox { idc = 61101; x = 0.455; y = 0.105; w = 0.505; h = 0.125; rowHeight = 0.032; sizeEx = 0.027; colorBackground[] = {0.02, 0.03, 0.05, 0.95}; colorSelectedBackground[] = {0.15, 0.35, 0.55, 0.75}; onLBSelChanged = "['spawnFilterChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class VehiclePreview: RscPicture { idc = 61104; x = 0.455; y = 0.242; w = 0.505; h = 0.288; text = ""; style = 48; colorBackground[] = {0.12, 0.13, 0.16, 1}; };
-        class DetailsLabelSpawn: RscText { idc = 61115; text = "Details"; x = 0.455; y = 0.538; w = 0.505; h = 0.020; sizeEx = 0.024; colorText[] = {0.65, 0.68, 0.75, 1}; };
-        class VehicleDetailsSpawn: RscListBoxVehicleDetails { idc = 61105; x = 0.455; y = 0.561; w = 0.505; h = 0.311; rowHeight = 0.026; sizeEx = 0.025; colorBackground[] = {0.02, 0.03, 0.05, 0.95}; };
+        class FactionList: RscListBox { idc = 61101; x = 0.455; y = 0.105; w = 0.505; h = 0.125; rowHeight = 0.032; sizeEx = 0.027; colorBackground[] = FAC_COLOR_BG_LIST; colorSelectedBackground[] = FAC_COLOR_LIST_SEL; onLBSelChanged = "['spawnFilterChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class VehiclePreview: RscPicture { idc = 61104; x = 0.455; y = 0.242; w = 0.505; h = 0.331; text = ""; style = 48; colorBackground[] = {0.12, 0.13, 0.16, 1}; };
+        class DetailsLabelSpawn: RscText { idc = 61115; text = "Details"; x = 0.455; y = 0.581; w = 0.505; h = 0.020; sizeEx = 0.024; colorText[] = FAC_COLOR_TEXT_MUTED; };
+        class VehicleDetailsSpawn: RscListBoxVehicleDetails { idc = 61105; x = 0.455; y = 0.604; w = 0.505; h = 0.268; rowHeight = 0.026; sizeEx = 0.025; colorBackground[] = FAC_COLOR_BG_LIST; };
         // --- Manage (Existing): list + tall preview (left, to footer row); details + ammo + fuel/health + quick row; Despawn/Duplicate right column only (x = Quick repair) ---
         class SpawnedLabel: RscText { idc = 61240; show = 0; text = "Selected vehicle"; x = 0.04; y = 0.105; w = 0.395; h = 0.020; sizeEx = 0.024; colorText[] = {0.92, 0.93, 0.95, 1}; };
-        class SpawnedList: RscListBox { idc = 61200; show = 0; x = 0.04; y = 0.128; w = 0.395; h = 0.328; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = {0.02, 0.03, 0.05, 0.95}; colorSelectedBackground[] = {0.15, 0.35, 0.55, 0.75}; onLBSelChanged = "['manageVehicleSel', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class SpawnedList: RscListBox { idc = 61200; show = 0; x = 0.04; y = 0.128; w = 0.395; h = 0.408; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; colorSelectedBackground[] = FAC_COLOR_LIST_SEL; onLBSelChanged = "['manageVehicleSel', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
         // Preview: left column only; extends to top of footer row (no overlap with right-column buttons).
-        class VehiclePreviewManage: RscPicture { idc = 61210; show = 0; x = 0.04; y = 0.465; w = 0.395; h = 0.399; text = ""; style = 48; colorBackground[] = {0.12, 0.13, 0.16, 1}; };
+        class VehiclePreviewManage: RscPicture { idc = 61210; show = 0; x = 0.04; y = 0.545; w = 0.395; h = 0.319; text = ""; style = 48; colorBackground[] = {0.12, 0.13, 0.16, 1}; };
         class DetailsLabelManage: RscText { idc = 61241; show = 0; text = "Selected vehicle details"; x = 0.455; y = 0.105; w = 0.505; h = 0.020; sizeEx = 0.024; colorText[] = {0.92, 0.93, 0.95, 1}; };
-        class VehicleDetailsManage: RscListBoxVehicleDetails { idc = 61211; show = 0; x = 0.455; y = 0.128; w = 0.505; h = 0.248; rowHeight = 0.026; sizeEx = 0.025; colorBackground[] = {0.02, 0.03, 0.05, 0.95}; };
-        class AmmoTypeLabel: RscText { idc = 61242; show = 0; text = "Ammo"; x = 0.455; y = 0.382; w = 0.505; h = 0.018; sizeEx = 0.022; colorText[] = {0.65, 0.68, 0.75, 1}; };
-        class AmmoTypeList: RscListBox { idc = 61220; show = 0; x = 0.455; y = 0.402; w = 0.505; h = 0.172; rowHeight = 0.024; sizeEx = 0.021; colorBackground[] = {0.02, 0.03, 0.05, 0.95}; onLBSelChanged = "['manageAmmoSelChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class VehicleDetailsManage: RscListBoxVehicleDetails { idc = 61211; show = 0; x = 0.455; y = 0.128; w = 0.505; h = 0.248; rowHeight = 0.026; sizeEx = 0.025; colorBackground[] = FAC_COLOR_BG_LIST; };
+        class AmmoTypeLabel: RscText { idc = 61242; show = 0; text = "Ammo"; x = 0.455; y = 0.382; w = 0.505; h = 0.018; sizeEx = 0.022; colorText[] = FAC_COLOR_TEXT_MUTED; };
+        class AmmoTypeList: RscListBox { idc = 61220; show = 0; x = 0.455; y = 0.402; w = 0.505; h = 0.172; rowHeight = 0.024; sizeEx = 0.021; colorBackground[] = FAC_COLOR_BG_LIST; onLBSelChanged = "['manageAmmoSelChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
         class AmmoAmountLabel: RscText { idc = 61222; show = 0; text = "Ammo load: 0 / 0"; x = 0.455; y = 0.578; w = 0.505; h = 0.016; sizeEx = 0.020; colorText[] = {0.85, 0.88, 0.92, 1}; };
         class AmmoSlider: RscXSliderH { idc = 61221; show = 0; x = 0.455; y = 0.596; w = 0.355; h = 0.022; onSliderPosChanged = "['manageAmmoSliderChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class AmmoApplyBtn: RscButton { idc = 61223; show = 0; text = "Apply ammo"; x = 0.82; y = 0.590; w = 0.14; h = 0.030; sizeEx = 0.022; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['manageApplyAmmo', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class AmmoApplyBtn: RscButton { idc = 61223; show = 0; text = "Apply ammo"; x = 0.82; y = 0.590; w = 0.14; h = 0.030; sizeEx = 0.022; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['manageApplyAmmo', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
         class FuelAmountLabel: RscText { idc = 61225; show = 0; text = "Fuel: 0%"; x = 0.455; y = 0.626; w = 0.505; h = 0.016; sizeEx = 0.020; colorText[] = {0.85, 0.88, 0.92, 1}; };
         class FuelSlider: RscXSliderH { idc = 61224; show = 0; x = 0.455; y = 0.644; w = 0.355; h = 0.022; onSliderPosChanged = "['manageFuelSliderChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class FuelApplyBtn: RscButton { idc = 61226; show = 0; text = "Apply fuel"; x = 0.82; y = 0.638; w = 0.14; h = 0.030; sizeEx = 0.022; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['manageApplyFuel', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class FuelApplyBtn: RscButton { idc = 61226; show = 0; text = "Apply fuel"; x = 0.82; y = 0.638; w = 0.14; h = 0.030; sizeEx = 0.022; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['manageApplyFuel', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
         class HealthAmountLabel: RscText { idc = 61228; show = 0; text = "Health: 0%"; x = 0.455; y = 0.674; w = 0.505; h = 0.016; sizeEx = 0.020; colorText[] = {0.85, 0.88, 0.92, 1}; };
         class HealthSlider: RscXSliderH { idc = 61227; show = 0; x = 0.455; y = 0.692; w = 0.355; h = 0.022; onSliderPosChanged = "['manageHealthSliderChanged', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class HealthApplyBtn: RscButton { idc = 61229; show = 0; text = "Apply health"; x = 0.82; y = 0.686; w = 0.14; h = 0.030; sizeEx = 0.022; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['manageApplyHealth', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class RepairBtn: RscButton { idc = 61201; show = 0; text = "Quick repair"; x = 0.455; y = 0.724; w = 0.122; h = 0.036; sizeEx = 0.022; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['servicePart', ['repair']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class RefuelBtn: RscButton { idc = 61205; show = 0; text = "Quick refuel"; x = 0.585; y = 0.724; w = 0.122; h = 0.036; sizeEx = 0.022; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['servicePart', ['refuel']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class RearmBtn: RscButton { idc = 61206; show = 0; text = "Quick rearm"; x = 0.715; y = 0.724; w = 0.122; h = 0.036; sizeEx = 0.022; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['servicePart', ['rearm']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class PylonsBtn: RscButton { idc = 61230; show = 0; text = "Configure pylons..."; x = 0.845; y = 0.724; w = 0.115; h = 0.036; sizeEx = 0.020; colorBackground[] = {0.52, 0.16, 0.16, 1}; colorBackgroundActive[] = {0.62, 0.22, 0.22, 1}; colorFocused[] = {0.62, 0.22, 0.22, 1}; action = "['manageOpenPylons', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class HealthApplyBtn: RscButton { idc = 61229; show = 0; text = "Apply health"; x = 0.82; y = 0.686; w = 0.14; h = 0.030; sizeEx = 0.022; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['manageApplyHealth', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class RepairBtn: RscButton { idc = 61201; show = 0; text = "Quick repair"; x = 0.455; y = 0.724; w = 0.122; h = 0.036; sizeEx = 0.022; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['servicePart', ['repair']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class RefuelBtn: RscButton { idc = 61205; show = 0; text = "Quick refuel"; x = 0.585; y = 0.724; w = 0.122; h = 0.036; sizeEx = 0.022; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['servicePart', ['refuel']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class RearmBtn: RscButton { idc = 61206; show = 0; text = "Quick rearm"; x = 0.715; y = 0.724; w = 0.122; h = 0.036; sizeEx = 0.022; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['servicePart', ['rearm']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class PylonsBtn: RscButton { idc = 61230; show = 0; text = "Configure pylons..."; x = 0.845; y = 0.724; w = 0.115; h = 0.036; sizeEx = 0.020; colorBackground[] = FAC_COLOR_BTN_DANGER; colorBackgroundActive[] = {0.62, 0.22, 0.22, 1}; colorFocused[] = {0.62, 0.22, 0.22, 1}; action = "['manageOpenPylons', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
         // --- Header: tabs + utility (above main body) ---
-        class HeaderBar: RscText { idc = 61900; x = 0.02; y = 0.025; w = 0.96; h = 0.065; colorBackground[] = {0.08, 0.14, 0.28, 1}; };
-        class TabNewVehicles: RscButton { idc = 61000; text = "Spawn new..."; x = 0.035; y = 0.037; w = 0.20; h = 0.044; sizeEx = 0.032; colorBackground[] = {0.22, 0.48, 0.78, 1}; colorText[] = {1, 1, 1, 1}; action = "['setTab', ['new']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class TabExistingVehicles: RscButton { idc = 61001; text = "Manage existing..."; x = 0.245; y = 0.037; w = 0.22; h = 0.044; sizeEx = 0.03; colorBackground[] = {0.07, 0.11, 0.20, 1}; colorText[] = {0.92, 0.92, 0.95, 1}; action = "['setTab', ['existing']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class BtnDeleteWrecks: RscButton { idc = 61004; text = "Delete wrecks"; x = 0.475; y = 0.037; w = 0.22; h = 0.044; sizeEx = 0.028; colorBackground[] = {0.36, 0.22, 0.16, 1}; colorBackgroundActive[] = {0.44, 0.28, 0.20, 1}; colorFocused[] = {0.44, 0.28, 0.20, 1}; colorText[] = {0.98, 0.97, 0.95, 1}; action = "['deleteWrecks', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class BtnHeaderRefresh: RscButton { idc = 61003; text = "Refresh"; x = 0.805; y = 0.037; w = 0.092; h = 0.044; sizeEx = 0.028; colorBackground[] = {0.18, 0.19, 0.22, 1}; colorText[] = {0.9, 0.9, 0.92, 1}; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class HeaderBar: RscText { idc = 61900; x = 0.02; y = 0.025; w = 0.96; h = 0.065; colorBackground[] = FAC_COLOR_BG_HEADER; };
+        class TabNewVehicles: RscButton { idc = 61000; text = "Spawn new..."; x = 0.035; y = 0.037; w = 0.20; h = 0.044; sizeEx = 0.032; colorBackground[] = FAC_COLOR_TAB_ACTIVE; colorText[] = {1, 1, 1, 1}; action = "['setTab', ['new']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class TabExistingVehicles: RscButton { idc = 61001; text = "Manage existing..."; x = 0.245; y = 0.037; w = 0.22; h = 0.044; sizeEx = 0.03; colorBackground[] = FAC_COLOR_TAB_IDLE; colorText[] = {0.92, 0.92, 0.95, 1}; action = "['setTab', ['existing']] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class BtnDeleteWrecks: RscButton { idc = 61004; text = "Delete wrecks"; x = 0.475; y = 0.037; w = 0.22; h = 0.044; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BTN_WARN; colorBackgroundActive[] = FAC_COLOR_BTN_WARN; colorFocused[] = FAC_COLOR_BTN_WARN; colorText[] = {0.98, 0.97, 0.95, 1}; action = "['deleteWrecks', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class BtnHeaderRefresh: RscButton { idc = 61003; text = "Refresh"; x = 0.805; y = 0.037; w = 0.092; h = 0.044; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BTN_NEUTRAL; colorText[] = {0.9, 0.9, 0.92, 1}; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
         class BtnCloseX: RscButton { idc = 61002; text = "X"; x = 0.905; y = 0.037; w = 0.048; h = 0.044; sizeEx = 0.034; colorBackground[] = {0.55, 0.12, 0.12, 1}; colorText[] = {1, 1, 1, 1}; action = "closeDialog 0;"; };
         // --- Manage footer: right column only (left edge = Quick repair); after header for z-order ---
-        class DespawnBtn: RscButton { idc = 61202; show = 0; text = "Despawn selected"; x = 0.455; y = 0.818; w = 0.247; h = 0.046; sizeEx = 0.026; colorBackground[] = {0.36, 0.22, 0.16, 1}; colorBackgroundActive[] = {0.44, 0.28, 0.20, 1}; colorText[] = {0.98, 0.97, 0.95, 1}; action = "['despawn', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
-        class DuplicateBtn: RscButton { idc = 61232; show = 0; text = "Duplicate selected"; x = 0.713; y = 0.818; w = 0.247; h = 0.046; sizeEx = 0.026; colorBackground[] = {0.22, 0.48, 0.78, 1}; colorBackgroundActive[] = {0.28, 0.55, 0.88, 1}; colorFocused[] = {0.28, 0.55, 0.88, 1}; colorText[] = {1, 1, 1, 1}; action = "['duplicate', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class DespawnBtn: RscButton { idc = 61202; show = 0; text = "Despawn selected"; x = 0.455; y = 0.818; w = 0.247; h = 0.046; sizeEx = 0.026; colorBackground[] = FAC_COLOR_BTN_WARN; colorBackgroundActive[] = FAC_COLOR_BTN_WARN; colorText[] = {0.98, 0.97, 0.95, 1}; action = "['despawn', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
+        class DuplicateBtn: RscButton { idc = 61232; show = 0; text = "Duplicate selected"; x = 0.713; y = 0.818; w = 0.247; h = 0.046; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_ACTIVE; colorBackgroundActive[] = FAC_COLOR_BTN_PRIMARY_A; colorFocused[] = FAC_COLOR_BTN_PRIMARY_A; colorText[] = {1, 1, 1, 1}; action = "['duplicate', []] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]);"; };
     };
 };
 
-// Manage Missions dialog -- list + description, no map (map control caused crashes)
+// Manage Missions dialog -- tabbed: Browse | Active slots
 class RscDisplayMissions: RscDisplayEmpty {
     idd = 60002;
     movingEnable = 1;
     enableSimulation = 1;
     onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]); };";
     class controlsBackground {
-        // Keep the container tight to the bottom abort buttons (removes dead space below slot panels).
-        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.845; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
-        class Title: RscText { idc = -1; text = "MANAGE MISSIONS"; x = 0.02; y = 0.02; w = 0.96; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+        class Background: FACRscDialogBackground { x = 0.02; y = 0.025; w = 0.96; h = 0.845; };
+        class HeaderBar: FACRscHeaderBar { x = 0.02; y = 0.025; w = 0.96; h = 0.065; };
+        class MainPanel: FACRscMainPanel { idc = 60101; x = 0.03; y = 0.092; w = 0.94; h = 0.768; };
     };
     class controls {
-        // Global vs single helper - RscEdit multiline (StructuredText often draws nothing in this dialog)
-        class MissionRulesText: RscEdit { idc = 60133; x = 0.04; y = 0.078; w = 0.92; h = 0.155; style = 528; sizeEx = 0.03; colorText[] = {0.55, 0.82, 0.62, 1}; colorDisabled[] = {0.55, 0.82, 0.62, 1}; colorBackground[] = {0, 0, 0, 0}; colorSelection[] = {0.12, 0.28, 0.2, 0.35}; text = ""; };
-        class MissionLabel: RscText { idc = 60110; text = "Select mission"; x = 0.04; y = 0.238; w = 0.28; h = 0.028; sizeEx = 0.032; };
-        class MissionList: RscListBox { idc = 60120; x = 0.04; y = 0.268; w = 0.28; h = 0.285; rowHeight = 0.038; sizeEx = 0.032; onLBSelChanged = "['missionSelChanged', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]); ['updateButtons', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
-        class DescLabel: RscText { idc = 60111; text = "Description"; x = 0.33; y = 0.238; w = 0.30; h = 0.028; sizeEx = 0.032; };
-        class DescText: RscEdit { idc = 60131; x = 0.33; y = 0.268; w = 0.63; h = 0.285; style = 16; sizeEx = 0.032; colorText[] = {0.9, 0.9, 0.9, 1}; colorDisabled[] = {0.9, 0.9, 0.9, 1}; colorBackground[] = {0.08, 0.08, 0.12, 0.9}; text = ""; };
-        // Active slots: column headers (G1 / S1â€“S3) + status boxes (plain text via script)
-        class StartMissionBtn: RscButton { idc = 60121; text = "START MISSION"; x = 0.04; y = 0.562; w = 0.28; h = 0.045; sizeEx = 0.032; action = "['startMission', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
-        class ActiveHdrG1: RscText { idc = 60112; text = "G1 - Global [max 1]"; x = 0.04; y = 0.615; w = 0.224; h = 0.026; sizeEx = 0.028; colorText[] = {0.72, 0.86, 1, 1}; };
-        class ActiveHdrS1: RscText { idc = 60113; text = "S1 - Single"; x = 0.272; y = 0.615; w = 0.224; h = 0.026; sizeEx = 0.028; colorText[] = {0.72, 0.86, 1, 1}; };
-        class ActiveHdrS2: RscText { idc = 60114; text = "S2 - Single"; x = 0.504; y = 0.615; w = 0.224; h = 0.026; sizeEx = 0.028; colorText[] = {0.72, 0.86, 1, 1}; };
-        class ActiveHdrS3: RscText { idc = 60115; text = "S3 - Single"; x = 0.736; y = 0.615; w = 0.224; h = 0.026; sizeEx = 0.028; colorText[] = {0.72, 0.86, 1, 1}; };
-        class ActiveSlotGlobal: RscEdit { idc = 60130; x = 0.04; y = 0.641; w = 0.224; h = 0.16; style = 16; sizeEx = 0.032; colorText[] = {0.9, 0.9, 0.9, 1}; colorDisabled[] = {0.9, 0.9, 0.9, 1}; colorBackground[] = {0.06, 0.08, 0.07, 0.92}; text = ""; };
-        class ActiveSlotSingle1: RscEdit { idc = 60134; x = 0.272; y = 0.641; w = 0.224; h = 0.16; style = 16; sizeEx = 0.032; colorText[] = {0.9, 0.9, 0.9, 1}; colorDisabled[] = {0.9, 0.9, 0.9, 1}; colorBackground[] = {0.06, 0.07, 0.1, 0.92}; text = ""; };
-        class ActiveSlotSingle2: RscEdit { idc = 60135; x = 0.504; y = 0.641; w = 0.224; h = 0.16; style = 16; sizeEx = 0.032; colorText[] = {0.9, 0.9, 0.9, 1}; colorDisabled[] = {0.9, 0.9, 0.9, 1}; colorBackground[] = {0.06, 0.07, 0.1, 0.92}; text = ""; };
-        class ActiveSlotSingle3: RscEdit { idc = 60136; x = 0.736; y = 0.641; w = 0.224; h = 0.16; style = 16; sizeEx = 0.032; colorText[] = {0.9, 0.9, 0.9, 1}; colorDisabled[] = {0.9, 0.9, 0.9, 1}; colorBackground[] = {0.06, 0.07, 0.1, 0.92}; text = ""; };
-        class AbortSlotG1Btn: RscButton { idc = 60150; text = "Abort G1"; x = 0.04; y = 0.809; w = 0.224; h = 0.035; sizeEx = 0.026; action = "['abortSlot', ['G1']] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
-        class AbortSlotS1Btn: RscButton { idc = 60151; text = "Abort S1"; x = 0.272; y = 0.809; w = 0.224; h = 0.035; sizeEx = 0.026; action = "['abortSlot', ['S1']] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
-        class AbortSlotS2Btn: RscButton { idc = 60152; text = "Abort S2"; x = 0.504; y = 0.809; w = 0.224; h = 0.035; sizeEx = 0.026; action = "['abortSlot', ['S2']] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
-        class AbortSlotS3Btn: RscButton { idc = 60153; text = "Abort S3"; x = 0.736; y = 0.809; w = 0.224; h = 0.035; sizeEx = 0.026; action = "['abortSlot', ['S3']] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
-        class HeaderRefreshBtn: RscButton { idc = 60141; text = "Refresh"; x = 0.84; y = 0.028; w = 0.058; h = 0.042; sizeEx = 0.028; colorBackground[] = {0.18, 0.32, 0.48, 1}; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
-        class HeaderCloseBtn: RscButton { idc = 60142; text = "X"; x = 0.905; y = 0.028; w = 0.048; h = 0.042; sizeEx = 0.034; colorBackground[] = {0.35, 0.22, 0.22, 1}; action = "closeDialog 0;"; };
+        class TitleText: FACRscDialogTitle { text = "MANAGE MISSIONS"; x = 0.035; y = 0.032; w = 0.20; h = 0.052; };
+        class TabBrowse: FACRscTabBtnActive { idc = 60160; text = "Browse..."; x = 0.24; y = 0.036; w = 0.14; h = 0.046; action = "['setTab', ['browse']] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
+        class TabActive: FACRscTabBtn { idc = 60161; text = "Active slots..."; x = 0.385; y = 0.036; w = 0.16; h = 0.046; action = "['setTab', ['active']] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
+        class HeaderRefreshBtn: FACRscRefreshBtn { idc = 60141; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
+        class HeaderCloseBtn: FACRscCloseBtn { idc = 60142; y = 0.036; };
+        // Browse tab
+        class MissionRulesText: RscEdit { idc = 60133; x = 0.04; y = 0.102; w = 0.92; h = 0.13; style = 528; sizeEx = 0.028; colorText[] = FAC_COLOR_TEXT_HINT; colorDisabled[] = FAC_COLOR_TEXT_HINT; colorBackground[] = {0, 0, 0, 0}; text = ""; };
+        class MissionLabel: FACRscLabelMuted { idc = 60110; text = "Select mission"; x = 0.04; y = 0.242; w = 0.28; h = 0.028; sizeEx = 0.030; };
+        class MissionList: FACRscListDark { idc = 60120; x = 0.04; y = 0.272; w = 0.28; h = 0.46; rowHeight = 0.038; sizeEx = 0.030; onLBSelChanged = "['missionSelChanged', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]); ['updateButtons', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
+        class DescLabel: FACRscLabelMuted { idc = 60111; text = "Description"; x = 0.33; y = 0.242; w = 0.30; h = 0.028; sizeEx = 0.030; };
+        class DescText: RscListBoxVehicleDetails { idc = 60131; x = 0.33; y = 0.272; w = 0.63; h = 0.46; rowHeight = 0.032; sizeEx = 0.030; colorBackground[] = FAC_COLOR_BG_INPUT; colorText[] = FAC_COLOR_TEXT; };
+        class StartMissionBtn: FACRscPrimaryBtn { idc = 60121; text = "Start mission..."; x = 0.04; y = 0.748; w = 0.92; h = 0.045; sizeEx = 0.030; action = "['startMission', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
+        // Active slots tab
+        class ActiveHdrG1: FACRscSectionHdr { idc = 60112; show = 0; text = "G1 - Global [max 1]"; x = 0.04; y = 0.108; w = 0.224; h = 0.028; sizeEx = 0.028; };
+        class ActiveHdrS1: FACRscSectionHdr { idc = 60113; show = 0; text = "S1 - Single"; x = 0.272; y = 0.108; w = 0.224; h = 0.028; sizeEx = 0.028; };
+        class ActiveHdrS2: FACRscSectionHdr { idc = 60114; show = 0; text = "S2 - Single"; x = 0.504; y = 0.108; w = 0.224; h = 0.028; sizeEx = 0.028; };
+        class ActiveHdrS3: FACRscSectionHdr { idc = 60115; show = 0; text = "S3 - Single"; x = 0.736; y = 0.108; w = 0.224; h = 0.028; sizeEx = 0.028; };
+        class ActiveSlotGlobal: RscEdit { idc = 60130; show = 0; x = 0.04; y = 0.140; w = 0.224; h = 0.62; style = 16; sizeEx = 0.030; colorText[] = FAC_COLOR_TEXT; colorDisabled[] = FAC_COLOR_TEXT; colorBackground[] = FAC_COLOR_BG_INPUT; text = ""; };
+        class ActiveSlotSingle1: RscEdit { idc = 60134; show = 0; x = 0.272; y = 0.140; w = 0.224; h = 0.62; style = 16; sizeEx = 0.030; colorText[] = FAC_COLOR_TEXT; colorDisabled[] = FAC_COLOR_TEXT; colorBackground[] = FAC_COLOR_BG_INPUT; text = ""; };
+        class ActiveSlotSingle2: RscEdit { idc = 60135; show = 0; x = 0.504; y = 0.140; w = 0.224; h = 0.62; style = 16; sizeEx = 0.030; colorText[] = FAC_COLOR_TEXT; colorDisabled[] = FAC_COLOR_TEXT; colorBackground[] = FAC_COLOR_BG_INPUT; text = ""; };
+        class ActiveSlotSingle3: RscEdit { idc = 60136; show = 0; x = 0.736; y = 0.140; w = 0.224; h = 0.62; style = 16; sizeEx = 0.030; colorText[] = FAC_COLOR_TEXT; colorDisabled[] = FAC_COLOR_TEXT; colorBackground[] = FAC_COLOR_BG_INPUT; text = ""; };
+        class AbortSlotG1Btn: RscButton { idc = 60150; show = 0; text = "Abort G1"; x = 0.04; y = 0.772; w = 0.224; h = 0.040; sizeEx = 0.026; colorBackground[] = FAC_COLOR_BTN_WARN; action = "['abortSlot', ['G1']] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
+        class AbortSlotS1Btn: RscButton { idc = 60151; show = 0; text = "Abort S1"; x = 0.272; y = 0.772; w = 0.224; h = 0.040; sizeEx = 0.026; colorBackground[] = FAC_COLOR_BTN_WARN; action = "['abortSlot', ['S1']] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
+        class AbortSlotS2Btn: RscButton { idc = 60152; show = 0; text = "Abort S2"; x = 0.504; y = 0.772; w = 0.224; h = 0.040; sizeEx = 0.026; colorBackground[] = FAC_COLOR_BTN_WARN; action = "['abortSlot', ['S2']] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
+        class AbortSlotS3Btn: RscButton { idc = 60153; show = 0; text = "Abort S3"; x = 0.736; y = 0.772; w = 0.224; h = 0.040; sizeEx = 0.026; colorBackground[] = FAC_COLOR_BTN_WARN; action = "['abortSlot', ['S3']] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]);"; };
     };
 };
 
@@ -304,140 +330,148 @@ class RscDisplayScenario: RscDisplayEmpty {
     enableSimulation = 1;
     onLoad = "0 spawn { private _d = findDisplay 60003; if (!isNull _d) then { ['onLoad', [_d]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]); }; };";
     class controlsBackground {
-        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.96; colorBackground[] = {0.08, 0.08, 0.11, 0.97}; };
-        class HeaderBar: RscText { idc = 60803; x = 0.02; y = 0.025; w = 0.96; h = 0.065; colorBackground[] = {0.08, 0.14, 0.28, 1}; };
-        class MainPanel: RscText { idc = 60800; x = 0.03; y = 0.092; w = 0.94; h = 0.788; colorBackground[] = {0.03, 0.04, 0.07, 0.55}; };
+        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.96; colorBackground[] = FAC_COLOR_BG_PANEL; };
+        class HeaderBar: RscText { idc = 60803; show = 0; x = 0.02; y = 0.025; w = 0.96; h = 0.065; colorBackground[] = FAC_COLOR_BG_HEADER; };
+        class MainPanel: RscText { idc = 60800; x = 0.03; y = 0.092; w = 0.94; h = 0.788; colorBackground[] = FAC_COLOR_BG_MAIN; };
     };
     class controls {
         class TitleText: RscText { idc = -1; text = "MANAGE SCENARIO"; x = 0.035; y = 0.030; w = 0.24; h = 0.052; sizeEx = 0.038; colorText[] = {1, 1, 1, 1}; colorBackground[] = {0, 0, 0, 0}; };
-        class TabScenario: RscButton { idc = 60810; text = "Scenario..."; x = 0.26; y = 0.036; w = 0.125; h = 0.046; sizeEx = 0.032; colorBackground[] = {0.22, 0.48, 0.78, 1}; colorText[] = {1, 1, 1, 1}; action = "['setTab', ['scenario']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class TabWeather: RscButton { idc = 60813; text = "Weather..."; x = 0.385; y = 0.036; w = 0.125; h = 0.046; sizeEx = 0.032; colorBackground[] = {0.07, 0.11, 0.20, 1}; colorText[] = {0.92, 0.92, 0.95, 1}; action = "['setTab', ['weather']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class TabFactions: RscButton { idc = 60811; text = "Factions..."; x = 0.51; y = 0.036; w = 0.125; h = 0.046; sizeEx = 0.032; colorBackground[] = {0.07, 0.11, 0.20, 1}; colorText[] = {0.92, 0.92, 0.95, 1}; action = "['setTab', ['factions']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class TabAdmin: RscButton { idc = 60812; text = "Admin..."; x = 0.635; y = 0.036; w = 0.125; h = 0.046; sizeEx = 0.032; colorBackground[] = {0.07, 0.11, 0.20, 1}; colorText[] = {0.92, 0.92, 0.95, 1}; action = "['setTab', ['admin']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class HeaderRefreshBtn: RscButton { idc = 60332; text = "Refresh"; x = 0.805; y = 0.036; w = 0.092; h = 0.046; sizeEx = 0.032; colorBackground[] = {0.18, 0.19, 0.22, 1}; colorText[] = {0.9, 0.9, 0.92, 1}; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class TabScenario: RscButton { idc = 60810; text = "Scenario..."; x = 0.26; y = 0.036; w = 0.125; h = 0.046; sizeEx = 0.032; colorBackground[] = FAC_COLOR_TAB_ACTIVE; colorText[] = {1, 1, 1, 1}; action = "['setTab', ['scenario']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class TabWeather: RscButton { idc = 60813; text = "Weather..."; x = 0.385; y = 0.036; w = 0.125; h = 0.046; sizeEx = 0.032; colorBackground[] = FAC_COLOR_TAB_IDLE; colorText[] = {0.92, 0.92, 0.95, 1}; action = "['setTab', ['weather']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class TabFactions: RscButton { idc = 60811; text = "Factions..."; x = 0.51; y = 0.036; w = 0.125; h = 0.046; sizeEx = 0.032; colorBackground[] = FAC_COLOR_TAB_IDLE; colorText[] = {0.92, 0.92, 0.95, 1}; action = "['setTab', ['factions']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class TabAdmin: RscButton { idc = 60812; text = "Admin..."; x = 0.635; y = 0.036; w = 0.125; h = 0.046; sizeEx = 0.032; colorBackground[] = FAC_COLOR_TAB_IDLE; colorText[] = {0.92, 0.92, 0.95, 1}; action = "['setTab', ['admin']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class HeaderRefreshBtn: RscButton { idc = 60332; text = "Refresh"; x = 0.805; y = 0.036; w = 0.092; h = 0.046; sizeEx = 0.032; colorBackground[] = FAC_COLOR_BTN_NEUTRAL; colorText[] = {0.9, 0.9, 0.92, 1}; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
         class CloseHeaderBtn: RscButton { idc = 60331; text = "X"; x = 0.905; y = 0.036; w = 0.048; h = 0.046; sizeEx = 0.036; colorBackground[] = {0.55, 0.12, 0.12, 1}; colorText[] = {1, 1, 1, 1}; action = "closeDialog 0;"; };
         // --- Scenario tab (time + rules; weather controls on Weather tab) ---
-        class ScenHdr: RscText { idc = 60804; text = "Scenario"; x = 0.04; y = 0.100; w = 0.40; h = 0.030; sizeEx = 0.034; colorText[] = {0.85, 0.9, 1, 1}; };
-        class TimeLabel: RscText { idc = 60805; text = "Time (Zulu)"; x = 0.04; y = 0.134; w = 0.22; h = 0.024; sizeEx = 0.028; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class TimePrevBtn: RscButton { idc = 60820; text = "<"; x = 0.04; y = 0.162; w = 0.055; h = 0.044; sizeEx = 0.034; colorBackground[] = {0.18, 0.32, 0.48, 1}; action = "['timeStep', [-1]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class ScenHdr: RscText { idc = 60804; show = 0; text = "Scenario"; x = 0.04; y = 0.100; w = 0.40; h = 0.030; sizeEx = 0.034; colorText[] = FAC_COLOR_TEXT_HDR; };
+        class TimeLabel: RscText { idc = 60805; show = 0; text = "Time (Zulu)"; x = 0.04; y = 0.134; w = 0.22; h = 0.024; sizeEx = 0.028; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class TimePrevBtn: RscButton { idc = 60820; text = "<"; x = 0.04; y = 0.162; w = 0.055; h = 0.044; sizeEx = 0.034; colorBackground[] = FAC_COLOR_BTN_NEUTRAL; action = "['timeStep', [-1]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
         class TimeDisplay: RscText { idc = 60821; text = "1200"; x = 0.10; y = 0.162; w = 0.095; h = 0.046; sizeEx = 0.040; colorText[] = {0.95, 0.95, 1, 1}; colorBackground[] = {0.06, 0.08, 0.1, 0.9}; style = 2; };
-        class TimeNextBtn: RscButton { idc = 60822; text = ">"; x = 0.20; y = 0.162; w = 0.055; h = 0.044; sizeEx = 0.034; colorBackground[] = {0.18, 0.32, 0.48, 1}; action = "['timeStep', [1]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class TimeNextBtn: RscButton { idc = 60822; text = ">"; x = 0.20; y = 0.162; w = 0.055; h = 0.044; sizeEx = 0.034; colorBackground[] = FAC_COLOR_BTN_NEUTRAL; action = "['timeStep', [1]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
         // --- Weather tab (hidden until Weather... selected) ---
-        class WthrHdr: RscText { idc = 60902; show = 0; text = "Weather"; x = 0.04; y = 0.100; w = 0.90; h = 0.030; sizeEx = 0.034; colorText[] = {0.85, 0.9, 1, 1}; };
+        class WthrHdr: RscText { idc = 60902; show = 0; text = "Weather"; x = 0.04; y = 0.100; w = 0.90; h = 0.030; sizeEx = 0.034; colorText[] = FAC_COLOR_TEXT_HDR; };
         class WeatherPresetLabel: RscText { idc = 60806; show = 0; text = "Weather preset"; x = 0.04; y = 0.134; w = 0.24; h = 0.024; sizeEx = 0.028; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class WeatherPresetList: RscListBox { idc = 60302; show = 0; x = 0.04; y = 0.162; w = 0.22; h = 0.516; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = {0.06, 0.08, 0.1, 0.95}; onLBSelChanged = "['weatherPresetChanged', []] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class WeatherPresetList: RscListBox { idc = 60302; show = 0; x = 0.04; y = 0.162; w = 0.22; h = 0.600; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; onLBSelChanged = "['weatherPresetChanged', []] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
         class LblOC: RscText { idc = 60831; show = 0; text = "Overcast: 0%"; x = 0.28; y = 0.100; w = 0.66; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
         class SlOvercast: RscXSliderH { idc = 60830; show = 0; x = 0.28; y = 0.124; w = 0.66; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class LblRain: RscText { idc = 60833; show = 0; text = "Rain: 0%"; x = 0.28; y = 0.158; w = 0.66; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
-        class SlRain: RscXSliderH { idc = 60832; show = 0; x = 0.28; y = 0.182; w = 0.66; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class LblFog: RscText { idc = 60835; show = 0; text = "Fog: 0%"; x = 0.28; y = 0.216; w = 0.66; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
-        class SlFog: RscXSliderH { idc = 60834; show = 0; x = 0.28; y = 0.240; w = 0.66; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class LblWind: RscText { idc = 60837; show = 0; text = "Wind: 0%"; x = 0.28; y = 0.274; w = 0.32; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
-        class SlWindStr: RscXSliderH { idc = 60836; show = 0; x = 0.28; y = 0.298; w = 0.32; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class LblWindDir: RscText { idc = 60839; show = 0; text = "Wind dir: 0 deg"; x = 0.62; y = 0.274; w = 0.32; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
-        class SlWindDir: RscXSliderH { idc = 60838; show = 0; x = 0.62; y = 0.298; w = 0.32; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class LblGust: RscText { idc = 60841; show = 0; text = "Gusts: 0%"; x = 0.28; y = 0.332; w = 0.32; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
-        class SlGusts: RscXSliderH { idc = 60840; show = 0; x = 0.28; y = 0.356; w = 0.32; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class LblWaves: RscText { idc = 60843; show = 0; text = "Waves: 0%"; x = 0.62; y = 0.332; w = 0.32; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
-        class SlWaves: RscXSliderH { idc = 60842; show = 0; x = 0.62; y = 0.356; w = 0.32; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class ScenHelpBg: RscText { idc = 60941; show = 0; x = 0.28; y = 0.398; w = 0.66; h = 0.280; colorBackground[] = {0.05, 0.06, 0.09, 0.75}; };
+        class LblRain: RscText { idc = 60833; show = 0; text = "Rain: 0%"; x = 0.28; y = 0.168; w = 0.66; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
+        class SlRain: RscXSliderH { idc = 60832; show = 0; x = 0.28; y = 0.192; w = 0.66; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class LblFog: RscText { idc = 60835; show = 0; text = "Fog: 0%"; x = 0.28; y = 0.236; w = 0.66; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
+        class SlFog: RscXSliderH { idc = 60834; show = 0; x = 0.28; y = 0.260; w = 0.66; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class LblWind: RscText { idc = 60837; show = 0; text = "Wind: 0%"; x = 0.28; y = 0.304; w = 0.32; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
+        class SlWindStr: RscXSliderH { idc = 60836; show = 0; x = 0.28; y = 0.328; w = 0.32; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class LblWindDir: RscText { idc = 60839; show = 0; text = "Wind dir: 0 deg"; x = 0.62; y = 0.304; w = 0.32; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
+        class SlWindDir: RscXSliderH { idc = 60838; show = 0; x = 0.62; y = 0.328; w = 0.32; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class LblGust: RscText { idc = 60841; show = 0; text = "Gusts: 0%"; x = 0.28; y = 0.372; w = 0.32; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
+        class SlGusts: RscXSliderH { idc = 60840; show = 0; x = 0.28; y = 0.396; w = 0.32; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class LblWaves: RscText { idc = 60843; show = 0; text = "Waves: 0%"; x = 0.62; y = 0.372; w = 0.32; h = 0.022; sizeEx = 0.026; colorText[] = {0.88, 0.9, 0.95, 1}; };
+        class SlWaves: RscXSliderH { idc = 60842; show = 0; x = 0.62; y = 0.396; w = 0.32; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class ScenHelpBg: RscText { idc = 60941; show = 0; x = 0.28; y = 0.438; w = 0.66; h = 0.340; colorBackground[] = {0.05, 0.06, 0.09, 0.75}; };
         class ScenHelp: RscStructuredText {
             idc = 60940;
             show = 0;
-            x = 0.29; y = 0.404; w = 0.64; h = 0.268;
+            x = 0.29; y = 0.444; w = 0.64; h = 0.328;
             colorBackground[] = {0, 0, 0, 0};
             size = 0.028;
             text = "";
-            class Attributes { font = "PuristaMedium"; color = "#c8d8e8"; align = "left"; valign = "top"; shadow = 0; };
+            class Attributes { font = "PuristaMedium"; color = "#d8d8dc"; align = "left"; valign = "top"; shadow = 0; };
         };
-        class RulesHdr: RscText { idc = 60942; text = "Loadouts, time & redeploy"; x = 0.04; y = 0.218; w = 0.50; h = 0.026; sizeEx = 0.030; colorText[] = {0.85, 0.9, 1, 1}; };
-        class GearLimitLabel: RscText { idc = 60844; text = "Limit gear (BLUFOR)"; x = 0.04; y = 0.246; w = 0.22; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnGearOff: RscButton { idc = 60850; text = "Off"; x = 0.04; y = 0.274; w = 0.10; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['toggleLimitGear', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnGearOn: RscButton { idc = 60851; text = "On"; x = 0.145; y = 0.274; w = 0.10; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['toggleLimitGear', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class CivLabel: RscText { idc = 60845; text = "Ambient civs"; x = 0.26; y = 0.246; w = 0.20; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnCivOff: RscButton { idc = 60852; text = "Off"; x = 0.26; y = 0.274; w = 0.095; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['toggleCivs', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnCivOn: RscButton { idc = 60853; text = "On"; x = 0.36; y = 0.274; w = 0.095; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['toggleCivs', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class FACLabel: RscText { idc = 60846; text = "Preset loadouts only"; x = 0.47; y = 0.246; w = 0.22; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnFACOff: RscButton { idc = 60854; text = "Off"; x = 0.47; y = 0.274; w = 0.10; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['togglePreset', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnFACOn: RscButton { idc = 60855; text = "On"; x = 0.575; y = 0.274; w = 0.10; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['togglePreset', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class TsLabel: RscText { idc = 60847; text = "Time scale"; x = 0.70; y = 0.246; w = 0.24; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnTs1: RscButton { idc = 60856; text = "1x"; x = 0.70; y = 0.274; w = 0.075; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['setTimeScale', [1]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnTs5: RscButton { idc = 60857; text = "5x"; x = 0.78; y = 0.274; w = 0.075; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setTimeScale', [5]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnTs25: RscButton { idc = 60858; text = "25x"; x = 0.86; y = 0.274; w = 0.075; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setTimeScale', [25]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class CivTalkLabel: RscText { idc = 60340; text = "Talk to civilians"; x = 0.04; y = 0.320; w = 0.50; h = 0.022; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnCivTalkEveryone: RscButton { idc = 60341; text = "Everyone"; x = 0.04; y = 0.346; w = 0.44; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['toggleCivTalkInterp', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnCivTalkInterpOnly: RscButton { idc = 60342; text = "Interpreters only"; x = 0.49; y = 0.346; w = 0.44; h = 0.036; sizeEx = 0.026; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['toggleCivTalkInterp', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class IntelReadLabel: RscText { idc = 60343; text = "Who can read Intel?"; x = 0.04; y = 0.392; w = 0.50; h = 0.022; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnIntelReadEveryone: RscButton { idc = 60344; text = "Everyone"; x = 0.04; y = 0.418; w = 0.44; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['toggleIntelSpecialists', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnIntelReadSpecialists: RscButton { idc = 60345; text = "Specialists only"; x = 0.49; y = 0.418; w = 0.44; h = 0.036; sizeEx = 0.026; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['toggleIntelSpecialists', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class TpLabel: RscText { idc = 60848; text = "Redeploy (teleport to player)"; x = 0.04; y = 0.464; w = 0.45; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnTpAll: RscButton { idc = 60859; text = "All players"; x = 0.04; y = 0.490; w = 0.44; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['setTeleportMode', [0]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnTpSL: RscButton { idc = 60860; text = "SL only"; x = 0.49; y = 0.490; w = 0.44; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setTeleportMode', [1]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class TownsLabel: RscText { idc = 60862; text = "Number of target towns in Operation mission: 6"; x = 0.04; y = 0.528; w = 0.90; h = 0.022; sizeEx = 0.023; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class SlTowns: RscXSliderH { idc = 60861; x = 0.04; y = 0.552; w = 0.90; h = 0.026; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class ScenCivFootHdr: RscText { idc = 60950; text = "Ambient walking civs (global cap)"; x = 0.04; y = 0.588; w = 0.44; h = 0.022; sizeEx = 0.024; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class ScenCivDensHdr: RscText { idc = 60951; text = "Town foot-civ density scale"; x = 0.50; y = 0.588; w = 0.44; h = 0.022; sizeEx = 0.024; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class SlCivFootCap: RscXSliderH { idc = 60650; x = 0.04; y = 0.612; w = 0.44; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class SlCivDensity: RscXSliderH { idc = 60652; x = 0.50; y = 0.612; w = 0.44; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class LblCivFootCap: RscText { idc = 60651; text = "Max alive: 55 (0 = unlimited)"; x = 0.04; y = 0.642; w = 0.44; h = 0.024; sizeEx = 0.023; colorText[] = {0.75, 0.85, 1, 1}; };
-        class LblCivDensity: RscText { idc = 60653; text = "Scale: 1.00x (capital→local tiers)"; x = 0.50; y = 0.642; w = 0.44; h = 0.024; sizeEx = 0.023; colorText[] = {0.75, 0.85, 1, 1}; };
+        class RulesHdr: RscText { idc = 60942; text = "Loadouts, time & redeploy"; x = 0.04; y = 0.218; w = 0.44; h = 0.026; sizeEx = 0.030; colorText[] = FAC_COLOR_TEXT_HDR; };
+        class GearLimitLabel: RscText { idc = 60844; text = "Limit gear (BLUFOR)"; x = 0.04; y = 0.250; w = 0.20; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnGearOff: RscButton { idc = 60850; text = "Off"; x = 0.04; y = 0.276; w = 0.095; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['toggleLimitGear', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnGearOn: RscButton { idc = 60851; text = "On"; x = 0.14; y = 0.276; w = 0.095; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['toggleLimitGear', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class CivLabel: RscText { idc = 60845; text = "Ambient civs"; x = 0.25; y = 0.250; w = 0.19; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnCivOff: RscButton { idc = 60852; text = "Off"; x = 0.25; y = 0.276; w = 0.090; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['toggleCivs', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnCivOn: RscButton { idc = 60853; text = "On"; x = 0.345; y = 0.276; w = 0.090; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['toggleCivs', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FACLabel: RscText { idc = 60846; text = "Preset loadouts only"; x = 0.04; y = 0.318; w = 0.20; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnFACOff: RscButton { idc = 60854; text = "Off"; x = 0.04; y = 0.344; w = 0.095; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['togglePreset', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnFACOn: RscButton { idc = 60855; text = "On"; x = 0.14; y = 0.344; w = 0.095; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['togglePreset', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class TsLabel: RscText { idc = 60847; text = "Time scale"; x = 0.25; y = 0.318; w = 0.19; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnTs1: RscButton { idc = 60856; text = "1x"; x = 0.25; y = 0.344; w = 0.058; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['setTimeScale', [1]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnTs5: RscButton { idc = 60857; text = "5x"; x = 0.313; y = 0.344; w = 0.058; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setTimeScale', [5]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnTs25: RscButton { idc = 60858; text = "25x"; x = 0.376; y = 0.344; w = 0.059; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setTimeScale', [25]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class CivTalkLabel: RscText { idc = 60340; text = "Talk to civilians"; x = 0.04; y = 0.392; w = 0.44; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnCivTalkEveryone: RscButton { idc = 60341; text = "Everyone"; x = 0.04; y = 0.418; w = 0.195; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['toggleCivTalkInterp', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnCivTalkInterpOnly: RscButton { idc = 60342; text = "Interpreters only"; x = 0.24; y = 0.418; w = 0.195; h = 0.034; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['toggleCivTalkInterp', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class IntelReadLabel: RscText { idc = 60343; text = "Who can read Intel?"; x = 0.04; y = 0.464; w = 0.44; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnIntelReadEveryone: RscButton { idc = 60344; text = "Everyone"; x = 0.04; y = 0.490; w = 0.195; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['toggleIntelSpecialists', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnIntelReadSpecialists: RscButton { idc = 60345; text = "Specialists only"; x = 0.24; y = 0.490; w = 0.195; h = 0.034; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['toggleIntelSpecialists', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class TpLabel: RscText { idc = 60848; text = "Redeploy (teleport to player)"; x = 0.04; y = 0.536; w = 0.44; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnTpAll: RscButton { idc = 60859; text = "All players"; x = 0.04; y = 0.562; w = 0.195; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['setTeleportMode', [0]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnTpSL: RscButton { idc = 60860; show = 0; text = "SL only"; x = 0.24; y = 0.562; w = 0.195; h = 0.034; sizeEx = 0.027; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setTeleportMode', [1]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class ZoneHdr: RscText { idc = 60952; show = 0; text = "Operation & invasion zones"; x = 0.52; y = 0.100; w = 0.44; h = 0.028; sizeEx = 0.030; colorText[] = FAC_COLOR_TEXT_HDR; };
+        class TownsLabel: RscText { idc = 60862; show = 0; text = "Number of target towns in Operation mission: 6"; x = 0.52; y = 0.134; w = 0.44; h = 0.022; sizeEx = 0.024; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class SlTowns: RscXSliderH { idc = 60861; show = 0; x = 0.52; y = 0.162; w = 0.44; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class CivAmbientHdr: RscText { idc = 60953; show = 0; text = "Ambient civilians"; x = 0.52; y = 0.204; w = 0.44; h = 0.028; sizeEx = 0.030; colorText[] = FAC_COLOR_TEXT_HDR; };
+        class ScenCivFootHdr: RscText { idc = 60950; text = "Walking civ global cap"; x = 0.52; y = 0.238; w = 0.44; h = 0.022; sizeEx = 0.024; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class SlCivFootCap: RscXSliderH { idc = 60650; x = 0.52; y = 0.266; w = 0.44; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class LblCivFootCap: RscText { idc = 60651; text = "Max alive: 55 (0 = unlimited)"; x = 0.52; y = 0.298; w = 0.44; h = 0.022; sizeEx = 0.023; colorText[] = {0.75, 0.85, 1, 1}; };
+        class ScenCivDensHdr: RscText { idc = 60951; text = "Town foot-civ density scale"; x = 0.52; y = 0.332; w = 0.44; h = 0.022; sizeEx = 0.024; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class SlCivDensity: RscXSliderH { idc = 60652; x = 0.52; y = 0.360; w = 0.44; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class LblCivDensity: RscText { idc = 60653; text = "Scale: 1.00x (capital→local tiers)"; x = 0.52; y = 0.392; w = 0.44; h = 0.022; sizeEx = 0.023; colorText[] = {0.75, 0.85, 1, 1}; };
         // --- Factions tab (hidden by default) ---
-        class FacHdr: RscText { idc = 60910; show = 0; text = "Enemy AI"; x = 0.04; y = 0.100; w = 0.50; h = 0.030; sizeEx = 0.034; colorText[] = {0.85, 0.9, 1, 1}; };
-        class FacPatrolLbl: RscText { idc = 60911; show = 0; text = "Patrols"; x = 0.04; y = 0.134; w = 0.14; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnPatOff: RscButton { idc = 60870; show = 0; text = "Off"; x = 0.04; y = 0.162; w = 0.095; h = 0.038; sizeEx = 0.028; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['togglePatrols', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnPatOn: RscButton { idc = 60871; show = 0; text = "On"; x = 0.14; y = 0.162; w = 0.095; h = 0.038; sizeEx = 0.028; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['togglePatrols', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class FacSkillLbl: RscText { idc = 60912; show = 0; text = "AI skill"; x = 0.26; y = 0.134; w = 0.50; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class SlEnemySkill: RscXSliderH { idc = 60872; show = 0; x = 0.26; y = 0.162; w = 0.70; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class FacSkillVal: RscText { idc = 60873; show = 0; text = "0.20"; x = 0.26; y = 0.192; w = 0.24; h = 0.022; sizeEx = 0.026; colorText[] = {0.75, 0.85, 1, 1}; };
-        class FacRoutLbl: RscText { idc = 60913; show = 0; text = "Routing"; x = 0.04; y = 0.218; w = 0.14; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnRoutOff: RscButton { idc = 60874; show = 0; text = "Off"; x = 0.04; y = 0.246; w = 0.095; h = 0.038; sizeEx = 0.028; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['toggleRouting', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnRoutOn: RscButton { idc = 60875; show = 0; text = "On"; x = 0.14; y = 0.246; w = 0.095; h = 0.038; sizeEx = 0.028; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['toggleRouting', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class FacAaaLbl: RscText { idc = 60914; show = 0; text = "AAA"; x = 0.26; y = 0.218; w = 0.70; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnAaaNone: RscButton { idc = 60876; show = 0; text = "Off"; x = 0.26; y = 0.246; w = 0.155; h = 0.038; sizeEx = 0.026; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['setAAA', ['Off']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnAaaLight: RscButton { idc = 60877; show = 0; text = "AAA"; x = 0.42; y = 0.246; w = 0.155; h = 0.038; sizeEx = 0.026; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setAAA', ['AAA']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnAaaMed: RscButton { idc = 60878; show = 0; text = "AAA+MANPADS"; x = 0.58; y = 0.246; w = 0.235; h = 0.038; sizeEx = 0.023; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setAAA', ['AAA+MANPADS']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacHdr: RscText { idc = 60910; show = 0; text = "Enemy AI"; x = 0.04; y = 0.100; w = 0.50; h = 0.030; sizeEx = 0.034; colorText[] = FAC_COLOR_TEXT_HDR; };
+        class FacPatrolLbl: RscText { idc = 60911; show = 0; text = "Patrols"; x = 0.04; y = 0.134; w = 0.10; h = 0.022; sizeEx = 0.025; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnPatOff: RscButton { idc = 60870; show = 0; text = "Off"; x = 0.04; y = 0.158; w = 0.075; h = 0.034; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['togglePatrols', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnPatOn: RscButton { idc = 60871; show = 0; text = "On"; x = 0.118; y = 0.158; w = 0.075; h = 0.034; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['togglePatrols', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacSkillLbl: RscText { idc = 60912; show = 0; text = "AI skill"; x = 0.20; y = 0.134; w = 0.12; h = 0.022; sizeEx = 0.025; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class SlEnemySkill: RscXSliderH { idc = 60872; show = 0; x = 0.20; y = 0.158; w = 0.22; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacSkillVal: RscText { idc = 60873; show = 0; text = "0.20"; x = 0.43; y = 0.158; w = 0.08; h = 0.028; sizeEx = 0.026; colorText[] = {0.75, 0.85, 1, 1}; };
+        class FacRoutLbl: RscText { idc = 60913; show = 0; text = "Routing"; x = 0.52; y = 0.134; w = 0.10; h = 0.022; sizeEx = 0.025; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnRoutOff: RscButton { idc = 60874; show = 0; text = "Off"; x = 0.52; y = 0.158; w = 0.075; h = 0.034; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['toggleRouting', [false]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnRoutOn: RscButton { idc = 60875; show = 0; text = "On"; x = 0.598; y = 0.158; w = 0.075; h = 0.034; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['toggleRouting', [true]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacAaaLbl: RscText { idc = 60914; show = 0; text = "AAA"; x = 0.69; y = 0.134; w = 0.08; h = 0.022; sizeEx = 0.025; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnAaaNone: RscButton { idc = 60876; show = 0; text = "Off"; x = 0.69; y = 0.158; w = 0.075; h = 0.034; sizeEx = 0.024; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['setAAA', ['Off']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnAaaLight: RscButton { idc = 60877; show = 0; text = "AAA"; x = 0.768; y = 0.158; w = 0.075; h = 0.034; sizeEx = 0.024; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setAAA', ['AAA']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnAaaMed: RscButton { idc = 60878; show = 0; text = "AAA+MANPADS"; x = 0.846; y = 0.158; w = 0.11; h = 0.034; sizeEx = 0.020; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setAAA', ['AAA+MANPADS']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
         class BtnAaaMan: RscButton { idc = 60879; show = 0; text = ""; x = -10; y = -10; w = 0; h = 0; sizeEx = 0.024; colorBackground[] = {0.07, 0.11, 0.20, 0}; action = ""; };
         class BtnAaaHeavy: RscButton { idc = 60880; show = 0; text = ""; x = -10; y = -10; w = 0; h = 0; sizeEx = 0.026; colorBackground[] = {0.07, 0.11, 0.20, 0}; action = ""; };
-        class FacAtLbl: RscText { idc = 60915; show = 0; text = "OPFOR AT"; x = 0.04; y = 0.292; w = 0.25; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnAtNorm: RscButton { idc = 60881; show = 0; text = "Normal"; x = 0.04; y = 0.320; w = 0.22; h = 0.038; sizeEx = 0.026; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['setLauncher', ['Normal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnAtRed: RscButton { idc = 60882; show = 0; text = "Reduced"; x = 0.265; y = 0.320; w = 0.22; h = 0.038; sizeEx = 0.026; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setLauncher', ['Reduced']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnAtMin: RscButton { idc = 60883; show = 0; text = "Minimal"; x = 0.49; y = 0.320; w = 0.22; h = 0.038; sizeEx = 0.026; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setLauncher', ['Minimal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnAtNone: RscButton { idc = 60884; show = 0; text = "None"; x = 0.715; y = 0.320; w = 0.22; h = 0.038; sizeEx = 0.026; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setLauncher', ['None']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class FacPopLbl: RscText { idc = 60916; show = 0; text = "OPFOR population"; x = 0.04; y = 0.368; w = 0.35; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnPopAuto: RscButton { idc = 60885; show = 0; text = "Auto"; x = 0.04; y = 0.396; w = 0.105; h = 0.036; sizeEx = 0.025; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['setOpforPop', ['Auto']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnPopVL: RscButton { idc = 60886; show = 0; text = "V.Low"; x = 0.15; y = 0.396; w = 0.105; h = 0.036; sizeEx = 0.025; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setOpforPop', ['VeryLow']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnPopLow: RscButton { idc = 60887; show = 0; text = "Low"; x = 0.26; y = 0.396; w = 0.095; h = 0.036; sizeEx = 0.025; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setOpforPop', ['Low']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnPopNorm: RscButton { idc = 60888; show = 0; text = "Normal"; x = 0.36; y = 0.396; w = 0.115; h = 0.036; sizeEx = 0.025; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setOpforPop', ['Normal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnPopHigh: RscButton { idc = 60889; show = 0; text = "High"; x = 0.48; y = 0.396; w = 0.095; h = 0.036; sizeEx = 0.025; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setOpforPop', ['High']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnPopVH: RscButton { idc = 60890; show = 0; text = "V.High"; x = 0.58; y = 0.396; w = 0.105; h = 0.036; sizeEx = 0.025; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setOpforPop', ['VeryHigh']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnPopIns: RscButton { idc = 60891; show = 0; text = "Insane"; x = 0.69; y = 0.396; w = 0.105; h = 0.036; sizeEx = 0.025; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setOpforPop', ['Insane']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class FacAirLbl: RscText { idc = 60917; show = 0; text = "OPFOR air"; x = 0.04; y = 0.442; w = 0.22; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnAirOff: RscButton { idc = 60892; show = 0; text = "Off"; x = 0.04; y = 0.470; w = 0.14; h = 0.038; sizeEx = 0.027; colorBackground[] = {0.22, 0.48, 0.78, 1}; action = "['setOpforAir', ['Off']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnAirLow: RscButton { idc = 60893; show = 0; text = "Low"; x = 0.185; y = 0.470; w = 0.14; h = 0.038; sizeEx = 0.027; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setOpforAir', ['Low']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnAirMed: RscButton { idc = 60894; show = 0; text = "Medium"; x = 0.33; y = 0.470; w = 0.16; h = 0.038; sizeEx = 0.027; colorBackground[] = {0.07, 0.11, 0.20, 1}; action = "['setOpforAir', ['Medium']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class FacFactionHdr: RscText { idc = 60918; show = 0; text = "Factions (spawns)"; x = 0.04; y = 0.518; w = 0.55; h = 0.026; sizeEx = 0.032; colorText[] = {0.85, 0.9, 1, 1}; };
-        class FriendlyLabel: RscText { idc = 60919; show = 0; text = "Friendly"; x = 0.04; y = 0.548; w = 0.30; h = 0.022; sizeEx = 0.028; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class FriendlyList: RscListBox { idc = 60311; show = 0; x = 0.04; y = 0.572; w = 0.30; h = 0.268; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = {0.06, 0.08, 0.1, 0.95}; onLBSelChanged = "['factionListChanged', [60311]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class EnemyLabel: RscText { idc = 60920; show = 0; text = "Enemy"; x = 0.35; y = 0.548; w = 0.30; h = 0.022; sizeEx = 0.028; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class EnemyList: RscListBox { idc = 60310; show = 0; x = 0.35; y = 0.572; w = 0.30; h = 0.268; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = {0.06, 0.08, 0.1, 0.95}; onLBSelChanged = "['factionListChanged', [60310]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class CivListLabel: RscText { idc = 60921; show = 0; text = "Civilian"; x = 0.66; y = 0.548; w = 0.298; h = 0.022; sizeEx = 0.028; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class CivList: RscListBox { idc = 60312; show = 0; x = 0.66; y = 0.572; w = 0.298; h = 0.268; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = {0.06, 0.08, 0.1, 0.95}; onLBSelChanged = "['factionListChanged', [60312]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacAtLbl: RscText { idc = 60915; show = 0; text = "OPFOR AT"; x = 0.04; y = 0.206; w = 0.25; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnAtNorm: RscButton { idc = 60881; show = 0; text = "Normal"; x = 0.04; y = 0.230; w = 0.22; h = 0.034; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['setLauncher', ['Normal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnAtRed: RscButton { idc = 60882; show = 0; text = "Reduced"; x = 0.265; y = 0.230; w = 0.22; h = 0.034; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setLauncher', ['Reduced']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnAtMin: RscButton { idc = 60883; show = 0; text = "Minimal"; x = 0.49; y = 0.230; w = 0.22; h = 0.034; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setLauncher', ['Minimal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnAtNone: RscButton { idc = 60884; show = 0; text = "None"; x = 0.715; y = 0.230; w = 0.22; h = 0.034; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setLauncher', ['None']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacPopLbl: RscText { idc = 60916; show = 0; text = "OPFOR population"; x = 0.04; y = 0.278; w = 0.35; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnPopVL: RscButton { idc = 60886; show = 0; text = "V.Low (0.25x)"; x = 0.04; y = 0.302; w = 0.132; h = 0.032; sizeEx = 0.021; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforPop', ['VeryLow']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnPopLow: RscButton { idc = 60887; show = 0; text = "Low (0.5x)"; x = 0.183; y = 0.302; w = 0.132; h = 0.032; sizeEx = 0.021; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforPop', ['Low']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnPopNorm: RscButton { idc = 60888; show = 0; text = "Normal (1x)"; x = 0.326; y = 0.302; w = 0.132; h = 0.032; sizeEx = 0.021; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforPop', ['Normal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnPopHigh: RscButton { idc = 60889; show = 0; text = "High (1.5x)"; x = 0.469; y = 0.302; w = 0.132; h = 0.032; sizeEx = 0.021; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforPop', ['High']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnPopVH: RscButton { idc = 60890; show = 0; text = "V.High (2x)"; x = 0.612; y = 0.302; w = 0.132; h = 0.032; sizeEx = 0.021; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforPop', ['VeryHigh']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnPopIns: RscButton { idc = 60891; show = 0; text = "Insane (4x)"; x = 0.755; y = 0.302; w = 0.132; h = 0.032; sizeEx = 0.021; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforPop', ['Insane']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacAirLbl: RscText { idc = 60917; show = 0; text = "OPFOR air"; x = 0.04; y = 0.348; w = 0.22; h = 0.022; sizeEx = 0.025; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnAirOff: RscButton { idc = 60892; show = 0; text = "Off"; x = 0.04; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['setOpforAir', ['Off']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnAirLow: RscButton { idc = 60893; show = 0; text = "Low"; x = 0.152; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforAir', ['Low']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnAirNorm: RscButton { idc = 60894; show = 0; text = "Normal"; x = 0.264; y = 0.372; w = 0.115; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforAir', ['Normal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnAirHigh: RscButton { idc = 60957; show = 0; text = "High"; x = 0.386; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforAir', ['High']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacDroneLbl: RscText { idc = 60958; show = 0; text = "OPFOR drones"; x = 0.52; y = 0.348; w = 0.22; h = 0.022; sizeEx = 0.025; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnDroneOff: RscButton { idc = 60959; show = 0; text = "Off"; x = 0.52; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['setOpforDrone', ['Off']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnDroneLow: RscButton { idc = 60960; show = 0; text = "Low"; x = 0.632; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforDrone', ['Low']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnDroneNorm: RscButton { idc = 60961; show = 0; text = "Normal"; x = 0.744; y = 0.372; w = 0.115; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforDrone', ['Normal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnDroneHigh: RscButton { idc = 60962; show = 0; text = "High"; x = 0.866; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforDrone', ['High']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacFactionHdr: RscText { idc = 60918; show = 0; text = "Factions (spawns)"; x = 0.04; y = 0.412; w = 0.55; h = 0.026; sizeEx = 0.030; colorText[] = FAC_COLOR_TEXT_HDR; };
+        class FriendlyLabel: RscText { idc = 60919; show = 0; text = "Friendly"; x = 0.04; y = 0.442; w = 0.30; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class FriendlyList: RscListBox { idc = 60311; show = 0; x = 0.04; y = 0.466; w = 0.30; h = 0.360; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; onLBSelChanged = "['factionListChanged', [60311]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class EnemyLabel: RscText { idc = 60920; show = 0; text = "Enemy"; x = 0.35; y = 0.442; w = 0.30; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class EnemyList: RscListBox { idc = 60310; show = 0; x = 0.35; y = 0.466; w = 0.30; h = 0.360; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; onLBSelChanged = "['factionListChanged', [60310]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class CivListLabel: RscText { idc = 60921; show = 0; text = "Civilian"; x = 0.66; y = 0.442; w = 0.298; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class CivList: RscListBox { idc = 60312; show = 0; x = 0.66; y = 0.466; w = 0.298; h = 0.360; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; onLBSelChanged = "['factionListChanged', [60312]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
         // --- Admin tab (full-width stack, even vertical rhythm) ---
-        class AdmHdr: RscText { idc = 60930; show = 0; text = "Admin tools"; x = 0.06; y = 0.104; w = 0.88; h = 0.032; sizeEx = 0.036; colorText[] = {0.85, 0.9, 1, 1}; };
+        class AdmHdr: RscText { idc = 60930; show = 0; text = "Admin tools"; x = 0.06; y = 0.104; w = 0.88; h = 0.032; sizeEx = 0.036; colorText[] = FAC_COLOR_TEXT_HDR; };
         class AdmSub: RscText { idc = 60943; show = 0; text = "Destructive actions require a second click (Are you sure?)"; x = 0.06; y = 0.138; w = 0.88; h = 0.024; sizeEx = 0.026; colorText[] = {0.7, 0.75, 0.82, 1}; };
-        class AdmMakeZeus: RscButton { idc = 60895; show = 0; text = "Make me Zeus"; x = 0.06; y = 0.172; w = 0.43; h = 0.052; sizeEx = 0.032; colorBackground[] = {0.2, 0.4, 0.62, 1}; action = "['adminCleanup', ['makeZeus']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class AdmMakeZeus: RscButton { idc = 60895; show = 0; text = "Make me Zeus"; x = 0.06; y = 0.172; w = 0.43; h = 0.052; sizeEx = 0.032; colorBackground[] = FAC_COLOR_BTN_PRIMARY; action = "['adminCleanup', ['makeZeus']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
         class AdmRmZeus: RscButton { idc = 60896; show = 0; text = "Remove my Zeus"; x = 0.51; y = 0.172; w = 0.43; h = 0.052; sizeEx = 0.030; colorBackground[] = {0.25, 0.22, 0.22, 1}; action = "['adminCleanup', ['removeMyZeus']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class AdmTpAll: RscButton { idc = 60897; show = 0; text = "Teleport all players to HQ (teleportBase)"; x = 0.06; y = 0.236; w = 0.88; h = 0.052; sizeEx = 0.028; colorBackground[] = {0.2, 0.4, 0.62, 1}; action = "['adminCleanup', ['teleportAllToBase']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class AdmStopMusic: RscButton { idc = 60898; show = 0; text = "Stop all music (jukebox)"; x = 0.06; y = 0.300; w = 0.88; h = 0.052; sizeEx = 0.028; colorBackground[] = {0.2, 0.4, 0.62, 1}; action = "['adminCleanup', ['stopAllMusic']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class AdmAbort: RscButton { idc = 60899; show = 0; text = "Abort all missions"; x = 0.06; y = 0.364; w = 0.88; h = 0.052; sizeEx = 0.030; colorBackground[] = {0.52, 0.14, 0.14, 1}; action = "['adminCleanup', ['abortAllMissions']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class AdmDespCiv: RscButton { idc = 60900; show = 0; text = "Despawn civilians"; x = 0.06; y = 0.428; w = 0.88; h = 0.052; sizeEx = 0.030; colorBackground[] = {0.52, 0.14, 0.14, 1}; action = "['adminCleanup', ['despawnCivilians']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class AdmDespOpf: RscButton { idc = 60901; show = 0; text = "Despawn OPFOR"; x = 0.06; y = 0.492; w = 0.88; h = 0.052; sizeEx = 0.030; colorBackground[] = {0.52, 0.14, 0.14, 1}; action = "['adminCleanup', ['despawnOpfor']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class ApplyBtn: RscButton { idc = 60320; text = "Apply and Close"; x = 0.04; y = 0.894; w = 0.92; h = 0.054; sizeEx = 0.040; colorBackground[] = {0.2, 0.4, 0.62, 1}; action = "['apply', []] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class AdmTpAll: RscButton { idc = 60897; show = 0; text = "Teleport all players to HQ (teleportBase)"; x = 0.06; y = 0.236; w = 0.88; h = 0.052; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BTN_PRIMARY; action = "['adminCleanup', ['teleportAllToBase']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class AdmStopMusic: RscButton { idc = 60898; show = 0; text = "Stop all music (jukebox)"; x = 0.06; y = 0.300; w = 0.88; h = 0.052; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BTN_PRIMARY; action = "['adminCleanup', ['stopAllMusic']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class AdmAbort: RscButton { idc = 60899; show = 0; text = "Abort all missions"; x = 0.06; y = 0.364; w = 0.88; h = 0.052; sizeEx = 0.030; colorBackground[] = FAC_COLOR_BTN_DANGER; action = "['adminCleanup', ['abortAllMissions']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class AdmDespCiv: RscButton { idc = 60900; show = 0; text = "Despawn civilians"; x = 0.06; y = 0.428; w = 0.88; h = 0.052; sizeEx = 0.030; colorBackground[] = FAC_COLOR_BTN_DANGER; action = "['adminCleanup', ['despawnCivilians']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class AdmDespOpf: RscButton { idc = 60901; show = 0; text = "Despawn OPFOR"; x = 0.06; y = 0.492; w = 0.88; h = 0.052; sizeEx = 0.030; colorBackground[] = FAC_COLOR_BTN_DANGER; action = "['adminCleanup', ['despawnOpfor']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class ApplyBtn: RscButton { idc = 60320; text = "Apply and Close"; x = 0.04; y = 0.902; w = 0.92; h = 0.050; sizeEx = 0.036; colorBackground[] = FAC_COLOR_BTN_PRIMARY; action = "['apply', []] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
     };
 };
 
 // Loadout GUI: single definition in rsc\LoadoutDialog.hpp (createDialog "RscDisplayLoadout", idd 60200).
 #include "rsc\LoadoutDialog.hpp"
+#include "rsc\RecruitDialog.hpp"
 #include "rsc\CivTalkDialog.hpp"
 
 // Jukebox GUI: single definition in rsc\JukeboxDialog.hpp (createDialog "RscDisplayJukebox", idd 60400).
@@ -445,104 +479,133 @@ class RscDisplayScenario: RscDisplayEmpty {
 #include "rsc\SniperDialog.hpp"
 #include "rsc\RangeDialog.hpp"
 
-// CQB killhouse — Scenario-style header/sections; threat toggles, density combo, civilian toggle pair
+// CQB killhouse — tabbed: Setup | Info
 class RscDisplayCQB: RscDisplayEmpty {
     idd = 60500;
     movingEnable = 1;
     enableSimulation = 1;
     onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]); };";
     class controlsBackground {
-        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.96; colorBackground[] = {0.08, 0.08, 0.11, 0.97}; };
-        class HeaderBar: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.056; colorBackground[] = {0.12, 0.22, 0.38, 1}; };
-        class SettingsSectionBg: RscText { idc = -1; x = 0.03; y = 0.082; w = 0.42; h = 0.43; colorBackground[] = {0.06, 0.06, 0.09, 0.55}; };
-        class InfoSectionBg: RscText { idc = -1; x = 0.465; y = 0.082; w = 0.505; h = 0.60; colorBackground[] = {0.06, 0.06, 0.09, 0.55}; };
+        class Background: FACRscDialogBackground { x = 0.02; y = 0.025; w = 0.96; h = 0.94; };
+        class HeaderBar: FACRscHeaderBar { x = 0.02; y = 0.025; w = 0.96; h = 0.065; };
+        class MainPanel: FACRscMainPanel { x = 0.03; y = 0.092; w = 0.94; h = 0.858; };
     };
     class controls {
-        class TitleText: RscText { idc = -1; text = "CQB TRAINING — KILLHOUSE"; x = 0.035; y = 0.028; w = 0.70; h = 0.042; sizeEx = 0.038; colorText[] = {1, 1, 1, 1}; colorBackground[] = {0, 0, 0, 0}; };
-        class HeaderRefreshBtn: RscButton { idc = 60514; text = "Refresh"; x = 0.84; y = 0.028; w = 0.058; h = 0.042; sizeEx = 0.028; colorBackground[] = {0.18, 0.32, 0.48, 1}; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
-        class CloseHeaderBtn: RscButton { idc = 60509; text = "X"; x = 0.905; y = 0.028; w = 0.048; h = 0.042; sizeEx = 0.034; colorBackground[] = {0.35, 0.22, 0.22, 1}; action = "closeDialog 0;"; };
-        class SettingsHdr: RscText { idc = -1; text = "Drill setup"; x = 0.04; y = 0.088; w = 0.38; h = 0.026; sizeEx = 0.030; colorText[] = {0.85, 0.9, 1, 1}; };
-        class ThreatLabel: RscText { idc = -1; text = "Threat type"; x = 0.04; y = 0.120; w = 0.38; h = 0.022; sizeEx = 0.024; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnThreatTargets: RscButton { idc = 60510; text = "Pop-up targets"; x = 0.04; y = 0.144; w = 0.195; h = 0.038; sizeEx = 0.028; colorBackground[] = {0.2, 0.4, 0.62, 1}; action = "['setThreat', ['targets']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
-        class BtnThreatLive: RscButton { idc = 60511; text = "Live OPFOR"; x = 0.245; y = 0.144; w = 0.195; h = 0.038; sizeEx = 0.028; colorBackground[] = {0.10, 0.12, 0.16, 1}; action = "['setThreat', ['enemies']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
-        class DensityLabel: RscText { idc = -1; text = "Spawn chance (per position)"; x = 0.04; y = 0.195; w = 0.38; h = 0.022; sizeEx = 0.024; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnDensityLow: RscButton { idc = 60515; text = "Low (20%)"; x = 0.04; y = 0.218; w = 0.125; h = 0.038; sizeEx = 0.026; colorBackground[] = {0.2, 0.4, 0.62, 1}; action = "['setDensity', ['Low']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
-        class BtnDensityMed: RscButton { idc = 60516; text = "Medium (33%)"; x = 0.172; y = 0.218; w = 0.128; h = 0.038; sizeEx = 0.026; colorBackground[] = {0.10, 0.12, 0.16, 1}; action = "['setDensity', ['Medium']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
-        class BtnDensityHigh: RscButton { idc = 60517; text = "High (50%)"; x = 0.307; y = 0.218; w = 0.123; h = 0.038; sizeEx = 0.026; colorBackground[] = {0.10, 0.12, 0.16, 1}; action = "['setDensity', ['High']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
-        class CivLabel: RscText { idc = -1; text = "Civilian mix (live OPFOR only)"; x = 0.04; y = 0.270; w = 0.38; h = 0.022; sizeEx = 0.024; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnCivOff: RscButton { idc = 60512; text = "Off"; x = 0.04; y = 0.294; w = 0.195; h = 0.038; sizeEx = 0.028; colorBackground[] = {0.2, 0.4, 0.62, 1}; action = "['setCiv', [false]] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
-        class BtnCivOn: RscButton { idc = 60513; text = "On (15%)"; x = 0.245; y = 0.294; w = 0.195; h = 0.038; sizeEx = 0.028; colorBackground[] = {0.10, 0.12, 0.16, 1}; action = "['setCiv', [true]] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
-        class LastResultLabel: RscText { idc = -1; text = "Last run"; x = 0.04; y = 0.348; w = 0.09; h = 0.022; sizeEx = 0.024; colorText[] = {0.85, 0.9, 1, 1}; };
-        class LastResultText: RscText { idc = 60508; text = ""; x = 0.04; y = 0.368; w = 0.39; h = 0.048; sizeEx = 0.023; colorText[] = {0.55, 0.95, 0.7, 1}; style = 16; };
-        class InfoHdr: RscText { idc = -1; text = "How it works"; x = 0.475; y = 0.088; w = 0.46; h = 0.026; sizeEx = 0.030; colorText[] = {0.85, 0.9, 1, 1}; };
+        class TitleText: FACRscDialogTitle { text = "CQB TRAINING"; x = 0.035; y = 0.032; w = 0.18; h = 0.052; };
+        class TabSetup: FACRscTabBtnActive { idc = 60520; text = "Setup..."; x = 0.22; y = 0.036; w = 0.14; h = 0.046; action = "['setTab', ['setup']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class TabInfo: FACRscTabBtn { idc = 60521; text = "Info..."; x = 0.365; y = 0.036; w = 0.12; h = 0.046; action = "['setTab', ['info']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class HeaderRefreshBtn: FACRscRefreshBtn { idc = 60514; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class HeaderCloseBtn: FACRscCloseBtn { idc = 60509; y = 0.036; };
+        class SettingsHdr: FACRscSectionHdr { idc = 60522; text = "Drill setup"; x = 0.04; y = 0.105; w = 0.92; h = 0.028; };
+        class ThreatLabel: FACRscLabelMuted { idc = 60523; text = "Threat type"; x = 0.04; y = 0.138; w = 0.40; h = 0.022; };
+        class BtnThreatTargets: FACRscPrimaryBtn { idc = 60510; text = "Pop-up targets"; x = 0.04; y = 0.162; w = 0.22; h = 0.038; sizeEx = 0.028; action = "['setThreat', ['targets']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class BtnThreatLive: RscButton { idc = 60511; text = "Live OPFOR"; x = 0.27; y = 0.162; w = 0.22; h = 0.038; sizeEx = 0.028; colorBackground[] = FAC_COLOR_TAB_IDLE; colorText[] = FAC_COLOR_TEXT; action = "['setThreat', ['enemies']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class DensityLabel: FACRscLabelMuted { idc = 60524; text = "Spawn chance (per position)"; x = 0.04; y = 0.212; w = 0.40; h = 0.022; };
+        class BtnDensityLow: FACRscPrimaryBtn { idc = 60515; text = "Low (20%)"; x = 0.04; y = 0.236; w = 0.14; h = 0.038; sizeEx = 0.026; action = "['setDensity', ['Low']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class BtnDensityMed: RscButton { idc = 60516; text = "Medium (33%)"; x = 0.185; y = 0.236; w = 0.145; h = 0.038; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_IDLE; colorText[] = FAC_COLOR_TEXT; action = "['setDensity', ['Medium']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class BtnDensityHigh: RscButton { idc = 60517; text = "High (50%)"; x = 0.335; y = 0.236; w = 0.14; h = 0.038; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_IDLE; colorText[] = FAC_COLOR_TEXT; action = "['setDensity', ['High']] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class CivLabel: FACRscLabelMuted { idc = 60525; text = "Civilian mix (live OPFOR only)"; x = 0.04; y = 0.286; w = 0.40; h = 0.022; };
+        class BtnCivOff: FACRscPrimaryBtn { idc = 60512; text = "Off"; x = 0.04; y = 0.310; w = 0.22; h = 0.038; sizeEx = 0.028; action = "['setCiv', [false]] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class BtnCivOn: RscButton { idc = 60513; text = "On (15%)"; x = 0.27; y = 0.310; w = 0.22; h = 0.038; sizeEx = 0.028; colorBackground[] = FAC_COLOR_TAB_IDLE; colorText[] = FAC_COLOR_TEXT; action = "['setCiv', [true]] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class LastResultLabel: FACRscSectionHdr { idc = 60526; text = "Last run"; x = 0.04; y = 0.362; w = 0.12; h = 0.024; sizeEx = 0.024; };
+        class LastResultText: RscText { idc = 60508; text = ""; x = 0.04; y = 0.386; w = 0.92; h = 0.048; sizeEx = 0.024; colorText[] = FAC_COLOR_TEXT_OK; style = 16; };
         class InfoPanel: RscStructuredText {
-            idc = 60507;
-            x = 0.475; y = 0.118; w = 0.485; h = 0.545;
-            colorBackground[] = {0.04, 0.05, 0.07, 0.88};
+            idc = 60507; show = 0;
+            x = 0.04; y = 0.118; w = 0.92; h = 0.72;
+            colorBackground[] = FAC_COLOR_BG_SECTION;
             text = "";
             size = 0.026;
-            class Attributes { font = "PuristaMedium"; color = "#d2e8dc"; align = "left"; valign = "top"; shadow = 0; };
+            class Attributes { font = "PuristaMedium"; color = "#d8d8dc"; align = "left"; valign = "top"; shadow = 0; };
         };
-        class DrillBtn: RscButton { idc = 60504; text = "Start drill"; x = 0.04; y = 0.748; w = 0.92; h = 0.052; sizeEx = 0.036; colorBackground[] = {0.2, 0.4, 0.62, 1}; action = "['drill', []] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
+        class DrillBtn: FACRscPrimaryBtn { idc = 60504; text = "Start drill"; x = 0.04; y = 0.868; w = 0.92; h = 0.052; sizeEx = 0.034; action = "['drill', []] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]);"; };
     };
 };
 
-// Teleport / Fast Travel - destination buttons + details (opened from teleportBoard_1..8)
+// Teleport / Fast Travel — tabbed chrome; destination tiles in SQF
 class RscDisplayTeleport: RscDisplayEmpty {
     idd = 60600;
     movingEnable = 1;
     enableSimulation = 1;
     onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]); };";
     class controlsBackground {
-        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.96; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
-        class Title: RscText { idc = -1; text = "FAST TRAVEL"; x = 0.02; y = 0.02; w = 0.96; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+        class Background: FACRscDialogBackground { x = 0.02; y = 0.025; w = 0.96; h = 0.94; };
+        class HeaderBar: FACRscHeaderBar { x = 0.02; y = 0.025; w = 0.96; h = 0.065; };
+        class MainPanel: FACRscMainPanel { x = 0.03; y = 0.092; w = 0.94; h = 0.858; };
     };
     class controls {
-        class HeaderRefreshBtn: RscButton { idc = 60607; text = "Refresh"; x = 0.84; y = 0.028; w = 0.058; h = 0.042; sizeEx = 0.028; colorBackground[] = {0.18, 0.32, 0.48, 1}; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
-        class HeaderCloseBtn: RscButton { idc = 60608; text = "X"; x = 0.905; y = 0.028; w = 0.048; h = 0.042; sizeEx = 0.034; colorBackground[] = {0.35, 0.22, 0.22, 1}; action = "closeDialog 0;"; };
-        class DestLabel: RscText { idc = -1; text = "Destinations — click twice to travel"; x = 0.04; y = 0.088; w = 0.92; h = 0.028; sizeEx = 0.026; colorText[] = {0.85, 0.88, 0.92, 1}; };
-        // Destination tiles created in SQF (idc 60620+) — grid fills area below label, above footer; see TeleportGui.sqf.
-        class TeleportPlayerBtn: RscButton { idc = 60606; text = "TELEPORT TO PLAYER..."; x = 0.04; y = 0.785; w = 0.92; h = 0.055; sizeEx = 0.034; colorText[] = {1, 1, 1, 1}; colorBackground[] = {0.18, 0.32, 0.48, 1}; action = "['openPlayers', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
+        class TitleText: FACRscDialogTitle { text = "FAST TRAVEL"; x = 0.035; y = 0.032; w = 0.20; h = 0.052; };
+        class TabDest: FACRscTabBtnActive { idc = 60609; text = "Destinations..."; x = 0.24; y = 0.036; w = 0.17; h = 0.046; action = "['setTab', ['dest']] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
+        class TabPlayers: FACRscTabBtn { idc = 60619; text = "Players..."; x = 0.415; y = 0.036; w = 0.14; h = 0.046; action = "['setTab', ['players']] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
+        class HeaderRefreshBtn: FACRscRefreshBtn { idc = 60607; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
+        class HeaderCloseBtn: FACRscCloseBtn { idc = 60608; y = 0.036; };
+        class DestLabel: FACRscLabelMuted { idc = 60605; text = "Destinations — click twice to travel"; x = 0.04; y = 0.108; w = 0.92; h = 0.032; sizeEx = 0.026; };
+        class PlayerListLabel: FACRscLabelMuted { idc = 60616; show = 0; text = "Active players"; x = 0.04; y = 0.108; w = 0.44; h = 0.028; sizeEx = 0.028; };
+        class PlayerList: FACRscListDark {
+            idc = 60611; show = 0;
+            x = 0.04; y = 0.142; w = 0.44; h = 0.64;
+            rowHeight = 0.038; sizeEx = 0.030;
+            onLBSelChanged = "['selChangedPlayers', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);";
+            onLBDblClick = "['teleportPlayer', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);";
+        };
+        class PlayerDetailsTitle: RscStructuredText {
+            idc = 60614; show = 0;
+            x = 0.50; y = 0.142; w = 0.46; h = 0.075;
+            colorBackground[] = FAC_COLOR_BG_SECTION;
+            size = 0.04;
+            text = "";
+        };
+        class PlayerDetailsBody: RscStructuredText {
+            idc = 60615; show = 0;
+            x = 0.50; y = 0.222; w = 0.46; h = 0.56;
+            colorBackground[] = FAC_COLOR_BG_SECTION;
+            size = 0.034;
+            text = "";
+        };
+        class TeleportPlayerBtn: FACRscPrimaryBtn { idc = 60612; show = 0; text = "Teleport"; x = 0.04; y = 0.868; w = 0.30; h = 0.052; sizeEx = 0.032; action = "['teleportPlayer', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
     };
 };
 
+// Legacy idd — kept for description.ext / test suite references; tabs now live in RscDisplayTeleport (60600).
 class RscDisplayTeleportPlayers: RscDisplayEmpty {
     idd = 60610;
     movingEnable = 1;
     enableSimulation = 1;
     onLoad = "[] spawn { sleep 0.01; ['onLoadPlayers', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]); };";
     class controlsBackground {
-        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.96; colorBackground[] = {0.1, 0.1, 0.15, 0.95}; };
-        class Title: RscText { idc = -1; text = "TELEPORT TO PLAYER"; x = 0.02; y = 0.02; w = 0.96; h = 0.05; colorBackground[] = {0.2, 0.4, 0.6, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.05; };
+        class Background: FACRscDialogBackground { x = 0.02; y = 0.025; w = 0.96; h = 0.94; };
+        class HeaderBar: FACRscHeaderBar { x = 0.02; y = 0.025; w = 0.96; h = 0.065; };
+        class MainPanel: FACRscMainPanel { x = 0.03; y = 0.092; w = 0.94; h = 0.858; };
     };
     class controls {
-        class HeaderRefreshBtn: RscButton { idc = 60617; text = "Refresh"; x = 0.84; y = 0.028; w = 0.058; h = 0.042; sizeEx = 0.028; colorBackground[] = {0.18, 0.32, 0.48, 1}; action = "['headerRefreshPlayers', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
-        class HeaderCloseBtn: RscButton { idc = 60618; text = "X"; x = 0.905; y = 0.028; w = 0.048; h = 0.042; sizeEx = 0.034; colorBackground[] = {0.35, 0.22, 0.22, 1}; action = "closeDialog 0;"; };
-        class PlayerListLabel: RscText { idc = -1; text = "Active players:"; x = 0.04; y = 0.09; w = 0.44; h = 0.03; sizeEx = 0.032; colorText[] = {0.9, 0.9, 0.9, 1}; };
-        class PlayerList: RscListBox {
+        class TitleText: FACRscDialogTitle { text = "FAST TRAVEL"; x = 0.035; y = 0.032; w = 0.20; h = 0.052; };
+        class TabDest: FACRscTabBtn { idc = 60628; text = "Destinations..."; x = 0.24; y = 0.036; w = 0.17; h = 0.046; action = "['backToMain', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
+        class TabPlayers: FACRscTabBtnActive { idc = 60629; text = "Players..."; x = 0.415; y = 0.036; w = 0.14; h = 0.046; action = ""; };
+        class HeaderRefreshBtn: FACRscRefreshBtn { idc = 60617; action = "['headerRefreshPlayers', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
+        class HeaderCloseBtn: FACRscCloseBtn { idc = 60618; y = 0.036; };
+        class PlayerListLabel: FACRscLabelMuted { idc = -1; text = "Active players"; x = 0.04; y = 0.105; w = 0.44; h = 0.028; sizeEx = 0.028; };
+        class PlayerList: FACRscListDark {
             idc = 60611;
-            x = 0.04; y = 0.125; w = 0.44; h = 0.64;
-            rowHeight = 0.038; sizeEx = 0.033;
-            colorBackground[] = {0.06, 0.06, 0.09, 0.85};
+            x = 0.04; y = 0.138; w = 0.44; h = 0.64;
+            rowHeight = 0.038; sizeEx = 0.030;
             onLBSelChanged = "['selChangedPlayers', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);";
             onLBDblClick = "['teleportPlayer', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);";
         };
         class PlayerDetailsTitle: RscStructuredText {
             idc = 60614;
-            x = 0.50; y = 0.125; w = 0.46; h = 0.075;
-            colorBackground[] = {0.06, 0.06, 0.09, 0.85};
+            x = 0.50; y = 0.138; w = 0.46; h = 0.075;
+            colorBackground[] = FAC_COLOR_BG_SECTION;
             size = 0.04;
             text = "";
         };
         class PlayerDetailsBody: RscStructuredText {
             idc = 60615;
-            x = 0.50; y = 0.205; w = 0.46; h = 0.56;
-            colorBackground[] = {0.06, 0.06, 0.09, 0.85};
+            x = 0.50; y = 0.218; w = 0.46; h = 0.56;
+            colorBackground[] = FAC_COLOR_BG_SECTION;
             size = 0.034;
             text = "";
         };
-        class TeleportPlayerBtn: RscButton { idc = 60612; text = "TELEPORT"; x = 0.04; y = 0.785; w = 0.30; h = 0.055; sizeEx = 0.038; action = "['teleportPlayer', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
-        class BackBtn: RscButton { idc = 60613; text = "BACK"; x = 0.35; y = 0.785; w = 0.30; h = 0.055; sizeEx = 0.038; action = "['backToMain', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
+        class TeleportPlayerBtn: FACRscPrimaryBtn { idc = 60612; text = "Teleport"; x = 0.04; y = 0.868; w = 0.30; h = 0.052; sizeEx = 0.032; action = "['teleportPlayer', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
+        class BackBtn: RscButton { idc = 60613; text = "Back"; x = 0.35; y = 0.868; w = 0.30; h = 0.052; sizeEx = 0.032; colorBackground[] = FAC_COLOR_BTN_NEUTRAL; colorText[] = FAC_COLOR_TEXT; action = "['backToMain', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
     };
 };
 
@@ -553,28 +616,28 @@ class RscDisplayFires: RscDisplayEmpty {
     enableSimulation = 1;
     onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]); };";
     class controlsBackground {
-        class Background: RscText { idc = -1; x = 0.02; y = 0.025; w = 0.96; h = 0.905; colorBackground[] = {0.05, 0.06, 0.09, 0.98}; };
+        class Background: RscText { idc = -1; x = 0.02; y = 0.025; w = 0.96; h = 0.905; colorBackground[] = FAC_COLOR_BG_PANEL; };
     };
     class controls {
-        class FiresMainPanel: RscText { idc = -1; x = 0.03; y = 0.098; w = 0.94; h = 0.825; colorBackground[] = {0.03, 0.04, 0.07, 0.55}; };
+        class FiresMainPanel: RscText { idc = -1; x = 0.03; y = 0.098; w = 0.94; h = 0.825; colorBackground[] = FAC_COLOR_BG_MAIN; };
         // --- Left: range + drill (drill hidden until Timed drill tab; positions from script) ---
-        class PieceLabel: RscText { idc = 60743; text = "Approved piece"; x = 0.04; y = 0.108; w = 0.395; h = 0.022; sizeEx = 0.024; colorText[] = {0.65, 0.68, 0.75, 1}; };
+        class PieceLabel: RscText { idc = 60743; text = "Approved piece"; x = 0.04; y = 0.108; w = 0.395; h = 0.022; sizeEx = 0.024; colorText[] = FAC_COLOR_TEXT_MUTED; };
         class PieceList: RscListBox {
             idc = 60703;
             x = 0.04; y = 0.133; w = 0.395; h = 0.34;
             rowHeight = 0.034; sizeEx = 0.027;
-            colorBackground[] = {0.02, 0.03, 0.05, 0.95};
-            colorSelectedBackground[] = {0.15, 0.35, 0.55, 0.75};
+            colorBackground[] = FAC_COLOR_BG_LIST;
+            colorSelectedBackground[] = FAC_COLOR_LIST_SEL;
             onLBSelChanged = "['selChanged', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);";
         };
         class DrillSectionLabel: RscText { idc = 60746; show = 0; text = "Timed drill"; x = 0.04; y = 0.382; w = 0.44; h = 0.024; sizeEx = 0.024; colorText[] = {0.72, 0.78, 0.88, 1}; };
-        class DrillMinLabel: RscText { idc = 60747; show = 0; text = "Min m"; x = 0.04; y = 0.412; w = 0.09; h = 0.022; sizeEx = 0.021; colorText[] = {0.65, 0.68, 0.75, 1}; };
-        class DrillMinEdit: RscEdit { idc = 60731; show = 0; x = 0.135; y = 0.408; w = 0.11; h = 0.032; sizeEx = 0.024; text = "600"; colorBackground[] = {0.02, 0.03, 0.05, 0.95}; };
-        class DrillMaxLabel: RscText { idc = 60748; show = 0; text = "Max m"; x = 0.255; y = 0.412; w = 0.09; h = 0.022; sizeEx = 0.021; colorText[] = {0.65, 0.68, 0.75, 1}; };
-        class DrillMaxEdit: RscEdit { idc = 60732; show = 0; x = 0.35; y = 0.408; w = 0.11; h = 0.032; sizeEx = 0.024; text = "1200"; colorBackground[] = {0.02, 0.03, 0.05, 0.95}; };
+        class DrillMinLabel: RscText { idc = 60747; show = 0; text = "Min m"; x = 0.04; y = 0.412; w = 0.09; h = 0.022; sizeEx = 0.021; colorText[] = FAC_COLOR_TEXT_MUTED; };
+        class DrillMinEdit: RscEdit { idc = 60731; show = 0; x = 0.135; y = 0.408; w = 0.11; h = 0.032; sizeEx = 0.024; text = "600"; colorBackground[] = FAC_COLOR_BG_LIST; };
+        class DrillMaxLabel: RscText { idc = 60748; show = 0; text = "Max m"; x = 0.255; y = 0.412; w = 0.09; h = 0.022; sizeEx = 0.021; colorText[] = FAC_COLOR_TEXT_MUTED; };
+        class DrillMaxEdit: RscEdit { idc = 60732; show = 0; x = 0.35; y = 0.408; w = 0.11; h = 0.032; sizeEx = 0.024; text = "1200"; colorBackground[] = FAC_COLOR_BG_LIST; };
         class DrillTargetCombo: FACRscCombo {
             idc = 60733; show = 0; x = 0.04; y = 0.448; w = 0.44; h = 0.034;
-            sizeEx = 0.022; colorBackground[] = {0.02, 0.03, 0.05, 0.95};
+            sizeEx = 0.022; colorBackground[] = FAC_COLOR_BG_LIST;
             maxHistoryDelay = 0; shadow = 0;
             wholeHeight = 0.35;
             arrowEmpty = "\a3\ui_f\data\gui\cfg\scrollbar\arrowempty_ca.paa";
@@ -582,10 +645,10 @@ class RscDisplayFires: RscDisplayEmpty {
             soundSelect[] = {"", 0, 0}; soundExpand[] = {"", 0, 0}; soundCollapse[] = {"", 0, 0};
             class ComboScrollBar { color[] = {1, 1, 1, 0.6}; colorActive[] = {1, 1, 1, 1}; colorDisabled[] = {1, 1, 1, 0.3}; thumb = "\a3\ui_f\data\gui\cfg\scrollbar\thumb_ca.paa"; arrowFull = "\a3\ui_f\data\gui\cfg\scrollbar\arrowfull_ca.paa"; arrowEmpty = "\a3\ui_f\data\gui\cfg\scrollbar\arrowempty_ca.paa"; border = 0; size = 0; };
         };
-        class DrillBearingLabel: RscText { idc = 60738; show = 0; text = "Bearing / randomization"; x = 0.04; y = 0.490; w = 0.44; h = 0.022; sizeEx = 0.021; colorText[] = {0.65, 0.68, 0.75, 1}; };
+        class DrillBearingLabel: RscText { idc = 60738; show = 0; text = "Bearing / randomization"; x = 0.04; y = 0.490; w = 0.44; h = 0.022; sizeEx = 0.021; colorText[] = FAC_COLOR_TEXT_MUTED; };
         class DrillBearingCombo: FACRscCombo {
             idc = 60737; show = 0; x = 0.04; y = 0.515; w = 0.44; h = 0.034;
-            sizeEx = 0.022; colorBackground[] = {0.02, 0.03, 0.05, 0.95};
+            sizeEx = 0.022; colorBackground[] = FAC_COLOR_BG_LIST;
             maxHistoryDelay = 0; shadow = 0;
             wholeHeight = 0.35;
             arrowEmpty = "\a3\ui_f\data\gui\cfg\scrollbar\arrowempty_ca.paa";
@@ -606,28 +669,28 @@ class RscDisplayFires: RscDisplayEmpty {
             colorBackground[] = {0.02, 0.03, 0.06, 0.55};
             text = "Select the occupied range slot the drill runs on.\n\nMin / Max: random distance band (meters) from the pit for the drill point. The server picks dry land at least 500 m from the main base (FADE_basePos), up to 25 samples; widen the band or use random bearing if start fails.\n\nThe server spawns a locked civilian vehicle there, plus a vanilla burning metal barrel (smoke/flame) offset from the car.\n\nOptional: set FADE_firesDrillFireClass in Config for an extra marker object (e.g. campfire); leave empty for barrel only.\n\nBearing: along pit axis or random approach.\n\nDrill completes when the car takes damage (near impact) or is destroyed. End drill cancels and removes spawned props.";
         };
-        class SlotLabel: RscText { idc = 60744; text = "Slots (spawned / location)"; x = 0.04; y = 0.481; w = 0.395; h = 0.022; sizeEx = 0.024; colorText[] = {0.65, 0.68, 0.75, 1}; };
+        class SlotLabel: RscText { idc = 60744; text = "Slots (spawned / location)"; x = 0.04; y = 0.481; w = 0.395; h = 0.022; sizeEx = 0.024; colorText[] = FAC_COLOR_TEXT_MUTED; };
         class SlotList: RscListBox {
             idc = 60701;
             x = 0.04; y = 0.506; w = 0.395; h = 0.285;
             rowHeight = 0.032; sizeEx = 0.026;
-            colorBackground[] = {0.02, 0.03, 0.05, 0.95};
-            colorSelectedBackground[] = {0.15, 0.35, 0.55, 0.75};
+            colorBackground[] = FAC_COLOR_BG_LIST;
+            colorSelectedBackground[] = FAC_COLOR_LIST_SEL;
             onLBSelChanged = "['slotSelChanged', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);";
         };
-        class SpawnBtn: RscButton { idc = 60706; text = "Spawn at slot"; x = 0.04; y = 0.842; w = 0.192; h = 0.046; sizeEx = 0.030; colorBackground[] = {0.22, 0.48, 0.78, 1}; colorBackgroundActive[] = {0.28, 0.55, 0.88, 1}; colorText[] = {1, 1, 1, 1}; action = "['spawn', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
-        class DespawnBtn: RscButton { idc = 60707; text = "Despawn at slot"; x = 0.243; y = 0.842; w = 0.192; h = 0.046; sizeEx = 0.028; colorBackground[] = {0.36, 0.22, 0.16, 1}; colorBackgroundActive[] = {0.44, 0.28, 0.20, 1}; colorText[] = {0.98, 0.97, 0.95, 1}; action = "['despawn', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
+        class SpawnBtn: RscButton { idc = 60706; text = "Spawn at slot"; x = 0.04; y = 0.842; w = 0.192; h = 0.046; sizeEx = 0.030; colorBackground[] = FAC_COLOR_TAB_ACTIVE; colorBackgroundActive[] = FAC_COLOR_BTN_PRIMARY_A; colorText[] = {1, 1, 1, 1}; action = "['spawn', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
+        class DespawnBtn: RscButton { idc = 60707; text = "Despawn at slot"; x = 0.243; y = 0.842; w = 0.192; h = 0.046; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BTN_WARN; colorBackgroundActive[] = FAC_COLOR_BTN_WARN; colorText[] = {0.98, 0.97, 0.95, 1}; action = "['despawn', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
         // --- Right column (range tab) ---
         class PiecePreview: RscPicture { idc = 60704; x = 0.455; y = 0.108; w = 0.505; h = 0.24; text = ""; style = 48; colorBackground[] = {0.12, 0.13, 0.16, 1}; };
-        class DetailsLabel: RscText { idc = 60753; text = "Details"; x = 0.455; y = 0.358; w = 0.505; h = 0.022; sizeEx = 0.024; colorText[] = {0.65, 0.68, 0.75, 1}; };
+        class DetailsLabel: RscText { idc = 60753; text = "Details"; x = 0.455; y = 0.358; w = 0.505; h = 0.022; sizeEx = 0.024; colorText[] = FAC_COLOR_TEXT_MUTED; };
         class PieceDetails: RscText { idc = 60705; x = 0.455; y = 0.382; w = 0.505; h = 0.056; sizeEx = 0.026; style = 16; colorText[] = {0.95, 0.95, 0.95, 1}; text = ""; };
-        class AmmoLabel: RscText { idc = 60754; text = "Ammo type"; x = 0.455; y = 0.444; w = 0.505; h = 0.022; sizeEx = 0.024; colorText[] = {0.65, 0.68, 0.75, 1}; };
+        class AmmoLabel: RscText { idc = 60754; text = "Ammo type"; x = 0.455; y = 0.444; w = 0.505; h = 0.022; sizeEx = 0.024; colorText[] = FAC_COLOR_TEXT_MUTED; };
         class AmmoList: RscListBox {
             idc = 60710;
             x = 0.455; y = 0.468; w = 0.505; h = 0.225;
             rowHeight = 0.030; sizeEx = 0.025;
             colorBackground[] = {0.02, 0.02, 0.04, 0.98};
-            colorSelectedBackground[] = {0.15, 0.35, 0.55, 0.75};
+            colorSelectedBackground[] = FAC_COLOR_LIST_SEL;
             onLBSelChanged = "['ammoSelChanged', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);";
         };
         class AmmoAmountLabel: RscText { idc = 60712; text = "Total rounds: 0"; x = 0.455; y = 0.701; w = 0.505; h = 0.022; sizeEx = 0.024; colorText[] = {0.88, 0.90, 0.94, 1}; };
@@ -641,99 +704,103 @@ class RscDisplayFires: RscDisplayEmpty {
             text = "Apply ammo load";
             x = 0.455; y = 0.756; w = 0.247; h = 0.038;
             sizeEx = 0.027;
-            colorBackground[] = {0.22, 0.48, 0.78, 1};
-            colorBackgroundActive[] = {0.28, 0.55, 0.88, 1};
+            colorBackground[] = FAC_COLOR_TAB_ACTIVE;
+            colorBackgroundActive[] = FAC_COLOR_BTN_PRIMARY_A;
             colorBackgroundDisabled[] = {0.14, 0.16, 0.20, 0.85};
             colorText[] = {1, 1, 1, 1};
             action = "['ammoApply', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);";
         };
         class RearmBtn: RscButton { idc = 60708; text = "Full rearm"; x = 0.713; y = 0.756; w = 0.247; h = 0.038; sizeEx = 0.027; colorBackground[] = {0.20, 0.21, 0.24, 1}; colorBackgroundActive[] = {0.28, 0.30, 0.34, 1}; colorText[] = {0.95, 0.95, 0.96, 1}; action = "['rearm', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
-        class SpawnAmmoTruckBtn: RscButton { idc = 60714; text = "Spawn ammo truck"; x = 0.455; y = 0.802; w = 0.505; h = 0.042; sizeEx = 0.030; colorBackground[] = {0.18, 0.32, 0.48, 1}; colorBackgroundActive[] = {0.24, 0.40, 0.58, 1}; colorText[] = {1, 1, 1, 1}; action = "['spawnAmmoTruck', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
-        class FiresDroneStatus: RscText { idc = 60724; text = ""; x = 0.455; y = 0.850; w = 0.505; h = 0.028; sizeEx = 0.022; style = 0; colorText[] = {0.72, 0.86, 0.98, 1}; };
-        class FiresDroneMapBtn: RscButton { idc = 60721; text = "Place drone (map click)"; x = 0.455; y = 0.882; w = 0.247; h = 0.034; sizeEx = 0.026; colorBackground[] = {0.15, 0.28, 0.42, 1}; colorBackgroundActive[] = {0.20, 0.36, 0.52, 1}; colorText[] = {1, 1, 1, 1}; action = "['droneMapPlace', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
-        class FiresDroneDespawnBtn: RscButton { idc = 60722; text = "Despawn drone"; x = 0.713; y = 0.882; w = 0.247; h = 0.034; sizeEx = 0.026; colorBackground[] = {0.32, 0.22, 0.18, 1}; colorBackgroundActive[] = {0.40, 0.28, 0.22, 1}; colorText[] = {0.98, 0.97, 0.95, 1}; action = "['droneDespawn', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
+        class SpawnAmmoTruckBtn: RscButton { idc = 60714; text = "Spawn ammo truck"; x = 0.455; y = 0.802; w = 0.505; h = 0.042; sizeEx = 0.030; colorBackground[] = FAC_COLOR_BTN_NEUTRAL; colorBackgroundActive[] = FAC_COLOR_BTN_PRIMARY; colorText[] = {1, 1, 1, 1}; action = "['spawnAmmoTruck', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
+        class FiresDroneStatus: RscText { idc = 60724; text = ""; x = 0.455; y = 0.850; w = 0.505; h = 0.028; sizeEx = 0.022; style = 0; colorText[] = FAC_COLOR_TEXT_MUTED; };
+        class FiresDroneMapBtn: RscButton { idc = 60721; text = "Place drone (map click)"; x = 0.455; y = 0.882; w = 0.247; h = 0.034; sizeEx = 0.026; colorBackground[] = FAC_COLOR_BTN_NEUTRAL; colorBackgroundActive[] = FAC_COLOR_BTN_PRIMARY; colorText[] = {1, 1, 1, 1}; action = "['droneMapPlace', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
+        class FiresDroneDespawnBtn: RscButton { idc = 60722; text = "Despawn drone"; x = 0.713; y = 0.882; w = 0.247; h = 0.034; sizeEx = 0.026; colorBackground[] = FAC_COLOR_BTN_WARN; colorBackgroundActive[] = FAC_COLOR_BTN_WARN; colorText[] = {0.98, 0.97, 0.95, 1}; action = "['droneDespawn', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
         // Header (drawn on top): tabs like VehicleGui spawn/manage
-        class FiresHeaderBar: RscText { idc = -1; x = 0.02; y = 0.025; w = 0.96; h = 0.065; colorBackground[] = {0.08, 0.14, 0.28, 1}; };
+        class FiresHeaderBar: RscText { idc = -1; x = 0.02; y = 0.025; w = 0.96; h = 0.065; colorBackground[] = FAC_COLOR_BG_HEADER; };
         class FiresTitle: RscText { idc = -1; text = "FIRES RANGE - ARTILLERY"; x = 0.035; y = 0.032; w = 0.28; h = 0.052; sizeEx = 0.032; colorText[] = {1, 1, 1, 1}; colorBackground[] = {0, 0, 0, 0}; style = 0; };
-        class FiresTabRangeBtn: RscButton { idc = 60740; text = "Range"; x = 0.325; y = 0.036; w = 0.11; h = 0.042; sizeEx = 0.028; colorBackground[] = {0.22, 0.48, 0.78, 1}; colorText[] = {1, 1, 1, 1}; action = "['setPage', [0]] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
-        class FiresTabDrillBtn: RscButton { idc = 60741; text = "Timed drill..."; x = 0.438; y = 0.036; w = 0.14; h = 0.042; sizeEx = 0.026; colorBackground[] = {0.14, 0.16, 0.22, 1}; colorText[] = {0.95, 0.95, 0.96, 1}; action = "['setPage', [1]] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
-        class HeaderRefreshBtn: RscButton { idc = 60715; text = "Refresh"; x = 0.755; y = 0.037; w = 0.10; h = 0.044; sizeEx = 0.028; colorBackground[] = {0.18, 0.19, 0.22, 1}; colorText[] = {0.9, 0.9, 0.92, 1}; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
-        class HeaderCloseBtn: RscButton { idc = 60716; text = "X"; x = 0.865; y = 0.037; w = 0.055; h = 0.044; sizeEx = 0.034; colorBackground[] = {0.55, 0.12, 0.12, 1}; colorText[] = {1, 1, 1, 1}; action = "closeDialog 0;"; };
+        class FiresTabRangeBtn: RscButton { idc = 60740; text = "Range"; x = 0.325; y = 0.036; w = 0.11; h = 0.042; sizeEx = 0.028; colorBackground[] = FAC_COLOR_TAB_ACTIVE; colorText[] = {1, 1, 1, 1}; action = "['setPage', [0]] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
+        class FiresTabDrillBtn: RscButton { idc = 60741; text = "Timed drill..."; x = 0.438; y = 0.036; w = 0.14; h = 0.042; sizeEx = 0.026; colorBackground[] = FAC_COLOR_TAB_IDLE; colorText[] = {0.95, 0.95, 0.96, 1}; action = "['setPage', [1]] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
+        class HeaderRefreshBtn: RscButton { idc = 60715; text = "Refresh"; x = 0.755; y = 0.037; w = 0.10; h = 0.044; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BTN_NEUTRAL; colorText[] = {0.9, 0.9, 0.92, 1}; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]);"; };
+        class HeaderCloseBtn: RscButton { idc = 60716; text = "X"; x = 0.865; y = 0.037; w = 0.055; h = 0.044; sizeEx = 0.034; colorBackground[] = FAC_COLOR_BTN_DANGER; colorText[] = FAC_COLOR_TEXT; action = "closeDialog 0;"; };
     };
 };
 
-// Medical training terminal — dummies at MEDICAL_1 / terminalMedical (60800)
+// Medical training terminal — tabbed: Dummies | Injuries
 class RscDisplayMedicalTraining: RscDisplayEmpty {
     idd = 60800;
     movingEnable = 1;
     enableSimulation = 1;
     onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]); };";
     class controlsBackground {
-        class Background: RscText { idc = -1; x = 0.02; y = 0.02; w = 0.96; h = 0.96; colorBackground[] = {0.08, 0.12, 0.14, 0.95}; };
-        class Title: RscText { idc = -1; text = "MEDICAL TRAINING"; x = 0.02; y = 0.02; w = 0.96; h = 0.05; colorBackground[] = {0.15, 0.35, 0.32, 1}; colorText[] = {1, 1, 1, 1}; sizeEx = 0.048; };
+        class Background: FACRscDialogBackground { x = 0.02; y = 0.025; w = 0.96; h = 0.94; };
+        class HeaderBar: FACRscHeaderBar { x = 0.02; y = 0.025; w = 0.96; h = 0.065; };
+        class MainPanel: FACRscMainPanel { x = 0.03; y = 0.092; w = 0.94; h = 0.858; };
     };
     class controls {
-        class HeaderRefreshBtn: RscButton { idc = 60841; text = "Refresh"; x = 0.84; y = 0.028; w = 0.058; h = 0.044; sizeEx = 0.030; colorBackground[] = {0.18, 0.32, 0.48, 1}; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class HeaderCloseBtn: RscButton { idc = 60842; text = "X"; x = 0.905; y = 0.028; w = 0.048; h = 0.044; sizeEx = 0.034; colorBackground[] = {0.35, 0.22, 0.22, 1}; action = "closeDialog 0;"; };
-        class DummyLabel: RscText { idc = -1; text = "Training dummies"; x = 0.03; y = 0.068; w = 0.405; h = 0.026; sizeEx = 0.028; };
-        class DummyList: RscListBox {
+        class TitleText: FACRscDialogTitle { text = "MEDICAL TRAINING"; x = 0.035; y = 0.032; w = 0.24; h = 0.052; sizeEx = 0.034; };
+        class TabDummies: FACRscTabBtnActive { idc = 60890; text = "Dummies..."; x = 0.28; y = 0.036; w = 0.15; h = 0.046; action = "['setTab', ['dummies']] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class TabInjuries: FACRscTabBtn { idc = 60891; text = "Injuries..."; x = 0.435; y = 0.036; w = 0.15; h = 0.046; action = "['setTab', ['injuries']] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class HeaderRefreshBtn: FACRscRefreshBtn { idc = 60841; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class HeaderCloseBtn: FACRscCloseBtn { idc = 60842; y = 0.036; };
+        class DummyLabel: FACRscSectionHdr { idc = 60880; text = "Training dummies"; x = 0.04; y = 0.105; w = 0.92; h = 0.028; sizeEx = 0.028; };
+        class DummyList: FACRscListDark {
             idc = 60801;
-            x = 0.03; y = 0.096; w = 0.405; h = 0.31;
+            x = 0.04; y = 0.138; w = 0.92; h = 0.42;
             rowHeight = 0.038; sizeEx = 0.028;
         };
-        class BtnNew: RscButton { idc = 60814; text = "New dummy"; x = 0.03; y = 0.414; w = 0.128; h = 0.042; sizeEx = 0.028; action = "['spawnDummy', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class BtnDelete: RscButton { idc = 60815; text = "Delete"; x = 0.168; y = 0.414; w = 0.128; h = 0.042; sizeEx = 0.028; action = "['deleteDummy', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class BtnDeleteAll: RscButton { idc = 60816; text = "Delete all"; x = 0.306; y = 0.414; w = 0.129; h = 0.042; sizeEx = 0.028; action = "['deleteAll', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class BtnNew: FACRscPrimaryBtn { idc = 60814; text = "New dummy"; x = 0.04; y = 0.568; w = 0.20; h = 0.042; sizeEx = 0.028; action = "['spawnDummy', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class BtnDelete: RscButton { idc = 60815; text = "Delete"; x = 0.25; y = 0.568; w = 0.20; h = 0.042; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BTN_WARN; colorText[] = FAC_COLOR_TEXT; action = "['deleteDummy', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class BtnDeleteAll: FACRscDangerBtn { idc = 60816; text = "Delete all"; x = 0.46; y = 0.568; w = 0.20; h = 0.042; sizeEx = 0.028; action = "['deleteAll', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
         class InfoText: RscStructuredText {
             idc = 60850;
-            x = 0.03; y = 0.466; w = 0.405; h = 0.492;
+            x = 0.04; y = 0.618; w = 0.92; h = 0.30;
             size = 0.024;
-            colorBackground[] = {0.03, 0.04, 0.07, 0.55};
+            colorBackground[] = FAC_COLOR_BG_SECTION;
             text = "";
         };
-        class PresetLabel: RscText { idc = -1; text = "Preset scenario"; x = 0.455; y = 0.068; w = 0.515; h = 0.024; sizeEx = 0.028; };
-        class PresetCombo: FACRscCombo { idc = 60802; x = 0.455; y = 0.092; w = 0.515; h = 0.036; wholeHeight = 0.48; sizeEx = 0.027; };
-        class BtnApplyPreset: RscButton { idc = 60830; text = "Apply preset"; x = 0.455; y = 0.134; w = 0.24; h = 0.040; sizeEx = 0.028; action = "['applyPreset', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class BtnApplyRandomPreset: RscButton { idc = 60836; text = "Apply random injury"; x = 0.705; y = 0.134; w = 0.265; h = 0.040; sizeEx = 0.028; action = "['applyRandomPreset', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class KatAirLabel: RscText { idc = -1; text = "Airway / chest (Zeus parity)"; x = 0.455; y = 0.180; w = 0.515; h = 0.024; sizeEx = 0.028; colorText[] = {0.75, 0.95, 0.88, 1}; };
-        class KatObLabel: RscText { idc = -1; text = "Obstruction"; x = 0.455; y = 0.206; w = 0.245; h = 0.020; sizeEx = 0.024; };
-        class KatObCombo: FACRscCombo { idc = 60860; x = 0.455; y = 0.228; w = 0.245; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
-        class KatOcLabel: RscText { idc = -1; text = "Occluded"; x = 0.715; y = 0.206; w = 0.255; h = 0.020; sizeEx = 0.024; };
-        class KatOcCombo: FACRscCombo { idc = 60861; x = 0.715; y = 0.228; w = 0.255; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
-        class KatHemoLabel: RscText { idc = -1; text = "Hemopneumothorax"; x = 0.455; y = 0.268; w = 0.245; h = 0.020; sizeEx = 0.024; };
-        class KatHemoCombo: FACRscCombo { idc = 60862; x = 0.455; y = 0.290; w = 0.245; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
-        class KatTenLabel: RscText { idc = -1; text = "Tension PTX"; x = 0.715; y = 0.268; w = 0.255; h = 0.020; sizeEx = 0.024; };
-        class KatTenCombo: FACRscCombo { idc = 60863; x = 0.715; y = 0.290; w = 0.255; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
-        class KatPtxLabel: RscText { idc = 60871; text = "Pneumothorax 0–4"; x = 0.455; y = 0.330; w = 0.40; h = 0.020; sizeEx = 0.024; };
-        class KatPtxSlider: RscXSliderH { idc = 60864; x = 0.455; y = 0.352; w = 0.515; h = 0.034; onSliderPosChanged = "['ptxSlider', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class KatSpo2Label: RscText { idc = 60872; text = "SpO2 / PaO2 slot (0–100)"; x = 0.455; y = 0.392; w = 0.45; h = 0.020; sizeEx = 0.024; };
-        class KatSpo2Slider: RscXSliderH { idc = 60865; x = 0.455; y = 0.414; w = 0.515; h = 0.034; onSliderPosChanged = "['spo2Slider', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class KatDetLabel: RscText { idc = -1; text = "PTX deteriorate"; x = 0.455; y = 0.454; w = 0.245; h = 0.020; sizeEx = 0.024; };
-        class KatDetCombo: FACRscCombo { idc = 60866; x = 0.455; y = 0.476; w = 0.245; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
-        class KatDeepLabel: RscText { idc = -1; text = "Deep penetrating"; x = 0.715; y = 0.454; w = 0.255; h = 0.020; sizeEx = 0.024; };
-        class KatDeepCombo: FACRscCombo { idc = 60867; x = 0.715; y = 0.476; w = 0.255; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
-        class BtnApplyKATAirway: RscButton { idc = 60868; text = "Apply airway / chest"; x = 0.455; y = 0.518; w = 0.515; h = 0.040; sizeEx = 0.028; colorBackground[] = {0.12, 0.35, 0.32, 1}; action = "['applyAirwayChest', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class KatCardiacLabel: RscText { idc = -1; text = "Cardiac rhythm"; x = 0.455; y = 0.566; w = 0.515; h = 0.024; sizeEx = 0.028; colorText[] = {0.75, 0.95, 0.88, 1}; };
-        class KatCardiacCombo: FACRscCombo { idc = 60869; x = 0.455; y = 0.592; w = 0.345; h = 0.036; wholeHeight = 0.26; sizeEx = 0.026; };
-        class BtnApplyKATCardiac: RscButton { idc = 60870; text = "Apply cardiac"; x = 0.815; y = 0.592; w = 0.155; h = 0.036; sizeEx = 0.028; colorBackground[] = {0.12, 0.35, 0.32, 1}; action = "['applyCardiac', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class AceWoundLabel: RscText { idc = -1; text = "Bleeding wound / part"; x = 0.455; y = 0.636; w = 0.515; h = 0.024; sizeEx = 0.028; };
-        class BodyLabel: RscText { idc = -1; text = "Body part"; x = 0.455; y = 0.662; w = 0.245; h = 0.020; sizeEx = 0.024; };
-        class BodyCombo: FACRscCombo { idc = 60803; x = 0.455; y = 0.684; w = 0.245; h = 0.034; wholeHeight = 0.32; sizeEx = 0.026; };
-        class WoundLabel: RscText { idc = -1; text = "Wound type"; x = 0.715; y = 0.662; w = 0.255; h = 0.020; sizeEx = 0.024; };
-        class WoundCombo: FACRscCombo { idc = 60804; x = 0.715; y = 0.684; w = 0.255; h = 0.034; wholeHeight = 0.24; sizeEx = 0.026; };
-        class BleedLabel: RscText { idc = 60806; text = "Bleed rate: —"; x = 0.455; y = 0.724; w = 0.515; h = 0.020; sizeEx = 0.024; };
+        class PresetLabel: FACRscSectionHdr { idc = 60892; show = 0; text = "Preset scenario"; x = 0.04; y = 0.105; w = 0.92; h = 0.028; sizeEx = 0.028; };
+        class PresetCombo: FACRscCombo { idc = 60802; show = 0; x = 0.04; y = 0.132; w = 0.92; h = 0.036; wholeHeight = 0.48; sizeEx = 0.027; };
+        class BtnApplyPreset: RscButton { idc = 60830; show = 0; text = "Apply preset"; x = 0.04; y = 0.174; w = 0.44; h = 0.040; sizeEx = 0.028; action = "['applyPreset', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class BtnApplyRandomPreset: RscButton { idc = 60836; show = 0; text = "Apply random injury"; x = 0.50; y = 0.174; w = 0.46; h = 0.040; sizeEx = 0.028; action = "['applyRandomPreset', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class KatAirLabel: RscText { idc = -1; text = "Airway / chest (Zeus parity)"; x = 0.04; y = 0.220; w = 0.92; h = 0.024; sizeEx = 0.028; colorText[] = FAC_COLOR_TEXT_HDR; };
+        class KatObLabel: RscText { idc = -1; text = "Obstruction"; x = 0.04; y = 0.246; w = 0.44; h = 0.020; sizeEx = 0.024; };
+        class KatObCombo: FACRscCombo { idc = 60860; show = 0; x = 0.04; y = 0.268; w = 0.44; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
+        class KatOcLabel: RscText { idc = -1; text = "Occluded"; x = 0.50; y = 0.246; w = 0.44; h = 0.020; sizeEx = 0.024; };
+        class KatOcCombo: FACRscCombo { idc = 60861; show = 0; x = 0.50; y = 0.268; w = 0.44; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
+        class KatHemoLabel: RscText { idc = -1; text = "Hemopneumothorax"; x = 0.04; y = 0.308; w = 0.44; h = 0.020; sizeEx = 0.024; };
+        class KatHemoCombo: FACRscCombo { idc = 60862; show = 0; x = 0.04; y = 0.330; w = 0.44; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
+        class KatTenLabel: RscText { idc = -1; text = "Tension PTX"; x = 0.50; y = 0.308; w = 0.44; h = 0.020; sizeEx = 0.024; };
+        class KatTenCombo: FACRscCombo { idc = 60863; show = 0; x = 0.50; y = 0.330; w = 0.44; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
+        class KatPtxLabel: RscText { idc = 60871; show = 0; text = "Pneumothorax 0–4"; x = 0.04; y = 0.370; w = 0.92; h = 0.020; sizeEx = 0.024; };
+        class KatPtxSlider: RscXSliderH { idc = 60864; show = 0; x = 0.04; y = 0.392; w = 0.92; h = 0.034; onSliderPosChanged = "['ptxSlider', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class KatSpo2Label: RscText { idc = 60872; show = 0; text = "SpO2 / PaO2 slot (0–100)"; x = 0.04; y = 0.432; w = 0.92; h = 0.020; sizeEx = 0.024; };
+        class KatSpo2Slider: RscXSliderH { idc = 60865; show = 0; x = 0.04; y = 0.454; w = 0.92; h = 0.034; onSliderPosChanged = "['spo2Slider', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class KatDetLabel: RscText { idc = -1; text = "PTX deteriorate"; x = 0.04; y = 0.494; w = 0.44; h = 0.020; sizeEx = 0.024; };
+        class KatDetCombo: FACRscCombo { idc = 60866; show = 0; x = 0.04; y = 0.516; w = 0.44; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
+        class KatDeepLabel: RscText { idc = -1; text = "Deep penetrating"; x = 0.50; y = 0.494; w = 0.44; h = 0.020; sizeEx = 0.024; };
+        class KatDeepCombo: FACRscCombo { idc = 60867; show = 0; x = 0.50; y = 0.516; w = 0.44; h = 0.034; wholeHeight = 0.14; sizeEx = 0.026; };
+        class BtnApplyKATAirway: RscButton { idc = 60868; show = 0; text = "Apply airway / chest"; x = 0.04; y = 0.558; w = 0.92; h = 0.040; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BTN_PRIMARY; action = "['applyAirwayChest', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class KatCardiacLabel: RscText { idc = -1; text = "Cardiac rhythm"; x = 0.04; y = 0.606; w = 0.92; h = 0.024; sizeEx = 0.028; colorText[] = FAC_COLOR_TEXT_HDR; };
+        class KatCardiacCombo: FACRscCombo { idc = 60869; show = 0; x = 0.04; y = 0.632; w = 0.66; h = 0.036; wholeHeight = 0.26; sizeEx = 0.026; };
+        class BtnApplyKATCardiac: RscButton { idc = 60870; show = 0; text = "Apply cardiac"; x = 0.72; y = 0.632; w = 0.24; h = 0.036; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BTN_PRIMARY; action = "['applyCardiac', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class AceWoundLabel: RscText { idc = -1; text = "Bleeding wound / part"; x = 0.04; y = 0.676; w = 0.92; h = 0.024; sizeEx = 0.028; colorText[] = FAC_COLOR_TEXT_HDR; };
+        class BodyLabel: RscText { idc = -1; text = "Body part"; x = 0.04; y = 0.702; w = 0.44; h = 0.020; sizeEx = 0.024; };
+        class BodyCombo: FACRscCombo { idc = 60803; show = 0; x = 0.04; y = 0.724; w = 0.44; h = 0.034; wholeHeight = 0.32; sizeEx = 0.026; };
+        class WoundLabel: RscText { idc = -1; text = "Wound type"; x = 0.50; y = 0.702; w = 0.44; h = 0.020; sizeEx = 0.024; };
+        class WoundCombo: FACRscCombo { idc = 60804; show = 0; x = 0.50; y = 0.724; w = 0.44; h = 0.034; wholeHeight = 0.24; sizeEx = 0.026; };
+        class BleedLabel: RscText { idc = 60806; show = 0; text = "Bleed rate: —"; x = 0.04; y = 0.764; w = 0.92; h = 0.020; sizeEx = 0.024; };
         class BleedSlider: RscXSliderH {
-            idc = 60805;
-            x = 0.455; y = 0.746; w = 0.515; h = 0.032;
+            idc = 60805; show = 0;
+            x = 0.04; y = 0.786; w = 0.92; h = 0.032;
             onSliderPosChanged = "['bleedSlider', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);";
         };
-        class DepthLabel: RscText { idc = -1; text = "Depth"; x = 0.455; y = 0.784; w = 0.245; h = 0.020; sizeEx = 0.024; };
-        class DepthCombo: FACRscCombo { idc = 60807; x = 0.455; y = 0.806; w = 0.245; h = 0.034; wholeHeight = 0.18; sizeEx = 0.026; };
-        class BtnApplyWound: RscButton { idc = 60831; text = "Apply wound"; x = 0.715; y = 0.784; w = 0.255; h = 0.056; sizeEx = 0.028; action = "['applyWound', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class BtnHealPart: RscButton { idc = 60832; text = "Heal part"; x = 0.455; y = 0.850; w = 0.245; h = 0.038; sizeEx = 0.028; action = "['healPart', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class BtnHealAll: RscButton { idc = 60833; text = "Heal all"; x = 0.715; y = 0.850; w = 0.255; h = 0.038; sizeEx = 0.028; action = "['healAll', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class BtnUncon: RscButton { idc = 60834; text = "Unconscious"; x = 0.455; y = 0.896; w = 0.245; h = 0.038; sizeEx = 0.028; action = "['unconscious', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
-        class BtnWake: RscButton { idc = 60835; text = "Conscious"; x = 0.715; y = 0.896; w = 0.255; h = 0.038; sizeEx = 0.028; action = "['conscious', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class DepthLabel: RscText { idc = -1; text = "Depth"; x = 0.04; y = 0.824; w = 0.44; h = 0.020; sizeEx = 0.024; };
+        class DepthCombo: FACRscCombo { idc = 60807; show = 0; x = 0.04; y = 0.846; w = 0.44; h = 0.034; wholeHeight = 0.18; sizeEx = 0.026; };
+        class BtnApplyWound: RscButton { idc = 60831; show = 0; text = "Apply wound"; x = 0.50; y = 0.824; w = 0.44; h = 0.056; sizeEx = 0.028; action = "['applyWound', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class BtnHealPart: RscButton { idc = 60832; show = 0; text = "Heal part"; x = 0.04; y = 0.890; w = 0.44; h = 0.038; sizeEx = 0.028; action = "['healPart', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class BtnHealAll: RscButton { idc = 60833; show = 0; text = "Heal all"; x = 0.50; y = 0.890; w = 0.44; h = 0.038; sizeEx = 0.028; action = "['healAll', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class BtnUncon: RscButton { idc = 60834; show = 0; text = "Unconscious"; x = 0.04; y = 0.936; w = 0.44; h = 0.038; sizeEx = 0.028; action = "['unconscious', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
+        class BtnWake: RscButton { idc = 60835; show = 0; text = "Conscious"; x = 0.50; y = 0.936; w = 0.44; h = 0.038; sizeEx = 0.028; action = "['conscious', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]);"; };
     };
 };
 
@@ -825,6 +892,7 @@ class CfgSounds
     class Sig_Buttrock_16       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Trapt_Headstrong.ogg", 3.5, 1, 400}; titles[] = {}; };
     class Sig_Buttrock_17       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_TrustCompany_Downfall.ogg", 3.5, 1, 400}; titles[] = {}; };
     class Sig_Buttrock_18       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_TwistedTransistor.ogg", 3.5, 1, 400}; titles[] = {}; };
+    class Sig_Buttrock_19       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Chevelle_SendThePainBelow.ogg", 3.5, 1, 400}; titles[] = {}; };
 
     // Vehicle loudspeaker: same OGGs as Sig_*; volume 25 / max distance 1000 m (CfgVehicles FAC_Jukebox_* → createSoundSource + attachTo).
     class FAC_JukeVeh_Sig_80smusic_mix_1    { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\1980s\80s_mix_1.ogg",                     25, 1, 1000}; titles[] = {}; };
@@ -863,6 +931,7 @@ class CfgSounds
     class FAC_JukeVeh_Sig_Buttrock_16       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Trapt_Headstrong.ogg", 25, 1, 1000}; titles[] = {}; };
     class FAC_JukeVeh_Sig_Buttrock_17       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_TrustCompany_Downfall.ogg", 25, 1, 1000}; titles[] = {}; };
     class FAC_JukeVeh_Sig_Buttrock_18       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_TwistedTransistor.ogg", 25, 1, 1000}; titles[] = {}; };
+    class FAC_JukeVeh_Sig_Buttrock_19       { sound[] = {"\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Chevelle_SendThePainBelow.ogg", 25, 1, 1000}; titles[] = {}; };
 };
 
 class CfgSFX
@@ -909,6 +978,7 @@ class CfgVehicles {
     class FAC_Jukebox_Sig_Buttrock_16: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_16"; };
     class FAC_Jukebox_Sig_Buttrock_17: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_17"; };
     class FAC_Jukebox_Sig_Buttrock_18: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_18"; };
+    class FAC_Jukebox_Sig_Buttrock_19: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_19"; };
 };
 
 // HVT mission: identities so unit name matches briefing codename

@@ -1,119 +1,35 @@
 // AUTO-EXTRACTED from Missions.sqf  -  run via FADE_runMission_* (compile once)
 if (!isServer) exitWith {};
 FADE_runMission_CASEVAC = {
-    private _missionType = missionNamespace getVariable ["FADE_missionRun_missionType", ""];
-    private _destPos = missionNamespace getVariable ["FADE_missionRun_destPos", [0,0,0]];
-    private _player = missionNamespace getVariable ["FADE_missionRun_player", objNull];
-    private _evadeePlayers = missionNamespace getVariable ["FADE_missionRun_evadeePlayers", []];
-    private _fromMapClick = missionNamespace getVariable ["FADE_missionRun_fromMapClick", false];
-    private _mapAnchor = missionNamespace getVariable ["FADE_missionRun_mapAnchor", []];
-    private _friendlyUnits = missionNamespace getVariable ["FADE_missionRun_friendlyUnits", []];
-    private _enemyUnits = missionNamespace getVariable ["FADE_missionRun_enemyUnits", []];
-    private _sideFriendly = missionNamespace getVariable ["FADE_missionRun_sideFriendly", west];
-    private _sideEnemy = missionNamespace getVariable ["FADE_missionRun_sideEnemy", east];
-    private _markerFriendly = missionNamespace getVariable ["FADE_missionRun_markerFriendly", "ColorWEST"];
-    private _markerEnemy = missionNamespace getVariable ["FADE_missionRun_markerEnemy", "ColorEAST"];
-    private _dryPos = missionNamespace getVariable ["FADE_surfaceIsDry", {}];
-    private _taskId = missionNamespace getVariable ["FADE_missionRun_taskId", ""];
-    private _operationName = missionNamespace getVariable ["FADE_missionRun_operationName", ""];
-    private _operationNameUpper = missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""];
-    private _briefGuiTail = missionNamespace getVariable ["FADE_missionRun_briefGuiTail", ""];
-    private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", {}];
-    private _enemyFactionName = missionNamespace getVariable ["FADE_missionRun_enemyFactionName", ""];
-    private _zeroAlphaDisplayName = missionNamespace getVariable ["FADE_missionRun_zeroAlphaDisplayName", ""];
-    private _isGlobalMission = missionNamespace getVariable ["FADE_missionRun_isGlobalMission", false];
-    private _basePos = missionNamespace getVariable ["FADE_missionRun_basePos", [0,0,0]];
-    private _unitCount = missionNamespace getVariable ["FADE_missionRun_unitCount", 6];
-    private _unitClasses = missionNamespace getVariable ["FADE_missionRun_unitClasses", []];
-    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {}];
-    private _fnc_createMissionTask = missionNamespace getVariable ["FADE_mission_createTask", {}];
-    private _showAssignedHint = missionNamespace getVariable ["FADE_mission_showAssignedHint", {}];
-    private _defaultSituationTaskText = missionNamespace getVariable ["FADE_missionRun_defaultSituationTaskText", ""];
-    private _defaultExecutionTaskText = missionNamespace getVariable ["FADE_missionRun_defaultExecutionTaskText", ""];
-    private _defaultAdminTaskText = missionNamespace getVariable ["FADE_missionRun_defaultAdminTaskText", ""];
-    private _defaultCommandTaskText = missionNamespace getVariable ["FADE_missionRun_defaultCommandTaskText", ""];
-    private _defaultSituationHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHtml", ""];
-    private _defaultSituationHintHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHintHtml", ""];
-    private _friendlyPlayerCount = missionNamespace getVariable ["FADE_missionRun_friendlyPlayerCount", 0];
-    private _friendlyFactionName = missionNamespace getVariable ["FADE_missionRun_friendlyFactionName", ""];
-    private _estimatedOpforCount = missionNamespace getVariable ["FADE_missionRun_estimatedOpforCount", 0];
-    private _opforCountFactor = missionNamespace getVariable ["FADE_missionRun_opforCountFactor", 1];
-    private _intelFormatter = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
-    private _topographyGrid = missionNamespace getVariable ["FADE_missionRun_topographyGrid", "UNKNOWN"];
-    private _topographyArea = missionNamespace getVariable ["FADE_missionRun_topographyArea", ""];
+    (call FADE_missionRun_getContext) params [
+        "_missionType", "_destPos", "_player", "_evadeePlayers", "_fromMapClick", "_mapAnchor",
+        "_friendlyUnits", "_enemyUnits", "_sideFriendly", "_sideEnemy", "_markerFriendly", "_markerEnemy",
+        "_dryPos", "_taskId", "_operationName", "_operationNameUpper", "_briefGuiTail",
+        "_mkrJitter", "_enemyFactionName", "_zeroAlphaDisplayName", "_isGlobalMission", "_basePos",
+        "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
+        "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
+        "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+    ];
     private _maxPax = _unitCount max 2;
     private _pickupCount = ((2 + floor random 9) min _maxPax) max 2;
     private _pickupClasses = (_friendlyUnits select [0, _pickupCount min count _friendlyUnits]);
     for "_i" from (count _pickupClasses) to (_pickupCount - 1) do { _pickupClasses pushBack (_friendlyUnits select 0) };
 
-    private _wpPos = _destPos getPos [10, random 360];
-    _wpPos = [[_wpPos, 0, 15, 2, 1, 0.3, 0, [], _wpPos], _wpPos] call FADE_findSafePosArray;
-    if (count _wpPos < 2) then { _wpPos = _destPos getPos [10, random 360] };
-    private _group = [_wpPos, _sideFriendly, _pickupClasses] call BIS_fnc_spawnGroup;
-    [_group] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
-    [_group] call FADE_attachNightStrobes;
-    _group addWaypoint [_wpPos, 0];
+    private _wreckData = [_destPos, _taskId] call FADE_mission_spawnCasualtyHeliWreck;
+    _wreckData params ["_wreck", "_airClass", "_crashPos", "_usedLiveHeli"];
+    private _survPos = [_crashPos getPos [10, random 360], 10, 8] call FADE_mission_findPickupSpawnPos;
+    if (count _survPos < 2) then { _survPos = +_crashPos };
 
-    private _useACE = isClass (configFile >> "CfgPatches" >> "ace_medical");
-    private _aceHasAddDamage = !isNil "ace_medical_fnc_addDamageToUnit";
-    private _aceHasAddWound = !isNil "ace_medical_fnc_addWound";
-    private _nStart = count units _group;
-    if (_nStart >= 2) then {
-        private _kia = (1 + floor random 2) min (_nStart - 1);
-        for "_k" from 1 to _kia do {
-            private _u = selectRandom units _group;
-            if (!isNull _u) then { deleteVehicle _u };
-        };
-        {
-            if (!alive _x) then {} else {
-                if (_useACE && _aceHasAddDamage) then {
-                    private _p = selectRandom ["Head", "Body", "LeftArm", "RightArm", "LeftLeg", "RightLeg"];
-                    [_x, 0.12 + random 0.22, _p, "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
-                    if (_aceHasAddWound) then { [_x, toLower _p, ["Laceration", 1, 0, 0.2]] call ace_medical_fnc_addWound };
-                } else {
-                    _x setDamage ((damage _x) + 0.15 + random 0.25);
-                };
-            };
-        } forEach units _group;
-    };
+    private _groupData = [_destPos, _sideFriendly, _pickupClasses, _survPos] call FADE_mission_spawnFriendlyPickupGroup;
+    _groupData params ["_group", "_wpPos"];
 
-    private _enemyGroups = [];
-    if (random 1 < 0.5) then {
-        private _numEnemyGroups = [1 + floor random 5, 1] call _scaleOpforCount;
-        private _minDistFromBase = 1000;
-        for "_g" from 0 to (_numEnemyGroups - 1) do {
-            private _grpPos = [];
-            for "_try" from 0 to 10 do {
-                private _angle = random 360;
-                private _dist = 500 + random 1500;
-                private _candidate = _destPos getPos [_dist, _angle];
-                _candidate = [[_candidate, 0, 30, 3, 1, 0.4, 0, [], _candidate], _candidate] call FADE_findSafePosArray;
-                if (count _candidate < 2) then { _candidate = _destPos getPos [_dist, _angle] };
-                if ((_candidate distance _basePos) >= _minDistFromBase) exitWith { _grpPos = _candidate };
-            };
-            if (count _grpPos < 2) then {
-                private _dirAwayFromBase = _destPos getDir _basePos;
-                _grpPos = _destPos getPos [800, _dirAwayFromBase + 180];
-            };
-            private _grpSize = [3 + floor random 5, 2] call _scaleOpforCount;
-            private _shuffled = _enemyUnits call BIS_fnc_arrayShuffle;
-            private _grpUnits = (_shuffled select [0, _grpSize min count _shuffled]);
-            if (count _grpUnits == 0) then { _grpUnits = [_enemyUnits select 0] };
-            private _grp = [_grpPos, _sideEnemy, _grpUnits] call BIS_fnc_spawnGroup;
-            [_grp] call FAC_applyEnemyScenarioToGroup;
-            _grp setBehaviour "AWARE";
-            _grp setCombatMode "RED";
-            _grp addWaypoint [_destPos, 0];
-            _enemyGroups pushBack _grp;
-        };
-        [_enemyGroups, _basePos] call FADE_registerEnemyRetreat;
-        _group setBehaviour "COMBAT";
-        _group setFormation "DIAMOND";
-    } else {
-        _group setBehaviour "SAFE";
-        _group setCombatMode "GREEN";
-        _group setFormation "STAG COLUMN";
-    };
+    [_group] call FADE_mission_casevacCasualtyPrep;
+
+    private _enemyGroups = [
+        _destPos, _basePos, _enemyUnits, _sideEnemy, _taskId, _scaleOpforCount
+    ] call FADE_mission_spawnFieldContactEnemies;
+    [_group, count _enemyGroups > 0] call FADE_mission_applyPickupGroupPosture;
 
     [_player, _taskId, "CASEVAC: extract casualties and return to base.", "CASEVAC", _destPos, "move", "", format [
         "<t align='left' color='#C0C0C0'>1. Fly to the pickup marker and land.<br/>2. Load all wounded  -  they may need to be carried or assisted aboard.<br/>3. RTB and land at base to complete the mission.</t>"
@@ -121,7 +37,9 @@ FADE_runMission_CASEVAC = {
 
     private _markerName = "FADE_casevac_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    private _marker = createMarker [_markerName, [_destPos, 100] call _mkrJitter];
+    private _casevacPickupRadius = 200;
+    [_taskId, _markerName + "_zone", _destPos, _casevacPickupRadius, _markerFriendly] call FADE_mission_createRadiusMarker;
+    private _marker = createMarker [_markerName, [_destPos] call FADE_normPos3];
     [_taskId, _markerName] call FADE_missionEnt_registerMarker;
     _marker setMarkerType "mil_pickup";
     _marker setMarkerColor _markerFriendly;
@@ -147,106 +65,29 @@ FADE_runMission_CASEVAC = {
 };
 
 FADE_runMission_CSAR = {
-    private _missionType = missionNamespace getVariable ["FADE_missionRun_missionType", ""];
-    private _destPos = missionNamespace getVariable ["FADE_missionRun_destPos", [0,0,0]];
-    private _player = missionNamespace getVariable ["FADE_missionRun_player", objNull];
-    private _evadeePlayers = missionNamespace getVariable ["FADE_missionRun_evadeePlayers", []];
-    private _fromMapClick = missionNamespace getVariable ["FADE_missionRun_fromMapClick", false];
-    private _mapAnchor = missionNamespace getVariable ["FADE_missionRun_mapAnchor", []];
-    private _friendlyUnits = missionNamespace getVariable ["FADE_missionRun_friendlyUnits", []];
-    private _enemyUnits = missionNamespace getVariable ["FADE_missionRun_enemyUnits", []];
-    private _sideFriendly = missionNamespace getVariable ["FADE_missionRun_sideFriendly", west];
-    private _sideEnemy = missionNamespace getVariable ["FADE_missionRun_sideEnemy", east];
-    private _markerFriendly = missionNamespace getVariable ["FADE_missionRun_markerFriendly", "ColorWEST"];
-    private _markerEnemy = missionNamespace getVariable ["FADE_missionRun_markerEnemy", "ColorEAST"];
-    private _dryPos = missionNamespace getVariable ["FADE_surfaceIsDry", {}];
-    private _taskId = missionNamespace getVariable ["FADE_missionRun_taskId", ""];
-    private _operationName = missionNamespace getVariable ["FADE_missionRun_operationName", ""];
-    private _operationNameUpper = missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""];
-    private _briefGuiTail = missionNamespace getVariable ["FADE_missionRun_briefGuiTail", ""];
-    private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", {}];
-    private _enemyFactionName = missionNamespace getVariable ["FADE_missionRun_enemyFactionName", ""];
-    private _zeroAlphaDisplayName = missionNamespace getVariable ["FADE_missionRun_zeroAlphaDisplayName", ""];
-    private _isGlobalMission = missionNamespace getVariable ["FADE_missionRun_isGlobalMission", false];
-    private _basePos = missionNamespace getVariable ["FADE_missionRun_basePos", [0,0,0]];
-    private _unitCount = missionNamespace getVariable ["FADE_missionRun_unitCount", 6];
-    private _unitClasses = missionNamespace getVariable ["FADE_missionRun_unitClasses", []];
-    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {}];
-    private _fnc_createMissionTask = missionNamespace getVariable ["FADE_mission_createTask", {}];
-    private _showAssignedHint = missionNamespace getVariable ["FADE_mission_showAssignedHint", {}];
-    private _defaultSituationTaskText = missionNamespace getVariable ["FADE_missionRun_defaultSituationTaskText", ""];
-    private _defaultExecutionTaskText = missionNamespace getVariable ["FADE_missionRun_defaultExecutionTaskText", ""];
-    private _defaultAdminTaskText = missionNamespace getVariable ["FADE_missionRun_defaultAdminTaskText", ""];
-    private _defaultCommandTaskText = missionNamespace getVariable ["FADE_missionRun_defaultCommandTaskText", ""];
-    private _defaultSituationHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHtml", ""];
-    private _defaultSituationHintHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHintHtml", ""];
-    private _friendlyPlayerCount = missionNamespace getVariable ["FADE_missionRun_friendlyPlayerCount", 0];
-    private _friendlyFactionName = missionNamespace getVariable ["FADE_missionRun_friendlyFactionName", ""];
-    private _estimatedOpforCount = missionNamespace getVariable ["FADE_missionRun_estimatedOpforCount", 0];
-    private _opforCountFactor = missionNamespace getVariable ["FADE_missionRun_opforCountFactor", 1];
-    private _intelFormatter = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
-    private _topographyGrid = missionNamespace getVariable ["FADE_missionRun_topographyGrid", "UNKNOWN"];
-    private _topographyArea = missionNamespace getVariable ["FADE_missionRun_topographyArea", ""];
-    private _pickupClasses = [_friendlyUnits select 0];
-    private _wpPos = _destPos getPos [10, random 360];
-    _wpPos = [[_wpPos, 0, 15, 2, 1, 0.3, 0, [], _wpPos], _wpPos] call FADE_findSafePosArray;
-    if (!(_wpPos isEqualType [])) then { _wpPos = _destPos getPos [10, random 360] };
-    if ((_wpPos isEqualType []) && { count _wpPos < 2 }) then { _wpPos = _destPos getPos [10, random 360] };
-    // BIS_fnc_findSafePos can return [x,y] only; setPosATL / createVehicle expect ATL with Z
-    if ((_wpPos isEqualType []) && { count _wpPos >= 2 && { count _wpPos < 3 } }) then { _wpPos = [(_wpPos select 0), (_wpPos select 1), 0] };
-    private _friendlyVehicleClasses = missionNamespace getVariable ["FADE_friendlyVehicleClasses", []];
-    private _factionHelis = _friendlyVehicleClasses select {
-        _x isKindOf "Helicopter" && { getNumber (configFile >> "CfgVehicles" >> _x >> "isUav") < 1 }
-    };
-    private _csarWreckClasses = [
-        "vn_air_f4b_wreck",
-        "vn_air_oh6a_01_wreck",
-        "Land_UH1H_Wreck_F",
-        "BlackhawkWreck",
-        "C130J_wreck_EP1"
+    (call FADE_missionRun_getContext) params [
+        "_missionType", "_destPos", "_player", "_evadeePlayers", "_fromMapClick", "_mapAnchor",
+        "_friendlyUnits", "_enemyUnits", "_sideFriendly", "_sideEnemy", "_markerFriendly", "_markerEnemy",
+        "_dryPos", "_taskId", "_operationName", "_operationNameUpper", "_briefGuiTail",
+        "_mkrJitter", "_enemyFactionName", "_zeroAlphaDisplayName", "_isGlobalMission", "_basePos",
+        "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
+        "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
+        "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
     ];
-    private _csarWreckOk = _csarWreckClasses select { isClass (configFile >> "CfgVehicles" >> _x) };
-    if (count _csarWreckOk == 0) then {
-        _csarWreckOk = ["Land_Wreck_Heli_Attack_01_F", "Land_Wreck_Heli_Attack_02_F"] select { isClass (configFile >> "CfgVehicles" >> _x) };
-    };
-    if (count _csarWreckOk == 0) then { _csarWreckOk = ["Land_Wreck_Heli_Attack_01_F"] };
-    private _wreck = objNull;
-    private _usedFactionHeli = false;
-    private _csarAircraftClass = "";
-    if (count _factionHelis > 0) then {
-        private _heliClass = selectRandom _factionHelis;
-        _csarAircraftClass = _heliClass;
-        _wreck = createVehicle [_heliClass, _wpPos, [], 0, "NONE"];
-        _wreck setPosATL _wpPos;
-        _wreck setDir (random 360);
-        _wreck setVelocity [0, 0, 0];
-        _wreck engineOn false;
-        private _sn = surfaceNormal _wpPos;
-        if ((vectorMagnitude _sn) > 0.5) then { _wreck setVectorUp _sn };
-        _usedFactionHeli = true;
-    } else {
-        private _wreckClass = selectRandom _csarWreckOk;
-        _csarAircraftClass = _wreckClass;
-        _wreck = createVehicle [_wreckClass, _wpPos, [], 0, "NONE"];
-        _wreck setPosATL _wpPos;
-        _wreck setDir (random 360);
-    };
-    missionNamespace setVariable ["FADE_csarWreck_" + _taskId, _wreck];
-    if (!isNull _wreck) then { [_taskId, _wreck] call FADE_missionEnt_registerObject };
+    private _pickupClasses = [_friendlyUnits select 0];
+    private _wreckData = [_destPos, _taskId] call FADE_mission_spawnCasualtyHeliWreck;
+    _wreckData params ["_wreck", "_csarAircraftClass", "_wpPos", "_usedFactionHeli"];
 
-    private _survPos = _wreck getPos [10, random 360];
-    _survPos = [[_survPos, 0, 8, 2, 1, 0.3, 0, [], _survPos], _survPos] call FADE_findSafePosArray;
-    if (!(_survPos isEqualType [])) then { _survPos = getPosATL _wreck };
-    if ((_survPos isEqualType []) && { count _survPos < 2 }) then { _survPos = getPosATL _wreck };
-    if ((_survPos isEqualType []) && { count _survPos >= 2 && { count _survPos < 3 } }) then { _survPos = [(_survPos select 0), (_survPos select 1), 0] };
-    private _group = [_survPos, _sideFriendly, _pickupClasses] call BIS_fnc_spawnGroup;
-    [_group] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
-    [_group] call FADE_attachNightStrobes;
-    { _x allowDamage false } forEach units _group;
-    if (_usedFactionHeli && { !isNull _wreck }) then {
-        _wreck setDamage 1;
+    private _survPos = +_wpPos;
+    if (!isNull _wreck) then {
+        _survPos = [_wreck getPos [10, random 360], 10, 8] call FADE_mission_findPickupSpawnPos;
+        if (count _survPos < 2) then { _survPos = getPosATL _wreck };
     };
-    private _crashCenter = getPosATL _wreck;
+    private _groupData = [_destPos, _sideFriendly, _pickupClasses, _survPos] call FADE_mission_spawnFriendlyPickupGroup;
+    _groupData params ["_group", "_survPos"];
+    { _x allowDamage false } forEach units _group;
+    private _crashCenter = if (!isNull _wreck) then { getPosATL _wreck } else { +_wpPos };
     if (count _crashCenter < 3) then { _crashCenter = [(_crashCenter select 0), (_crashCenter select 1), 0] };
     // Pilot starts moving toward the nearest civ-town center in stealth.
     while { count waypoints _group > 0 } do { deleteWaypoint [_group, 0] };
@@ -281,7 +122,7 @@ FADE_runMission_CSAR = {
         private _kiaPos = _crashCenter getPos [2 + random 8, random 360];
         _kiaPos = [[_kiaPos, 0, 4, 1, 1, 0.3, 0, [], _kiaPos], _kiaPos] call FADE_findSafePosArray;
         if (!(_kiaPos isEqualType []) || { count _kiaPos < 2 }) then { _kiaPos = _crashCenter getPos [2 + random 8, random 360] };
-        if (count _kiaPos < 3) then { _kiaPos = [(_kiaPos select 0), (_kiaPos select 1), 0] };
+        _kiaPos = [_kiaPos] call FADE_mission_groundAtlPos;
         private _kiaGroup = createGroup [_sideFriendly, true];
         private _kiaUnit = _kiaGroup createUnit [_kiaClass, _kiaPos, [], 0, "NONE"];
         _kiaUnit setPosATL _kiaPos;
@@ -292,29 +133,7 @@ FADE_runMission_CSAR = {
     };
     missionNamespace setVariable ["FADE_csarBodies_" + _taskId, _csarBodies];
 
-    private _useACE = isClass (configFile >> "CfgPatches" >> "ace_medical");
-    private _aceHasAddDamage = !isNil "ace_medical_fnc_addDamageToUnit";
-    private _aceHasAddWound = !isNil "ace_medical_fnc_addWound";
-    {
-        if (_useACE && _aceHasAddDamage) then {
-            _x allowDamage true;
-            private _p = selectRandom ["Body", "LeftLeg", "RightLeg"];
-            [_x, 0.18 + random 0.2, _p, "bullet", objNull] call ace_medical_fnc_addDamageToUnit;
-            if (_aceHasAddWound) then { [_x, toLower _p, ["VelocityWound", 1, 1, 0.4]] call ace_medical_fnc_addWound };
-            _x allowDamage false;
-        } else {
-            _x allowDamage true;
-            _x setDamage (0.25 + random 0.2);
-            _x allowDamage false;
-        };
-    } forEach units _group;
-
-    [_group] spawn {
-        params ["_grp"];
-        sleep 30;
-        if (isNull _grp) exitWith {};
-        { if (!isNull _x && { alive _x }) then { _x allowDamage true } } forEach units _grp;
-    };
+    [_group] call FADE_mission_csarPilotWoundPrep;
 
     private _enemyGroups = [];
     if (count _enemyUnits > 0) then {
@@ -370,7 +189,7 @@ FADE_runMission_CSAR = {
             [_grp] call FAC_applyEnemyScenarioToGroup;
             _grp setBehaviour "SAFE";
             _grp setCombatMode "GREEN";
-            _grp setSpeedMode "LIMITED";
+            _grp setSpeedMode "FULL";
             _grp setFormation "LINE";
             while { count waypoints _grp > 0 } do { deleteWaypoint [_grp, 0] };
             // 1) Random point within 100 m of crash; 2) same civ-town objective as the survivor's move waypoint
@@ -389,14 +208,14 @@ FADE_runMission_CSAR = {
             if (count _townWpPos < 3) then { _townWpPos = [(_townWpPos select 0), (_townWpPos select 1), 0] };
             private _wpCrash = _grp addWaypoint [_nearCrashWp, 0];
             _wpCrash setWaypointType "MOVE";
-            _wpCrash setWaypointSpeed "LIMITED";
+            _wpCrash setWaypointSpeed "FULL";
             _wpCrash setWaypointBehaviour "SAFE";
             _wpCrash setWaypointCombatMode "GREEN";
             _wpCrash setWaypointFormation "LINE";
             _wpCrash setWaypointCompletionRadius 35;
             private _wpTown = _grp addWaypoint [_townWpPos, 0];
             _wpTown setWaypointType "MOVE";
-            _wpTown setWaypointSpeed "LIMITED";
+            _wpTown setWaypointSpeed "FULL";
             _wpTown setWaypointBehaviour "SAFE";
             _wpTown setWaypointCombatMode "GREEN";
             _wpTown setWaypointFormation "LINE";
@@ -410,7 +229,9 @@ FADE_runMission_CSAR = {
 
     private _markerName = "FADE_csar_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    private _marker = createMarker [_markerName, [_destPos, 100] call _mkrJitter];
+    private _csarPickupRadius = 200;
+    [_taskId, _markerName + "_zone", _destPos, _csarPickupRadius, _markerFriendly] call FADE_mission_createRadiusMarker;
+    private _marker = createMarker [_markerName, [_destPos] call FADE_normPos3];
     [_taskId, _markerName] call FADE_missionEnt_registerMarker;
     _marker setMarkerType "mil_pickup";
     _marker setMarkerColor _markerFriendly;
@@ -448,13 +269,12 @@ FADE_runMission_CSAR = {
             sleep 3;
             private _ldr = leader _group;
             if (isNull _ldr || !alive _ldr) exitWith {};
+            private _sfPlayers = ([] call FADE_getAlivePlayers) select { side group _x == _sf };
             private _minD = 1e10;
             {
-                if (side _x == _sf && { isPlayer _x } && { alive _x }) then {
-                    private _d = _x distance _ldr;
-                    if (_d < _minD) then { _minD = _d };
-                };
-            } forEach allPlayers;
+                private _d = _x distance _ldr;
+                if (_d < _minD) then { _minD = _d };
+            } forEach _sfPlayers;
             if (_minD < 1e10) then {
                 private _posLdr = getPosATL _ldr;
                 if (!_didRadio1k && { _minD <= 1000 }) then {
@@ -487,17 +307,15 @@ FADE_runMission_CSAR = {
                         private _nearestVeh = objNull;
                         private _nearestDist = 1e10;
                         {
-                            if (side _x == _sf && { isPlayer _x } && { alive _x }) then {
-                                private _veh = vehicle _x;
-                                if (_veh != _x && { alive _veh } && { canMove _veh }) then {
-                                    private _dVeh = _survivor distance _veh;
-                                    if (_dVeh < _nearestDist) then {
-                                        _nearestVeh = _veh;
-                                        _nearestDist = _dVeh;
-                                    };
+                            private _veh = vehicle _x;
+                            if (_veh != _x && { alive _veh } && { canMove _veh }) then {
+                                private _dVeh = _survivor distance _veh;
+                                if (_dVeh < _nearestDist) then {
+                                    _nearestVeh = _veh;
+                                    _nearestDist = _dVeh;
                                 };
                             };
-                        } forEach allPlayers;
+                        } forEach _sfPlayers;
 
                         if (!isNull _nearestVeh && { _nearestDist <= 80 }) then {
                             private _hasSeat = (_nearestVeh emptyPositions "cargo") > 0 || { (_nearestVeh emptyPositions "turret") > 0 } || { (_nearestVeh emptyPositions "gunner") > 0 };

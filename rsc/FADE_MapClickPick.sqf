@@ -14,6 +14,27 @@ FADE_mapClickPick_parsePos = {
     [_x, _y, _z]
 };
 
+// Shared countdown hint for map-pick overlays (_rem < 0 = initial message with timeoutSec).
+FADE_mapPick_formatCountdownHint = {
+    params ["_rem", "_introLines", "_remainingSuffix", "_timeoutSec"];
+    private _nl = toString [10, 10];
+    if (_rem < 0) then {
+        format [
+            "%1%2You have %3 seconds - mission aborts if you do not click.",
+            _introLines joinString _nl,
+            _nl,
+            _timeoutSec
+        ]
+    } else {
+        format [
+            "%1%2%3 s remaining - mission aborts if you do not click.",
+            _introLines joinString _nl,
+            _nl,
+            _rem
+        ]
+    }
+};
+
 FADE_mapClickPick_clearHandler = {
     onMapSingleClick (str false);
 };

@@ -135,8 +135,8 @@ FADE_sniperClient_showTrialHint = {
 FAC_sniperGui_fnc = {
     params ["_action", "_params"];
 
-    private _btnSel = [0.2, 0.4, 0.62, 1];
-    private _btnIdle = [0.10, 0.12, 0.16, 1];
+    private _btnSel = FAC_theme_tabActive;
+    private _btnIdle = FAC_theme_tabIdle;
 
     private _fncRefreshThreat = {
         private _display = findDisplay 60910;
@@ -202,7 +202,7 @@ FAC_sniperGui_fnc = {
             _status ctrlSetTextColor [1, 0.75, 0.5, 1];
         } else {
             _status ctrlSetText "INACTIVE";
-            _status ctrlSetTextColor [0.55, 0.95, 0.7, 1];
+            _status ctrlSetTextColor FAC_theme_textOk;
         };
     };
 
@@ -241,7 +241,7 @@ FAC_sniperGui_fnc = {
             "Sniper range and firing/AT range can run at the same time (separate shooters and targets)."
         ];
         private _body = "";
-        { _body = _body + format ["<t color='#d2e8dc'>%1</t><br/>", _x] } forEach _lines;
+        { _body = _body + format ["<t color='%1'>%2</t><br/>", FAC_theme_htmlBody, _x] } forEach _lines;
         _ctrl ctrlSetStructuredText parseText _body;
     };
 
@@ -334,7 +334,7 @@ FAC_sniperGui_fnc = {
                 _btn ctrlSetBackgroundColor [0.65, 0.36, 0.16, 1];
             } else {
                 _btn ctrlSetText "Start session";
-                _btn ctrlSetBackgroundColor [0.2, 0.4, 0.62, 1];
+                _btn ctrlSetBackgroundColor FAC_theme_tabActive;
             };
             [] call _fncRefreshStatus;
             [] call _fncRefreshInteractivity;

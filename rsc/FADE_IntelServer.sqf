@@ -96,7 +96,7 @@ FADE_intel_buildLines = {
         _lines pushBack "Higher: OPFOR shifts quick-reaction traffic between contested zones when engaged.";
     };
     if (_gt == "EscapeEvasion" && { count _lines < 3 && { random 1 < 0.55 } }) then {
-        _lines pushBack "Source: truck-mounted QRF on a long cycle after confirmed contact in the town belt.";
+        _lines pushBack "Source: locals report enemy trucks staging after contact in the town belt.";
     };
 
     if (count _lines == 0) then {

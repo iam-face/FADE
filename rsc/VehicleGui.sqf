@@ -15,8 +15,8 @@ FAC_vehicleGui_syncHeaderTabs = {
     private _tab = missionNamespace getVariable ["FAC_vehicleGui_tab", "new"];
     private _tNew = _d displayCtrl 61000;
     private _tEx = _d displayCtrl 61001;
-    private _act = [0.22, 0.48, 0.78, 1];
-    private _inact = [0.07, 0.11, 0.20, 1];
+    private _act = FAC_theme_tabActive;
+    private _inact = FAC_theme_tabIdle;
     if (_tab == "new") then {
         _tNew ctrlSetBackgroundColor _act;
         _tEx ctrlSetBackgroundColor _inact;
@@ -33,7 +33,7 @@ FAC_vehicleGui_resetDeleteWreckButton = {
     if (isNull _btn) exitWith {};
     _btn ctrlSetText "Delete wrecks";
     _btn ctrlSetTextColor [0.98, 0.97, 0.95, 1];
-    _btn ctrlSetBackgroundColor [0.36, 0.22, 0.16, 1];
+    _btn ctrlSetBackgroundColor FAC_theme_btnWarn;
 };
 
 FAC_vehicleGui_syncSpawnCategoryButtons = {
@@ -43,8 +43,8 @@ FAC_vehicleGui_syncSpawnCategoryButtons = {
     private _bAir = _d displayCtrl 61116;
     private _bLand = _d displayCtrl 61117;
     if (isNull _bAir || { isNull _bLand }) exitWith {};
-    private _act = [0.22, 0.48, 0.78, 1];
-    private _inact = [0.07, 0.11, 0.20, 1];
+    private _act = FAC_theme_tabActive;
+    private _inact = FAC_theme_tabIdle;
     if (_cat == "aircraft") then {
         _bAir ctrlSetBackgroundColor _act;
         _bLand ctrlSetBackgroundColor _inact;
@@ -161,11 +161,11 @@ FAC_vehicleGui_buildVehicleDetailsPlain = {
     _lines pushBack format ["Crew positions: %1 | Passenger/cargo seats: %2", _crew, _cargo];
     private _stats = [];
     private _fuel = getNumber (_cfg >> "fuelCapacity");
-    if (_fuel > 0) then { _stats pushBack format ["Fuel capacity (cfg): %1", _fuel] };
+    if (_fuel > 0) then { _stats pushBack format ["Fuel capacity: %1", _fuel] };
     private _ms = getNumber (_cfg >> "maxSpeed");
-    if (_ms > 0) then { _stats pushBack format ["Max speed (cfg): %1", _ms] };
+    if (_ms > 0) then { _stats pushBack format ["Max speed: %1", _ms] };
     private _armor = getNumber (_cfg >> "armor");
-    if (_armor > 0) then { _stats pushBack format ["Armor (cfg): %1", _armor] };
+    if (_armor > 0) then { _stats pushBack format ["Armor: %1", _armor] };
     private _sling = getNumber (_cfg >> "slingLoadMaxCargoMass");
     if (_sling > 0) then { _stats pushBack format ["Sling load max (kg): %1", _sling] };
     if (count _stats > 0) then { _lines pushBack (_stats joinString ", ") };
@@ -240,6 +240,34 @@ FAC_vehicleGui_getManageSelectedVehicle = {
     missionNamespace getVariable [_varName, objNull]
 };
 
+// MP: pass netId to server RPCs (object refs from client list can fail to resolve on dedicated server).
+FAC_vehicleGui_vehicleRpcId = {
+    params ["_veh"];
+    if (isNull _veh) exitWith { "" };
+    private _nid = netId _veh;
+    if (_nid != "") exitWith { _nid };
+    missionNamespace getVariable ["FADE_obj_" + (str _veh) + "_netId", ""]
+};
+
+FAC_vehicleGui_scheduleManageRefresh = {
+    params [["_preserveNetId", ""]];
+    if (_preserveNetId != "") then {
+        missionNamespace setVariable ["FAC_vehicleGui_restoreSelectNetId", _preserveNetId];
+    };
+    [] spawn {
+        sleep 0.35;
+        if (isNull (findDisplay FAC_vehicleGui_IDD)) exitWith {};
+        if (missionNamespace getVariable ["FAC_vehicleGui_tab", "new"] != "existing") exitWith {};
+        ["manageSyncServicePanels", [false]] call FAC_vehicleGui_fnc;
+    };
+};
+
+FAC_vehicleGui_preserveManageSelectionForRefresh = {
+    private _veh = call FAC_vehicleGui_getManageSelectedVehicle;
+    if (isNull _veh) exitWith { "" };
+    [_veh] call FAC_vehicleGui_vehicleRpcId
+};
+
 // Fill ammo list: turret magazines (magazinesAllTurrets) + dynamic pylons (getPylonMagazines / ammoOnPylon).
 // lbData: [mag, cur, max] or ["PYLON", pylonIndex, mag, cur, max] for apply/slider logic.
 FAC_vehicleGui_rebuildManageAmmoList = {
@@ -271,11 +299,13 @@ FAC_vehicleGui_rebuildManageAmmoList = {
     } forEach _magState;
 
     private _pyMags = getPylonMagazines _veh;
+    // getPylonMagazines array is 0-based (elem 0 = pylon 1); ammoOnPylon / setAmmoOnPylon use 1-based pylon index.
     for "_i" from 0 to ((count _pyMags) - 1) do {
         private _mag = _pyMags select _i;
         if (_mag != "") then {
-            private _cur = _veh ammoOnPylon _i;
-            if (!(_cur isEqualType 0)) then { _cur = 0 };
+            private _pylonId = _i + 1;
+            private _cur = _veh ammoOnPylon _pylonId;
+            if !(_cur isEqualType 0) then { _cur = 0 };
             _cur = round _cur;
             private _cfgMag = configFile >> "CfgMagazines" >> _mag;
             private _max = if (isClass _cfgMag) then { getNumber (_cfgMag >> "count") } else { 0 };
@@ -284,8 +314,8 @@ FAC_vehicleGui_rebuildManageAmmoList = {
             if (_cur > _max) then { _cur = _max };
             private _dn = if (isClass _cfgMag) then { getText (_cfgMag >> "displayName") } else { "" };
             if (_dn == "") then { _dn = _mag };
-            private _row = _ammoLb lbAdd format ["Pylon %1: %2 (%3)  -  %4/%5", _i + 1, _dn, _mag, _cur, _max];
-            _ammoLb lbSetData [_row, str ["PYLON", _i, _mag, _cur, _max]];
+            private _row = _ammoLb lbAdd format ["Pylon %1: %2 (%3)  -  %4/%5", _pylonId, _dn, _mag, _cur, _max];
+            _ammoLb lbSetData [_row, str ["PYLON", _pylonId, _mag, _cur, _max]];
         };
     };
 };
@@ -372,7 +402,7 @@ FAC_vehicleGui_fnc = {
                 missionNamespace setVariable ["FAC_vehicleGui_deleteWreckPending", time];
                 _btn ctrlSetText "Are you sure?";
                 _btn ctrlSetTextColor [1, 0.35, 0.35, 1];
-                _btn ctrlSetBackgroundColor [0.22, 0.10, 0.10, 1];
+                _btn ctrlSetBackgroundColor FAC_theme_btnDanger;
                 [_confirmGen] spawn {
                     params ["_gen"];
                     sleep 3;
@@ -673,8 +703,12 @@ FAC_vehicleGui_fnc = {
             private _rounds = round (sliderPosition _slider);
             _rounds = (_rounds max 0) min _max;
             private _ratio = _rounds / _max;
-            [_veh, player, "rearm", _ratio, _mag, _pylonIdx] remoteExec ["FADE_serviceVehiclePart", 2];
+            private _nid = [_veh] call FAC_vehicleGui_vehicleRpcId;
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
+            [_nid, player, "rearm", _ratio, _mag, _pylonIdx] remoteExec ["FADE_serviceVehiclePart", 2];
             systemChat "Requesting ammo load update...";
+            private _preserve = [] call FAC_vehicleGui_preserveManageSelectionForRefresh;
+            [_preserve] call FAC_vehicleGui_scheduleManageRefresh;
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
 
@@ -686,8 +720,12 @@ FAC_vehicleGui_fnc = {
             private _slider = _display displayCtrl 61224;
             private _ratio = (sliderPosition _slider) / 100;
             _ratio = (_ratio max 0) min 1;
-            [_veh, player, "refuel", _ratio] remoteExec ["FADE_serviceVehiclePart", 2];
+            private _nid = [_veh] call FAC_vehicleGui_vehicleRpcId;
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
+            [_nid, player, "refuel", _ratio] remoteExec ["FADE_serviceVehiclePart", 2];
             systemChat "Requesting fuel update...";
+            private _preserve = [] call FAC_vehicleGui_preserveManageSelectionForRefresh;
+            [_preserve] call FAC_vehicleGui_scheduleManageRefresh;
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
 
@@ -699,8 +737,12 @@ FAC_vehicleGui_fnc = {
             private _slider = _display displayCtrl 61227;
             private _health = (sliderPosition _slider) / 100;
             _health = (_health max 0) min 1;
-            [_veh, player, "repair", _health] remoteExec ["FADE_serviceVehiclePart", 2];
+            private _nid = [_veh] call FAC_vehicleGui_vehicleRpcId;
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
+            [_nid, player, "repair", _health] remoteExec ["FADE_serviceVehiclePart", 2];
             systemChat "Requesting health update...";
+            private _preserve = [] call FAC_vehicleGui_preserveManageSelectionForRefresh;
+            [_preserve] call FAC_vehicleGui_scheduleManageRefresh;
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
 
@@ -764,11 +806,19 @@ FAC_vehicleGui_fnc = {
             };
             _factionPairs sort true;
             private _factionList = _display displayCtrl 61101;
+            private _prevFaction = "";
+            if (lbCurSel _factionList >= 0) then { _prevFaction = _factionList lbData (lbCurSel _factionList) };
             lbClear _factionList;
-            private _idx = _factionList lbAdd "All factions";
+            private _idx = _factionList lbAdd "All Factions";
             _factionList lbSetData [_idx, ""];
             { _x params ["_dn", "_id"]; private _i = _factionList lbAdd _dn; _factionList lbSetData [_i, _id] } forEach _factionPairs;
-            if (lbSize _factionList > 0) then { _factionList lbSetCurSel 0 };
+            private _factionSel = 0;
+            if (_prevFaction != "") then {
+                for "_k" from 0 to (lbSize _factionList - 1) do {
+                    if ((_factionList lbData _k) == _prevFaction) exitWith { _factionSel = _k };
+                };
+            };
+            if (lbSize _factionList > 0) then { _factionList lbSetCurSel _factionSel };
 
             private _searchEdit = _display displayCtrl 61102;
             _searchEdit ctrlSetText "";
@@ -798,14 +848,13 @@ FAC_vehicleGui_fnc = {
                     };
                 };
             } forEach _fullList;
-            _filtered = _filtered apply { [_x select 3, _x select 1, _x] };
+            _filtered = _filtered apply { [_x select 1, _x] };
             _filtered sort true;
-            _filtered = _filtered apply { _x select 2 };
+            _filtered = _filtered apply { _x select 1 };
             lbClear _lb;
             {
                 _x params ["_cls", "_name", "_faction", "_factionDn"];
-                private _label = format ["'%1' > %2", _factionDn, _name];
-                private _i = _lb lbAdd _label;
+                private _i = _lb lbAdd _name;
                 _lb lbSetData [_i, _cls];
                 private _tip = [_cls] call FAC_vehicleGui_buildVehicleTooltip;
                 _lb lbSetTooltip [_i, if (_tip != "") then { _tip } else { format ["Class: %1", _cls] }];
@@ -974,7 +1023,9 @@ FAC_vehicleGui_fnc = {
             if (_varName == "") exitWith {};
             private _obj = missionNamespace getVariable [_varName, objNull];
             if (isNull _obj) exitWith { systemChat "VEHICLE NO LONGER EXISTS." };
-            [_obj, player] remoteExec ["FADE_despawnVehicle", 2];
+            private _nid = [_obj] call FAC_vehicleGui_vehicleRpcId;
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
+            [_nid, player] remoteExec ["FADE_despawnVehicle", 2];
             systemChat "Requesting despawn...";
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
@@ -982,7 +1033,9 @@ FAC_vehicleGui_fnc = {
         case "duplicate": {
             private _veh = call FAC_vehicleGui_getManageSelectedVehicle;
             if (isNull _veh || {!alive _veh}) exitWith { systemChat "Select a vehicle to duplicate." };
-            [_veh, player] remoteExec ["FADE_duplicateVehicleAtBase", 2];
+            private _nid = [_veh] call FAC_vehicleGui_vehicleRpcId;
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
+            [_nid, player] remoteExec ["FADE_duplicateVehicleAtBase", 2];
             systemChat "Requesting duplicate spawn...";
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
@@ -998,6 +1051,8 @@ FAC_vehicleGui_fnc = {
             if (_varName == "") exitWith {};
             private _obj = missionNamespace getVariable [_varName, objNull];
             if (isNull _obj) exitWith { systemChat "VEHICLE NO LONGER EXISTS." };
+            private _nid = [_obj] call FAC_vehicleGui_vehicleRpcId;
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
             private _msg = switch (toLower _part) do {
                 case "repair": { "Requesting repair..." };
                 case "refuel": { "Requesting refuel..." };
@@ -1005,7 +1060,9 @@ FAC_vehicleGui_fnc = {
                 default { "Requesting service..." };
             };
             systemChat _msg;
-            [_obj, player, toLower _part, _ratio, _mag] remoteExec ["FADE_serviceVehiclePart", 2];
+            [_nid, player, toLower _part, _ratio, _mag] remoteExec ["FADE_serviceVehiclePart", 2];
+            private _preserve = [] call FAC_vehicleGui_preserveManageSelectionForRefresh;
+            [_preserve] call FAC_vehicleGui_scheduleManageRefresh;
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
 
@@ -1024,6 +1081,22 @@ FAC_vehicleGui_fnc = {
             private _disp = findDisplay FAC_vehicleGui_IDD;
             if (isNull _disp) exitWith {};
             private _lb = _disp displayCtrl 61200;
+            // Preserve Manage-tab vehicle selection across async list rebuilds (apply / header refresh).
+            private _restoreNetId = missionNamespace getVariable ["FAC_vehicleGui_restoreSelectNetId", ""];
+            if (_restoreNetId == "") then {
+                private _prevSel = lbCurSel _lb;
+                if (_prevSel >= 0) then {
+                    private _prevVar = _lb lbData _prevSel;
+                    if (_prevVar != "") then {
+                        _restoreNetId = missionNamespace getVariable [_prevVar + "_netId", ""];
+                        if (_restoreNetId == "") then {
+                            private _prevVeh = missionNamespace getVariable [_prevVar, objNull];
+                            if (!isNull _prevVeh) then { _restoreNetId = netId _prevVeh };
+                        };
+                    };
+                };
+            };
+            missionNamespace setVariable ["FAC_vehicleGui_restoreSelectNetId", nil];
             lbClear _lb;
             {
                 _x params ["_veh", "_padName"];
@@ -1034,12 +1107,23 @@ FAC_vehicleGui_fnc = {
                     private _label = format ["%1  -  %2", _name, _padName];
                     private _varName = "FADE_obj_" + (str _veh);
                     missionNamespace setVariable [_varName, _veh];
+                    missionNamespace setVariable [_varName + "_netId", netId _veh];
                     private _idx = _lb lbAdd _label;
                     _lb lbSetData [_idx, _varName];
                     _lb lbSetTooltip [_idx, format ["%1 at %2", _cls, _padName]];
                 };
             } forEach _vehicleData;
-            if (lbSize _lb > 0) then { _lb lbSetCurSel 0 };
+            private _selIdx = -1;
+            if (_restoreNetId != "" && { lbSize _lb > 0 }) then {
+                for "_i" from 0 to (lbSize _lb - 1) do {
+                    private _vn = _lb lbData _i;
+                    if (_vn != "" && { (missionNamespace getVariable [_vn + "_netId", ""]) == _restoreNetId }) exitWith {
+                        _selIdx = _i;
+                    };
+                };
+            };
+            if (_selIdx < 0 && { lbSize _lb > 0 }) then { _selIdx = 0 };
+            if (_selIdx >= 0) then { _lb lbSetCurSel _selIdx };
             // Avoid refreshing manage sliders/preview while "New" tab is active (async overlap / flicker).
             if (missionNamespace getVariable ["FAC_vehicleGui_tab", "new"] == "existing") then {
                 ["manageVehicleSel", []] call FAC_vehicleGui_fnc;
@@ -1079,9 +1163,9 @@ FAC_vehicleGui_fnc = {
                 };
                 _pylonsBtn ctrlEnable _pylonOk;
                 if (_pylonOk) then {
-                    _pylonsBtn ctrlSetBackgroundColor [0.52, 0.16, 0.16, 1];
+                    _pylonsBtn ctrlSetBackgroundColor FAC_theme_btnDanger;
                 } else {
-                    _pylonsBtn ctrlSetBackgroundColor [0.22, 0.22, 0.26, 1];
+                    _pylonsBtn ctrlSetBackgroundColor FAC_theme_btnNeutral;
                 };
             };
         };

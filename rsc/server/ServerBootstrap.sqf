@@ -1,4 +1,5 @@
 ﻿call compile preprocessFileLineNumbers "rsc\OperationNames.sqf";
+call compile preprocessFileLineNumbers "rsc\MissionLore.sqf";
 missionNamespace setVariable ["FADE_convoyMinRouteM", FADE_convoyMinRouteM];
 FADE_interceptConvoyRoadRoute = compile preprocessFileLineNumbers "rsc\fn_FADE_interceptConvoyRoadRoute.sqf";
 FADE_interceptConvoyRouteWaypoints = compile preprocessFileLineNumbers "rsc\fn_FADE_interceptConvoyRouteWaypoints.sqf";
@@ -67,6 +68,7 @@ FADE_playerCanUseMissionsGui = FAC_playerCanUseMissionsGui;
 FADE_playerCanUseScenarioGui = FAC_playerCanUseScenarioGui;
 FADE_playerCanUseVehicleGui = FAC_playerCanUseVehicleGui;
 FADE_playerCanUseLoadoutGui = FAC_playerCanUseLoadoutGui;
+FADE_playerCanUseRecruitGui = FAC_playerCanUseRecruitGui;
 FADE_playerCanUseScenarioAdmin = FAC_playerCanUseScenarioAdmin;
 FADE_playerCanUseJukebox = FAC_playerCanUseJukebox;
 FADE_playerCanUseDebugTools = FAC_playerCanUseDebugTools;
@@ -501,6 +503,8 @@ FADE_resolveScenarioEnemyUnits = {
     };
     private _filter = missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }];
     _units = [_units] call _filter;
+    private _launcherFilter = missionNamespace getVariable ["FADE_filterEnemyUnitsByLauncherPolicy", { _this select 0 }];
+    _units = [_units] call _launcherFilter;
     [_units, _ef, _snE, false] call FADE_filterUnitsForScenarioFaction
 };
 missionNamespace setVariable ["FADE_resolveScenarioFriendlyUnits", FADE_resolveScenarioFriendlyUnits];
@@ -528,8 +532,8 @@ FADE_attachNightStrobes = {
 };
 missionNamespace setVariable ["FADE_attachNightStrobes", FADE_attachNightStrobes];
 
-// Operation mission: BLUFOR players / OPFOR men within horizontal radius (distance2D).
-// Zone capture state uses 0 OPFOR = captured (latched); player count only for contested vs enemy marker tint when OPFOR present.
+// Operation mission: BLUFOR / OPFOR within horizontal radius (distance2D).
+// Capture uses spawned OPFOR only; full count (incl. virtual garrison pending) for contested/QRF.
 FADE_op_countBluforPlayersInRadius = {
     params ["_center", "_r"];
     private _n = 0;
@@ -537,6 +541,15 @@ FADE_op_countBluforPlayersInRadius = {
     {
         if (isPlayer _x && { alive _x } && { side _x == _sf } && { (_x distance2D _center) <= _r }) then { _n = _n + 1 };
     } forEach allPlayers;
+    _n
+};
+FADE_op_countBluforInRadius = {
+    params ["_center", "_r"];
+    private _n = 0;
+    private _sf = missionNamespace getVariable ["FADE_sideFriendly", west];
+    {
+        if (alive _x && { side _x == _sf } && { _x isKindOf "Man" } && { (_x distance2D _center) <= _r }) then { _n = _n + 1 };
+    } forEach allUnits;
     _n
 };
 FADE_op_countEnemyMenInRadius = {
@@ -550,8 +563,19 @@ FADE_op_countEnemyMenInRadius = {
     } forEach allUnits;
     _n
 };
+FADE_op_countEnemyMenSpawnedInRadius = {
+    params ["_center", "_r"];
+    private _raw = missionNamespace getVariable ["FADE_op_countEnemyMenInRadius_raw", nil];
+    if (!isNil "_raw" && { _raw isEqualType {} }) then {
+        [_center, _r] call _raw
+    } else {
+        [_center, _r] call FADE_op_countEnemyMenInRadius
+    }
+};
 missionNamespace setVariable ["FADE_op_countBluforPlayersInRadius", FADE_op_countBluforPlayersInRadius];
+missionNamespace setVariable ["FADE_op_countBluforInRadius", FADE_op_countBluforInRadius];
 missionNamespace setVariable ["FADE_op_countEnemyMenInRadius", FADE_op_countEnemyMenInRadius];
+missionNamespace setVariable ["FADE_op_countEnemyMenSpawnedInRadius", FADE_op_countEnemyMenSpawnedInRadius];
 
 call compile preprocessFileLineNumbers "rsc\FADE_VirtualGarrison.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_IntelServer.sqf";
@@ -703,23 +727,18 @@ FADE_getCivVehiclesForFaction = {
     _final
 };
 
-// Resolve OPFOR population setting into a concrete multiplier.
-// Auto: 0.5x (1â€“6 players), 1x (7â€“20), 1.5x (21+). Manual modes map to fixed multipliers.
+// Resolve OPFOR population setting into a concrete multiplier (fixed stepped levels only).
+// VeryLow 0.25x | Low 0.5x | Normal 1x | High 1.5x | VeryHigh 2x | Insane 4x
 FADE_resolveOpforPopulationScale = {
-    params [["_setting", "Auto"]];
+    params [["_setting", "Normal"]];
     private _set = toLower (_setting + "");
     switch _set do {
-        case "verylow": { [0.25, "Manual Very Low (0.25x)"] };
-        case "low": { [0.5, "Manual Low (0.5x)"] };
-        case "high": { [1.5, "Manual High (1.5x)"] };
-        case "veryhigh": { [2, "Manual Very High (2x)"] };
-        case "insane": { [4, "Manual Insane (4x)"] };
-        case "normal": { [1, "Manual Normal (1x)"] };
-        default {
-            private _players = count (allPlayers select { !isNull _x });
-            private _auto = if (_players <= 6) then { 0.5 } else { if (_players <= 20) then { 1 } else { 1.5 } };
-            [_auto, format ["Auto (%1 player%2 -> %3x)", _players, if (_players == 1) then { "" } else { "s" }, _auto]]
-        };
+        case "verylow": { [0.25, "Very Low (0.25x)"] };
+        case "low": { [0.5, "Low (0.5x)"] };
+        case "high": { [1.5, "High (1.5x)"] };
+        case "veryhigh": { [2, "Very High (2x)"] };
+        case "insane": { [4, "Insane (4x)"] };
+        default { [1, "Normal (1x)"] };
     }
 };
 
@@ -763,14 +782,65 @@ publicVariable "FADE_aiSideChat_exec";
 // Detection: CfgWeapons type 4 (launcher) and/or inheritance from Launcher_Base_F (Bohemia wiki / config tree); some mods omit type.
 FADE_weaponIsOpforAtLauncherPolicyTarget = {
     params ["_weapon"];
-    if (_weapon == "") exitWith { false };
+    if (_weapon == "" || { _weapon in ["Throw", "Put"] }) exitWith { false };
     private _ln = toLower _weapon;
-    if ((_ln find "titan" >= 0) || { _ln find "igla" >= 0 } || { _ln find "stinger" >= 0 } || { (_ln find "launch_" >= 0) && { _ln find "aa" >= 0 } }) exitWith { false };
+    if ((_ln find "stinger" >= 0) || { _ln find "igla" >= 0 }) exitWith { false };
+    if ((_ln find "launch_" >= 0) && { _ln find "aa" >= 0 }) exitWith { false };
+    if ((_ln find "titan" >= 0) && { _ln find "aa" >= 0 }) exitWith { false };
     private _cfg = configFile >> "CfgWeapons" >> _weapon;
-    if (!isClass _cfg) exitWith { false };
-    private _t = getNumber (_cfg >> "type");
-    if (_t == 4) exitWith { true };
-    _weapon isKindOf ["Launcher_Base_F", configFile >> "CfgWeapons"]
+    if (isClass _cfg) then {
+        private _t = getNumber (_cfg >> "type");
+        if (_t == 4) exitWith { true };
+        if (_weapon isKindOf ["Launcher_Base_F", configFile >> "CfgWeapons"]) exitWith { true };
+    };
+    (_ln find "launch_" == 0)
+        || { _ln find "rpg" >= 0 }
+        || { _ln find "nlaw" >= 0 }
+        || { _ln find "mraws" >= 0 }
+        || { _ln find "maaws" >= 0 }
+        || { (_ln find "titan" >= 0) && { (_ln find "short" >= 0) || { _ln find "at" >= 0 } || { _ln find "ap" >= 0 } } }
+};
+
+FADE_unitClassCarriesOpforAtLauncher = {
+    params ["_class"];
+    if (!(_class isEqualType "") || { !isClass (configFile >> "CfgVehicles" >> _class) }) exitWith { false };
+    private _hit = false;
+    {
+        if ([_x] call FADE_weaponIsOpforAtLauncherPolicyTarget) exitWith { _hit = true };
+    } forEach (getArray (configFile >> "CfgVehicles" >> _class >> "weapons"));
+    _hit
+};
+
+FADE_filterEnemyUnitsByLauncherPolicy = {
+    params ["_classes"];
+    if (_classes isEqualTo [] || { !(_classes isEqualType []) }) exitWith { _classes };
+    private _setting = [missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"]] call FADE_normalizeOpforLauncherSetting;
+    if (_setting == "Normal") exitWith { _classes };
+    private _plain = [];
+    private _at = [];
+    {
+        if ([_x] call FADE_unitClassCarriesOpforAtLauncher) then { _at pushBack _x } else { _plain pushBack _x };
+    } forEach _classes;
+    if (_at isEqualTo [] || { _plain isEqualTo [] }) exitWith { _classes };
+    private _keepShare = switch (_setting) do {
+        case "Reduced": { 0.25 };
+        case "Minimal": { 0.10 };
+        case "None": { 0 };
+        default { 1 };
+    };
+    private _keepN = (round (count _at * _keepShare)) max 0;
+    private _atShuffled = +_at;
+    _atShuffled = _atShuffled call BIS_fnc_arrayShuffle;
+    +_plain + (_atShuffled select [0, _keepN min count _atShuffled])
+};
+missionNamespace setVariable ["FADE_filterEnemyUnitsByLauncherPolicy", FADE_filterEnemyUnitsByLauncherPolicy];
+
+FADE_reapplyOpforLauncherPolicyToAliveEnemy = {
+    if (!isServer) exitWith {};
+    private _enemySide = missionNamespace getVariable ["FADE_sideEnemy", east];
+    {
+        if (alive _x && { side _x == _enemySide }) then { [_x] call FADE_applyOpforLauncherPolicyToUnit };
+    } forEach allUnits;
 };
 
 FADE_applyOpforLauncherPolicyToUnit = {
@@ -782,24 +852,29 @@ FADE_applyOpforLauncherPolicyToUnit = {
     // Deferred: loadouts can finish after spawn; scan all weapon slots (not only secondaryWeapon).
     [_unit] spawn {
         params ["_unit"];
-        sleep 0.2;
-        if (isNull _unit || {!alive _unit}) exitWith {};
         private _enemySide2 = missionNamespace getVariable ["FADE_sideEnemy", east];
-        if (side _unit != _enemySide2) exitWith {};
-        private _setting = missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"];
-        if (_setting == "Normal") exitWith {};
-        private _keepChance = switch (_setting) do {
-            case "Reduced": { 0.25 };
-            case "Minimal": { 0.10 };
-            case "None": { 0 };
-            default { 1 };
-        };
         {
-            private _w = _x;
-            if ([_w] call FADE_weaponIsOpforAtLauncherPolicyTarget) then {
-                if (random 1 > _keepChance) then { _unit removeWeapon _w };
+            sleep _x;
+            if (isNull _unit || {!alive _unit}) exitWith {};
+            if (side _unit != _enemySide2) exitWith {};
+            private _setting = [missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"]] call FADE_normalizeOpforLauncherSetting;
+            if (_setting == "Normal") exitWith {};
+            private _keepChance = switch (_setting) do {
+                case "Reduced": { 0.25 };
+                case "Minimal": { 0.10 };
+                case "None": { 0 };
+                default { 1 };
             };
-        } forEach (weapons _unit);
+            private _strip = [];
+            {
+                if ([_x] call FADE_weaponIsOpforAtLauncherPolicyTarget) then {
+                    if (random 1 > _keepChance) then {
+                        if !(_x in _strip) then { _strip pushBack _x };
+                    };
+                };
+            } forEach (weapons _unit);
+            { _unit removeWeapon _x } forEach _strip;
+        } forEach [0.15, 0.6, 1.5];
     };
 };
 publicVariable "FADE_applyOpforLauncherPolicyToUnit";
@@ -809,7 +884,20 @@ FAC_applyEnemyScenarioToGroup = {
     params ["_grp"];
     private _enemySide = missionNamespace getVariable ["FADE_sideEnemy", east];
     if (isNull _grp || { side _grp != _enemySide }) exitWith {};
-    private _skill = missionNamespace getVariable ["FADE_enemySkill", 0.2];
+    private _ensureDry = missionNamespace getVariable ["FADE_ensureDryLandPos", {}];
+    private _dryFn = missionNamespace getVariable ["FADE_surfaceIsDry", { params ["_p"]; count _p >= 2 && { !surfaceIsWater [_p select 0, _p select 1] } }];
+    {
+        if (alive _x) then {
+            private _p = getPosATL _x;
+            if !([_p] call _dryFn) then {
+                if (!(_ensureDry isEqualTo {})) then {
+                    private _dry = [_p, _p] call _ensureDry;
+                    if ([_dry] call _dryFn) then { _x setPosATL _dry };
+                };
+            };
+        };
+    } forEach units _grp;
+    private _skill = missionNamespace getVariable ["FADE_enemySkill", 0.0];
     private _routing = missionNamespace getVariable ["FADE_enemyRouting", 0];
     { _x setSkill _skill } forEach units _grp;
     _grp allowFleeing _routing;
@@ -1160,10 +1248,10 @@ FADE_opforAir_trySpawn = {
         };
     };
     if (_atHqSuppressed) exitWith {};
-    private _setting = missionNamespace getVariable ["FADE_opforAirSetting", "Off"];
+    private _setting = [missionNamespace getVariable ["FADE_opforAirSetting", "Off"]] call FADE_normalizeOpforThreatSetting;
     if (_setting == "Off") exitWith {};
-    private _maxActive = if (_setting == "Low") then { 1 } else { 2 };
-    private _cooldown = if (_setting == "Low") then { 600 } else { 300 };
+    private _intensity = [_setting] call FADE_opforThreatIntensity;
+    _intensity params ["_maxActive", "_cooldown"];
     private _arr = missionNamespace getVariable ["FADE_opforAir_active", []];
     _arr = _arr select { !isNull _x && { alive _x } };
     missionNamespace setVariable ["FADE_opforAir_active", _arr];
@@ -1200,10 +1288,11 @@ FADE_applyScenarioSettings = {
     // Scenario GUI sends one wrapped array so remoteExec always delivers a single _this (reliable with many args on dedicated servers).
     params ["_args"];
     if !(_args isEqualType []) exitWith {};
-    _args params ["_hour", "_weather", "_enemyFaction", "_friendlyFaction", "_civFaction", ["_limitGear", false], ["_presetOnly", false], ["_player", objNull], ["_patrolsEnabled", false], ["_enemySkill", 0.2], ["_enemyRouting", 0], ["_enemyAAA", "Off"], ["_civiliansEnabled", true], ["_aoStrength", "Medium"], ["_timeCompressionScale", 1], ["_opforPopulationSetting", "Auto"], ["_teleportToPlayerMode", 0], ["_opforLauncherSetting", "Normal"], ["_opforAirSetting", "Off"], ["_operationZoneCount", 6], ["_weatherParams", []], ["_civGlobalMaxAlive", 55], ["_civDensityScale", 1], ["_civTalkInterpretersOnly", false], ["_intelSpecialistsOnly", false]];
+    _args params ["_hour", "_weather", "_enemyFaction", "_friendlyFaction", "_civFaction", ["_limitGear", false], ["_presetOnly", false], ["_player", objNull], ["_patrolsEnabled", true], ["_enemySkill", 0.0], ["_enemyRouting", 0], ["_enemyAAA", "Off"], ["_civiliansEnabled", true], ["_aoStrength", "Medium"], ["_timeCompressionScale", 1], ["_opforPopulationSetting", "Low"], ["_teleportToPlayerMode", 0], ["_opforLauncherSetting", "Normal"], ["_opforAirSetting", "Off"], ["_operationZoneCount", 6], ["_weatherParams", []], ["_civGlobalMaxAlive", 55], ["_civDensityScale", 1], ["_civTalkInterpretersOnly", false], ["_intelSpecialistsOnly", false], ["_opforDroneSetting", "Off"]];
     FADE_getUnitsForFaction_cache = createHashMap;
     FADE_getCivVehiclesForFaction_cache = createHashMap;
     missionNamespace setVariable ["FADE_enemyAirVehicleClasses_cache", []];
+    missionNamespace setVariable ["FADE_enemyDroneVehicleClasses_cache", []];
     if (!([_player] call FADE_playerCanUseScenarioGui)) exitWith {
         if (!isNull _player) then {
             ["Scenario access denied by lobby settings."] remoteExec ["systemChat", _player];
@@ -1241,15 +1330,20 @@ FADE_applyScenarioSettings = {
     missionNamespace setVariable ["FADE_civTalkInterpretersOnly", _civTalkInterpretersOnly, true];
     missionNamespace setVariable ["FADE_intelSpecialistsOnly", _intelSpecialistsOnly, true];
     missionNamespace setVariable ["FADE_limitToPresetLoadouts", _presetOnly];
+    _opforAirSetting = [_opforAirSetting] call FADE_normalizeOpforThreatSetting;
+    _opforDroneSetting = [_opforDroneSetting] call FADE_normalizeOpforThreatSetting;
+    _opforLauncherSetting = [_opforLauncherSetting] call FADE_normalizeOpforLauncherSetting;
     missionNamespace setVariable ["FADE_opforPopulationSetting", _opforPopulationSetting, true];
     missionNamespace setVariable ["FADE_opforLauncherSetting", _opforLauncherSetting, true];
     missionNamespace setVariable ["FADE_opforAirSetting", _opforAirSetting, true];
+    missionNamespace setVariable ["FADE_opforDroneSetting", _opforDroneSetting, true];
+    if (_opforLauncherSetting != "Normal") then { [] call FADE_reapplyOpforLauncherPolicyToAliveEnemy };
     _operationZoneCount = (round _operationZoneCount) max 2 min 10;
     missionNamespace setVariable ["FADE_operationZoneCount", _operationZoneCount, true];
     if (_opforAirSetting == "Off") then { call FADE_opforAir_despawnAll };
+    if (_opforDroneSetting == "Off" && {!isNil "FADE_opforDrone_despawnAll"}) then { call FADE_opforDrone_despawnAll };
     private _opforResolved = [_opforPopulationSetting] call FADE_resolveOpforPopulationScale;
     private _opforScale = _opforResolved select 0;
-    private _opforScaleLabel = _opforResolved select 1;
     missionNamespace setVariable ["FADE_opforPopulationScale", _opforScale, true];
 
     private _enemySideNum = [_enemyFaction, 0] call FADE_getFactionSideNum;
@@ -1275,6 +1369,7 @@ FADE_applyScenarioSettings = {
     };
     _enemyUnits = [_enemyUnits] call FADE_filterUnitsArmed;
     _friendlyUnits = [_friendlyUnits] call FADE_filterUnitsArmed;
+    _enemyUnits = [_enemyUnits] call FADE_filterEnemyUnitsByLauncherPolicy;
     _enemyUnits = [_enemyUnits, _enemyFaction, _enemySideNum, false] call FADE_filterUnitsForScenarioFaction;
     _friendlyUnits = [_friendlyUnits, _friendlyFaction, _friendlySideNum, false] call FADE_filterUnitsForScenarioFaction;
     // Shallow copy so we never store the same array reference as FADE_unitsByFactionSide cache (avoids accidental mutation).
@@ -1318,60 +1413,13 @@ FADE_applyScenarioSettings = {
     };
 
     private _hourStr = (if (_hour < 10) then { "0" } else { "" }) + str _hour + "00";
-    private _enemyDn = [_enemyFaction] call FADE_getFactionDisplayName;
-    private _friendlyDn = [_friendlyFaction] call FADE_getFactionDisplayName;
-    private _civDn = [_civFaction] call FADE_getFactionDisplayName;
-    private _skillDn = if (_enemySkill <= 0.35) then { "low" } else { if (_enemySkill <= 0.6) then { "medium" } else { if (_enemySkill <= 0.85) then { "high" } else { "very high" } } };
-    private _patrolW = if (_patrolsEnabled) then { "on" } else { "off" };
-    private _routeW = if (_enemyRouting > 0) then { "on" } else { "off" };
-    private _airLc = toLower _opforAirSetting;
-    private _atLc = toLower _opforLauncherSetting;
-    private _summaryParts = [
-        format ["patrols %1", _patrolW],
-        format ["%1 AI", _skillDn],
-        format ["routing %1", _routeW],
-        format ["AAA %1", toLower _enemyAAA],
-        format ["%1 towns", str _operationZoneCount],
-        format ["OPFOR %1", toLower _opforScaleLabel]
+    private _hintText = format [
+        "<t size='1.2' color='#87CEEB'>SCENARIO UPDATE</t><br/><br/>" +
+        "<t color='#A0B4C8'>DTG</t> <t color='#E0E0E0'>%1 ZULU</t><br/>" +
+        "<t color='#A0B4C8'>WX</t> <t color='#E0E0E0'>%2</t>",
+        _hourStr,
+        _weather
     ];
-    if (_opforLauncherSetting != "Normal") then { _summaryParts pushBack format ["AT %1", _atLc] };
-    if (_opforAirSetting != "Off") then { _summaryParts pushBack format ["air %1", _airLc] };
-    private _summaryLine = _summaryParts joinString " | ";
-    private _civBlock = if (_civiliansEnabled) then {
-        format ["<t align='left' color='#A8B8C8' size='0.9'>Civilians</t> <t color='#D4C4A8'>%1</t><br/>", _civDn]
-    } else {
-        "<t align='left' color='#C8A090' size='0.9'>Ambient civilians off</t><br/>"
-    };
-    private _extras = [];
-    if (_limitGear) then { _extras pushBack "BLUFOR gear limited to faction" };
-    if (_presetOnly) then { _extras pushBack "Preset loadouts only" };
-    if (((round _teleportToPlayerMode) max 0 min 1) > 0) then { _extras pushBack "Redeploy: squad leaders only" };
-    if (_civTalkInterpretersOnly) then { _extras pushBack "Civilian talk: interpreters only" };
-    if (_intelSpecialistsOnly) then { _extras pushBack "Intel read: specialists only" };
-    private _tc = (_timeCompressionScale max 1) min 100;
-    if (_tc != 1) then { _extras pushBack format ["Mission time %1x", _tc] };
-    private _extraBlock = if (count _extras > 0) then {
-        format ["<br/><t align='left' color='#8FA0B0' size='0.85'>%1</t>", _extras joinString "<br/>"]
-    } else { "" };
-    private _hintText =
-        "<t size='1.12' color='#8CB4E8' align='center'>Scenario updated</t>" +
-        "<br/><br/>" +
-        format [
-            "<t align='left' color='#9AAAB8' size='0.9'>Mission clock</t> <t color='#D0E4FF' size='0.95'>%1 ZULU</t><br/>" +
-            "<t align='left' color='#9AAAB8' size='0.9'>Weather</t> <t color='#D0E4FF' size='0.95'>%2</t><br/><br/>" +
-            "<t align='left' color='#9AAAB8' size='0.9'>Friendly</t> <t color='#A8DDB0' size='0.95'>%3</t><br/>" +
-            "<t align='left' color='#9AAAB8' size='0.9'>Enemy</t> <t color='#E0A8A8' size='0.95'>%4</t><br/>" +
-            "%5<br/>" +
-            "<t align='left' color='#8FA0B0' size='0.88'>%6</t>" +
-            "%7",
-            _hourStr,
-            _weather,
-            _friendlyDn,
-            _enemyDn,
-            _civBlock,
-            _summaryLine,
-            _extraBlock
-        ];
     [_hintText] remoteExec ["FADE_showMissionHint", 0];
     // Single packed client sync (JIP + apply)  -  replaces per-field PV burst for GUI state.
     FADE_scenarioClientSync = [
@@ -1452,6 +1500,7 @@ if (_defCiv isEqualTo []) then { _defCiv = ["C_man_1", "C_man_1_1_F", "C_man_pol
 if (_defCivVeh isEqualTo []) then { _defCivVeh = ["C_Offroad_01_F", "C_Hatchback_01_F", "C_SUV_01_F", "C_Van_01_transport_F"] };
 _defEnemy = [_defEnemy] call FADE_filterUnitsArmed;
 _defFriendly = [_defFriendly] call FADE_filterUnitsArmed;
+_defEnemy = [_defEnemy] call FADE_filterEnemyUnitsByLauncherPolicy;
 _defEnemy = [_defEnemy, _enemyF, _enemySideNum0, false] call FADE_filterUnitsForScenarioFaction;
 _defFriendly = [_defFriendly, _friendlyF, _friendlySideNum0, false] call FADE_filterUnitsForScenarioFaction;
 private _defFriendlyVeh = [_friendlyF] call FADE_getFriendlyVehicleClasses;
@@ -1470,10 +1519,13 @@ missionNamespace setVariable ["FADE_timeCompressionScale", missionNamespace getV
 missionNamespace setVariable ["FADE_teleportToPlayerMode", missionNamespace getVariable ["FADE_teleportToPlayerMode", 0], true];
 missionNamespace setVariable ["FADE_civTalkInterpretersOnly", missionNamespace getVariable ["FADE_civTalkInterpretersOnly", false], true];
 missionNamespace setVariable ["FADE_intelSpecialistsOnly", missionNamespace getVariable ["FADE_intelSpecialistsOnly", false], true];
-missionNamespace setVariable ["FADE_opforPopulationSetting", missionNamespace getVariable ["FADE_opforPopulationSetting", "Auto"], true];
+missionNamespace setVariable ["FADE_opforPopulationSetting", missionNamespace getVariable ["FADE_opforPopulationSetting", "Low"], true];
 missionNamespace setVariable ["FADE_opforLauncherSetting", missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"], true];
 missionNamespace setVariable ["FADE_opforAirSetting", missionNamespace getVariable ["FADE_opforAirSetting", "Off"], true];
-private _opforInit = [missionNamespace getVariable ["FADE_opforPopulationSetting", "Auto"]] call FADE_resolveOpforPopulationScale;
+missionNamespace setVariable ["FADE_opforDroneSetting", missionNamespace getVariable ["FADE_opforDroneSetting", "Off"], true];
+missionNamespace setVariable ["FADE_scenarioPatrols", missionNamespace getVariable ["FADE_scenarioPatrols", true], true];
+missionNamespace setVariable ["FADE_enemySkill", missionNamespace getVariable ["FADE_enemySkill", 0.0], true];
+private _opforInit = [missionNamespace getVariable ["FADE_opforPopulationSetting", "Low"]] call FADE_resolveOpforPopulationScale;
 missionNamespace setVariable ["FADE_opforPopulationScale", _opforInit select 0, true];
 FADE_scenarioClientSync = [
     "v1",

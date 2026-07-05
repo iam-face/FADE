@@ -217,7 +217,7 @@ FADE_rangeSpawnVehicleAt = {
     missionNamespace setVariable ["FADE_rangeSpawned", _spawned];
 };
 
-FADE_rangeEndSession = {
+FADE_rangeEndSession_impl = {
     params [["_player", objNull], ["_msg", "Range session ended."]];
     if (!isServer) exitWith {};
     if (!(missionNamespace getVariable ["FADE_rangeSessionActive", false])) exitWith {};
@@ -369,7 +369,7 @@ FADE_rangeStartSession_impl = {
 
     private _starterKh = _player addEventHandler ["Killed", {
         if (!(missionNamespace getVariable ["FADE_rangeSessionActive", false])) exitWith {};
-        [_this select 0, "Range ended: shooter down."] call FADE_rangeEndSession;
+        [_this select 0, "Range ended: shooter down."] call FADE_rangeEndSession_impl;
     }];
     missionNamespace setVariable ["FADE_rangeStarterKilledEh", [_player, _starterKh]];
 
@@ -457,7 +457,7 @@ FADE_rangeStartSession_impl = {
             [_player, "", false] spawn {
                 params ["_p"];
                 sleep 0.05;
-                [_p, ""] call FADE_rangeEndSession;
+                [_p, ""] call FADE_rangeEndSession_impl;
             };
         };
         missionNamespace setVariable ["FADE_rangeTrialScript", _trial];
@@ -550,14 +550,14 @@ FADE_rangePublishAtStateTo = {
     ] remoteExec ["FADE_rangeClient_setAtWeaponState", _player];
 };
 
-FADE_rangeRequestAtWeaponState = {
+FADE_rangeRequestAtWeaponState_impl = {
     params [["_player", objNull]];
     if (!isServer) exitWith {};
     [_player] call FADE_rangePublishAtStateTo;
 };
 
 // Spawn friendly land vehicle / equipment at rangeFriendlyVehPos_* (exact Eden logic position + heading).
-FADE_rangeSpawnFriendlyLandAtSlot = {
+FADE_rangeSpawnFriendlyLandAtSlot_impl = {
     params [["_slotName", ""], ["_vehicleClass", ""], ["_player", objNull], ["_maxRangeM", 200]];
     if (!isServer) exitWith {};
     if (_slotName == "" || {_vehicleClass == ""}) exitWith {};
@@ -622,7 +622,7 @@ FADE_rangeSpawnFriendlyLandAtSlot = {
     [_player] call FADE_rangePublishAtStateTo;
 };
 
-FADE_rangeDespawnFriendlyLandAtSlot = {
+FADE_rangeDespawnFriendlyLandAtSlot_impl = {
     params [["_slotName", ""], ["_player", objNull]];
     if (!isServer) exitWith {};
     if (_slotName == "") exitWith {};
@@ -642,10 +642,6 @@ FADE_rangeDespawnFriendlyLandAtSlot = {
     [_player] call FADE_rangePublishAtStateTo;
 };
 
-publicVariable "FADE_rangeEndSession";
-publicVariable "FADE_rangeRequestAtWeaponState";
-publicVariable "FADE_rangeSpawnFriendlyLandAtSlot";
-publicVariable "FADE_rangeDespawnFriendlyLandAtSlot";
 publicVariable "FADE_rangeSessionActive";
 publicVariable "FADE_rangeSessionMode";
 publicVariable "FADE_rangeFiringPosCount";

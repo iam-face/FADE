@@ -41,6 +41,7 @@ FAC_jukebox_tracks = [
     ["Buttrock > Three Days Grace - Animal I Have Become", "Sig_Buttrock_15"],
     ["Buttrock > Trapt - Headstrong",              "Sig_Buttrock_16"],
     ["Buttrock > Trust Company - Downfall",        "Sig_Buttrock_17"],
+    ["Buttrock > Chevelle - Send the Pain Below",  "Sig_Buttrock_19"],
     ["Buttrock > Korn - Twisted Transistor",       "Sig_Buttrock_18"],
     ["C&C > Generals China Mix",                   "Sig_CNC_Gen_CHI_Mix"],
     ["C&C > Generals GLA Mix",                     "Sig_CNC_Gen_GLA_Mix"],
@@ -90,7 +91,8 @@ FAC_jukebox_oggPairs = [
     ["Sig_Buttrock_15",       "\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_ThreeDaysGrace_AnimalIHaveBecome.ogg"],
     ["Sig_Buttrock_16",       "\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Trapt_Headstrong.ogg"],
     ["Sig_Buttrock_17",       "\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_TrustCompany_Downfall.ogg"],
-    ["Sig_Buttrock_18",       "\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_TwistedTransistor.ogg"]
+    ["Sig_Buttrock_18",       "\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_TwistedTransistor.ogg"],
+    ["Sig_Buttrock_19",       "\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\Buttrock\buttrock_Chevelle_SendThePainBelow.ogg"]
 ];
 
 FAC_jukebox_fnc_oggPath = {
@@ -206,6 +208,9 @@ FAC_jukebox_fnc_clientClearSourceAudio = {
     if (!isNull _em) then {
         private _snd = _em getVariable ["FAC_jukeboxActiveSnd", objNull];
         if (!isNull _snd) then { deleteVehicle _snd };
+        {
+            if (!isNull _x && { _x isKindOf "Sound" }) then { deleteVehicle _x };
+        } forEach (attachedObjects _em);
         _em setVariable ["FAC_jukeboxActiveSnd", nil, false];
     };
 
@@ -215,7 +220,11 @@ FAC_jukebox_fnc_clientClearSourceAudio = {
         _x params ["_k", "_ps3d", "_o"];
         if (_k == _sourceKey) then {
             [_ps3d] call FAC_jukebox_fnc_stopPs3d;
-            if (!isNull _o) then { deleteVehicle _o };
+            if (!isNull _o) then {
+                private _parent = attachedTo _o;
+                if (!isNull _parent) then { _parent setVariable ["FAC_jukeboxActiveSnd", nil, false] };
+                deleteVehicle _o;
+            };
         } else {
             _keep pushBack _x;
         };
@@ -310,31 +319,26 @@ FAC_jukebox_clientPlay_execOne = {
     };
 };
 
-// Drain queue in one spawn; exit when empty (no idle polling - dedicated server never runs this: FAC_jukebox_clientPlay requires hasInterface).
-// Outer loop catches jobs appended while the last execOne runs; inner loop drains without toggling running between jobs.
+// One persistent drain thread per client (scriptDone guard). Avoids overlapping spawns that double-play / orphan audio.
 FAC_jukebox_clientPlay_kickDrain = {
-    // Recover if a prior drain script died with cpDrainRunning true and an empty queue (would block all jukebox RPCs).
-    if (
-        missionNamespace getVariable ["FAC_jukebox_cpDrainRunning", false]
-        && { count (missionNamespace getVariable ["FAC_jukebox_cpQueue", []]) == 0 }
-    ) then {
-        missionNamespace setVariable ["FAC_jukebox_cpDrainRunning", false];
-    };
-    if (missionNamespace getVariable ["FAC_jukebox_cpDrainRunning", false]) exitWith {};
-    missionNamespace setVariable ["FAC_jukebox_cpDrainRunning", true];
-    [] spawn {
+    if (!hasInterface) exitWith {};
+    private _handle = missionNamespace getVariable ["FAC_jukebox_cpDrainScript", scriptNull];
+    if (!scriptDone _handle) exitWith {};
+    private _h = [] spawn {
         while { true } do {
+            waitUntil {
+                sleep 0.02;
+                count (missionNamespace getVariable ["FAC_jukebox_cpQueue", []]) > 0
+            };
             while { count (missionNamespace getVariable ["FAC_jukebox_cpQueue", []]) > 0 } do {
                 private _q = missionNamespace getVariable ["FAC_jukebox_cpQueue", []];
                 private _job = _q deleteAt 0;
                 missionNamespace setVariable ["FAC_jukebox_cpQueue", _q];
                 _job call FAC_jukebox_clientPlay_execOne;
             };
-            missionNamespace setVariable ["FAC_jukebox_cpDrainRunning", false];
-            if (count (missionNamespace getVariable ["FAC_jukebox_cpQueue", []]) == 0) exitWith {};
-            missionNamespace setVariable ["FAC_jukebox_cpDrainRunning", true];
         };
     };
+    missionNamespace setVariable ["FAC_jukebox_cpDrainScript", _h];
 };
 
 // FAC_jukebox_clientPlay -- enqueue; spawn drain only when idle (no perpetual waitUntil).
@@ -366,7 +370,9 @@ FAC_jukebox_clientStopAll = {
     if (!hasInterface) exitWith {};
     params [["_sourceKeys", []]];
     missionNamespace setVariable ["FAC_jukebox_cpQueue", []];
-    missionNamespace setVariable ["FAC_jukebox_cpDrainRunning", false];
+    private _drain = missionNamespace getVariable ["FAC_jukebox_cpDrainScript", scriptNull];
+    if (!scriptDone _drain) then { terminate _drain };
+    missionNamespace setVariable ["FAC_jukebox_cpDrainScript", scriptNull];
 
     {
         if (_x != "") then { [_x] call FAC_jukebox_fnc_clientClearSourceAudio };
@@ -434,6 +440,7 @@ FAC_jukeboxGui_fnc = {
                 systemChat "Jukebox access denied by lobby settings.";
             };
             if (!createDialog "RscDisplayJukebox") then {
+                ["Jukebox"] call FAC_theme_guiResourceMissing;
                 ["RESOURCE NOT FOUND."] call FAC_jukebox_dbg;
             } else {
                 ["Open dialog"] call FAC_jukebox_dbg;
@@ -559,9 +566,12 @@ FAC_jukeboxGui_fnc = {
             private _key = missionNamespace getVariable ["FAC_jukebox_guiSource", ""];
             if (_key == "") exitWith { ["No source (re-open the jukebox)."] call FAC_jukebox_dbg };
             ["Stop → server"] call FAC_jukebox_dbg;
-            ["", _key, player] remoteExec ["FAC_jukebox_serverPlay", 2];
+            private _q = missionNamespace getVariable ["FAC_jukebox_cpQueue", []];
+            _q = (_q select { (_x select 1) != _key });
+            missionNamespace setVariable ["FAC_jukebox_cpQueue", _q];
             [_key, ""] call FAC_jukebox_fnc_setClientActiveSourceSong;
             [_key] call FAC_jukebox_fnc_clientClearSourceAudio;
+            ["", _key, player] remoteExec ["FAC_jukebox_serverPlay", 2];
             systemChat "Jukebox stopped at this source.";
             if (!isNull (findDisplay 60400)) then {
                 ["updateNowPlaying", []] call FAC_jukeboxGui_fnc;

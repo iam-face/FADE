@@ -1,54 +1,24 @@
 // AUTO-EXTRACTED from Missions.sqf  -  run via FADE_runMission_* (compile once)
 if (!isServer) exitWith {};
 FADE_runMission_Cargo = {
-    private _missionType = missionNamespace getVariable ["FADE_missionRun_missionType", ""];
-    private _destPos = missionNamespace getVariable ["FADE_missionRun_destPos", [0,0,0]];
-    private _player = missionNamespace getVariable ["FADE_missionRun_player", objNull];
-    private _evadeePlayers = missionNamespace getVariable ["FADE_missionRun_evadeePlayers", []];
-    private _fromMapClick = missionNamespace getVariable ["FADE_missionRun_fromMapClick", false];
-    private _mapAnchor = missionNamespace getVariable ["FADE_missionRun_mapAnchor", []];
-    private _friendlyUnits = missionNamespace getVariable ["FADE_missionRun_friendlyUnits", []];
-    private _enemyUnits = missionNamespace getVariable ["FADE_missionRun_enemyUnits", []];
-    private _sideFriendly = missionNamespace getVariable ["FADE_missionRun_sideFriendly", west];
-    private _sideEnemy = missionNamespace getVariable ["FADE_missionRun_sideEnemy", east];
-    private _markerFriendly = missionNamespace getVariable ["FADE_missionRun_markerFriendly", "ColorWEST"];
-    private _markerEnemy = missionNamespace getVariable ["FADE_missionRun_markerEnemy", "ColorEAST"];
-    private _dryPos = missionNamespace getVariable ["FADE_surfaceIsDry", {}];
-    private _taskId = missionNamespace getVariable ["FADE_missionRun_taskId", ""];
-    private _operationName = missionNamespace getVariable ["FADE_missionRun_operationName", ""];
-    private _operationNameUpper = missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""];
-    private _briefGuiTail = missionNamespace getVariable ["FADE_missionRun_briefGuiTail", ""];
-    private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", {}];
-    private _enemyFactionName = missionNamespace getVariable ["FADE_missionRun_enemyFactionName", ""];
-    private _zeroAlphaDisplayName = missionNamespace getVariable ["FADE_missionRun_zeroAlphaDisplayName", ""];
-    private _isGlobalMission = missionNamespace getVariable ["FADE_missionRun_isGlobalMission", false];
-    private _basePos = missionNamespace getVariable ["FADE_missionRun_basePos", [0,0,0]];
-    private _unitCount = missionNamespace getVariable ["FADE_missionRun_unitCount", 6];
-    private _unitClasses = missionNamespace getVariable ["FADE_missionRun_unitClasses", []];
-    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {}];
-    private _fnc_createMissionTask = missionNamespace getVariable ["FADE_mission_createTask", {}];
-    private _showAssignedHint = missionNamespace getVariable ["FADE_mission_showAssignedHint", {}];
-    private _defaultSituationTaskText = missionNamespace getVariable ["FADE_missionRun_defaultSituationTaskText", ""];
-    private _defaultExecutionTaskText = missionNamespace getVariable ["FADE_missionRun_defaultExecutionTaskText", ""];
-    private _defaultAdminTaskText = missionNamespace getVariable ["FADE_missionRun_defaultAdminTaskText", ""];
-    private _defaultCommandTaskText = missionNamespace getVariable ["FADE_missionRun_defaultCommandTaskText", ""];
-    private _defaultSituationHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHtml", ""];
-    private _defaultSituationHintHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHintHtml", ""];
-    private _friendlyPlayerCount = missionNamespace getVariable ["FADE_missionRun_friendlyPlayerCount", 0];
-    private _friendlyFactionName = missionNamespace getVariable ["FADE_missionRun_friendlyFactionName", ""];
-    private _estimatedOpforCount = missionNamespace getVariable ["FADE_missionRun_estimatedOpforCount", 0];
-    private _opforCountFactor = missionNamespace getVariable ["FADE_missionRun_opforCountFactor", 1];
-    private _intelFormatter = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
-    private _topographyGrid = missionNamespace getVariable ["FADE_missionRun_topographyGrid", "UNKNOWN"];
-    private _topographyArea = missionNamespace getVariable ["FADE_missionRun_topographyArea", ""];
+    (call FADE_missionRun_getContext) params [
+        "_missionType", "_destPos", "_player", "_evadeePlayers", "_fromMapClick", "_mapAnchor",
+        "_friendlyUnits", "_enemyUnits", "_sideFriendly", "_sideEnemy", "_markerFriendly", "_markerEnemy",
+        "_dryPos", "_taskId", "_operationName", "_operationNameUpper", "_briefGuiTail",
+        "_mkrJitter", "_enemyFactionName", "_zeroAlphaDisplayName", "_isGlobalMission", "_basePos",
+        "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
+        "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
+        "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+    ];
     if (isNil "FADE_cargoClasses" || { count FADE_cargoClasses == 0 }) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No cargo classes configured.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "No cargo classes configured."] call FADE_missionErrorHint;
     };
     private _cargoClass = selectRandom FADE_cargoClasses;
     if (isNil "_cargoClass" || { _cargoClass == "" }) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Invalid cargo class.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "Invalid cargo class."] call FADE_missionErrorHint;
     };
     // Spawn cargo at CargoPoint_1 marker; findSafePos avoids clipping with vehicles
     private _cargoCenter = getMarkerPos "CargoPoint_1";
@@ -139,7 +109,9 @@ FADE_runMission_Cargo = {
 
     private _markerName = "FADE_cargo_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    private _marker = createMarker [_markerName, [_destPos, 100] call _mkrJitter];
+    private _campLandingRadius = 50;
+    [_taskId, _markerName + "_zone", _destPos, _campLandingRadius, "ColorYellow"] call FADE_mission_createRadiusMarker;
+    private _marker = createMarker [_markerName, [_destPos] call FADE_normPos3];
     [_taskId, _markerName] call FADE_missionEnt_registerMarker;
     _marker setMarkerType "loc_bunker";
     _marker setMarkerColor "ColorYellow";
@@ -147,7 +119,7 @@ FADE_runMission_Cargo = {
 
     // Cargo box pickup marker - only visible while this mission is active
     private _cargoPickupMarkerName = "FADE_cargoPickup_" + _taskId;
-    private _cargoPickupMarker = createMarker [_cargoPickupMarkerName, [_cargoPos, 100] call _mkrJitter];
+    private _cargoPickupMarker = createMarker [_cargoPickupMarkerName, [_cargoPos] call FADE_normPos3];
     [_taskId, _cargoPickupMarkerName] call FADE_missionEnt_registerMarker;
     _cargoPickupMarker setMarkerType "mil_box";
     _cargoPickupMarker setMarkerColor "ColorYellow";
@@ -205,17 +177,8 @@ FADE_runMission_Cargo = {
                     } else {
                         [_receivingUnit, format ["This is %1. Confirm drop-off. Out.", _callsign]] call FADE_aiSideChat;
                         [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
-                        [_markerName] call FADE_deleteMarkerSafe;
-                        [_cargoPickupMarkerName] call FADE_deleteMarkerSafe;
-                        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
-                        [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups] spawn {
-                            params ["_campObjects", "_garrisonGroup", "_cargo", "_pgGrps"];
-                            sleep 60;
-                            { if (!isNull _x) then { deleteVehicle _x } } forEach _campObjects;
-                            if (!isNull _garrisonGroup) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _garrisonGroup; deleteGroup _garrisonGroup };
-                            if (!isNull _cargo) then { deleteVehicle _cargo };
-                            { if (!isNull _x) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } } forEach _pgGrps;
-                        };
+                        [_taskId, _markerName, _player, 60, [_markerName + "_zone", _cargoPickupMarkerName]] call FADE_mission_completeCleanup;
+                        [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups, 60] call FADE_cargo_cleanupSiteDeferred;
                         _waitDone = true;
                     };
                 };
@@ -230,33 +193,15 @@ FADE_runMission_Cargo = {
                     [_receivingUnit, format ["This is %1. Receiving. Offloading cargo, give me a few seconds. Out.", _callsign]] call FADE_aiSideChat;
                     sleep 5;
                     [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
-                    [_markerName] call FADE_deleteMarkerSafe;
-                    [_cargoPickupMarkerName] call FADE_deleteMarkerSafe;
-                    if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
-                    [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups] spawn {
-                        params ["_campObjects", "_garrisonGroup", "_cargo", "_pgGrps"];
-                        sleep 60;
-                        { if (!isNull _x) then { deleteVehicle _x } } forEach _campObjects;
-                        if (!isNull _garrisonGroup) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _garrisonGroup; deleteGroup _garrisonGroup };
-                        if (!isNull _cargo) then { deleteVehicle _cargo };
-                        { if (!isNull _x) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } } forEach _pgGrps;
-                    };
+                    [_taskId, _markerName, _player, 60, [_markerName + "_zone", _cargoPickupMarkerName]] call FADE_mission_completeCleanup;
+                    [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups, 60] call FADE_cargo_cleanupSiteDeferred;
                     _waitDone = true;
                 } else {
                     if (time - _unloadStartTime > 25) then {
                         [_receivingUnit, format ["This is %1. Confirm drop-off. Out.", _callsign]] call FADE_aiSideChat;
                         [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
-                        [_markerName] call FADE_deleteMarkerSafe;
-                        [_cargoPickupMarkerName] call FADE_deleteMarkerSafe;
-                        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
-                        [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups] spawn {
-                            params ["_campObjects", "_garrisonGroup", "_cargo", "_pgGrps"];
-                            sleep 60;
-                            { if (!isNull _x) then { deleteVehicle _x } } forEach _campObjects;
-                            if (!isNull _garrisonGroup) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _garrisonGroup; deleteGroup _garrisonGroup };
-                            if (!isNull _cargo) then { deleteVehicle _cargo };
-                            { if (!isNull _x) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } } forEach _pgGrps;
-                        };
+                        [_taskId, _markerName, _player, 60, [_markerName + "_zone", _cargoPickupMarkerName]] call FADE_mission_completeCleanup;
+                        [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups, 60] call FADE_cargo_cleanupSiteDeferred;
                         _waitDone = true;
                     };
                 };
@@ -268,18 +213,9 @@ FADE_runMission_Cargo = {
         if (!((_taskId call BIS_fnc_taskState) in ["SUCCEEDED","CANCELED","FAILED"])) then {
             [_taskId, "CANCELED"] call BIS_fnc_taskSetState;
         };
-        [_markerName] call FADE_deleteMarkerSafe;
-        [_cargoPickupMarkerName] call FADE_deleteMarkerSafe;
-        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
+        [_taskId, _markerName, _player, 60, [_markerName + "_zone", _cargoPickupMarkerName]] call FADE_mission_completeCleanup;
         if ((_taskId call BIS_fnc_taskState) != "SUCCEEDED") then {
-            [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups] spawn {
-                params ["_campObjects", "_garrisonGroup", "_cargo", "_pgGrps"];
-                sleep 60;
-                { if (!isNull _x) then { deleteVehicle _x } } forEach _campObjects;
-                if (!isNull _garrisonGroup) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _garrisonGroup; deleteGroup _garrisonGroup };
-                if (!isNull _cargo) then { deleteVehicle _cargo };
-                { if (!isNull _x) then { { if (!isNull _x) then { deleteVehicle _x } } forEach units _x; deleteGroup _x } } forEach _pgGrps;
-            };
+            [_campObjects, _garrisonGroup, _cargo, _cargoPatrolGroups, 60] call FADE_cargo_cleanupSiteDeferred;
         };
     };
 };

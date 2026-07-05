@@ -1,57 +1,27 @@
 // AUTO-EXTRACTED from Missions.sqf  -  run via FADE_runMission_* (compile once)
 if (!isServer) exitWith {};
 FADE_runMission_SearchDestroy = {
-    private _missionType = missionNamespace getVariable ["FADE_missionRun_missionType", ""];
-    private _destPos = missionNamespace getVariable ["FADE_missionRun_destPos", [0,0,0]];
-    private _player = missionNamespace getVariable ["FADE_missionRun_player", objNull];
-    private _evadeePlayers = missionNamespace getVariable ["FADE_missionRun_evadeePlayers", []];
-    private _fromMapClick = missionNamespace getVariable ["FADE_missionRun_fromMapClick", false];
-    private _mapAnchor = missionNamespace getVariable ["FADE_missionRun_mapAnchor", []];
-    private _friendlyUnits = missionNamespace getVariable ["FADE_missionRun_friendlyUnits", []];
-    private _enemyUnits = missionNamespace getVariable ["FADE_missionRun_enemyUnits", []];
-    private _sideFriendly = missionNamespace getVariable ["FADE_missionRun_sideFriendly", west];
-    private _sideEnemy = missionNamespace getVariable ["FADE_missionRun_sideEnemy", east];
-    private _markerFriendly = missionNamespace getVariable ["FADE_missionRun_markerFriendly", "ColorWEST"];
-    private _markerEnemy = missionNamespace getVariable ["FADE_missionRun_markerEnemy", "ColorEAST"];
-    private _dryPos = missionNamespace getVariable ["FADE_surfaceIsDry", {}];
-    private _taskId = missionNamespace getVariable ["FADE_missionRun_taskId", ""];
-    private _operationName = missionNamespace getVariable ["FADE_missionRun_operationName", ""];
-    private _operationNameUpper = missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""];
-    private _briefGuiTail = missionNamespace getVariable ["FADE_missionRun_briefGuiTail", ""];
-    private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", {}];
-    private _enemyFactionName = missionNamespace getVariable ["FADE_missionRun_enemyFactionName", ""];
-    private _zeroAlphaDisplayName = missionNamespace getVariable ["FADE_missionRun_zeroAlphaDisplayName", ""];
-    private _isGlobalMission = missionNamespace getVariable ["FADE_missionRun_isGlobalMission", false];
-    private _basePos = missionNamespace getVariable ["FADE_missionRun_basePos", [0,0,0]];
-    private _unitCount = missionNamespace getVariable ["FADE_missionRun_unitCount", 6];
-    private _unitClasses = missionNamespace getVariable ["FADE_missionRun_unitClasses", []];
-    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {}];
-    private _fnc_createMissionTask = missionNamespace getVariable ["FADE_mission_createTask", {}];
-    private _showAssignedHint = missionNamespace getVariable ["FADE_mission_showAssignedHint", {}];
-    private _defaultSituationTaskText = missionNamespace getVariable ["FADE_missionRun_defaultSituationTaskText", ""];
-    private _defaultExecutionTaskText = missionNamespace getVariable ["FADE_missionRun_defaultExecutionTaskText", ""];
-    private _defaultAdminTaskText = missionNamespace getVariable ["FADE_missionRun_defaultAdminTaskText", ""];
-    private _defaultCommandTaskText = missionNamespace getVariable ["FADE_missionRun_defaultCommandTaskText", ""];
-    private _defaultSituationHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHtml", ""];
-    private _defaultSituationHintHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHintHtml", ""];
-    private _friendlyPlayerCount = missionNamespace getVariable ["FADE_missionRun_friendlyPlayerCount", 0];
-    private _friendlyFactionName = missionNamespace getVariable ["FADE_missionRun_friendlyFactionName", ""];
-    private _estimatedOpforCount = missionNamespace getVariable ["FADE_missionRun_estimatedOpforCount", 0];
-    private _opforCountFactor = missionNamespace getVariable ["FADE_missionRun_opforCountFactor", 1];
-    private _intelFormatter = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
-    private _topographyGrid = missionNamespace getVariable ["FADE_missionRun_topographyGrid", "UNKNOWN"];
-    private _topographyArea = missionNamespace getVariable ["FADE_missionRun_topographyArea", ""];
+    (call FADE_missionRun_getContext) params [
+        "_missionType", "_destPos", "_player", "_evadeePlayers", "_fromMapClick", "_mapAnchor",
+        "_friendlyUnits", "_enemyUnits", "_sideFriendly", "_sideEnemy", "_markerFriendly", "_markerEnemy",
+        "_dryPos", "_taskId", "_operationName", "_operationNameUpper", "_briefGuiTail",
+        "_mkrJitter", "_enemyFactionName", "_zeroAlphaDisplayName", "_isGlobalMission", "_basePos",
+        "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
+        "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
+        "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+    ];
     private _enemyUnitsSd = +_enemyUnits;
     _enemyUnitsSd = [_enemyUnitsSd] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsSd == 0) exitWith {
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>No enemy units configured.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "No enemy units configured."] call FADE_missionErrorHint;
     };
     private _baseClassSd = _enemyUnitsSd select 0;
     // Same civ-zone + near-center pattern as Hostage: random urban pos can land in empty ground  -  loop until
     // three enterable buildings (2+ buildingPos slots) exist within radius, trying random zones then every civ zone.
     private _minDistUrban = 1000;
-    private _areaRadius = 250;
+    private _areaRadius = missionNamespace getVariable ["FADE_missionApproxZoneRadiusM", 110];
     private _trySdPickBuildings = {
         params ["_pos", "_radius"];
         if (count _pos < 2) exitWith { [[], []] };
@@ -123,7 +93,7 @@ FADE_runMission_SearchDestroy = {
         } else {
             "No town with three enterable buildings near a civ zone. Try again or use a denser map."
         };
-        [format ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>%1</t>", _sdErr]] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", _sdErr] call FADE_missionErrorHint;
     };
 
     private _allGroups = [];
@@ -183,7 +153,7 @@ FADE_runMission_SearchDestroy = {
         private _building = _x;
         private _buildingCenter = getPosATL _building;
         if (count _buildingCenter < 3) then { _buildingCenter = [(_buildingCenter select 0), (_buildingCenter select 1), 0] };
-        private _barrelPos = [[_buildingCenter, 8, 22, 2, 1, 0.3, 0, [], _buildingCenter], _buildingCenter] call FADE_findSafePosArray;
+        private _barrelPos = [_buildingCenter] call FADE_findOutdoorHintPos;
         if (_barrelPos isEqualType [] && { count _barrelPos >= 2 }) then {
             _barrelPos = [(_barrelPos select 0), (_barrelPos select 1), (_barrelPos param [2, 0])];
             private _barrel = createVehicle ["MetalBarrel_burning_F", _barrelPos, [], 0, "NONE"];
@@ -350,7 +320,7 @@ FADE_runMission_SearchDestroy = {
     if (_initialCount == 0) exitWith {
         { if (!isNull _x) then { deleteVehicle _x } } forEach _sdCleanupObjs;
         [_player] call FADE_clearActiveMission;
-        ["<t size='1.2' color='#FF6666'>MISSION ERROR</t><br/><br/><t color='#E0E0E0'>Could not spawn enemies.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        [_player, "MISSION ERROR", "Could not spawn enemies."] call FADE_missionErrorHint;
     };
 
     missionNamespace setVariable ["FADE_searchDestroyEntities_" + _taskId, [_allGroups, _sdCleanupObjs]];
@@ -361,18 +331,7 @@ FADE_runMission_SearchDestroy = {
     missionNamespace setVariable ["FADE_searchDestroyMarker_" + _taskId, _markerName];
     missionNamespace setVariable ["FADE_searchDestroyZoneMarker_" + _taskId, _zoneMarkerName];
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    private _zoneMarker = createMarker [_zoneMarkerName, _center];
-    [_taskId, _zoneMarkerName] call FADE_missionEnt_registerMarker;
-    _zoneMarker setMarkerShape "ELLIPSE";
-    _zoneMarker setMarkerSize [_areaRadius, _areaRadius];
-    _zoneMarker setMarkerBrush "Border";
-    _zoneMarker setMarkerColor _markerEnemy;
-    _zoneMarker setMarkerAlpha 0.45;
-    private _marker = createMarker [_markerName, [_center, 100] call _mkrJitter];
-    [_taskId, _markerName] call FADE_missionEnt_registerMarker;
-    _marker setMarkerType "mil_objective";
-    _marker setMarkerColor _markerEnemy;
-    _marker setMarkerText _operationName;
+    [_taskId, _markerName, _center, _areaRadius, _markerEnemy, "mil_objective", _operationName] call FADE_mission_createObjectiveMarker;
 
     private _grid = mapGridPosition _center;
     private _cacheCount = count _sdAmmoObjs;
@@ -394,7 +353,7 @@ FADE_runMission_SearchDestroy = {
     };
     private _sdExec = if (_cacheCount > 0) then {
         format [
-            "<t align='left' color='#C0C0C0'>1. Search the marked zone (%1 m radius).<br/>2. Burning barrels mark buildings with enemy ammo caches.<br/>3. Locate and destroy at least %2 of %3 caches (%4%% required).<br/>4. Eliminate all defenders in the zone.</t>",
+            "<t align='left' color='#C0C0C0'>1. Search the marked zone (%1 m radius).<br/>2. Burning barrels mark buildings with enemy ammo caches.<br/>3. Locate and destroy at least %2 of %3 caches (%4%% required).</t>",
             _areaRadius,
             _requiredDestroy,
             _cacheCount,
@@ -408,7 +367,7 @@ FADE_runMission_SearchDestroy = {
     };
     private _missionDesc = if (_cacheCount > 0) then {
         format [
-            "Search the marked zone (%1 m radius). Destroy at least %2 of %3 ammo caches (%4%%) and eliminate all defenders.",
+            "Search the marked zone (%1 m radius). Destroy at least %2 of %3 ammo caches (%4%%).",
             _areaRadius,
             _requiredDestroy,
             _cacheCount,
@@ -432,7 +391,7 @@ FADE_runMission_SearchDestroy = {
         ""
     };
     private _hintObjective = if (_cacheCount > 0) then {
-        format ["<t color='#FFFFFF'>Destroy at least %1 of %2 caches, then clear all defenders.</t>", _requiredDestroy, _cacheCount]
+        format ["<t color='#FFFFFF'>Destroy at least %1 of %2 ammo caches to complete.</t>", _requiredDestroy, _cacheCount]
     } else {
         "<t color='#FFFFFF'>Clear all defenders inside the marked zone.</t>"
     };
@@ -444,8 +403,8 @@ FADE_runMission_SearchDestroy = {
     [_taskId, _center, _basePos, _enemyUnitsSd, _allGroups, _sdDetect] call FADE_counterAttackStart;
 
     private _sdTimeout = 900;
-    [_taskId, _allGroups, _initialCount, _markerName, _player, _sdTimeout, _sdCleanupObjs, _misOwnSd, _sdAmmoObjs, _requiredDestroy] spawn {
-        params ["_taskId", "_allGroups", "_initialCount", "_markerName", "_player", "_timeout", "_sdCleanupObjs", "_misOwnSd", "_sdAmmoObjs", "_requiredDestroy"];
+    [_taskId, _allGroups, _initialCount, _markerName, _player, _sdTimeout, _sdCleanupObjs, _misOwnSd, _sdAmmoObjs, _requiredDestroy, _cacheCount] spawn {
+        params ["_taskId", "_allGroups", "_initialCount", "_markerName", "_player", "_timeout", "_sdCleanupObjs", "_misOwnSd", "_sdAmmoObjs", "_requiredDestroy", "_cacheCount"];
         private _start = time;
         private _vgPendF = missionNamespace getVariable ["FADE_vg_pendingMenForOwner", {}];
         private _fnc_cacheDestroyed = {
@@ -457,17 +416,16 @@ FADE_runMission_SearchDestroy = {
             if (missionNamespace getVariable ["FADE_sdAborted_" + _taskId, false]) exitWith { true };
             if ((_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"]) exitWith { true };
             if (time - _start > _timeout) exitWith { true };
-            private _alive = 0;
-            { _alive = _alive + ({ alive _x } count units _x) } forEach _allGroups;
-            private _pend = if (!(_vgPendF isEqualTo {})) then { [_misOwnSd] call _vgPendF } else { 0 };
-            private _enemiesCleared = (_alive == 0) && { _pend == 0 };
             private _destroyed = { [_x] call _fnc_cacheDestroyed } count _sdAmmoObjs;
-            private _cachesCleared = if (count _sdAmmoObjs > 0) then {
+            private _cachesCleared = if (_cacheCount > 0) then {
                 _destroyed >= _requiredDestroy
             } else {
-                true
+                private _alive = 0;
+                { _alive = _alive + ({ alive _x } count units _x) } forEach _allGroups;
+                private _pend = if (!(_vgPendF isEqualTo {})) then { [_misOwnSd] call _vgPendF } else { 0 };
+                (_alive == 0) && { _pend == 0 }
             };
-            if (_enemiesCleared && _cachesCleared) exitWith {
+            if (_cachesCleared) exitWith {
                 [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
                 true
             };
@@ -476,9 +434,7 @@ FADE_runMission_SearchDestroy = {
         if ((time - _start > _timeout) && { (_taskId call BIS_fnc_taskState) == "ASSIGNED" }) then {
             [_taskId, "CANCELED"] call BIS_fnc_taskSetState;
         };
-        [_markerName] call FADE_deleteMarkerSafe;
-        if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
-        [_taskId, 60, _player] call FADE_missionEnt_scheduledCleanup;
+        [_taskId, _markerName, _player, 60] call FADE_mission_completeCleanup;
     };
 };
 
