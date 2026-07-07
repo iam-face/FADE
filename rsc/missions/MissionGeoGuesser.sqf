@@ -102,17 +102,18 @@ FADE_geoGuesser_submitGuess = {
 };
 
 FADE_runMission_GeoGuesser = {
-    private _missionType = missionNamespace getVariable ["FADE_missionRun_missionType", ""];
-    private _dropPos = missionNamespace getVariable ["FADE_missionRun_destPos", [0, 0, 0]];
-    private _player = missionNamespace getVariable ["FADE_missionRun_player", objNull];
-    private _participants = missionNamespace getVariable ["FADE_missionRun_evadeePlayers", []];
-    private _taskId = missionNamespace getVariable ["FADE_missionRun_taskId", ""];
-    private _operationName = missionNamespace getVariable ["FADE_missionRun_operationName", ""];
-    private _operationNameUpper = missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""];
-    private _briefGuiTail = missionNamespace getVariable ["FADE_missionRun_briefGuiTail", ""];
-    private _isGlobalMission = missionNamespace getVariable ["FADE_missionRun_isGlobalMission", false];
-    private _basePos = missionNamespace getVariable ["FADE_missionRun_basePos", [0, 0, 0]];
-    private _showAssignedHint = missionNamespace getVariable ["FADE_mission_showAssignedHint", {}];
+    (call FADE_missionRun_getContext) params [
+        "_missionType", "_dropPos", "_player", "_participants", "_fromMapClick", "_mapAnchor",
+        "_friendlyUnits", "_enemyUnits", "_sideFriendly", "_sideEnemy", "_markerFriendly", "_markerEnemy",
+        "_dryPos", "_taskId", "_operationName", "_operationNameUpper", "_briefGuiTail",
+        "_mkrJitter", "_enemyFactionName", "_zeroAlphaDisplayName", "_isGlobalMission", "_basePos",
+        "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
+        "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
+        "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
+    ];
     private _timeSec = missionNamespace getVariable ["FADE_ggRun_timeSec", 60];
     private _difficulty = missionNamespace getVariable ["FADE_ggRun_difficulty", "Normal"];
     _timeSec = round _timeSec max 30 min 600;
@@ -151,7 +152,7 @@ FADE_runMission_GeoGuesser = {
         _difficulty,
         _timeSec
     ];
-    private _ggSituationTxt = missionNamespace getVariable ["FADE_missionRun_defaultSituationTaskText", ""];
+    private _ggSituationTxt = _defaultSituationTaskText;
     private _ggExecTxt = format [
         "<t align='left' color='#C0C0C0'>Look around at the drop site, then open your map (M) and click your estimated position. Faster accurate guesses score higher. No task marker shows the drop point. Results when the timer ends or all players have guessed.</t>"
     ];

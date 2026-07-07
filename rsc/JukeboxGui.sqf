@@ -1,13 +1,16 @@
 // =============================================================================
 // JukeboxGui.sqf -- Jukebox: loudspeaker tracks (per client, per source)
 // =============================================================================
-// Sources: radio:Radio_1..4 (Eden) use playSound3D (fixed emitter; stopSound on handle). vehicle:<netId> uses
-//   createSoundSource (CfgVehicles FAC_Jukebox_<CfgSounds name>) + attachTo (playSound3D does not follow vehicles).
+// Sources: radio:Radio_1..4 and vehicle:<netId>. playSound3D first (GUI volume/distance sliders).
+//   createSoundSource (FAC_Jukebox_* → mod CfgSFX) is fallback when playSound3D fails; fallback ignores sliders (mod CfgSFX levels).
 // Each source has at most one track; different sources may play simultaneously.
 // Stop all music: Scenario → Admin only (FAC_jukebox_stopAllMusic → FAC_jukebox_clientStopAll on all clients).
 // Client Play -> server validates emitter + CfgSounds, updates FAC_jukebox_activeSources [key, song, volume, distance],
-//   remoteExec FAC_jukebox_clientPlay [song, sourceKey, volume, distance] to all clients (no JIP replay of active sources).
-// Per client: queued drain (spawn) serializes jobs. Radios: playSound3D + stopSound; vehicles: attached Sound + deleteVehicle.
+//   remoteExec FAC_jukebox_clientPlay [song, sourceKey, volume, distance] to all clients (0; no JIP replay of active sources).
+//   Client RPCs must be registered global (FAC_jukebox_fnc_registerClientRpc) for dedicated MP remoteExec by name.
+// Per client: queued drain (single thread). Radios + vehicles: createSoundSource (deleteVehicle to stop);
+//   playSound3D fallback for radios when CfgVehicles sound class missing. Generation token per source aborts
+//   stale play jobs after stop (fixes stop during 0.06s pre-play sleep).
 // FAC_jukebox_clientAudioList: [sourceKey, playSound3D handle or "", attached Sound object or objNull].
 // =============================================================================
 
@@ -113,13 +116,34 @@ FAC_jukebox_fnc_stopPs3d = {
     private _h = _id;
     [_h] spawn {
         params ["_x"];
-        sleep 0.05;
-        stopSound _x;
+        for "_i" from 0 to 4 do {
+            stopSound _x;
+            sleep 0.04;
+        };
     };
 };
 
+FAC_jukebox_fnc_sourceGenVar = {
+    params ["_sourceKey"];
+    "FAC_jukebox_gen_" + _sourceKey
+};
+
+FAC_jukebox_fnc_sourceGenCurrent = {
+    params ["_sourceKey"];
+    missionNamespace getVariable [[_sourceKey] call FAC_jukebox_fnc_sourceGenVar, 0]
+};
+
+// Invalidate in-flight play jobs for this source; return new generation id.
+FAC_jukebox_fnc_bumpSourceGen = {
+    params ["_sourceKey"];
+    private _var = [_sourceKey] call FAC_jukebox_fnc_sourceGenVar;
+    private _g = (missionNamespace getVariable [_var, 0]) + 1;
+    missionNamespace setVariable [_var, _g];
+    _g
+};
+
 // GUI defaults (sliders 1-25 / 50-2500); persisted in missionNamespace while mission runs.
-FAC_jukebox_guiVolumeDefault = 4;
+FAC_jukebox_guiVolumeDefault = 8;
 FAC_jukebox_guiDistanceDefault = 400;
 
 // -----------------------------------------------------------------------------
@@ -188,18 +212,33 @@ FAC_jukebox_fnc_setClientActiveSourceSong = {
     missionNamespace setVariable ["FAC_jukebox_activeSources", _next];
 };
 
-// Resolve OGG path + pitch from CfgSounds (mission first); optional volume/distance from config when not overridden by GUI.
-FAC_jukebox_fnc_soundFileFromCfg = {
+// Addon-root OGG path from @CTB mod CfgSFX (configFile only). Mission CfgSounds/CfgSFX mirrors use the same path string but the audio engine resolves them under mpmissions\ — fileExists still returns true.
+FAC_jukebox_fnc_sfxOggPath = {
     params [["_song", ""]];
     if (_song == "") exitWith {["", 1]};
-    private _cfg = missionConfigFile >> "CfgSounds" >> _song;
-    if (!isClass _cfg) then { _cfg = configFile >> "CfgSounds" >> _song };
-    if (!isClass _cfg) exitWith {["", 1]};
-    private _arr = getArray (_cfg >> "sound");
-    if (count _arr < 1) exitWith {["", 1]};
-    private _file = _arr select 0;
-    private _pitch = if (count _arr >= 3) then { _arr select 2 } else { 1 };
+    private _file = "";
+    private _pitch = 1;
+
+    if (isClass (configFile >> "CfgSFX" >> _song)) then {
+        private _sounds = getArray (configFile >> "CfgSFX" >> _song >> "sounds");
+        if !(_sounds isEqualTo []) then {
+            private _arr = getArray (configFile >> "CfgSFX" >> _song >> (_sounds select 0));
+            if (count _arr >= 1) then {
+                _file = _arr select 0;
+                _pitch = if (count _arr >= 3) then { _arr select 2 } else { 1 };
+            };
+        };
+    };
+
+    if (_file isEqualType "" && { count _file > 0 } && { (_file select [0, 1]) != "\" }) then {
+        _file = "\" + _file;
+    };
     [_file, _pitch]
+};
+
+FAC_jukebox_fnc_soundFileFromCfg = {
+    params [["_song", ""]];
+    [_song] call FAC_jukebox_fnc_sfxOggPath
 };
 
 FAC_jukebox_fnc_clientClearSourceAudio = {
@@ -232,23 +271,102 @@ FAC_jukebox_fnc_clientClearSourceAudio = {
     missionNamespace setVariable ["FAC_jukebox_clientAudioList", _keep];
 };
 
-// Vehicle loudspeaker only: create a deletable sound source and attach it to the vehicle.
-// Returns true if playback started. Loudness / range = CfgSFX FAC_JukeVeh_* (description.ext; currently 25 / 1000 m).
-FAC_jukebox_fnc_tryAttachedSound = {
+// Candidate createSoundSource classnames. Mission FAC_Jukebox_* first (works even when isClass is false); then mod Sig_*_Z.
+FAC_jukebox_fnc_soundSourceClassCandidates = {
+    params [["_song", ""]];
+    if (_song == "") exitWith {[]};
+    [
+        format ["FAC_Jukebox_%1", _song],
+        format ["%1_Z", _song],
+        _song
+    ]
+};
+
+// Returns createSoundSource classname ("" if none). Uses isClass when available; does not guarantee createSoundSource will spawn.
+FAC_jukebox_fnc_resolveSoundSourceClass = {
+    params [["_song", ""]];
+    if (_song == "") exitWith {""};
+    private _candidates = [_song] call FAC_jukebox_fnc_soundSourceClassCandidates;
+    private _found = "";
+    for "_i" from 0 to (count _candidates - 1) do {
+        if (_found != "") exitWith {};
+        private _x = _candidates select _i;
+        if (isClass (configFile >> "CfgVehicles" >> _x) || { isClass (missionConfigFile >> "CfgVehicles" >> _x) }) then {
+            _found = _x;
+        };
+    };
+    _found
+};
+
+// Dev probe: isClass vs createSoundSource for each candidate (CLIENT).
+FAC_jukebox_fnc_debugProbeSoundClasses = {
+    params [["_song", "Sig_Buttrock_1"], ["_emitter", objNull]];
+    if (isNull _emitter) then { _emitter = missionNamespace getVariable ["Radio_1", player] };
+    private _lines = [];
+    {
+        private _cf = isClass (configFile >> "CfgVehicles" >> _x);
+        private _mis = isClass (missionConfigFile >> "CfgVehicles" >> _x);
+        private _snd = createSoundSource [_x, getPosATL _emitter, [], 0];
+        private _created = !isNull _snd;
+        if (_created) then { deleteVehicle _snd };
+        _lines pushBack format ["%1 cf=%2 mis=%3 create=%4", _x, _cf, _mis, _created];
+    } forEach ([_song] call FAC_jukebox_fnc_soundSourceClassCandidates);
+    _lines joinString " | "
+};
+
+// playSound3D with mod CfgSFX path + GUI volume/distance (sliders). Returns true when a valid handle is stored.
+FAC_jukebox_fnc_tryPlaySound3D = {
+    params ["_sourceKey", "_song", "_emitter", "_vol", "_dist"];
+    if (_song == "" || { isNull _emitter }) exitWith { false };
+    ([_song] call FAC_jukebox_fnc_soundFileFromCfg) params ["_file", "_pitch"];
+    if (_file == "") then {
+        private _fallback = [_song] call FAC_jukebox_fnc_oggPath;
+        if (_fallback != "") then {
+            _file = _fallback;
+            _pitch = 1;
+        };
+    };
+    if (_file == "") exitWith { false };
+    _vol = ((round _vol) max 1) min 25;
+    _dist = ((round _dist) max 50) min 2500;
+    private _h = playSound3D [_file, _emitter, false, getPosASL _emitter, _vol, _pitch, _dist];
+    if (isNil "_h" || { _h isEqualTo "" } || { !(_h isEqualType 0) } || { _h < 0 }) exitWith { false };
+    private _list = missionNamespace getVariable ["FAC_jukebox_clientAudioList", []];
+    _list = _list select { (_x select 0) != _sourceKey };
+    _list pushBack [_sourceKey, _h, objNull];
+    missionNamespace setVariable ["FAC_jukebox_clientAudioList", _list];
+    true
+};
+
+// createSoundSource + deleteVehicle (radios: fixed pos; vehicles: attachTo). Tries candidates without isClass pre-check.
+FAC_jukebox_fnc_trySoundSource = {
     params [["_sourceKey", ""], ["_song", ""], ["_emitter", objNull]];
-    if (_sourceKey find "vehicle:" != 0) exitWith {false};
-    if (_song == "" || {isNull _emitter}) exitWith {false};
-    private _cls = format ["FAC_Jukebox_%1", _song];
-    if (!isClass (missionConfigFile >> "CfgVehicles" >> _cls)) exitWith {false};
-    private _sfx = getText (missionConfigFile >> "CfgVehicles" >> _cls >> "sound");
-    if (_sfx == "" || {!isClass (missionConfigFile >> "CfgSFX" >> _sfx)}) exitWith {false};
-    private _sounds = getArray (missionConfigFile >> "CfgSFX" >> _sfx >> "sounds");
-    if (_sounds isEqualTo [] || {!((_sounds select 0) isEqualType "")}) exitWith {false};
-    private _snd = createSoundSource [_cls, getPosATL _emitter, [], 0];
-    if (isNull _snd) exitWith {false};
-    _snd attachTo [_emitter, [0, 0, 0]];
+    if (_song == "" || { isNull _emitter }) exitWith { false };
+    private _cls = "";
+    private _snd = objNull;
+    private _candidates = [_song] call FAC_jukebox_fnc_soundSourceClassCandidates;
+    for "_i" from 0 to (count _candidates - 1) do {
+        if (_cls != "") exitWith {};
+        private _tryCls = _candidates select _i;
+        private _try = createSoundSource [_tryCls, getPosATL _emitter, [], 0];
+        if (isNull _try) then { continue };
+        private _vehCfg = missionConfigFile >> "CfgVehicles" >> _tryCls;
+        if (!isClass _vehCfg) then { _vehCfg = configFile >> "CfgVehicles" >> _tryCls };
+        private _sfx = if (isClass _vehCfg) then { getText (_vehCfg >> "sound") } else { "" };
+        if (_sfx != "" && { !isClass (configFile >> "CfgSFX" >> _sfx) }) then {
+            deleteVehicle _try;
+        } else {
+            _cls = _tryCls;
+            _snd = _try;
+        };
+    };
+    if (_cls == "" || { isNull _snd }) exitWith { false };
+    if (_sourceKey find "vehicle:" == 0) then {
+        _snd attachTo [_emitter, [0, 0, 0]];
+    };
     _emitter setVariable ["FAC_jukeboxActiveSnd", _snd, false];
     private _list = missionNamespace getVariable ["FAC_jukebox_clientAudioList", []];
+    _list = _list select { (_x select 0) != _sourceKey };
     _list pushBack [_sourceKey, "", _snd];
     missionNamespace setVariable ["FAC_jukebox_clientAudioList", _list];
     true
@@ -256,60 +374,58 @@ FAC_jukebox_fnc_tryAttachedSound = {
 
 // One playback job (must run inside spawn / scheduled - not directly from remoteExec).
 FAC_jukebox_clientPlay_execOne = {
-    params [["_song", ""], ["_sourceKey", ""], ["_vol", 4], ["_dist", 400]];
+    params [["_song", ""], ["_sourceKey", ""], ["_vol", 4], ["_dist", 400], ["_gen", -1]];
     if (!hasInterface) exitWith {};
     if (_sourceKey == "") exitWith {};
 
     [_sourceKey] call FAC_jukebox_fnc_clientClearSourceAudio;
 
-    if (_song != "") then {
-        sleep 0.06;
-        private _emitter = [_sourceKey] call FAC_jukebox_fnc_resolveEmitterClient;
-        if (isNull _emitter) then {
-            [format ["FAIL: emitter missing for %1 - cannot play sound.", _sourceKey]] call FAC_jukebox_dbg;
-            [_sourceKey, ""] call FAC_jukebox_fnc_setClientActiveSourceSong;
-        } else {
-            _vol = ((round _vol) max 1) min 25;
-            _dist = ((round _dist) max 50) min 2500;
-            private _played = false;
-            if ([_sourceKey, _song, _emitter] call FAC_jukebox_fnc_tryAttachedSound) then {
-                [format ["vehicle attach OK: %1 @ %2", _song, _sourceKey]] call FAC_jukebox_dbg;
-                _played = true;
-            } else {
-                ([_song] call FAC_jukebox_fnc_soundFileFromCfg) params ["_file", "_pitch"];
-                if (_file == "") then {
-                    private _fallback = [_song] call FAC_jukebox_fnc_oggPath;
-                    if (_fallback != "") then {
-                        _file = _fallback;
-                        _pitch = 1;
-                    };
-                };
-                if (_file == "") then {
-                    [format ["FAIL: no CfgSounds / path for %1.", _song]] call FAC_jukebox_dbg;
-                } else {
-                    private _pos = getPosASL _emitter;
-                    private _h = playSound3D [_file, _emitter, false, _pos, _vol, _pitch, _dist];
-                    if (isNil "_h" || {_h isEqualTo ""} || {!(_h isEqualType 0)} || {_h < 0}) then {
-                        [format ["FAIL: playSound3D (%1 @ %2).", _song, _sourceKey]] call FAC_jukebox_dbg;
-                    } else {
-                        [format ["playSound3D OK: %1 @ %2 (vol=%3 dist=%4)", _song, _sourceKey, _vol, _dist]] call FAC_jukebox_dbg;
-                        private _list = missionNamespace getVariable ["FAC_jukebox_clientAudioList", []];
-                        _list pushBack [_sourceKey, _h, objNull];
-                        missionNamespace setVariable ["FAC_jukebox_clientAudioList", _list];
-                        _played = true;
-                    };
-                };
-            };
-            if (_played) then {
-                [_sourceKey, _song, _vol, _dist] call FAC_jukebox_fnc_setClientActiveSourceSong;
-            } else {
-                [_sourceKey, ""] call FAC_jukebox_fnc_setClientActiveSourceSong;
+    if (_song == "") exitWith {
+        [_sourceKey, ""] call FAC_jukebox_fnc_setClientActiveSourceSong;
+        if (!isNull (findDisplay 60400)) then {
+            private _guiSrc = missionNamespace getVariable ["FAC_jukebox_guiSource", ""];
+            if (_sourceKey == _guiSrc) then {
+                ["updateNowPlaying", []] call FAC_jukeboxGui_fnc;
+                ["updateButtons", []] call FAC_jukeboxGui_fnc;
             };
         };
     };
 
+    if (_gen < 0) then { _gen = [_sourceKey] call FAC_jukebox_fnc_sourceGenCurrent };
+    sleep 0.06;
+    if (_gen != ([_sourceKey] call FAC_jukebox_fnc_sourceGenCurrent)) exitWith {
+        [format ["Play aborted (superseded): %1 @ %2", _song, _sourceKey]] call FAC_jukebox_dbg;
+    };
+
+    private _emitter = [_sourceKey] call FAC_jukebox_fnc_resolveEmitterClient;
+    if (isNull _emitter) exitWith {
+        [format ["FAIL: emitter missing for %1 - cannot play sound.", _sourceKey]] call FAC_jukebox_dbg;
+        [_sourceKey, ""] call FAC_jukebox_fnc_setClientActiveSourceSong;
+    };
+
+    _vol = ((round _vol) max 1) min 25;
+    _dist = ((round _dist) max 50) min 2500;
+    private _played = false;
+    if ([_sourceKey, _song, _emitter, _vol, _dist] call FAC_jukebox_fnc_tryPlaySound3D) then {
+        [format ["playSound3D OK: %1 @ %2 (vol=%3 dist=%4)", _song, _sourceKey, _vol, _dist]] call FAC_jukebox_dbg;
+        _played = true;
+    } else {
+        if ([_sourceKey, _song, _emitter] call FAC_jukebox_fnc_trySoundSource) then {
+            [format ["soundSource fallback (sliders ignored): %1 @ %2 (%3)", _song, _sourceKey, [_song] call FAC_jukebox_fnc_resolveSoundSourceClass]] call FAC_jukebox_dbg;
+            _played = true;
+        };
+    };
+    if (!_played) then {
+        [format ["FAIL: no playback for %1 @ %2.", _song, _sourceKey]] call FAC_jukebox_dbg;
+    };
+    if (_played) then {
+        [_sourceKey, _song, _vol, _dist] call FAC_jukebox_fnc_setClientActiveSourceSong;
+    } else {
+        [_sourceKey, ""] call FAC_jukebox_fnc_setClientActiveSourceSong;
+    };
+
     if (!isNull (findDisplay 60400)) then {
-        [format ["Client sync source %1 (song=%2)", _sourceKey, if (_song == "") then {"<none>"} else {_song}]] call FAC_jukebox_dbg;
+        [format ["Client sync source %1 (song=%2)", _sourceKey, _song]] call FAC_jukebox_dbg;
     };
 
     private _guiSrc = missionNamespace getVariable ["FAC_jukebox_guiSource", ""];
@@ -319,12 +435,12 @@ FAC_jukebox_clientPlay_execOne = {
     };
 };
 
-// One persistent drain thread per client (scriptDone guard). Avoids overlapping spawns that double-play / orphan audio.
-FAC_jukebox_clientPlay_kickDrain = {
+// Single persistent drain thread per client (started once from ensure / first enqueue).
+FAC_jukebox_clientPlay_ensureDrain = {
     if (!hasInterface) exitWith {};
-    private _handle = missionNamespace getVariable ["FAC_jukebox_cpDrainScript", scriptNull];
-    if (!scriptDone _handle) exitWith {};
-    private _h = [] spawn {
+    if (missionNamespace getVariable ["FAC_jukebox_cpDrainStarted", false]) exitWith {};
+    missionNamespace setVariable ["FAC_jukebox_cpDrainStarted", true];
+    [] spawn {
         while { true } do {
             waitUntil {
                 sleep 0.02;
@@ -338,7 +454,6 @@ FAC_jukebox_clientPlay_kickDrain = {
             };
         };
     };
-    missionNamespace setVariable ["FAC_jukebox_cpDrainScript", _h];
 };
 
 // FAC_jukebox_clientPlay -- enqueue; spawn drain only when idle (no perpetual waitUntil).
@@ -353,16 +468,19 @@ FAC_jukebox_clientPlay = {
     if (_sourceKey == "") exitWith {};
 
     private _q = missionNamespace getVariable ["FAC_jukebox_cpQueue", []];
+    _q = _q select { (_x select 1) != _sourceKey };
+
     if (_song == "") then {
+        [_sourceKey] call FAC_jukebox_fnc_bumpSourceGen;
         [_sourceKey, ""] call FAC_jukebox_fnc_setClientActiveSourceSong;
-        _q = (_q select { (_x select 1) != _sourceKey });
-        _q = [["", _sourceKey, _vol, _dist]] + _q;
+        _q pushBack ["", _sourceKey, _vol, _dist, [_sourceKey] call FAC_jukebox_fnc_sourceGenCurrent];
     } else {
-        _q pushBack [_song, _sourceKey, _vol, _dist];
+        private _gen = [_sourceKey] call FAC_jukebox_fnc_bumpSourceGen;
+        _q pushBack [_song, _sourceKey, _vol, _dist, _gen];
     };
     missionNamespace setVariable ["FAC_jukebox_cpQueue", _q];
 
-    [] call FAC_jukebox_clientPlay_kickDrain;
+    [] call FAC_jukebox_clientPlay_ensureDrain;
 };
 
 // Stops every jukebox source on this client (radios, vehicles, queued jobs).
@@ -370,9 +488,7 @@ FAC_jukebox_clientStopAll = {
     if (!hasInterface) exitWith {};
     params [["_sourceKeys", []]];
     missionNamespace setVariable ["FAC_jukebox_cpQueue", []];
-    private _drain = missionNamespace getVariable ["FAC_jukebox_cpDrainScript", scriptNull];
-    if (!scriptDone _drain) then { terminate _drain };
-    missionNamespace setVariable ["FAC_jukebox_cpDrainScript", scriptNull];
+    { if (_x != "") then { [_x] call FAC_jukebox_fnc_bumpSourceGen } } forEach _sourceKeys;
 
     {
         if (_x != "") then { [_x] call FAC_jukebox_fnc_clientClearSourceAudio };
@@ -566,11 +682,12 @@ FAC_jukeboxGui_fnc = {
             private _key = missionNamespace getVariable ["FAC_jukebox_guiSource", ""];
             if (_key == "") exitWith { ["No source (re-open the jukebox)."] call FAC_jukebox_dbg };
             ["Stop → server"] call FAC_jukebox_dbg;
+            [_key] call FAC_jukebox_fnc_bumpSourceGen;
             private _q = missionNamespace getVariable ["FAC_jukebox_cpQueue", []];
-            _q = (_q select { (_x select 1) != _key });
+            _q = _q select { (_x select 1) != _key };
             missionNamespace setVariable ["FAC_jukebox_cpQueue", _q];
-            [_key, ""] call FAC_jukebox_fnc_setClientActiveSourceSong;
             [_key] call FAC_jukebox_fnc_clientClearSourceAudio;
+            [_key, ""] call FAC_jukebox_fnc_setClientActiveSourceSong;
             ["", _key, player] remoteExec ["FAC_jukebox_serverPlay", 2];
             systemChat "Jukebox stopped at this source.";
             if (!isNull (findDisplay 60400)) then {

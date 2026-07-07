@@ -209,8 +209,7 @@ if (_createTask isEqualTo {}) then {
 } forEach _participants;
 private _insertLzRadius = 500;
 [_taskId, _markerName + "_zone", _dropPos, _insertLzRadius, _markerFriendly] call FADE_mission_createRadiusMarker;
-private _marker = createMarker [_markerName, [_dropPos] call FADE_normPos3];
-[_taskId, _markerName] call FADE_missionEnt_registerMarker;
+private _marker = [_markerName, [_dropPos] call FADE_normPos3, _taskId] call FADE_createRegisteredMarker;
 _marker setMarkerType "mil_pickup";
 _marker setMarkerColor _markerFriendly;
 _marker setMarkerText _operationName;

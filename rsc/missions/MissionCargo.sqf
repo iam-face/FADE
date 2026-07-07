@@ -9,7 +9,9 @@ FADE_runMission_Cargo = {
         "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
         "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
         "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
-        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     if (isNil "FADE_cargoClasses" || { count FADE_cargoClasses == 0 }) exitWith {
         [_player] call FADE_clearActiveMission;
@@ -110,19 +112,17 @@ FADE_runMission_Cargo = {
     private _markerName = "FADE_cargo_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _campLandingRadius = 50;
-    [_taskId, _markerName + "_zone", _destPos, _campLandingRadius, "ColorYellow"] call FADE_mission_createRadiusMarker;
-    private _marker = createMarker [_markerName, [_destPos] call FADE_normPos3];
-    [_taskId, _markerName] call FADE_missionEnt_registerMarker;
+    [_taskId, _markerName + "_zone", _destPos, _campLandingRadius, "ColorOrange"] call FADE_mission_createRadiusMarker;
+    private _marker = [_markerName, [_destPos] call FADE_normPos3, _taskId] call FADE_createRegisteredMarker;
     _marker setMarkerType "loc_bunker";
-    _marker setMarkerColor "ColorYellow";
+    _marker setMarkerColor "ColorOrange";
     _marker setMarkerText _operationName;
 
     // Cargo box pickup marker - only visible while this mission is active
     private _cargoPickupMarkerName = "FADE_cargoPickup_" + _taskId;
-    private _cargoPickupMarker = createMarker [_cargoPickupMarkerName, [_cargoPos] call FADE_normPos3];
-    [_taskId, _cargoPickupMarkerName] call FADE_missionEnt_registerMarker;
+    private _cargoPickupMarker = [_cargoPickupMarkerName, [_cargoPos] call FADE_normPos3, _taskId] call FADE_createRegisteredMarker;
     _cargoPickupMarker setMarkerType "mil_box";
-    _cargoPickupMarker setMarkerColor "ColorYellow";
+    _cargoPickupMarker setMarkerColor "ColorWEST";
     _cargoPickupMarker setMarkerText _operationName;
 
     private _grid = mapGridPosition _destPos;

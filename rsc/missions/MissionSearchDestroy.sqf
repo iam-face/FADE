@@ -9,7 +9,9 @@ FADE_runMission_SearchDestroy = {
         "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
         "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
         "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
-        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     private _enemyUnitsSd = +_enemyUnits;
     _enemyUnitsSd = [_enemyUnitsSd] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
@@ -21,7 +23,7 @@ FADE_runMission_SearchDestroy = {
     // Same civ-zone + near-center pattern as Hostage: random urban pos can land in empty ground  -  loop until
     // three enterable buildings (2+ buildingPos slots) exist within radius, trying random zones then every civ zone.
     private _minDistUrban = 1000;
-    private _areaRadius = missionNamespace getVariable ["FADE_missionApproxZoneRadiusM", 110];
+    private _areaRadius = missionNamespace getVariable ["FADE_missionApproxZoneRadiusM", 55];
     private _trySdPickBuildings = {
         params ["_pos", "_radius"];
         if (count _pos < 2) exitWith { [[], []] };
@@ -331,7 +333,13 @@ FADE_runMission_SearchDestroy = {
     missionNamespace setVariable ["FADE_searchDestroyMarker_" + _taskId, _markerName];
     missionNamespace setVariable ["FADE_searchDestroyZoneMarker_" + _taskId, _zoneMarkerName];
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    [_taskId, _markerName, _center, _areaRadius, _markerEnemy, "mil_objective", _operationName] call FADE_mission_createObjectiveMarker;
+    private _sdBldPos = _picked apply {
+        private _p = getPosATL _x;
+        if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
+    };
+    private _sdAnchor = [_sdBldPos] call FADE_mission_positionsCentroid;
+    private _sdMarkerOut = [_taskId, _markerName, _sdAnchor, _areaRadius, _markerEnemy, "mil_objective", _operationName, -1, -1, _sdBldPos] call FADE_mission_createObjectiveMarker;
+    private _displayRadius = _sdMarkerOut param [3, _areaRadius];
 
     private _grid = mapGridPosition _center;
     private _cacheCount = count _sdAmmoObjs;
@@ -354,7 +362,7 @@ FADE_runMission_SearchDestroy = {
     private _sdExec = if (_cacheCount > 0) then {
         format [
             "<t align='left' color='#C0C0C0'>1. Search the marked zone (%1 m radius).<br/>2. Burning barrels mark buildings with enemy ammo caches.<br/>3. Locate and destroy at least %2 of %3 caches (%4%% required).</t>",
-            _areaRadius,
+            _displayRadius,
             _requiredDestroy,
             _cacheCount,
             _destroyPct
@@ -362,26 +370,26 @@ FADE_runMission_SearchDestroy = {
     } else {
         format [
             "<t align='left' color='#C0C0C0'>1. Search the marked zone (%1 m radius).<br/>2. Burning barrels mark suspected cache buildings.<br/>3. Clear all defenders in the zone.</t>",
-            _areaRadius
+            _displayRadius
         ]
     };
     private _missionDesc = if (_cacheCount > 0) then {
         format [
             "Search the marked zone (%1 m radius). Destroy at least %2 of %3 ammo caches (%4%%).",
-            _areaRadius,
+            _displayRadius,
             _requiredDestroy,
             _cacheCount,
             _destroyPct
         ]
     } else {
-        format ["Search the marked zone (%1 m radius) and eliminate all defenders.", _areaRadius]
+        format ["Search the marked zone (%1 m radius) and eliminate all defenders.", _displayRadius]
     };
-    [_player, _taskId, _missionDesc, "Search & Destroy", _center, "attack", "", _sdExec] call _fnc_createMissionTask;
+    [_player, _taskId, _missionDesc, "Search and Destroy", _center, "attack", "", _sdExec] call _fnc_createMissionTask;
     private _brief = format [
         "SEARCH & DESTROY%1%1Search zone (approx.): Grid %2  -  %3 m radius%1%1%4%1Burning barrels outside buildings mark cache sites.",
         toString [10],
         _grid,
-        _areaRadius,
+        _displayRadius,
         _cacheObjectiveLine
     ] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
@@ -395,7 +403,7 @@ FADE_runMission_SearchDestroy = {
     } else {
         "<t color='#FFFFFF'>Clear all defenders inside the marked zone.</t>"
     };
-    [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFFFFF'>Search radius: %2 m</t><br/>%3%4", _grid, _areaRadius, _hintCaches, _hintObjective]] call _showAssignedHint;
+    [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFFFFF'>Search radius: %2 m</t><br/>%3%4", _grid, _displayRadius, _hintCaches, _hintObjective]] call _showAssignedHint;
     [_player, "Search & Destroy"] call FADE_notifyOthersMissionStarted;
 
     private _sdDetect = (_areaRadius + 120) max 280;

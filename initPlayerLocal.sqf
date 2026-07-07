@@ -415,12 +415,23 @@ call compile preprocessFileLineNumbers "rsc\CutsceneClient.sqf";
 call compile preprocessFileLineNumbers "rsc\FAC_ClientBoardActions.sqf";
 [] call FAC_clientInstallBoardActions;
 
-// Dev: scroll-wheel entry for full test suite (lobby param debug tools / Zeus).
-[] spawn {
-    sleep 2;
+// Dev: scroll-wheel entry for test suites (lobby param debug tools / Zeus).
+FAC_installDevScrollActions = {
     if (!hasInterface) exitWith {};
-    if !(["FAC_playerCanUseDebugTools"] call FAC_lobbyParams_callAccess) exitWith {};
-    player addAction [
+    {
+        player removeAction _x;
+    } forEach (missionNamespace getVariable ["FAC_devScrollActionIds", []]);
+    missionNamespace setVariable ["FAC_devScrollActionIds", []];
+    if !(["FAC_playerCanUseDebugTools"] call FAC_lobbyParams_callAccess) exitWith {
+        diag_log "[FAC] Dev scroll-wheel actions skipped (need Zeus slot or Admin debug-tools lobby param).";
+    };
+    [] call FAC_playthroughSuite__loadSuite;
+    if (isNil "FAC_playthroughSuite_runServer") then {
+        systemChat "[FAC Playthrough] Scripts failed to load — check RPT for compile errors.";
+        diag_log "[FAC] Dev playthrough suite failed to compile (see RPT).";
+    };
+    private _ids = [];
+    _ids pushBack (player addAction [
         "<t color='#FFD700'>[DEV] Run FAC Test Suite</t>",
         { [] call FAC_missionTestSuite_execAll },
         [],
@@ -430,8 +441,34 @@ call compile preprocessFileLineNumbers "rsc\FAC_ClientBoardActions.sqf";
         "",
         "",
         5
-    ];
+    ]);
+    _ids pushBack (player addAction [
+        "<t color='#FFA45B'>[DEV] Run Mission Playthrough Suite</t>",
+        { [] call FAC_playthroughSuite_execAll },
+        [],
+        0,
+        false,
+        true,
+        "",
+        "",
+        5
+    ]);
+    missionNamespace setVariable ["FAC_devScrollActionIds", _ids];
 };
+
+[] spawn {
+    sleep 2;
+    [] call FAC_installDevScrollActions;
+};
+player addEventHandler ["Respawn", {
+    params ["_unit"];
+    if (_unit != player) exitWith {};
+    [_unit] spawn {
+        params ["_u"];
+        sleep 1;
+        if (_u == player) then { [] call FAC_installDevScrollActions };
+    };
+}];
 
 // JIP / late connect: one initial scan + EntityCreated for ambient civ / base NPC talk actions.
 [] spawn {
@@ -598,4 +635,42 @@ FAC_missionTestSuite_onServerDone = {
     if (isNil "FAC_missionTestSuite_showSummary") exitWith {};
     private _cRes = missionNamespace getVariable ["FAC_missionTestSuite_clientRes", [0, 0]];
     [_cRes, _serverRes, false] call FAC_missionTestSuite_showSummary;
+};
+
+// Mission playthrough suite — sequential live mission tests (server authority).
+//   [] call FAC_playthroughSuite_execAll
+//   Abort in progress: [] call FAC_playthroughSuite_abort
+FAC_playthroughSuite__loadSuite = {
+    if (isNil "FAC_playthroughSuite_runServer") then {
+        call compile preprocessFileLineNumbers "rsc\MissionPlaythroughSuite.sqf";
+    };
+    if (isNil "FAC_playthroughSuite__runComplete") then {
+        call compile preprocessFileLineNumbers "rsc\MissionPlaythroughProfiles.sqf";
+    };
+};
+
+FAC_playthroughSuite_abort = {
+    if (isServer) then {
+        if (isNil "FAC_playthroughSuite__setAbortRequested") then {
+            [] call FAC_playthroughSuite__loadSuite;
+        };
+        [] call FAC_playthroughSuite__setAbortRequested;
+    } else {
+        [] remoteExec ["FAC_playthroughSuite_abortServer", 2];
+        systemChat "[FAC Playthrough] Abort requested.";
+    };
+};
+
+FAC_playthroughSuite_execAll = {
+    if (!hasInterface) exitWith {};
+    [] call FAC_playthroughSuite__loadSuite;
+    if (isNil "FAC_playthroughSuite_runServer") exitWith {
+        systemChat "[FAC Playthrough] aborted: rsc\MissionPlaythroughSuite.sqf failed to load (check RPT).";
+    };
+    systemChat "[FAC Playthrough] Starting sequential playthrough (<=10 min, no input — see RPT).";
+    if (isServer) then {
+        [player] call FAC_playthroughSuite_runServer;
+    } else {
+        [player] remoteExec ["FAC_playthroughSuite_execServer", 2];
+    };
 };

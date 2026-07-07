@@ -1,48 +1,18 @@
 // AUTO-EXTRACTED from Missions.sqf  -  run via FADE_runMission_* (compile once)
 if (!isServer) exitWith {};
 FADE_runMission_InterceptConvoy = {
-    private _missionType = missionNamespace getVariable ["FADE_missionRun_missionType", ""];
-    private _destPos = missionNamespace getVariable ["FADE_missionRun_destPos", [0,0,0]];
-    private _player = missionNamespace getVariable ["FADE_missionRun_player", objNull];
-    private _evadeePlayers = missionNamespace getVariable ["FADE_missionRun_evadeePlayers", []];
-    private _fromMapClick = missionNamespace getVariable ["FADE_missionRun_fromMapClick", false];
-    private _mapAnchor = missionNamespace getVariable ["FADE_missionRun_mapAnchor", []];
-    private _mapPickResolvedR = missionNamespace getVariable ["FADE_missionRun_mapPickResolvedRadius", -1];
-    private _convoyEndRaw = missionNamespace getVariable ["FADE_missionRun_convoyEndRaw", []];
-    private _friendlyUnits = missionNamespace getVariable ["FADE_missionRun_friendlyUnits", []];
-    private _enemyUnits = missionNamespace getVariable ["FADE_missionRun_enemyUnits", []];
-    private _sideFriendly = missionNamespace getVariable ["FADE_missionRun_sideFriendly", west];
-    private _sideEnemy = missionNamespace getVariable ["FADE_missionRun_sideEnemy", east];
-    private _markerFriendly = missionNamespace getVariable ["FADE_missionRun_markerFriendly", "ColorWEST"];
-    private _markerEnemy = missionNamespace getVariable ["FADE_missionRun_markerEnemy", "ColorEAST"];
-    private _dryPos = missionNamespace getVariable ["FADE_surfaceIsDry", {}];
-    private _taskId = missionNamespace getVariable ["FADE_missionRun_taskId", ""];
-    private _operationName = missionNamespace getVariable ["FADE_missionRun_operationName", ""];
-    private _operationNameUpper = missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""];
-    private _briefGuiTail = missionNamespace getVariable ["FADE_missionRun_briefGuiTail", ""];
-    private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", {}];
-    private _enemyFactionName = missionNamespace getVariable ["FADE_missionRun_enemyFactionName", ""];
-    private _zeroAlphaDisplayName = missionNamespace getVariable ["FADE_missionRun_zeroAlphaDisplayName", ""];
-    private _isGlobalMission = missionNamespace getVariable ["FADE_missionRun_isGlobalMission", false];
-    private _basePos = missionNamespace getVariable ["FADE_missionRun_basePos", [0,0,0]];
-    private _unitCount = missionNamespace getVariable ["FADE_missionRun_unitCount", 6];
-    private _unitClasses = missionNamespace getVariable ["FADE_missionRun_unitClasses", []];
-    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {}];
-    private _fnc_createMissionTask = missionNamespace getVariable ["FADE_mission_createTask", {}];
-    private _showAssignedHint = missionNamespace getVariable ["FADE_mission_showAssignedHint", {}];
-    private _defaultSituationTaskText = missionNamespace getVariable ["FADE_missionRun_defaultSituationTaskText", ""];
-    private _defaultExecutionTaskText = missionNamespace getVariable ["FADE_missionRun_defaultExecutionTaskText", ""];
-    private _defaultAdminTaskText = missionNamespace getVariable ["FADE_missionRun_defaultAdminTaskText", ""];
-    private _defaultCommandTaskText = missionNamespace getVariable ["FADE_missionRun_defaultCommandTaskText", ""];
-    private _defaultSituationHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHtml", ""];
-    private _defaultSituationHintHtml = missionNamespace getVariable ["FADE_missionRun_defaultSituationHintHtml", ""];
-    private _friendlyPlayerCount = missionNamespace getVariable ["FADE_missionRun_friendlyPlayerCount", 0];
-    private _friendlyFactionName = missionNamespace getVariable ["FADE_missionRun_friendlyFactionName", ""];
-    private _estimatedOpforCount = missionNamespace getVariable ["FADE_missionRun_estimatedOpforCount", 0];
-    private _opforCountFactor = missionNamespace getVariable ["FADE_missionRun_opforCountFactor", 1];
-    private _intelFormatter = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
-    private _topographyGrid = missionNamespace getVariable ["FADE_missionRun_topographyGrid", "UNKNOWN"];
-    private _topographyArea = missionNamespace getVariable ["FADE_missionRun_topographyArea", ""];
+    (call FADE_missionRun_getContext) params [
+        "_missionType", "_destPos", "_player", "_evadeePlayers", "_fromMapClick", "_mapAnchor",
+        "_friendlyUnits", "_enemyUnits", "_sideFriendly", "_sideEnemy", "_markerFriendly", "_markerEnemy",
+        "_dryPos", "_taskId", "_operationName", "_operationNameUpper", "_briefGuiTail",
+        "_mkrJitter", "_enemyFactionName", "_zeroAlphaDisplayName", "_isGlobalMission", "_basePos",
+        "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
+        "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
+        "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
+    ];
     private _efConv = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
     private _convoyVehicles = [_efConv] call FADE_getEnemyVehiclesForFaction;
     if (_convoyVehicles isEqualTo []) then {
@@ -382,21 +352,18 @@ FADE_runMission_InterceptConvoy = {
     private _markerNameEnd = "FADE_convoy_end_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerNameStart, true];
     _player setVariable ["FADE_myMissionMarkerEnd", _markerNameEnd, true];
-    private _markerStart = createMarker [_markerNameStart, [_startPos] call FADE_normPos3];
-    [_taskId, _markerNameStart] call FADE_missionEnt_registerMarker;
+    private _markerStart = [_markerNameStart, [_startPos] call FADE_normPos3, _taskId] call FADE_createRegisteredMarker;
     _markerStart setMarkerType "mil_arrow";
     _markerStart setMarkerColor _markerEnemy;
     _markerStart setMarkerText _operationName;
-    private _markerEnd = createMarker [_markerNameEnd, [_endPos] call FADE_normPos3];
-    [_taskId, _markerNameEnd] call FADE_missionEnt_registerMarker;
+    private _markerEnd = [_markerNameEnd, [_endPos] call FADE_normPos3, _taskId] call FADE_createRegisteredMarker;
     _markerEnd setMarkerType "mil_end";
     _markerEnd setMarkerColor _markerEnemy;
     _markerEnd setMarkerText _operationName;
     for "_ri" from 1 to ((count _routeWaypoints) - 2) do {
         private _routePos = _routeWaypoints select _ri;
         private _routeMarkerName = format ["FADE_convoy_route_%1_%2", _taskId, _ri];
-        private _routeMarker = createMarker [_routeMarkerName, _routePos];
-        [_taskId, _routeMarkerName] call FADE_missionEnt_registerMarker;
+        private _routeMarker = [_routeMarkerName, _routePos, _taskId] call FADE_createRegisteredMarker;
         _routeMarker setMarkerType "mil_dot";
         _routeMarker setMarkerColor _markerEnemy;
         _routeMarker setMarkerAlpha 0.85;
@@ -408,8 +375,7 @@ FADE_runMission_InterceptConvoy = {
         } forEach _routeWaypoints;
         if (count _polylinePath >= 4) then {
             private _routeLineName = format ["FADE_convoy_route_line_%1", _taskId];
-            private _routeLine = createMarker [_routeLineName, _startPos];
-            [_taskId, _routeLineName] call FADE_missionEnt_registerMarker;
+            private _routeLine = [_routeLineName, _startPos, _taskId] call FADE_createRegisteredMarker;
             _routeLine setMarkerShape "POLYLINE";
             _routeLine setMarkerColor _markerEnemy;
             _routeLine setMarkerAlpha 0.55;

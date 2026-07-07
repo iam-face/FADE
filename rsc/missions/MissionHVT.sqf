@@ -9,11 +9,13 @@ FADE_runMission_HVT = {
         "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
         "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
         "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
-        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     private _hvtMinSlots = 10;
     private _buildRadius = 450;
-    private _patrolRadius = 250;
+    private _patrolRadius = missionNamespace getVariable ["FADE_hvtSearchRadiusM", 125];
     private _baseDistForComplete = 80;
     private _minDistHVT = 1000;
 
@@ -91,7 +93,7 @@ FADE_runMission_HVT = {
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _hvtObjectivePos = getPosATL _targetBuilding;
     if (count _hvtObjectivePos < 3) then { _hvtObjectivePos = [(_hvtObjectivePos select 0), (_hvtObjectivePos select 1), 0] };
-    [_taskId, _markerName, _hvtObjectivePos, _patrolRadius, _markerEnemy, "mil_objective", _operationName] call FADE_mission_createObjectiveMarker;
+    [_taskId, _markerName, _hvtObjectivePos, _patrolRadius, _markerEnemy, "mil_objective", _operationName, -1, -1, [_hvtObjectivePos]] call FADE_mission_createObjectiveMarker;
 
     private _grid = mapGridPosition (getPosATL _targetBuilding);
     private _brief = format ["HVT%1%1Search area (approx.): Grid %2%1Designation: %3  -  %4%1%1Locate and neutralise or capture the high-value target. Secure the area and move the target to extraction as ordered.", toString [10], _grid, _hvtCodename, _hvtTypeName] + _briefGuiTail;

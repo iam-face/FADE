@@ -10,6 +10,7 @@ FADE_missionEnt_scheduledCleanup = {
         params ["_tid", "_d", "_player"];
         [_tid, _player] call FADE_cleanupMissionMarkers;
         if (_d > 0) then { sleep _d };
+        if (!isNil "FADE_mission_unpinCivZonesForTask") then { [_tid] call FADE_mission_unpinCivZonesForTask };
         if !(missionNamespace getVariable [format ["FADE_missionEnt_cleaned_%1", _tid], false]) then {
             [_tid, "", false] call FADE_cleanupMissionEntities;
         };
@@ -86,11 +87,18 @@ FADE_abortMission = {
     };
 };
 
-// Asset Retrieval: secure intel from addAction (server).
+// Recover-object pickup from scroll action (server). Marks the associated task SUCCEEDED and removes the object.
 FADE_assetIntelTakeServer = {
     params ["_taskId", "_intelObj", ["_player", objNull]];
     if (!isServer) exitWith {};
+    if (missionNamespace getVariable ["FADE_assetIntelTaken_" + _taskId, false]) exitWith {};
     missionNamespace setVariable ["FADE_assetIntelTaken_" + _taskId, true];
+
+    private _taskState = _taskId call BIS_fnc_taskState;
+    if (_taskState in ["CREATED", "ASSIGNED"]) then {
+        [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
+    };
+
     private _logDiary = missionNamespace getVariable ["FADE_intelDiaryLog", true];
     if (
         _logDiary &&
@@ -101,11 +109,16 @@ FADE_assetIntelTakeServer = {
         private _grid = if (!isNull _intelObj) then { mapGridPosition _intelObj } else { "unknown" };
         private _whenStr = format ["Mission +%1 min", floor (time / 60) max 0];
         private _body = format [
-            "Secured intel package from Asset Retrieval objective (approx. grid %1). Return to base per task to finish.",
+            "Recovered objective package (approx. grid %1).",
             _grid
         ];
-        ["Asset retrieval", _whenStr, _body, "Package secured"] remoteExec ["FADE_intel_clientAppendIntelDiary", _player];
+        ["Asset retrieval", _whenStr, _body, "Package recovered"] remoteExec ["FADE_intel_clientAppendIntelDiary", _player];
     };
+
+    if (_taskId find "_raid_obj_" < 0 && { !isNull _player } && { isPlayer _player }) then {
+        [_player, "Object recovered."] call FADE_missionSuccessHint;
+    };
+
     if (!isNull _intelObj) then { deleteVehicle _intelObj };
 };
 publicVariable "FADE_assetIntelTakeServer";

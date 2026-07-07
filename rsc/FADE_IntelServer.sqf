@@ -178,14 +178,14 @@ FADE_intel_revealPackage = {
         private _nid = missionNamespace getVariable ["FADE_intelNextMarkerId", 0];
         missionNamespace setVariable ["FADE_intelNextMarkerId", _nid + 1];
         private _mname = format ["FADE_intel_m_%1_%2", _nid, floor (random 1e6)];
-        private _mk = createMarker [_mname, _markerPos];
+        private _mk = [_mname, _markerPos, ""] call FADE_createRegisteredMarker;
         _mk setMarkerType "mil_unknown";
         _mk setMarkerColor "ColorOPFOR";
         _mk setMarkerText "Intel (approx.)";
         [_mname, _ttl] spawn {
             params ["_mn", "_t"];
             sleep _t;
-            if (getMarkerColor _mn != "") then { deleteMarker _mn };
+            if (getMarkerColor _mn != "") then { [_mn] call FADE_deleteMarkerSafe };
         };
     };
 };

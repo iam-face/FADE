@@ -1,9 +1,10 @@
 // =============================================================================
-// FADE_MOTDBoard.sqf  -  dynamic Message of the Day on Eden board_MOTD (server)
+// FADE_MOTDBoard.sqf  -  dynamic Message of the Day on Eden MOTD boards (server)
 // =============================================================================
 
 FADE_motdBoard_intervalSec = 300; // 5 minutes
 FADE_motdBoard_wrapChars = 28;    // ~line length on 512x512 Caveat @ 0.07 (see Eden default)
+FADE_motdBoard_boardNames = ["board_MOTD", "board_MOTD_1"];
 
 FADE_motdBoard_messages = [
     "We recommend not feeding the Gunn^3r any dairy products.",
@@ -63,8 +64,16 @@ FADE_motdBoard_resolveMessage = {
     [_msg, "<name>", [_name] call FADE_motdBoard_sanitizeTextureText] call FADE_motdBoard_replaceToken
 };
 
+FADE_motdBoard_pickTemplate = {
+    params [["_exclude", []]];
+    private _pool = FADE_motdBoard_messages select { !(_x in _exclude) };
+    if (count _pool == 0) then { _pool = FADE_motdBoard_messages };
+    selectRandom _pool
+};
+
 FADE_motdBoard_pickMessage = {
-    [selectRandom FADE_motdBoard_messages] call FADE_motdBoard_resolveMessage
+    params [["_exclude", []]];
+    [[_exclude] call FADE_motdBoard_pickTemplate] call FADE_motdBoard_resolveMessage
 };
 
 FADE_motdBoard_buildTexture = {
@@ -77,19 +86,25 @@ FADE_motdBoard_buildTexture = {
 };
 
 FADE_motdBoard_resolveBoard = {
-    private _board = missionNamespace getVariable ["board_MOTD", objNull];
+    params [["_boardName", "board_MOTD"]];
+    private _board = missionNamespace getVariable [_boardName, objNull];
     if (!isNull _board) exitWith { _board };
     private _scan = allMissionObjects "Land_MapBoard_01_Wall_F";
-    private _i = _scan findIf { vehicleVarName _x == "board_MOTD" };
+    private _i = _scan findIf { vehicleVarName _x == _boardName };
     if (_i >= 0) then { _scan select _i } else { objNull }
 };
 
 FADE_motdBoard_update = {
     if (!isServer) exitWith {};
-    private _board = [] call FADE_motdBoard_resolveBoard;
-    if (isNull _board) exitWith {};
-    private _texture = [[] call FADE_motdBoard_pickMessage] call FADE_motdBoard_buildTexture;
-    _board setObjectTextureGlobal [0, _texture];
+    private _usedTemplates = [];
+    {
+        private _board = [_x] call FADE_motdBoard_resolveBoard;
+        if (isNull _board) then { continue };
+        private _template = [_usedTemplates] call FADE_motdBoard_pickTemplate;
+        _usedTemplates pushBack _template;
+        private _texture = [[_template] call FADE_motdBoard_resolveMessage] call FADE_motdBoard_buildTexture;
+        _board setObjectTextureGlobal [0, _texture];
+    } forEach FADE_motdBoard_boardNames;
 };
 
 FADE_motdBoard_start = {

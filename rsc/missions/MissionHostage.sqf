@@ -9,7 +9,9 @@ FADE_runMission_Hostage = {
         "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
         "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
         "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
-        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     private _buildRadius = 450;
     private _minSlotsPerBuilding = 5;
@@ -104,13 +106,13 @@ FADE_runMission_Hostage = {
     [_player, _taskId, _taskHostageLine, "Hostage", _missionCenter, "run"] call _fnc_createMissionTask;
     private _markerName = "FADE_hostage_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    private _searchRadius = 250;
-    [_taskId, _markerName + "_zone", _missionCenter, _searchRadius, "ColorCIV"] call FADE_mission_createRadiusMarker;
-    private _marker = createMarker [_markerName, [_missionCenter] call FADE_normPos3];
-    [_taskId, _markerName] call FADE_missionEnt_registerMarker;
-    _marker setMarkerType "mil_objective";
-    _marker setMarkerColor "ColorCIV";
-    _marker setMarkerText _operationName;
+    private _searchRadius = missionNamespace getVariable ["FADE_hostageSearchRadiusM", 125];
+    private _hoBldPos = _buildingsUsed apply {
+        private _p = getPosATL _x;
+        if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
+    };
+    private _hoAnchor = [_hoBldPos] call FADE_mission_positionsCentroid;
+    [_taskId, _markerName, _hoAnchor, _searchRadius, "ColorCIV", "mil_objective", _operationName, -1, -1, _hoBldPos] call FADE_mission_createObjectiveMarker;
 
     private _grid = mapGridPosition _missionCenter;
     private _brief = format ["HOSTAGE%1%1Incident area (approx.): Grid %2%1%1Rescue civilians held by hostiles. Prioritise civilian safety and follow the task's ROE and handling procedures for recovered persons.", toString [10], _grid] + _briefGuiTail;

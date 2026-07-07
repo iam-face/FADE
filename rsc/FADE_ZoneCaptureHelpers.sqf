@@ -17,11 +17,10 @@ FADE_zone_createCaptureMarkerPair = {
     ];
     private _centerN = [_center] call FADE_normPos3;
     private _mName = format ["%1_%2_%3", _markerPrefix, _taskId, _idx];
-    [_taskId, _mName, _centerN, _zoneRadius, _markerColor, 0.5] call FADE_mission_createRadiusMarker;
+    [_taskId, _mName, _centerN, _zoneRadius, _markerColor] call FADE_mission_createRadiusMarker;
 
     private _iconName = _mName + "_icon";
-    private _mi = createMarker [_iconName, _centerN];
-    [_taskId, _iconName] call FADE_missionEnt_registerMarker;
+    private _mi = [_iconName, _centerN, _taskId] call FADE_createRegisteredMarker;
     _mi setMarkerType "hd_flag";
     _mi setMarkerColor _markerColor;
     _mi setMarkerText _markerText;
@@ -34,6 +33,7 @@ FADE_zone_createCaptureMarkerPair = {
 };
 
 // Operation capture tick. Returns updated captured flag for zone _i.
+// _captureAllowed false: contest markers update but zone cannot latch captured (e.g. locked OPFOR HQ).
 FADE_zone_tickOperationCapture = {
     params [
         "_center",
@@ -46,7 +46,8 @@ FADE_zone_tickOperationCapture = {
         "_markerFriendly",
         "_markerEnemy",
         "_vgCancelEllipse",
-        "_vgOwner"
+        "_vgOwner",
+        ["_captureAllowed", true]
     ];
     private _captured = _wasCaptured;
     if (_eCnt > 0) then {
@@ -65,12 +66,18 @@ FADE_zone_tickOperationCapture = {
         };
     } else {
         if (_bluforCnt > 0) then {
-            if (!_wasCaptured && { !(_vgCancelEllipse isEqualTo {}) }) then {
-                [_center, _zoneRadius, _vgOwner] call _vgCancelEllipse;
+            if (_captureAllowed) then {
+                if (!_wasCaptured && { !(_vgCancelEllipse isEqualTo {}) }) then {
+                    [_center, _zoneRadius, _vgOwner] call _vgCancelEllipse;
+                };
+                _captured = true;
+                [_mArea, _markerFriendly] call FADE_mission_setRadiusMarkerColor;
+                _mIcon setMarkerColor _markerFriendly;
+            } else {
+                _captured = false;
+                [_mArea, "ColorOrange"] call FADE_mission_setRadiusMarkerColor;
+                _mIcon setMarkerColor "ColorOrange";
             };
-            _captured = true;
-            [_mArea, _markerFriendly] call FADE_mission_setRadiusMarkerColor;
-            _mIcon setMarkerColor _markerFriendly;
         } else {
             if (_wasCaptured) then {
                 [_mArea, _markerFriendly] call FADE_mission_setRadiusMarkerColor;

@@ -9,7 +9,9 @@ FADE_runMission_MineClearing = {
         "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
         "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
         "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
-        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     private _useMines = random 1 < 0.5;
     private _need = if (_useMines) then { 2 + (floor random 4) } else { 1 + (floor random 3) };
@@ -134,16 +136,11 @@ FADE_runMission_MineClearing = {
 
             private _markerName = "FADE_mines_" + _taskId;
             _player setVariable ["FADE_myMissionMarker", _markerName, true];
-            private _hazardRadius = 50;
+            private _hazardRadius = 25;
             { private _d = _centerPos distance2D _x; if (_d > _hazardRadius) then { _hazardRadius = _d } } forEach _positions;
-            _hazardRadius = (_hazardRadius + 40) max 80;
+            _hazardRadius = (_hazardRadius + 20) max 40;
             private _mineMarkerColor = missionNamespace getVariable ["FADE_markerColorEnemy", "ColorEAST"];
-            [_taskId, _markerName + "_zone", _centerPos, _hazardRadius, _mineMarkerColor] call FADE_mission_createRadiusMarker;
-            private _mkr = createMarker [_markerName, [_centerPos] call FADE_normPos3];
-            [_taskId, _markerName] call FADE_missionEnt_registerMarker;
-            _mkr setMarkerType "mil_warning";
-            _mkr setMarkerColor (missionNamespace getVariable ["FADE_markerColorEnemy", "ColorEAST"]);
-            _mkr setMarkerText _operationName;
+            [_taskId, _markerName, _centerPos, _hazardRadius, _mineMarkerColor, "mil_warning", _operationName, -1, -1, _positions] call FADE_mission_createObjectiveMarker;
 
             private _grid = mapGridPosition _centerPos;
             private _threatLine = if (_useMines) then {

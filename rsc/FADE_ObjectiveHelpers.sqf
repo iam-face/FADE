@@ -355,20 +355,21 @@ FADE_objective_spawnPatrolsPerBuilding = {
 };
 
 FADE_objective_addRecoverHoldAction = {
-    params ["_objCase", "_childTaskId"];
-    missionNamespace setVariable ["FADE_assetIntelTaken_" + _childTaskId, false];
+    params ["_objCase", "_taskId"];
+    missionNamespace setVariable ["FADE_assetIntelTaken_" + _taskId, false];
+    _objCase setVariable ["FADE_recoverTaskId", _taskId, true];
     _objCase addAction [
-        "Secure objective",
+        "Pick up",
         {
-            (_this select 3) params ["_cTaskId"];
+            private _cTaskId = (_this select 0) getVariable ["FADE_recoverTaskId", ""];
             [_cTaskId, _this select 0, _this select 1] remoteExec ["FADE_assetIntelTakeServer", 2];
         },
-        [_childTaskId],
+        [],
         1.5,
         true,
         true,
         "",
-        "(_this distance _target) < 3 && { alive _this }",
+        "(_this distance _target) < 3 && { alive _this } && { alive _target }",
         3
     ];
 };

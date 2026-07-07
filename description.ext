@@ -939,46 +939,71 @@ class CfgSFX
     #include "rsc\JukeboxVehicleSFX.hpp"
 };
 
-// Jukebox: CfgVehicles Sound subclasses — vehicle loudspeaker (createSoundSource + attachTo); sound= → CfgSFX (CfgSounds mirrors for playSound3D / server checks).
+// Required so mission FAC_Jukebox_* Sound classes register for createSoundSource (isClass / runtime lookup).
+class CfgPatches {
+    class FAC_FADE_JukeboxSounds {
+        author = "FADE";
+        name = "FADE Jukebox Sound Sources";
+        units[] = {
+            "FAC_Jukebox_Sig_80smusic_mix_1", "FAC_Jukebox_Sig_BF2_MEC", "FAC_Jukebox_Sig_BF2_CHI",
+            "FAC_Jukebox_Sig_BF1942_Menu", "FAC_Jukebox_Sig_BF1942_Loading1", "FAC_Jukebox_Sig_BF1942_Loading2",
+            "FAC_Jukebox_Sig_BFDC_Menu", "FAC_Jukebox_Sig_BFDC_Loading",
+            "FAC_Jukebox_Sig_CNC_Tibdawn_Mix", "FAC_Jukebox_Sig_CNC_Gen_GLA_Mix", "FAC_Jukebox_Sig_CNC_Gen_USA_Mix", "FAC_Jukebox_Sig_CNC_Gen_CHI_Mix",
+            "FAC_Jukebox_Sig_BHD_Mix", "FAC_Jukebox_Sig_Abba_Gimmie", "FAC_Jukebox_Sig_90sdance_Mix", "FAC_Jukebox_Sig_OFPSeventh_mix",
+            "FAC_Jukebox_Sig_SovietMusic_mix_1", "FAC_Jukebox_Sig_VietnamMusic_mix_1",
+            "FAC_Jukebox_Sig_Buttrock_1", "FAC_Jukebox_Sig_Buttrock_2", "FAC_Jukebox_Sig_Buttrock_3", "FAC_Jukebox_Sig_Buttrock_4",
+            "FAC_Jukebox_Sig_Buttrock_5", "FAC_Jukebox_Sig_Buttrock_6", "FAC_Jukebox_Sig_Buttrock_7", "FAC_Jukebox_Sig_Buttrock_8",
+            "FAC_Jukebox_Sig_Buttrock_9", "FAC_Jukebox_Sig_Buttrock_10", "FAC_Jukebox_Sig_Buttrock_11", "FAC_Jukebox_Sig_Buttrock_12",
+            "FAC_Jukebox_Sig_Buttrock_13", "FAC_Jukebox_Sig_Buttrock_14", "FAC_Jukebox_Sig_Buttrock_15", "FAC_Jukebox_Sig_Buttrock_16",
+            "FAC_Jukebox_Sig_Buttrock_17", "FAC_Jukebox_Sig_Buttrock_18", "FAC_Jukebox_Sig_Buttrock_19"
+        };
+        weapons[] = {};
+        requiredVersion = 0.1;
+        requiredAddons[] = {"A3_Data_F", "A3_Sounds_F"};
+    };
+};
+
+// Jukebox: CfgVehicles Sound subclasses — vehicle loudspeaker (createSoundSource + attachTo); sound= → mod CfgSFX Sig_* (not mission FAC_JukeVeh_* mirrors).
 class CfgVehicles {
     class Sound;
-    class FAC_Jukebox_Sig_80smusic_mix_1: Sound { sound = "FAC_JukeVeh_Sig_80smusic_mix_1"; };
-    class FAC_Jukebox_Sig_BF2_MEC: Sound { sound = "FAC_JukeVeh_Sig_BF2_MEC"; };
-    class FAC_Jukebox_Sig_BF2_CHI: Sound { sound = "FAC_JukeVeh_Sig_BF2_CHI"; };
-    class FAC_Jukebox_Sig_BF1942_Menu: Sound { sound = "FAC_JukeVeh_Sig_BF1942_Menu"; };
-    class FAC_Jukebox_Sig_BF1942_Loading1: Sound { sound = "FAC_JukeVeh_Sig_BF1942_Loading1"; };
-    class FAC_Jukebox_Sig_BF1942_Loading2: Sound { sound = "FAC_JukeVeh_Sig_BF1942_Loading2"; };
-    class FAC_Jukebox_Sig_BFDC_Menu: Sound { sound = "FAC_JukeVeh_Sig_BFDC_Menu"; };
-    class FAC_Jukebox_Sig_BFDC_Loading: Sound { sound = "FAC_JukeVeh_Sig_BFDC_Loading"; };
-    class FAC_Jukebox_Sig_CNC_Tibdawn_Mix: Sound { sound = "FAC_JukeVeh_Sig_CNC_Tibdawn_Mix"; };
-    class FAC_Jukebox_Sig_CNC_Gen_GLA_Mix: Sound { sound = "FAC_JukeVeh_Sig_CNC_Gen_GLA_Mix"; };
-    class FAC_Jukebox_Sig_CNC_Gen_USA_Mix: Sound { sound = "FAC_JukeVeh_Sig_CNC_Gen_USA_Mix"; };
-    class FAC_Jukebox_Sig_CNC_Gen_CHI_Mix: Sound { sound = "FAC_JukeVeh_Sig_CNC_Gen_CHI_Mix"; };
-    class FAC_Jukebox_Sig_BHD_Mix: Sound { sound = "FAC_JukeVeh_Sig_BHD_Mix"; };
-    class FAC_Jukebox_Sig_Abba_Gimmie: Sound { sound = "FAC_JukeVeh_Sig_Abba_Gimmie"; };
-    class FAC_Jukebox_Sig_90sdance_Mix: Sound { sound = "FAC_JukeVeh_Sig_90sdance_Mix"; };
-    class FAC_Jukebox_Sig_OFPSeventh_mix: Sound { sound = "FAC_JukeVeh_Sig_OFPSeventh_mix"; };
-    class FAC_Jukebox_Sig_SovietMusic_mix_1: Sound { sound = "FAC_JukeVeh_Sig_SovietMusic_mix_1"; };
-    class FAC_Jukebox_Sig_VietnamMusic_mix_1: Sound { sound = "FAC_JukeVeh_Sig_VietnamMusic_mix_1"; };
-    class FAC_Jukebox_Sig_Buttrock_1: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_1"; };
-    class FAC_Jukebox_Sig_Buttrock_2: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_2"; };
-    class FAC_Jukebox_Sig_Buttrock_3: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_3"; };
-    class FAC_Jukebox_Sig_Buttrock_4: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_4"; };
-    class FAC_Jukebox_Sig_Buttrock_5: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_5"; };
-    class FAC_Jukebox_Sig_Buttrock_6: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_6"; };
-    class FAC_Jukebox_Sig_Buttrock_7: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_7"; };
-    class FAC_Jukebox_Sig_Buttrock_8: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_8"; };
-    class FAC_Jukebox_Sig_Buttrock_9: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_9"; };
-    class FAC_Jukebox_Sig_Buttrock_10: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_10"; };
-    class FAC_Jukebox_Sig_Buttrock_11: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_11"; };
-    class FAC_Jukebox_Sig_Buttrock_12: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_12"; };
-    class FAC_Jukebox_Sig_Buttrock_13: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_13"; };
-    class FAC_Jukebox_Sig_Buttrock_14: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_14"; };
-    class FAC_Jukebox_Sig_Buttrock_15: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_15"; };
-    class FAC_Jukebox_Sig_Buttrock_16: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_16"; };
-    class FAC_Jukebox_Sig_Buttrock_17: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_17"; };
-    class FAC_Jukebox_Sig_Buttrock_18: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_18"; };
-    class FAC_Jukebox_Sig_Buttrock_19: Sound { sound = "FAC_JukeVeh_Sig_Buttrock_19"; };
+    // sound= must reference @CTB mod CfgSFX (Sig_*), not mission FAC_JukeVeh_* mirrors — engine resolves mission CfgSFX OGG paths under mpmissions\ and cannot hear mod PBOs.
+    class FAC_Jukebox_Sig_80smusic_mix_1: Sound { scope = 2; sound = "Sig_80smusic_mix_1"; };
+    class FAC_Jukebox_Sig_BF2_MEC: Sound { scope = 2; sound = "Sig_BF2_MEC"; };
+    class FAC_Jukebox_Sig_BF2_CHI: Sound { scope = 2; sound = "Sig_BF2_CHI"; };
+    class FAC_Jukebox_Sig_BF1942_Menu: Sound { scope = 2; sound = "Sig_BF1942_Menu"; };
+    class FAC_Jukebox_Sig_BF1942_Loading1: Sound { scope = 2; sound = "Sig_BF1942_Loading1"; };
+    class FAC_Jukebox_Sig_BF1942_Loading2: Sound { scope = 2; sound = "Sig_BF1942_Loading2"; };
+    class FAC_Jukebox_Sig_BFDC_Menu: Sound { scope = 2; sound = "Sig_BFDC_Menu"; };
+    class FAC_Jukebox_Sig_BFDC_Loading: Sound { scope = 2; sound = "Sig_BFDC_Loading"; };
+    class FAC_Jukebox_Sig_CNC_Tibdawn_Mix: Sound { scope = 2; sound = "Sig_CNC_Tibdawn_Mix"; };
+    class FAC_Jukebox_Sig_CNC_Gen_GLA_Mix: Sound { scope = 2; sound = "Sig_CNC_Gen_GLA_Mix"; };
+    class FAC_Jukebox_Sig_CNC_Gen_USA_Mix: Sound { scope = 2; sound = "Sig_CNC_Gen_USA_Mix"; };
+    class FAC_Jukebox_Sig_CNC_Gen_CHI_Mix: Sound { scope = 2; sound = "Sig_CNC_Gen_CHI_Mix"; };
+    class FAC_Jukebox_Sig_BHD_Mix: Sound { scope = 2; sound = "Sig_BHD_Mix"; };
+    class FAC_Jukebox_Sig_Abba_Gimmie: Sound { scope = 2; sound = "Sig_Abba_Gimmie"; };
+    class FAC_Jukebox_Sig_90sdance_Mix: Sound { scope = 2; sound = "Sig_90sdance_Mix"; };
+    class FAC_Jukebox_Sig_OFPSeventh_mix: Sound { scope = 2; sound = "Sig_OFPSeventh_mix"; };
+    class FAC_Jukebox_Sig_SovietMusic_mix_1: Sound { scope = 2; sound = "Sig_SovietMusic_mix_1"; };
+    class FAC_Jukebox_Sig_VietnamMusic_mix_1: Sound { scope = 2; sound = "Sig_VietnamMusic_mix_1"; };
+    class FAC_Jukebox_Sig_Buttrock_1: Sound { scope = 2; sound = "Sig_Buttrock_1"; };
+    class FAC_Jukebox_Sig_Buttrock_2: Sound { scope = 2; sound = "Sig_Buttrock_2"; };
+    class FAC_Jukebox_Sig_Buttrock_3: Sound { scope = 2; sound = "Sig_Buttrock_3"; };
+    class FAC_Jukebox_Sig_Buttrock_4: Sound { scope = 2; sound = "Sig_Buttrock_4"; };
+    class FAC_Jukebox_Sig_Buttrock_5: Sound { scope = 2; sound = "Sig_Buttrock_5"; };
+    class FAC_Jukebox_Sig_Buttrock_6: Sound { scope = 2; sound = "Sig_Buttrock_6"; };
+    class FAC_Jukebox_Sig_Buttrock_7: Sound { scope = 2; sound = "Sig_Buttrock_7"; };
+    class FAC_Jukebox_Sig_Buttrock_8: Sound { scope = 2; sound = "Sig_Buttrock_8"; };
+    class FAC_Jukebox_Sig_Buttrock_9: Sound { scope = 2; sound = "Sig_Buttrock_9"; };
+    class FAC_Jukebox_Sig_Buttrock_10: Sound { scope = 2; sound = "Sig_Buttrock_10"; };
+    class FAC_Jukebox_Sig_Buttrock_11: Sound { scope = 2; sound = "Sig_Buttrock_11"; };
+    class FAC_Jukebox_Sig_Buttrock_12: Sound { scope = 2; sound = "Sig_Buttrock_12"; };
+    class FAC_Jukebox_Sig_Buttrock_13: Sound { scope = 2; sound = "Sig_Buttrock_13"; };
+    class FAC_Jukebox_Sig_Buttrock_14: Sound { scope = 2; sound = "Sig_Buttrock_14"; };
+    class FAC_Jukebox_Sig_Buttrock_15: Sound { scope = 2; sound = "Sig_Buttrock_15"; };
+    class FAC_Jukebox_Sig_Buttrock_16: Sound { scope = 2; sound = "Sig_Buttrock_16"; };
+    class FAC_Jukebox_Sig_Buttrock_17: Sound { scope = 2; sound = "Sig_Buttrock_17"; };
+    class FAC_Jukebox_Sig_Buttrock_18: Sound { scope = 2; sound = "Sig_Buttrock_18"; };
+    class FAC_Jukebox_Sig_Buttrock_19: Sound { scope = 2; sound = "Sig_Buttrock_19"; };
 };
 
 // HVT mission: identities so unit name matches briefing codename

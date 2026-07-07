@@ -9,7 +9,9 @@ FADE_runMission_CASEVAC = {
         "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
         "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
         "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
-        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     private _maxPax = _unitCount max 2;
     private _pickupCount = ((2 + floor random 9) min _maxPax) max 2;
@@ -39,8 +41,7 @@ FADE_runMission_CASEVAC = {
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _casevacPickupRadius = 200;
     [_taskId, _markerName + "_zone", _destPos, _casevacPickupRadius, _markerFriendly] call FADE_mission_createRadiusMarker;
-    private _marker = createMarker [_markerName, [_destPos] call FADE_normPos3];
-    [_taskId, _markerName] call FADE_missionEnt_registerMarker;
+    private _marker = [_markerName, [_destPos] call FADE_normPos3, _taskId] call FADE_createRegisteredMarker;
     _marker setMarkerType "mil_pickup";
     _marker setMarkerColor _markerFriendly;
     _marker setMarkerText _operationName;
@@ -73,7 +74,9 @@ FADE_runMission_CSAR = {
         "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
         "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
         "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
-        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     private _pickupClasses = [_friendlyUnits select 0];
     private _wreckData = [_destPos, _taskId] call FADE_mission_spawnCasualtyHeliWreck;
@@ -231,8 +234,7 @@ FADE_runMission_CSAR = {
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _csarPickupRadius = 200;
     [_taskId, _markerName + "_zone", _destPos, _csarPickupRadius, _markerFriendly] call FADE_mission_createRadiusMarker;
-    private _marker = createMarker [_markerName, [_destPos] call FADE_normPos3];
-    [_taskId, _markerName] call FADE_missionEnt_registerMarker;
+    private _marker = [_markerName, [_destPos] call FADE_normPos3, _taskId] call FADE_createRegisteredMarker;
     _marker setMarkerType "mil_pickup";
     _marker setMarkerColor _markerFriendly;
     _marker setMarkerText _operationName;

@@ -220,8 +220,7 @@ if (_createTask isEqualTo {}) then {
 private _zoneMarkerName = _markerName + "_zone";
 private _extractPickupRadius = 200;
 [_taskId, _zoneMarkerName, _pickupPos, _extractPickupRadius, _markerFriendly] call FADE_mission_createRadiusMarker;
-private _marker = createMarker [_markerName, [_pickupPos] call FADE_normPos3];
-[_taskId, _markerName] call FADE_missionEnt_registerMarker;
+private _marker = [_markerName, [_pickupPos] call FADE_normPos3, _taskId] call FADE_createRegisteredMarker;
 _marker setMarkerType "mil_pickup";
 _marker setMarkerColor _markerFriendly;
 _marker setMarkerText _operationName;

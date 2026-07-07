@@ -380,7 +380,7 @@ FAC_vehicleGui_fnc = {
             missionNamespace setVariable ["FAC_vehicleGui_deleteWreckPending", -99];
             missionNamespace setVariable ["FAC_vehicleGui_deleteWreckConfirmGen", 0];
             [] call FAC_vehicleGui_resetDeleteWreckButton;
-            if (isNil "FAC_vehicleGui_whitelistAircraft") then {
+            if (isNil { missionNamespace getVariable "FAC_vehicleGui_whitelistAircraft" }) then {
                 missionNamespace setVariable ["FAC_vehicleGui_whitelistAircraft", true];
             };
             // Tab visibility first (config has manage controls show=0; setTab enforces spawn vs manage).
