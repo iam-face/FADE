@@ -26,7 +26,7 @@ FADE_civ_syncTownDebugMarker = {
     };
     private _label = format ["%1 (%2)", _locName, if (_active) then { "ACTIVE" } else { "idle" }];
     if (markerColor _mrkId == "") then {
-        createMarker [_mrkId, _pos];
+        [_mrkId, _pos, ""] call FADE_createRegisteredMarker;
         _mrkId setMarkerType "hd_flag";
         _mrkId setMarkerSize [0.55, 0.55];
     } else {

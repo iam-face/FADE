@@ -9,7 +9,9 @@ FADE_runMission_CAS = {
         "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
         "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
         "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
-        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     if (count _enemyUnits == 0) exitWith {
         [_player] call FADE_clearActiveMission;
@@ -65,8 +67,7 @@ FADE_runMission_CAS = {
 
     private _markerName = "FADE_cas_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    private _marker = createMarker [_markerName, [_destPos] call FADE_normPos3];
-    [_taskId, _markerName] call FADE_missionEnt_registerMarker;
+    private _marker = [_markerName, [_destPos] call FADE_normPos3, _taskId] call FADE_createRegisteredMarker;
     _marker setMarkerType "mil_objective";
     _marker setMarkerColor "ColorRed";
     _marker setMarkerText _operationName;

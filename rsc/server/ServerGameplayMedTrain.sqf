@@ -349,18 +349,11 @@ missionNamespace setVariable ["FADE_aoRegisterObject", FADE_aoRegisterObject];
 FADE_cleanupMissionEntities = {
     params ["_taskId", ["_missionType", ""], ["_setAbortFlags", true]];
     if (_taskId == "") exitWith {};
+    if (!isNil "FADE_mission_unpinCivZonesForTask") then { [_taskId] call FADE_mission_unpinCivZonesForTask };
     if (missionNamespace getVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], false]) exitWith {};
 
     if (_missionType == "AreaOfOperations") then {
         missionNamespace setVariable ["FADE_aoEnded_" + _taskId, true];
-    };
-
-    missionNamespace setVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], true];
-
-    private _vgX = missionNamespace getVariable ["FADE_vg_cancelPendingByOwner", {}];
-    if (!(_vgX isEqualTo {})) then {
-        [format ["mis:%1", _taskId]] call _vgX;
-        [format ["op:%1", _taskId]] call _vgX;
     };
 
     if (_setAbortFlags) then {
@@ -381,6 +374,14 @@ FADE_cleanupMissionEntities = {
             missionNamespace setVariable [_abortKey, true, true];
         };
     };
+
+    private _vgX = missionNamespace getVariable ["FADE_vg_cancelPendingByOwner", {}];
+    if (!(_vgX isEqualTo {})) then {
+        [format ["mis:%1", _taskId]] call _vgX;
+        [format ["op:%1", _taskId]] call _vgX;
+    };
+
+    missionNamespace setVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], true];
 
     private _ent = missionNamespace getVariable [format ["FADE_missionEnt_%1", _taskId], createHashMap];
     private _seenGrps = [];
@@ -403,15 +404,61 @@ FADE_cleanupMissionEntities = {
     };
     private _opEnt = missionNamespace getVariable ["FADE_operationEntities_" + _taskId, []];
     if (_opEnt isEqualType [] && { count _opEnt >= 2 }) then {
-        { if (_x isEqualType grpNull) then { [_x] call FADE_missionEnt_deleteGroupFull } } forEach (_opEnt select 0);
+        private _opOwner = format ["op:%1", _taskId];
+        private _vgEll = missionNamespace getVariable ["FADE_vg_cancelPendingInEllipse", {}];
+        private _zones = if (count _opEnt >= 3) then { _opEnt select 2 } else { [] };
+        private _zr = if (count _opEnt >= 4 && { (_opEnt select 3) isEqualType 0 }) then { _opEnt select 3 } else { 250 };
+        if (!(_vgEll isEqualTo {})) then {
+            { [_x, _zr, _opOwner] call _vgEll } forEach _zones;
+        };
+        if ((_opEnt select 1) isEqualType []) then {
+            { if (_x isEqualType "" && { _x != "" }) then { [_x] call FADE_deleteMarkerSafe } } forEach (_opEnt select 1);
+        };
+        {
+            if (_x isEqualType grpNull && { !isNull _x }) then { [_x] call FADE_missionEnt_deleteGroupFull };
+        } forEach (_opEnt select 0);
         if (count _opEnt >= 6) then {
-            { if (!isNull _x) then { [_x] call FADE_missionEnt_deleteVehicleFull } } forEach (_opEnt select 4);
+            {
+                if (!isNull _x) then {
+                    private _cg = _x getVariable ["FADE_opCargoGrp", grpNull];
+                    if (!isNull _cg) then { [_cg] call FADE_missionEnt_deleteGroupFull };
+                    [_x] call FADE_missionEnt_deleteVehicleFull;
+                };
+            } forEach (_opEnt select 4);
             { if (!isNull _x) then { deleteVehicle _x } } forEach (_opEnt select 5);
         };
+        {
+            private _g = group _x;
+            if (!isNull _g && { (_g getVariable ["FADE_vgOwner", ""]) == _opOwner }) then {
+                if (alive _x) then { deleteVehicle _x };
+            };
+        } forEach allUnits;
+        {
+            if (!isNull _x && { _x getVariable ["FADE_opHomeIdx", -1] >= 0 }) then {
+                private _cg = _x getVariable ["FADE_opCargoGrp", grpNull];
+                if (!isNull _cg) then { [_cg] call FADE_missionEnt_deleteGroupFull };
+                [_x] call FADE_missionEnt_deleteVehicleFull;
+            };
+        } forEach vehicles;
         missionNamespace setVariable ["FADE_operationEntities_" + _taskId, nil];
         missionNamespace setVariable ["FADE_operationCapState_" + _taskId, nil];
         missionNamespace setVariable ["FADE_operationZoneCenters_" + _taskId, nil];
+        missionNamespace setVariable ["FADE_operationHqIdx_" + _taskId, nil];
+        missionNamespace setVariable ["FADE_operationCivZoneIds_" + _taskId, nil];
         missionNamespace setVariable ["FADE_operationMakeVehFn_" + _taskId, nil];
+        missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, nil];
+    };
+    private _invEnt = missionNamespace getVariable ["FADE_invasionEntities_" + _taskId, []];
+    if (_invEnt isEqualType [] && { count _invEnt >= 1 }) then {
+        if ((_invEnt select 0) isEqualType []) then {
+            { if (_x isEqualType grpNull && { !isNull _x }) then { [_x] call FADE_missionEnt_deleteGroupFull } } forEach (_invEnt select 0);
+        };
+        if (count _invEnt >= 2 && { (_invEnt select 1) isEqualType [] }) then {
+            { if (_x isEqualType "" && { _x != "" }) then { [_x] call FADE_deleteMarkerSafe } } forEach (_invEnt select 1);
+        };
+        missionNamespace setVariable ["FADE_invasionEntities_" + _taskId, nil];
+        missionNamespace setVariable ["FADE_invasionZoneCenters_" + _taskId, nil];
+        missionNamespace setVariable ["FADE_invasionCapState_" + _taskId, nil];
     };
     private _sdEnt = missionNamespace getVariable ["FADE_searchDestroyEntities_" + _taskId, []];
     if (_sdEnt isEqualType [] && { count _sdEnt >= 1 }) then {

@@ -495,6 +495,9 @@ FADE_getAlivePlayerPositions = {
 };
 
 // Standard mission runner context (set by FADE_runMission in Missions.sqf before dispatch).
+FADE_missionRun_contextFieldCount = 49;
+missionNamespace setVariable ["FADE_missionRun_contextFieldCount", FADE_missionRun_contextFieldCount];
+
 FADE_missionRun_getContext = {
     [
         missionNamespace getVariable ["FADE_missionRun_missionType", ""],
@@ -536,7 +539,16 @@ FADE_missionRun_getContext = {
         missionNamespace getVariable ["FADE_missionRun_opforCountFactor", 1],
         missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}],
         missionNamespace getVariable ["FADE_missionRun_topographyGrid", "UNKNOWN"],
-        missionNamespace getVariable ["FADE_missionRun_topographyArea", ""]
+        missionNamespace getVariable ["FADE_missionRun_topographyArea", ""],
+        missionNamespace getVariable ["FADE_missionRun_mapPickRawAnchor", []],
+        missionNamespace getVariable ["FADE_missionRun_mapPickSnappedCenter", []],
+        missionNamespace getVariable ["FADE_missionRun_mapPickResolvedRadius", -1],
+        missionNamespace getVariable ["FADE_missionRun_convoyEndRaw", []],
+        missionNamespace getVariable ["FADE_missionRun_convoyEndAnchor", []],
+        missionNamespace getVariable ["FADE_missionRun_raidZoneClicks", []],
+        missionNamespace getVariable ["FADE_missionRun_loreShort", ""],
+        missionNamespace getVariable ["FADE_missionRun_loreLong", ""],
+        missionNamespace getVariable ["FADE_missionRun_loreSmeacHtml", ""]
     ]
 };
 

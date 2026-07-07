@@ -10,7 +10,9 @@ FADE_runMission_ClearArea = {
         "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
         "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
         "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
-        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     // Use same resolved list as rest of Missions.sqf (FADE_resolveScenarioEnemyUnits  -  scenario faction first)
     private _enemyUnitsCA = +_enemyUnits;
@@ -92,7 +94,11 @@ FADE_runMission_ClearArea = {
         _allGroups append ([_center, _stationaryCount, _enemyUnitsCA, _sideEnemy, _taskId, 3, 12, 20] call FADE_missionSpawnGuards);
     };
     if (count _center >= 2 && { count _center < 3 }) then { _center = [(_center select 0), (_center select 1), 0] };
-    private _areaRadius = if (_useTown) then { 280 } else { 120 };
+    private _areaRadius = if (_useTown) then {
+        missionNamespace getVariable ["FADE_clearAreaTownRadiusM", 140]
+    } else {
+        missionNamespace getVariable ["FADE_clearAreaCampRadiusM", 60]
+    };
     private _caGarExtra = missionNamespace getVariable ["FADE_garrisonClearAreaSearchExtraM", 150];
     private _caBldChance = missionNamespace getVariable ["FADE_garrisonMissionNearbyBuildingChance", 0.25];
     private _buildingsAll = nearestObjects [_center, ["House", "Building"], _areaRadius + _caGarExtra];
@@ -234,12 +240,11 @@ FADE_runMission_ClearArea = {
     } else {
         private _markerName = "FADE_clear_" + _taskId;
         _player setVariable ["FADE_myMissionMarker", _markerName, true];
-        [_taskId, _markerName + "_zone", _center, _areaRadius, _markerEnemy] call FADE_mission_createRadiusMarker;
-        private _marker = createMarker [_markerName, [_center] call FADE_normPos3];
-        [_taskId, _markerName] call FADE_missionEnt_registerMarker;
-        _marker setMarkerType "mil_objective";
-        _marker setMarkerColor _markerEnemy;
-        _marker setMarkerText _operationName;
+        private _caBldPos = _buildings apply {
+            private _p = getPosATL _x;
+            if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
+        };
+        [_taskId, _markerName, _center, _areaRadius, _markerEnemy, "mil_objective", _operationName, -1, -1, _caBldPos] call FADE_mission_createObjectiveMarker;
         private _grid = mapGridPosition _center;
         [_player, _taskId, "Destroy at least 80% of enemy forces in the area.", "Clear Area", _center, "attack"] call _fnc_createMissionTask;
         private _brief = format ["CLEAR AREA%1%1Objective (approx.): Grid %2 (%3)%1%1Clear and secure the area. Reduce enemy presence to the task's completion threshold; see Tasks for specific objectives and rules.", toString [10], _grid, if (_useTown) then { "occupied town" } else { "enemy camp" }] + _briefGuiTail;

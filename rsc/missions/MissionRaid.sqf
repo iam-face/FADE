@@ -1,37 +1,23 @@
 // =============================================================================
 // MissionRaid.sqf  -  Global multi-objective raid. N objectives at separate
 // CIV_T_* zones. Each zone: weighted variant (in-zone + RTB mix), per-zone
-// QRF on player detection, intel refines on recon/contact. Helpers in
+// QRF on player detection (foot wave then vehicles). Target buildings marked at spawn. Helpers in
 // FADE_ObjectiveHelpers.sqf and FADE_RaidHelpers.sqf.
 // =============================================================================
 if (!isServer) exitWith {};
 FADE_runMission_Raid = {
-    private _missionType = missionNamespace getVariable ["FADE_missionRun_missionType", ""];
-    private _destPos = missionNamespace getVariable ["FADE_missionRun_destPos", [0,0,0]];
-    private _player = missionNamespace getVariable ["FADE_missionRun_player", objNull];
-    private _fromMapClick = missionNamespace getVariable ["FADE_missionRun_fromMapClick", false];
-    private _mapAnchor = missionNamespace getVariable ["FADE_missionRun_mapAnchor", []];
-    private _raidZoneClicks = missionNamespace getVariable ["FADE_missionRun_raidZoneClicks", []];
-    private _enemyUnits = missionNamespace getVariable ["FADE_missionRun_enemyUnits", []];
-    private _sideFriendly = missionNamespace getVariable ["FADE_missionRun_sideFriendly", west];
-    private _sideEnemy = missionNamespace getVariable ["FADE_missionRun_sideEnemy", east];
-    private _markerEnemy = missionNamespace getVariable ["FADE_missionRun_markerEnemy", "ColorEAST"];
-    private _taskId = missionNamespace getVariable ["FADE_missionRun_taskId", ""];
-    private _operationNameUpper = missionNamespace getVariable ["FADE_missionRun_operationNameUpper", ""];
-    private _briefGuiTail = missionNamespace getVariable ["FADE_missionRun_briefGuiTail", ""];
-    private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", {}];
-    private _enemyFactionName = missionNamespace getVariable ["FADE_missionRun_enemyFactionName", ""];
-    private _basePos = missionNamespace getVariable ["FADE_missionRun_basePos", [0,0,0]];
-    private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {}];
-    private _fnc_createMissionTask = missionNamespace getVariable ["FADE_mission_createTask", {}];
-    private _friendlyPlayerCount = missionNamespace getVariable ["FADE_missionRun_friendlyPlayerCount", 0];
-    private _friendlyFactionName = missionNamespace getVariable ["FADE_missionRun_friendlyFactionName", ""];
-    private _estimatedOpforCount = missionNamespace getVariable ["FADE_missionRun_estimatedOpforCount", 0];
-    private _opforCountFactor = missionNamespace getVariable ["FADE_missionRun_opforCountFactor", 1];
-    private _intelFormatter = missionNamespace getVariable ["FADE_formatSituationIntelHtml", {}];
-    private _loreShort = missionNamespace getVariable ["FADE_missionRun_loreShort", ""];
-    private _loreLong = missionNamespace getVariable ["FADE_missionRun_loreLong", ""];
-    private _loreSmeacHtml = missionNamespace getVariable ["FADE_missionRun_loreSmeacHtml", ""];
+    (call FADE_missionRun_getContext) params [
+        "_missionType", "_destPos", "_player", "_evadeePlayers", "_fromMapClick", "_mapAnchor",
+        "_friendlyUnits", "_enemyUnits", "_sideFriendly", "_sideEnemy", "_markerFriendly", "_markerEnemy",
+        "_dryPos", "_taskId", "_operationName", "_operationNameUpper", "_briefGuiTail",
+        "_mkrJitter", "_enemyFactionName", "_zeroAlphaDisplayName", "_isGlobalMission", "_basePos",
+        "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
+        "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
+        "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
+    ];
 
     private _raidZoneCount = (round (missionNamespace getVariable ["FADE_raidObjectiveCount", 3])) max 2 min 5;
     private _minDistBase = 1000;
@@ -39,11 +25,11 @@ FADE_runMission_Raid = {
     private _raidQrfSkipDetection = missionNamespace getVariable ["FADE_raidQrfSkipDetectionWait", false];
     private _raidQrfFirstMin = missionNamespace getVariable ["FADE_raidQrfFirstDelayMin", 0];
     private _raidQrfFirstMax = missionNamespace getVariable ["FADE_raidQrfFirstDelayMax", 30];
+    private _raidQrfFootWave = missionNamespace getVariable ["FADE_raidQrfFootWave", true];
     private _raidTimeoutSec = missionNamespace getVariable ["FADE_raidTimeoutSec", 0];
     private _baseDistForComplete = 100;
-    private _zoneDetectRadius = missionNamespace getVariable ["FADE_raidZoneDetectRadiusM", 300];
-    private _intelApproxRadius = missionNamespace getVariable ["FADE_missionApproxZoneRadiusM", 110];
-    private _intelRefineRadius = missionNamespace getVariable ["FADE_raidIntelRefineRadiusM", 300];
+    private _qrfDetectRadius = missionNamespace getVariable ["FADE_raidQrfDetectionRadiusM", 350];
+    private _searchZoneRadius = missionNamespace getVariable ["FADE_missionApproxZoneRadiusM", 55];
     private _variantLabels = missionNamespace getVariable ["FADE_raid_variantLabels", createHashMap];
 
     [] call FADE_ensureBisTaskSetParent;
@@ -122,6 +108,14 @@ FADE_runMission_Raid = {
         [_player, "MISSION ERROR", format ["Could not find %1 distinct civ zones for the raid.", _raidZoneCount]] call FADE_missionErrorHint;
     };
     };
+
+    private _zoneCivIds = _zonesPicked apply { _x select 0 };
+    {
+        if (!isNil "FADE_enemyPatrol_despawnForZone") then { [_x] call FADE_enemyPatrol_despawnForZone };
+        if (!isNil "FADE_dynamicRoadblocks_despawnForZone") then { [_x] call FADE_dynamicRoadblocks_despawnForZone };
+    } forEach _zoneCivIds;
+    missionNamespace setVariable ["FADE_raidCivZoneIds_" + _taskId, +_zoneCivIds];
+    if (!isNil "FADE_civ_pinZones") then { [_zoneCivIds] call FADE_civ_pinZones };
 
     private _zoneVariantsPlanned = [_raidZoneCount] call FADE_raid_pickVariants;
 
@@ -204,7 +198,7 @@ FADE_runMission_Raid = {
 
     private _topoRaid = [_raidCenter] call (missionNamespace getVariable ["FADE_getTopographySummary", { ["UNKNOWN", "Unknown area"] }]);
     private _raidExecText = format [
-        "<t align='left' color='#C0C0C0'>Intel starts approximate — recon or contact refines each site.</t><br/>" +
+        "<t align='left' color='#C0C0C0'>Each objective has a map marker and search circle; the building lies inside the circle.</t><br/>" +
         "<t align='left' color='#C0C0C0'>Committed assault may draw enemy attention and follow-on forces.</t><br/>" +
         "<t align='left' color='#C0C0C0'>Clear objectives in any order; follow map markers and child tasks.</t>"
     ];
@@ -260,7 +254,6 @@ FADE_runMission_Raid = {
         private _zoneCodename = _zoneCodenames select _zi;
         private _childTaskId = format ["%1_raid_obj_%2", _taskId, _zoneNum];
         private _zoneMarkerName = format ["FADE_raid_%1_%2", _taskId, _zoneNum];
-        private _zoneEllipseName = _zoneMarkerName + "_zone";
 
         private _diffMul = [_zi, _friendlyPlayerCount] call FADE_raid_zoneDifficultyMul;
 
@@ -281,21 +274,19 @@ FADE_runMission_Raid = {
 
         [_taskId, _zoneGroups] call FADE_missionEnt_bindGroups;
         { if (!isNull _x) then { [_taskId, _x] call FADE_missionEnt_registerObject } } forEach _zoneObjects;
-        [_taskId, _zoneMarkerName] call FADE_missionEnt_registerMarker;
-        [_taskId, _zoneEllipseName] call FADE_missionEnt_registerMarker;
-        [_zoneGroups, _basePos] call FADE_registerEnemyRetreat;
 
-        [_taskId, _zoneEllipseName, _zoneCenter, _intelApproxRadius, _markerEnemy] call FADE_mission_createRadiusMarker;
-        private _zMarker = createMarker [_zoneMarkerName, [_zoneCenter] call FADE_normPos3];
-        _zMarker setMarkerType "o_unknown";
-        _zMarker setMarkerColor _markerEnemy;
-        _zMarker setMarkerText _zoneCodename;
+        private _buildingPos = [_zoneWinPos] call FADE_normPos3;
+        [_taskId, _zoneMarkerName, _buildingPos, _searchZoneRadius, _markerEnemy, "mil_objective", _zoneCodename, -1, -1, [_buildingPos]] call FADE_mission_createObjectiveMarker;
 
         if (_zi == 0) then {
             [_sideFriendly, _zoneMarkerName] call FADE_raid_assignMarkersToFriendlies;
         };
 
-        [_taskId, _childTaskId, _zoneMarkerName, _zoneEllipseName, _zoneCenter, _zoneWinPos, _zoneDetectRadius, _intelApproxRadius, _intelRefineRadius] call FADE_raid_startIntelMonitor;
+        if (_childTaskId != "" && { !isNil "BIS_fnc_taskSetDestination" }) then {
+            [_childTaskId, _buildingPos] call BIS_fnc_taskSetDestination;
+        };
+
+        [_zoneGroups, _basePos] call FADE_registerEnemyRetreat;
 
         private _zoneTargetName = "";
         if (_actualVariant in ["KillHVT", "CaptureHVT", "RecoverHostage"] && { _watcherPayload isEqualType [] } && { count _watcherPayload > 0 } && { !isNull (_watcherPayload select 0) }) then {
@@ -345,26 +336,26 @@ FADE_runMission_Raid = {
             case "RecoverObject": {
                 private _objName = [] call (missionNamespace getVariable ["FADE_getRecoverObjectDisplayName", { "priority package" }]);
                 format [
-                    "Recover %1 at %2 (Grid %3). Most likely indoors inside a defended building — use scroll action to secure it. Completes in place; no RTB required.",
+                    "Recover %1 at marked building %2 (Grid %3). Use scroll action Pick up on the package indoors. Completes when recovered; no RTB required.",
                     _objName,
                     _zoneCodename,
-                    mapGridPosition _zoneCenter
+                    mapGridPosition _buildingPos
                 ]
             };
             case "KillHVT": {
-                format ["Eliminate HVT %1 at %2 (Grid %3).", _zoneTargetName, _zoneCodename, mapGridPosition _zoneCenter]
+                format ["Eliminate HVT %1 at marked building %2 (Grid %3).", _zoneTargetName, _zoneCodename, mapGridPosition _buildingPos]
             };
             case "CaptureHVT": {
-                format ["Capture HVT %1 at %2 (Grid %3) and return them (handcuffed/captive) within %4 m of base.", _zoneTargetName, _zoneCodename, mapGridPosition _zoneCenter, _baseDistForComplete]
+                format ["Capture HVT %1 at marked building %2 (Grid %3) and return them (handcuffed/captive) within %4 m of base.", _zoneTargetName, _zoneCodename, mapGridPosition _buildingPos, _baseDistForComplete]
             };
             default {
-                format ["Rescue hostage %1 at %2 (Grid %3) and return them alive within %4 m of base.", _zoneTargetName, _zoneCodename, mapGridPosition _zoneCenter, _baseDistForComplete]
+                format ["Rescue hostage %1 at marked building %2 (Grid %3) and return them alive within %4 m of base.", _zoneTargetName, _zoneCodename, mapGridPosition _buildingPos, _baseDistForComplete]
             };
         };
         private _variantTitle = _variantLabels getOrDefault [_actualVariant, _actualVariant];
-        [_childTaskId, _variantDesc, _variantTitle, _zoneCenter, "search"] call _fnc_createChildTask;
+        [_childTaskId, _variantDesc, _variantTitle, _buildingPos, "attack"] call _fnc_createChildTask;
 
-        [_taskId, _zoneWinPos, _basePos, _enemyUnitsRaid, _zoneGroups, _zoneDetectRadius, _raidQrfSkipDetection, _raidQrfFirstMin, _raidQrfFirstMax] call FADE_counterAttackStart;
+        [_taskId, _zoneWinPos, _basePos, _enemyUnitsRaid, _zoneGroups, _qrfDetectRadius, _raidQrfSkipDetection, _raidQrfFirstMin, _raidQrfFirstMax, false, _raidQrfFootWave] call FADE_counterAttackStart;
 
         [_taskId, _childTaskId, _zi, _basePos, _baseDistForComplete, _actualVariant, _watcherPayload, _zoneMarkerName, _zoneWinPos, _zoneCodename] spawn {
             params ["_taskId", "_childTaskId", "_zi", "_basePos", "_baseDistForComplete", "_variant", "_payload", "_zoneMarkerName", "_zoneWinPos", "_zoneCodename"];
@@ -391,7 +382,11 @@ FADE_runMission_Raid = {
                 };
                 switch (_variant) do {
                     case "RecoverObject": {
-                        if (missionNamespace getVariable ["FADE_assetIntelTaken_" + _childTaskId, false]) then {
+                        private _childState = _childTaskId call BIS_fnc_taskState;
+                        if (
+                            _childState == "SUCCEEDED" ||
+                            { missionNamespace getVariable ["FADE_assetIntelTaken_" + _childTaskId, false] }
+                        ) then {
                             _done = true;
                             _result = "SUCCEEDED";
                         };
@@ -455,6 +450,7 @@ FADE_runMission_Raid = {
     if (_spawnFailed) exitWith {
         missionNamespace setVariable ["FADE_raidZoneState_" + _taskId, nil];
         missionNamespace setVariable ["FADE_raidAborted_" + _taskId, nil];
+        if (!isNil "FADE_mission_unpinCivZonesForTask") then { [_taskId] call FADE_mission_unpinCivZonesForTask };
         [_taskId, "", _player, 5] call FADE_mission_completeCleanup;
     };
 
@@ -485,7 +481,7 @@ FADE_runMission_Raid = {
     // ---- Brief + assigned intro ----
     private _grid0 = mapGridPosition _raidCenter;
     private _brief = format [
-        "RAID (%1)%2%2Network: %3%2Operation area (approx.): Grid %4%2%2%5%2%2Clear all %6 objectives in any order. Map markers use codenames from the operation word list. Intel is approximate until recon refines each site.",
+        "RAID (%1)%2%2Network: %3%2Operation area (approx.): Grid %4%2%2%5%2%2Clear all %6 objectives in any order. Map markers and search circles show each target (codenames from the operation word list).",
         _operationNameUpper,
         toString [10],
         _cellName,
@@ -554,6 +550,7 @@ FADE_runMission_Raid = {
             };
             [_player, _failMsg] call FADE_missionFailHint;
         };
+        if (!isNil "FADE_mission_unpinCivZonesForTask") then { [_taskId] call FADE_mission_unpinCivZonesForTask };
         [_taskId, "", _player, 60] call FADE_mission_completeCleanup;
         missionNamespace setVariable ["FADE_raidZoneState_" + _taskId, nil];
         missionNamespace setVariable ["FADE_raidAborted_" + _taskId, nil];

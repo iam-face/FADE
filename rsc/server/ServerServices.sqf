@@ -132,15 +132,16 @@ FAC_jukebox_serverPlay = {
         private _wasPlaying = _cur select { (_x select 1) != "" };
         if (count _wasPlaying > 0) then {
             [_sourceKey, ""] call FAC_jukebox_fnc_setActiveSourceSong;
-            ["", _sourceKey] remoteExec ["FAC_jukebox_clientPlay", 0];
+            ["", _sourceKey, _vol, _dist] remoteExec ["FAC_jukebox_clientPlay", 0];
         };
     };
 
-    private _sndCfg = missionConfigFile >> "CfgSounds" >> _song;
-    if (!isClass _sndCfg) then { _sndCfg = configFile >> "CfgSounds" >> _song };
-    if (!isClass _sndCfg) exitWith {
-        diag_log format ["FAC_jukebox_serverPlay: CfgSounds %1 not found (missionConfigFile/configFile)", _song];
-        [format ["FAIL: CfgSounds %1 missing (description.ext / mod).", _song], _requester] call FAC_jukebox_serverDbg;
+    private _sndOk = isClass (missionConfigFile >> "CfgSounds" >> _song)
+        || { isClass (configFile >> "CfgSounds" >> _song) }
+        || { isClass (configFile >> "CfgSFX" >> _song) };
+    if (!_sndOk) exitWith {
+        diag_log format ["FAC_jukebox_serverPlay: sound def %1 not found (CfgSounds/CfgSFX)", _song];
+        [format ["FAIL: sound def %1 missing (description.ext / @CTB mod).", _song], _requester] call FAC_jukebox_serverDbg;
     };
 
     [_sourceKey, _song, _vol, _dist] call FAC_jukebox_fnc_setActiveSourceSong;
@@ -194,6 +195,39 @@ FAC_missionTestSuite_execServer = {
     };
 };
 publicVariable "FAC_missionTestSuite_execServer";
+
+// Mission playthrough suite — sequential live mission init + QRF probes (dev only).
+// Debug console: [player] remoteExec ["FAC_playthroughSuite_execServer", 2]
+FAC_playthroughSuite_execServer = {
+    if (!isServer) exitWith {};
+    private _to = _this param [0, objNull];
+    private _types = _this param [1, []];
+    if (isNil "FAC_playthroughSuite_runServer") then {
+        call compile preprocessFileLineNumbers "rsc\MissionPlaythroughSuite.sqf";
+        call compile preprocessFileLineNumbers "rsc\MissionPlaythroughProfiles.sqf";
+    };
+    if (_types isEqualTo []) then { _types = +FAC_playthroughSuite__missionTypes };
+    if (isNil "FAC_playthroughSuite_runServer") exitWith {
+        private _err = "[FAC Playthrough] Server: aborted (script failed to load — check RPT).";
+        if (!isNull _to && { isPlayer _to }) then { [_err] remoteExec ["systemChat", _to]; } else { [_err] remoteExec ["systemChat", 0]; };
+    };
+    private _res = [_to, _types] call FAC_playthroughSuite_runServer;
+    if (isNil "_res" || { count _res < 3 }) exitWith {};
+    _res params ["_p", "_f", "_s"];
+    private _end = format ["[FAC Playthrough] Server finished: %1 pass / %2 fail / %3 skipped.", _p, _f, _s];
+    if (!isNull _to && { isPlayer _to }) then { [_end] remoteExec ["systemChat", _to]; } else { [_end] remoteExec ["systemChat", 0]; };
+};
+publicVariable "FAC_playthroughSuite_execServer";
+
+FAC_playthroughSuite_abortServer = {
+    if (!isServer) exitWith {};
+    if (isNil "FAC_playthroughSuite__setAbortRequested") then {
+        call compile preprocessFileLineNumbers "rsc\MissionPlaythroughSuite.sqf";
+        call compile preprocessFileLineNumbers "rsc\MissionPlaythroughProfiles.sqf";
+    };
+    [] call FAC_playthroughSuite__setAbortRequested;
+};
+publicVariable "FAC_playthroughSuite_abortServer";
 
 // Retry base NPC spawn if postInit / spawn failed; re-anchor if Eden logic was late.
 [] spawn {

@@ -67,6 +67,76 @@ FAC_missionTestSuite__placementMinDist = {
     _minDist
 };
 
+// #region agent log
+FAC_facDebugAgentLog = {
+    params ["_hypothesisId", "_location", "_message", ["_data", []]];
+    private _dataStr = if (_data isEqualType []) then { str _data } else { str _data };
+    private _ts = round (diag_tickTime * 1000);
+    private _line = format [
+        "{\"sessionId\":\"add34b\",\"hypothesisId\":\"%1\",\"location\":\"%2\",\"message\":\"%3\",\"data\":%4,\"timestamp\":%5}",
+        _hypothesisId, _location, _message, _dataStr, _ts
+    ];
+    diag_log format ["[DBG-add34b] %1", _line];
+    private _cfg = str missionConfigFile;
+    private _idx = _cfg find "\description.ext";
+    if (_idx > 0) then {
+        private _dir = _cfg select [1, _idx - 1];
+        private _fh = openFile [_dir + "\debug-add34b.log", "Append"];
+        if (!isNil "_fh" && { _fh >= 0 }) then {
+            writeLine [_fh, _line];
+            closeFile _fh;
+        };
+    };
+};
+// #endregion
+
+// Append paths from a missionNamespace module manifest (unique, stable order).
+FAC_missionTestSuite__appendModuleManifest = {
+    params [["_files", []], ["_listVar", ""]];
+    private _list = missionNamespace getVariable [_listVar, nil];
+    if (isNil "_list" || {!(_list isEqualType [])}) exitWith { _files };
+    {
+        if !(_x in _files) then { _files pushBack _x };
+    } forEach _list;
+    _files
+};
+
+// Union of all FADE_*ModuleList manifests (post-boot).
+FAC_missionTestSuite__collectModuleManifest = {
+    private _out = [];
+    {
+        _out = [_out, _x] call FAC_missionTestSuite__appendModuleManifest;
+    } forEach [
+        "FADE_missionModuleList",
+        "FADE_serverWorldModuleList",
+        "FADE_serverBootstrapModuleList",
+        "FADE_ambientCiviliansModuleList",
+        "FADE_serverGameplayMissionsModuleList",
+        "FADE_aoMissionModuleList",
+        "FADE_operationMissionModuleList",
+        "FADE_invasionMissionModuleList"
+    ];
+    _out
+};
+
+// Runners that use custom param globals instead of FADE_missionRun_getContext (anti-regression exempt).
+FAC_missionTestSuite__getContextExemptPaths = [
+    "rsc\\missions\\AOMission.sqf",
+    "rsc\\missions\\AOMissionInfil.sqf",
+    "rsc\\missions\\AOMissionMain.sqf",
+    "rsc\\missions\\AOMissionRunner.sqf",
+    "rsc\\missions\\OperationMission.sqf",
+    "rsc\\missions\\OperationMissionPick.sqf",
+    "rsc\\missions\\OperationMissionMain.sqf",
+    "rsc\\missions\\OperationMissionRunner.sqf",
+    "rsc\\missions\\MissionInvasion.sqf",
+    "rsc\\missions\\MissionInvasionHelpers.sqf",
+    "rsc\\missions\\MissionInvasionMain.sqf",
+    "rsc\\missions\\MissionInvasionRunner.sqf",
+    "rsc\\missions\\TroopInsertMission.sqf",
+    "rsc\\missions\\TroopExtractMission.sqf"
+];
+
 FAC_missionTestSuite_runServer = {
     params [["_notifyPlayer", objNull]];
     if (!isServer) exitWith { [0, 0] };
@@ -462,15 +532,15 @@ FAC_missionTestSuite_runServer = {
     // ----- Compile mission scripts (syntax / preprocess only; does not start missions) -----
     ["[FAC TestSuite] Server: compiling mission .sqf (may take a few seconds)...", _notifyPlayer] call FAC_missionTestSuite__serverChat;
     diag_log "[FAC TestSuite] --- compile checks (script error here = FAIL in RPT) ---";
-    private _compileFiles = [
+    private _compileFiles = [] call FAC_missionTestSuite__collectModuleManifest;
+    // #region agent log
+    ["C", "MissionTestSuite.sqf:compile", "collectModuleManifest", [count _compileFiles]] call FAC_facDebugAgentLog;
+    // #endregion
+    {
+        if !(_x in _compileFiles) then { _compileFiles pushBack _x };
+    } forEach [
         "rsc\Missions.sqf",
         "rsc\TroopTransport.sqf",
-        "rsc\missions\AOMission.sqf",
-        "rsc\missions\OperationMission.sqf",
-        "rsc\TroopInsertTransport.sqf",
-        "rsc\TroopExtractTransport.sqf",
-        "rsc\missions\TroopInsertMission.sqf",
-        "rsc\missions\TroopExtractMission.sqf",
         "rsc\TroopInsertPickGui.sqf",
         "rsc\FADE_MapClickPick.sqf",
         "rsc\MissionPickOverlay.sqf",
@@ -489,6 +559,7 @@ FAC_missionTestSuite_runServer = {
         "rsc\LoadoutPresetCommon.sqf",
         "rsc\FADE_MissionCommon.sqf",
         "rsc\ConfigClient.sqf",
+        "rsc\ConfigClientDefaults.sqf",
         "rsc\FADE_MissionSpawn.sqf",
         "rsc\FADE_RaidHelpers.sqf",
         "rsc\FADE_ObjectiveHelpers.sqf",
@@ -496,27 +567,14 @@ FAC_missionTestSuite_runServer = {
         "rsc\FADE_MedevacMissionCommon.sqf",
         "rsc\FADE_TroopMissionCommon.sqf",
         "rsc\MissionLore.sqf",
-        "rsc\missions\MissionRaid.sqf",
-        "rsc\missions\MissionInvasion.sqf",
         "rsc\MissionConvoyMapPick.sqf",
         "rsc\MissionRaidMapPick.sqf",
         "rsc\fn_FADE_interceptConvoyRoadRoute.sqf",
-        "rsc\missions\MissionAssetRetrieval.sqf",
-        "rsc\missions\MissionSearchDestroy.sqf",
-        "rsc\missions\MissionCasevacCsar.sqf",
-        "rsc\missions\MissionInterceptConvoy.sqf",
-        "rsc\missions\MissionEscapeEvasion.sqf",
-        "rsc\missions\MissionGeoGuesser.sqf",
+        "rsc\fn_FADE_interceptConvoyRouteWaypoints.sqf",
         "rsc\GeoGuesserPickGui.sqf",
         "rsc\GeoGuesserClient.sqf",
         "rsc\EscapeEvasionPickGui.sqf",
-        "rsc\missions\MissionCAS.sqf",
-        "rsc\missions\MissionCargo.sqf",
-        "rsc\missions\MissionHVT.sqf",
-        "rsc\missions\MissionHostage.sqf",
-        "rsc\missions\MissionClearArea.sqf",
-        "rsc\missions\MissionMineClearing.sqf",
-        "rsc\missions\MissionTroopExtract.sqf",
+        "rsc\ConfigDefaults.sqf",
         "rsc\EnemyAAA.sqf",
         "rsc\RoadblockCommon.sqf",
         "rsc\DynamicRoadblocks.sqf",
@@ -534,22 +592,13 @@ FAC_missionTestSuite_runServer = {
         "rsc\FAC_MissionTypeLabels.sqf",
         "rsc\FADE_OpforDrones.sqf",
         "rsc\FADE_VirtualGarrison.sqf",
-        "rsc\fn_FADE_interceptConvoyRouteWaypoints.sqf",
         "rsc\AmbientCivilians.sqf",
-        "rsc\DynamicRoadblocks.sqf",
         "rsc\BaseNpcTalk.sqf",
         "rsc\CutsceneServer.sqf",
-        "rsc\server\ServerGameplayRecruit.sqf"
+        "rsc\server\ServerGameplayRecruit.sqf",
+        "rsc\server\ServerWorld.sqf",
+        "rsc\server\ServerBootstrap.sqf"
     ];
-    if (!isNil "FADE_missionModuleList") then {
-        {
-            private _modPath = _x;
-            if !(_modPath in _compileFiles) then {
-                _compileFiles pushBack _modPath;
-                diag_log format ["[FAC TestSuite] NOTE (server): compile list extended from FADE_missionModuleList: %1", _modPath];
-            };
-        } forEach FADE_missionModuleList;
-    };
     {
         private _path = _x;
         private _code = compile preprocessFileLineNumbers _path;
@@ -725,11 +774,13 @@ FAC_missionTestSuite_runServer = {
         if (_chk) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): %1", _x]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): %1", _x]; };
     } forEach [
         "FADE_missionRun_getContext", "FADE_mission_completeCleanup",
+        "FADE_createRegisteredMarker", "FADE_deleteMarkerSafe",
         "FADE_getAlivePlayers", "FADE_getAlivePlayerPositions", "FADE_countFriendlyPlayers",
         "FADE_ao_pointsWithoutFriendlies",
         "FADE_missionErrorHint", "FADE_missionOutcomeHint", "FADE_missionFailHint", "FADE_missionSuccessHint",
         "FADE_textureText_sanitize", "FADE_textureText_wrap",
         "FADE_mission_createRadiusMarker", "FADE_mission_createObjectiveMarker",
+        "FADE_mission_computeSearchZone", "FADE_mission_positionsCentroid",
         "FADE_mission_spawnFieldContactEnemies", "FADE_missionSpawnGuards", "FADE_cargo_cleanupSiteDeferred",
         "FADE_mission_findPickupSpawnPos", "FADE_mission_spawnFriendlyPickupGroup", "FADE_mission_spawnCasualtyHeliWreck", "FADE_mission_groundAtlPos",
         "FADE_mission_applyPickupGroupPosture", "FADE_mission_casevacCasualtyPrep", "FADE_mission_csarPilotWoundPrep",
@@ -737,6 +788,102 @@ FAC_missionTestSuite_runServer = {
         "FADE_troopMission_liveParticipants", "FADE_troopMission_runTransportWave", "FADE_troopMission_clearParticipantMissionVars",
         "FADE_pickHvtCodename", "FADE_getIdentityDisplayName", "FADE_objective_findBuildingForMission"
     ];
+
+    if (!isNil "FADE_missionRun_getContext") then {
+        private _ctx = call FADE_missionRun_getContext;
+        private _fieldCount = missionNamespace getVariable ["FADE_missionRun_contextFieldCount", 49];
+        _ok = _ctx isEqualType [] && { count _ctx == _fieldCount };
+        if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_missionRun_getContext (%1 fields)", _fieldCount]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_missionRun_getContext count %1 (expected %2)", count _ctx, _fieldCount]; };
+    };
+
+    if (!isNil "FADE_missionModuleList") then {
+        private _legacyRunners = [];
+        private _samplePath = "rsc\missions\MissionHVT.sqf";
+        private _loadLen = count (loadFile _samplePath);
+        private _preLen = count (preprocessFileLineNumbers _samplePath);
+        // #region agent log
+        ["A", "MissionTestSuite.sqf:antiRegress", "loadFile vs preprocess", [_samplePath, _loadLen, _preLen]] call FAC_facDebugAgentLog;
+        // #endregion
+        {
+            private _path = _x;
+            if (_path in FAC_missionTestSuite__getContextExemptPaths) then { continue };
+            if !(_path find "rsc\missions\Mission" == 0 || { _path find "rsc\missions\Troop" == 0 }) then { continue };
+            private _txt = preprocessFileLineNumbers _path;
+            if (_txt == "") then {
+                _legacyRunners pushBack _path;
+                continue;
+            };
+            private _usesCtx = _txt find "FADE_missionRun_getContext" >= 0;
+            private _legacy = _txt find "missionNamespace getVariable [""FADE_missionRun_missionType""" >= 0;
+            if (!_usesCtx || _legacy) then { _legacyRunners pushBack _path };
+        } forEach FADE_missionModuleList;
+        // #region agent log
+        ["A", "MissionTestSuite.sqf:antiRegress", "legacyRunners", _legacyRunners] call FAC_facDebugAgentLog;
+        // #endregion
+        _ok = count _legacyRunners == 0;
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): standard runners use FADE_missionRun_getContext (no legacy missionType block)";
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): legacy missionRun reads in %1", _legacyRunners];
+        };
+    };
+
+    private _ambientWaitEnd = diag_tickTime + 15;
+    waitUntil {
+        sleep 0.1;
+        !isNil { missionNamespace getVariable "FADE_ambientCiviliansModuleList" } || { diag_tickTime > _ambientWaitEnd }
+    };
+    // #region agent log
+    ["B", "MissionTestSuite.sqf:manifest", "ambientModuleList ready", [
+        !isNil { missionNamespace getVariable "FADE_ambientCiviliansModuleList" },
+        count (missionNamespace getVariable ["FADE_ambientCiviliansModuleList", []])
+    ]] call FAC_facDebugAgentLog;
+    // #endregion
+
+    {
+        private _lst = missionNamespace getVariable [_x select 0, nil];
+        _ok = !isNil "_lst" && { _lst isEqualType [] } && { count _lst >= (_x select 1) };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log format ["[FAC TestSuite] PASS (server): %1 (%2 paths)", _x select 0, count _lst];
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): %1 manifest", _x select 0];
+        };
+    } forEach [
+        ["FADE_serverWorldModuleList", 6],
+        ["FADE_serverBootstrapModuleList", 3],
+        ["FADE_ambientCiviliansModuleList", 4],
+        ["FADE_serverGameplayMissionsModuleList", 3],
+        ["FADE_aoMissionModuleList", 3],
+        ["FADE_operationMissionModuleList", 3],
+        ["FADE_invasionMissionModuleList", 3]
+    ];
+
+    if (!isNil "FADE_missionModuleList") then {
+        _ok = !("rsc\\missions\\MissionTroopExtract.sqf" in FADE_missionModuleList);
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): MissionTroopExtract.sqf removed from module list"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): MissionTroopExtract.sqf still in FADE_missionModuleList"; };
+    };
+
+    if (!isNil "FADE_createRegisteredMarker") then {
+        private _testMkr = ["FAC_testSuite_mkr", [0, 0, 0], ""] call FADE_createRegisteredMarker;
+        [_testMkr] call FADE_deleteMarkerSafe;
+        _ok = _testMkr isEqualType "" && { _testMkr == "FAC_testSuite_mkr" };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_createRegisteredMarker round-trip"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_createRegisteredMarker"; };
+    };
+
+    if (!isNil "FADE_startupFactionFriendly") then {
+        _pass = _pass + 1;
+        diag_log "[FAC TestSuite] PASS (server): ConfigDefaults loaded (FADE_startupFactionFriendly)";
+    } else {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): ConfigDefaults not loaded";
+    };
+
+    _ok = (missionNamespace getVariable ["FADE_minDistBetweenMissions", -1]) == 2000 && { !isNil "FADE_missionMapClickRadiusTiers" };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): ConfigClientDefaults loaded"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): ConfigClientDefaults"; };
 
     if (!isNil "FADE_getAlivePlayers") then {
         _ok = ([] call FADE_getAlivePlayers) isEqualType [];
@@ -788,6 +935,9 @@ FAC_missionTestSuite_runServer = {
 
     // ----- Mission type registry (GUI labels ↔ runners ↔ slot lists) -----
     diag_log "[FAC TestSuite] --- MISSION REGISTRY ---";
+    if ((missionNamespace getVariable ["FAC_missionTypeLabels", []]) isEqualTo []) then {
+        call compile preprocessFileLineNumbers "rsc\FAC_MissionTypeLabels.sqf";
+    };
     private _labelIds = (missionNamespace getVariable ["FAC_missionTypeLabels", []]) apply { _x select 1 };
     private _slotTypes = (+_gmt) + (+_smt);
     {
@@ -1255,13 +1405,60 @@ FAC_missionTestSuite_runClient = {
     _ok = _fires isEqualType [] && { count _fires > 0 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (client): FAC_fires_artilleryDefinitions (%1)", count _fires]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (client): FAC_fires_artilleryDefinitions"; };
 
+    // @CTB - Mission Sounds Library (jukebox OGGs in Sig_CTB_MSL_Music_Loudspeaker.pbo)
+    private _ctbSfx = isClass (configFile >> "CfgSFX" >> "Sig_Buttrock_1");
+    if (_ctbSfx) then {
+        _pass = _pass + 1;
+        diag_log "[FAC TestSuite] PASS (client): CTB music mod CfgSFX Sig_Buttrock_1 (configFile)";
+    } else {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (client): CTB music mod CfgSFX Sig_Buttrock_1 missing (is @CTB - Mission Sounds Library loaded?)";
+    };
+    private _ctbOgg = "\Sig_CTB_MSL_Music_Loudspeaker\loudspeaker\bhd_mix.ogg";
+    private _ctbFe = fileExists _ctbOgg;
+    if (_ctbFe) then {
+        _pass = _pass + 1;
+        diag_log format ["[FAC TestSuite] PASS (client): CTB music OGG fileExists %1", _ctbOgg];
+    } else {
+        _fail = _fail + 1;
+        diag_log format ["[FAC TestSuite] FAIL (client): CTB music OGG fileExists %1 (mod PBO mounted but path not readable)", _ctbOgg];
+    };
+    private _jukeSfx = getText (missionConfigFile >> "CfgVehicles" >> "FAC_Jukebox_Sig_Buttrock_1" >> "sound");
+    private _jukeChain = (_jukeSfx == "Sig_Buttrock_1") && { isClass (configFile >> "CfgSFX" >> _jukeSfx) };
+    if (_jukeChain) then {
+        _pass = _pass + 1;
+        diag_log "[FAC TestSuite] PASS (client): FAC_Jukebox_Sig_Buttrock_1 sound= -> mod CfgSFX";
+    } else {
+        _fail = _fail + 1;
+        diag_log format ["[FAC TestSuite] FAIL (client): FAC_Jukebox sound chain (got sound=%1; expect Sig_Buttrock_1 + configFile CfgSFX)", _jukeSfx];
+    };
+
+    // Range vehicle/AT defs live in Config.sqf (server); RangeGui syncs runtime lists via RPC.
     private _rangeVehicleMap = missionNamespace getVariable ["FADE_rangeVehicleTypeMap", []];
-    _ok = _rangeVehicleMap isEqualType [] && {count _rangeVehicleMap >= 4};
-    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (client): FADE_rangeVehicleTypeMap (%1)", count _rangeVehicleMap]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (client): FADE_rangeVehicleTypeMap"; };
+    if (_rangeVehicleMap isEqualType [] && { count _rangeVehicleMap >= 4 }) then {
+        _pass = _pass + 1;
+        diag_log format ["[FAC TestSuite] PASS (client): FADE_rangeVehicleTypeMap (%1)", count _rangeVehicleMap];
+    } else {
+        if (isDedicated) then {
+            diag_log "[FAC TestSuite] SKIP (client): FADE_rangeVehicleTypeMap (server Config.sqf; RangeGui uses RPC lists)";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (client): FADE_rangeVehicleTypeMap";
+        };
+    };
 
     private _rangeAtDefs = missionNamespace getVariable ["FADE_rangeAtWeaponDefinitions", []];
-    _ok = _rangeAtDefs isEqualType [] && {count _rangeAtDefs > 0};
-    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (client): FADE_rangeAtWeaponDefinitions (%1)", count _rangeAtDefs]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (client): FADE_rangeAtWeaponDefinitions"; };
+    if (_rangeAtDefs isEqualType [] && { count _rangeAtDefs > 0 }) then {
+        _pass = _pass + 1;
+        diag_log format ["[FAC TestSuite] PASS (client): FADE_rangeAtWeaponDefinitions (%1)", count _rangeAtDefs];
+    } else {
+        if (isDedicated) then {
+            diag_log "[FAC TestSuite] SKIP (client): FADE_rangeAtWeaponDefinitions (server Config.sqf; RangeGui uses RPC lists)";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (client): FADE_rangeAtWeaponDefinitions";
+        };
+    };
 
     // ----- description.ext / Rsc displays (createDialog targets) -----
     private _rscNames = [

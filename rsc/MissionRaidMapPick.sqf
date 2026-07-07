@@ -58,19 +58,27 @@ FAC_raidMapPick_fnc_finish = {
 
 FAC_raidMapPick_fnc_arm = {
     if (!isNil "FADE_mapClickPick_clearHandler") then { [] call FADE_mapClickPick_clearHandler };
-    onMapSingleClick "missionNamespace setVariable ['FAC_raidMapPick_clickPos', _pos]; call FAC_raidMapPick_fnc_onClick;";
+    // onMapSingleClick handler must return BOOL (see TeleportMapPick.sqf / FADE_mapClickPick_onMapClick).
+    onMapSingleClick "missionNamespace setVariable ['FAC_raidMapPick_clickPos', _pos]; call FAC_raidMapPick_fnc_onClick; true;";
+    // #region agent log
+    diag_log format ["#DBGa783a2 {""sessionId"":""a783a2"",""hypothesisId"":""H1"",""location"":""MissionRaidMapPick.sqf:arm"",""message"":""raid map pick handler armed"",""data"":{},""timestamp"":%1}", diag_tickTime];
+    // #endregion
 };
 
 FAC_raidMapPick_fnc_onClick = {
-    if (!(missionNamespace getVariable ["FAC_raidMapPick_active", false])) exitWith {};
+    if (!(missionNamespace getVariable ["FAC_raidMapPick_active", false])) exitWith { false };
     private _pos = missionNamespace getVariable ["FAC_raidMapPick_clickPos", []];
+    // #region agent log
+    diag_log format ["#DBGa783a2 {""sessionId"":""a783a2"",""hypothesisId"":""H1"",""location"":""MissionRaidMapPick.sqf:onClick"",""message"":""raid map click"",""data"":{""pickedSoFar"":%1,""clickPos"":%2},""timestamp"":%3}", count (missionNamespace getVariable ["FAC_raidMapPick_zones", []]), _pos, diag_tickTime];
+    // #endregion
     private _parseFn = missionNamespace getVariable ["FADE_mapClickPick_parsePos", { [] }];
     private _clickPos = [[], _pos, false, false] call _parseFn;
-    if (count _clickPos < 2) exitWith {};
+    if (count _clickPos < 2) exitWith { false };
     if (surfaceIsWater _clickPos) exitWith {
         if (!visibleMap) then { openMap true };
         hint "Cannot select water — pick again.";
         systemChat "Cannot select water — pick again.";
+        false
     };
 
     private _picked = +(missionNamespace getVariable ["FAC_raidMapPick_zones", []]);
@@ -93,7 +101,7 @@ FAC_raidMapPick_fnc_onClick = {
             ];
         };
     } forEach _picked;
-    if (_tooClose) exitWith {};
+    if (_tooClose) exitWith { false };
 
     _picked pushBack _clickPos;
     missionNamespace setVariable ["FAC_raidMapPick_zones", _picked];
@@ -110,6 +118,7 @@ FAC_raidMapPick_fnc_onClick = {
     if (count _picked < _need) then {
         if (!visibleMap) then { openMap true };
         hint ([-1] call FAC_raidMapPick_fnc_buildHint);
+        true
     } else {
         [] call FAC_raidMapPick_fnc_disarm;
         if (visibleMap) then { openMap false };
@@ -117,12 +126,16 @@ FAC_raidMapPick_fnc_onClick = {
         private _zones = +_picked;
         missionNamespace setVariable ["FAC_raidMapPick_zones", nil];
         missionNamespace setVariable ["FAC_raidMapPick_active", false];
+        // #region agent log
+        diag_log format ["#DBGa783a2 {""sessionId"":""a783a2"",""hypothesisId"":""H2"",""location"":""MissionRaidMapPick.sqf:onClick"",""message"":""raid zones submitted"",""data"":{""zoneCount"":%1,""zones"":%2},""timestamp"":%3}", count _zones, _zones, diag_tickTime];
+        // #endregion
         [_zones, player] spawn {
             params ["_zones", "_pl"];
             systemChat "RAID: Zones submitted — setting up mission, please wait...";
             ["Raid", _pl, [], "", "", "", [], _zones] remoteExec ["FADE_startMission", 2];
             hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
         };
+        true
     };
 };
 

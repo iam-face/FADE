@@ -234,36 +234,82 @@ FADE_mission_spawnFieldContactEnemies = {
     _groups
 };
 
-// Thick ring: solid outer ellipse + inner border (same centre). Outer name = _markerName + "_outer".
+// Single hollow ring (Border brush only — no fill, no companion _outer marker).
 FADE_mission_radiusBorderThick = {
     missionNamespace getVariable ["FADE_missionRadiusBorderThick", 40]
 };
 
 FADE_mission_setRadiusMarkerColor = {
     params ["_markerName", "_color"];
-    if (_markerName == "") exitWith {};
-    if (markerShape _markerName != "") then { _markerName setMarkerColor _color };
-    private _outerName = _markerName + "_outer";
-    if (markerShape _outerName != "") then { _outerName setMarkerColor _color };
+    if (_markerName == "" || { markerShape _markerName == "" }) exitWith {};
+    _markerName setMarkerColor _color;
 };
 
 FADE_mission_setRadiusMarkerGeometry = {
     params ["_markerName", "_center", "_radiusM"];
-    if (_markerName == "" || { _radiusM <= 0 }) exitWith {};
+    if (_markerName == "" || { _radiusM <= 0 } || { markerShape _markerName == "" }) exitWith {};
     private _centerN = [_center] call FADE_normPos3;
-    private _borderThick = [] call FADE_mission_radiusBorderThick;
-    private _outerName = _markerName + "_outer";
-    if (markerShape _markerName != "") then {
-        _markerName setMarkerPos _centerN;
-        _markerName setMarkerSize [_radiusM, _radiusM];
-    };
-    if (markerShape _outerName != "") then {
-        _outerName setMarkerPos _centerN;
-        _outerName setMarkerSize [_radiusM + _borderThick, _radiusM + _borderThick];
-    };
+    _markerName setMarkerPos _centerN;
+    _markerName setMarkerSize [_radiusM, _radiusM];
 };
 
-// Border ellipse for mission search / completion radii (exact center; register for cleanup).
+// Centroid of 2D positions (ATL Z flattened to 0).
+FADE_mission_positionsCentroid = {
+    params [["_positions", []]];
+    if (_positions isEqualTo []) exitWith { [0, 0, 0] };
+    private _sumX = 0;
+    private _sumY = 0;
+    {
+        if (_x isEqualType [] && { count _x >= 2 }) then {
+            _sumX = _sumX + (_x select 0);
+            _sumY = _sumY + (_x select 1);
+        };
+    } forEach _positions;
+    private _n = count _positions max 1;
+    [(_sumX / _n), (_sumY / _n), 0]
+};
+
+// Marker icon + search circle share one centre; icon is jittered from anchor; radius fits all mustContain points.
+FADE_mission_computeSearchZone = {
+    params [
+        "_anchorPos",
+        ["_nominalRadiusM", 55],
+        ["_jitterMaxM", -1],
+        ["_mustContain", []],
+        ["_edgeMarginM", -1]
+    ];
+    private _anchorN = [_anchorPos] call FADE_normPos3;
+    private _jitterM = if (_jitterMaxM < 0) then {
+        missionNamespace getVariable ["FADE_missionMarkerJitterM", 25]
+    } else {
+        _jitterMaxM max 0
+    };
+    private _marginM = if (_edgeMarginM < 0) then {
+        missionNamespace getVariable ["FADE_missionSearchZoneEdgeMarginM", 15]
+    } else {
+        _edgeMarginM max 0
+    };
+    private _mkrFn = missionNamespace getVariable ["FADE_jitterMarkerPos", { params [["_p", [0, 0, 0]]]; [_p] call FADE_normPos3 }];
+    private _markerPos = if (_jitterM > 0) then {
+        [_anchorN, _jitterM] call _mkrFn
+    } else {
+        +_anchorN
+    };
+    private _points = [+_anchorN];
+    {
+        if (_x isEqualType [] && { count _x >= 2 }) then {
+            _points pushBack ([_x] call FADE_normPos3);
+        };
+    } forEach _mustContain;
+    private _maxSpan = 0;
+    {
+        _maxSpan = _maxSpan max (_markerPos distance2D _x);
+    } forEach _points;
+    private _displayRadius = (_nominalRadiusM max (_maxSpan + _marginM));
+    [_markerPos, _displayRadius]
+};
+
+// Hollow ellipse border for mission search / completion radii (one marker, no fill).
 FADE_mission_createRadiusMarker = {
     params [
         "_taskId",
@@ -271,57 +317,68 @@ FADE_mission_createRadiusMarker = {
         "_center",
         "_radiusM",
         ["_markerColor", "ColorEAST"],
-        ["_alpha", 0.45]
+        ["_alpha", -1]
     ];
     if (_markerName == "" || { _radiusM <= 0 }) exitWith { "" };
     private _centerN = [_center] call FADE_normPos3;
-    private _borderThick = [] call FADE_mission_radiusBorderThick;
-    private _outerName = _markerName + "_outer";
-    private _outerMarker = createMarker [_outerName, _centerN];
-    if (_taskId != "") then { [_taskId, _outerName] call FADE_missionEnt_registerMarker };
-    _outerMarker setMarkerShape "ELLIPSE";
-    _outerMarker setMarkerSize [_radiusM + _borderThick, _radiusM + _borderThick];
-    _outerMarker setMarkerBrush "Solid";
-    _outerMarker setMarkerColor _markerColor;
-    _outerMarker setMarkerAlpha _alpha;
-
-    private _zoneMarker = createMarker [_markerName, _centerN];
-    if (_taskId != "") then { [_taskId, _markerName] call FADE_missionEnt_registerMarker };
+    private _ringAlpha = if (_alpha < 0) then {
+        missionNamespace getVariable ["FADE_missionRadiusMarkerAlpha", 1]
+    } else {
+        _alpha
+    };
+    private _zoneMarker = [_markerName, _centerN, _taskId] call FADE_createRegisteredMarker;
     _zoneMarker setMarkerShape "ELLIPSE";
     _zoneMarker setMarkerSize [_radiusM, _radiusM];
     _zoneMarker setMarkerBrush "Border";
     _zoneMarker setMarkerColor _markerColor;
-    _zoneMarker setMarkerAlpha _alpha;
+    _zoneMarker setMarkerAlpha _ringAlpha;
     _markerName
 };
 
-// Zone ellipse + centred objective icon (register both for cleanup). Returns [_iconMarker, _zoneMarker].
+// Zone ellipse + centred objective icon (register both for cleanup). Circle and icon share jittered centre;
+// radius is expanded when needed so every mustContain point lies inside the border ring.
+// Returns [_iconMarker, _zoneMarker, _markerPos, _displayRadiusM].
 FADE_mission_createObjectiveMarker = {
     params [
         "_taskId",
         "_markerBaseName",
-        "_center",
-        ["_zoneRadius", 0],
+        "_anchorPos",
+        ["_nominalZoneRadius", 0],
         ["_markerColor", "ColorEAST"],
         ["_markerType", "mil_objective"],
         ["_markerText", ""],
-        ["_jitterRadius", 0],
-        ["_zoneAlpha", 0.45]
+        ["_jitterMaxM", -1],
+        ["_zoneAlpha", -1],
+        ["_mustContain", []]
     ];
-    private _centerN = [_center] call FADE_normPos3;
+    private _markerPosN = [_anchorPos] call FADE_normPos3;
+    private _zoneRadius = _nominalZoneRadius;
+    if (_nominalZoneRadius > 0) then {
+        private _computed = [_anchorPos, _nominalZoneRadius, _jitterMaxM, _mustContain] call FADE_mission_computeSearchZone;
+        _computed params ["_markerPosN", "_zoneRadius"];
+    } else {
+        if (_jitterMaxM != 0) then {
+            private _jitterM = if (_jitterMaxM < 0) then {
+                missionNamespace getVariable ["FADE_missionMarkerJitterM", 25]
+            } else {
+                _jitterMaxM
+            };
+            if (_jitterM > 0) then {
+                private _mkrFn = missionNamespace getVariable ["FADE_jitterMarkerPos", { params [["_p", [0, 0, 0]]]; [_p] call FADE_normPos3 }];
+                _markerPosN = [_markerPosN, _jitterM] call _mkrFn;
+            };
+        };
+    };
     private _zoneName = "";
     if (_zoneRadius > 0) then {
         _zoneName = _markerBaseName + "_zone";
-        [_taskId, _zoneName, _centerN, _zoneRadius, _markerColor, _zoneAlpha] call FADE_mission_createRadiusMarker;
+        [_taskId, _zoneName, _markerPosN, _zoneRadius, _markerColor, _zoneAlpha] call FADE_mission_createRadiusMarker;
     };
-    private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", { params [["_p", [0, 0, 0]]]; [_p] call FADE_normPos3 }];
-    private _iconPos = if (_jitterRadius > 0) then { [_centerN, _jitterRadius] call _mkrJitter } else { +_centerN };
-    private _icon = createMarker [_markerBaseName, _iconPos];
-    [_taskId, _markerBaseName] call FADE_missionEnt_registerMarker;
+    private _icon = [_markerBaseName, _markerPosN, _taskId] call FADE_createRegisteredMarker;
     _icon setMarkerType _markerType;
     _icon setMarkerColor _markerColor;
     if (_markerText != "") then { _icon setMarkerText _markerText };
-    [_markerBaseName, _zoneName]
+    [_markerBaseName, _zoneName, _markerPosN, _zoneRadius]
 };
 
 // Cargo camp delayed despawn (success / fail / timeout paths).
@@ -355,6 +412,8 @@ missionNamespace setVariable ["FADE_mission_spawnFieldContactEnemies", FADE_miss
 missionNamespace setVariable ["FADE_mission_radiusBorderThick", FADE_mission_radiusBorderThick];
 missionNamespace setVariable ["FADE_mission_setRadiusMarkerColor", FADE_mission_setRadiusMarkerColor];
 missionNamespace setVariable ["FADE_mission_setRadiusMarkerGeometry", FADE_mission_setRadiusMarkerGeometry];
+missionNamespace setVariable ["FADE_mission_positionsCentroid", FADE_mission_positionsCentroid];
+missionNamespace setVariable ["FADE_mission_computeSearchZone", FADE_mission_computeSearchZone];
 missionNamespace setVariable ["FADE_mission_createRadiusMarker", FADE_mission_createRadiusMarker];
 missionNamespace setVariable ["FADE_mission_createObjectiveMarker", FADE_mission_createObjectiveMarker];
 missionNamespace setVariable ["FADE_cargo_cleanupSiteDeferred", FADE_cargo_cleanupSiteDeferred];

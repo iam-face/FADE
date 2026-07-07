@@ -13,7 +13,7 @@ player createDiarySubject ["FAC_Notes", "FADE Notes"];
 player createDiarySubject ["FAC_Intel", "Intel"];
 player createDiaryRecord ["FAC_Intel", ["About Intel", "
 <font color='#87CEEB' size='14'>INTEL LOG</font><br/><br/>
-<font color='#E0E0E0'>When an <font color='#90EE90'>ambient civilian</font> gives you something actionable (e.g. OPFOR sighting, vehicle tip), or you <font color='#90EE90'>read building intel</font> / <font color='#90EE90'>secure an Asset Retrieval package</font>, a <font color='#FFD700'>timestamped entry</font> is added below  -  newest first.</font><br/><br/>
+<font color='#E0E0E0'>When an <font color='#90EE90'>ambient civilian</font> gives you something actionable (e.g. OPFOR sighting, vehicle tip), or you <font color='#90EE90'>read building intel</font> / <font color='#90EE90'>pick up an Asset Retrieval package</font>, a <font color='#FFD700'>timestamped entry</font> is added below  -  newest first.</font><br/><br/>
 <font color='#AAAAAA'>Open the map → <font color='#FFD700'>Intel</font> to review past reports. Building intel still shows on-screen hints and optional map markers when applicable.</font>
 "]];
 private _facNotes = [];
@@ -44,7 +44,7 @@ All AI and player radio traffic in FADE follows FAC RATEL. Use this format so co
 // -----------------------------------------------------------------------------
 _facNotes pushBack ["Area of Operations and Artillery", "
 <font color='#FFD700' size='14'>AO MISSION AND FIRES SUPPORT</font><br/><br/>
-The <font color='#90EE90'>Area of Operations</font> mission (Manage Missions, <font color='#90EE90'>[G] Global</font>) creates a 2 km x 2 km zone with three capture objectives. BLUFOR assaults from one edge toward OBJ 1, OBJ 2 and OBJ 3; OPFOR hold the objectives, receive reinforcements, and may counter-attack after a capture. Mission strength uses <font color='#90EE90'>FADE_aoStrength</font> from lobby / startup settings rather than a live Scenario GUI slider. Hold all three objectives to complete before the 30-minute timeout.<br/><br/>
+The <font color='#90EE90'>Area of Operations</font> mission (Manage Missions, <font color='#90EE90'>[G] Global</font>) creates a 2 km x 2 km zone with three capture objectives. BLUFOR and OPFOR ground infiltrations snap to the nearest civil zone on opposite sides of the AO (from the assault axis); BLUFOR assaults toward OBJ 1, OBJ 2 and OBJ 3 while OPFOR hold the objectives, receive reinforcements from their infil sector, and may counter-attack after a capture. Mission strength uses <font color='#90EE90'>FADE_aoStrength</font> from lobby / startup settings rather than a live Scenario GUI slider. Hold all three objectives to complete before the 60-minute timeout.<br/><br/>
 <font color='#87CEEB'>FIRES range</font><br/>
 Use <font color='#90EE90'>terminalFires</font> at Joon's Fires Range to spawn / rearm / despawn approved indirect-fire pieces, place an observer UAV by map click, and run timed grid / elevation drills. Qualifying indirect rounds can show short fall-of-shot camera feeds on enabled <font color='#90EE90'>firesScreenPos_*</font> screens. The CFF / GPO material in these Notes is doctrine for player-run training; FADE does not yet simulate a full AI GPO readback net for live player fire missions.
 "];
@@ -475,8 +475,8 @@ In <font color='#FFD700'>Manage Missions</font>, <font color='#90EE90'>[G] Globa
 Most missions open a location overlay: choose <font color='#90EE90'>Random location</font> or <font color='#90EE90'>Map click</font>. Map click has a 20 s timer. Some mission types snap to nearby civilian zones; others search outward from the click for a valid site. <font color='#90EE90'>Troop Insert</font> and <font color='#90EE90'>Troop Extract</font> skip the location overlay — LZ/pickup sites are chosen randomly near civ zones (including each wave). Escape &amp; Evasion and Geo-Guesser use participant pickers instead of a location picker; the starter must be included.<br/><br/>
 
 <font color='#87CEEB'>GLOBAL [G]</font><br/>
-- <font color='#90EE90'>Area of Operations</font>  - 2 km square AO with three objectives. BLUFOR assaults OBJ 1 through OBJ 3; OPFOR defend, reinforce and may counter-attack. 30-minute limit.<br/>
-- <font color='#90EE90'>Asset Retrieval</font>  - Clear a site, then either secure an intel package by scroll action and RTB, or recover an OPFOR vehicle to within 1000 m of base.<br/>
+- <font color='#90EE90'>Area of Operations</font>  - 2 km square AO with three objectives. BLUFOR and OPFOR infiltrate from separate nearest civ zones on opposite AO sides; BLUFOR assaults OBJ 1 through OBJ 3; OPFOR defend, reinforce and may counter-attack. 60-minute limit.<br/>
+- <font color='#90EE90'>Asset Retrieval</font>  - Clear a site, then either use Pick up on the objective package (completes in place), or recover an OPFOR vehicle to within 1000 m of base.<br/>
 - <font color='#90EE90'>CAS / Fire Support</font>  - Support friendly AI under attack. Friendlies can radio a 5-line CCA call; succeed when OPFOR is reduced below the task threshold, fail if all friendlies are lost.<br/>
 - <font color='#90EE90'>Clear Area</font>  - Clear an enemy-held town or procedural camp; about 80 percent of enemies must be eliminated before timeout.<br/>
 - <font color='#90EE90'>CSAR</font>  - Downed helicopter survivor moves near the crash area, radios at 1 km and marks with smoke / IR near 500 m. Extract and RTB.<br/>
@@ -486,9 +486,9 @@ Most missions open a location overlay: choose <font color='#90EE90'>Random locat
 - <font color='#90EE90'>HVT</font>  - Locate a high-value target in an urban building. Kill or capture; captured HVTs must be brought back near base.<br/>
 - <font color='#90EE90'>Intercept Convoy</font>  - Stop a moving road convoy before it reaches the end zone. At least 60 percent of convoy vehicles must be destroyed or immobilised.<br/>
 - <font color='#90EE90'>Invasion</font>  - Defensive multi-zone fight: OPFOR seizes a beachhead and pushes through the nearest civil zones. Retake the INVASION beachhead to win; lose if OPFOR holds every zone.<br/>
-- <font color='#90EE90'>Operation</font>  - Multi-zone fight across civilian zones. Zones capture once OPFOR are cleared, then can be contested again if OPFOR return; evaluation runs about every 5 s.<br/>
-- <font color='#90EE90'>Raid</font> — Three objectives across the map (recover object, HVT kill/capture, or hostage) tied to one enemy network. Each site gets a codename marker (e.g. HAMMER, TRIDENT); clear them in any order. Intel starts approximate and refines on recon.<br/>
-- <font color='#90EE90'>Search &amp; Destroy</font>  - Search a marked 250 m town zone for ammo caches in garrisoned buildings. Burning barrels mark cache buildings; task text states cache count and required destroy percentage.<br/><br/>
+- <font color='#90EE90'>Operation</font>  - Hub-and-spoke fight across civilian zones: clear outer objectives (codenames on map), then secure the OPFOR HQ. HQ cannot be captured until every outer zone is held. OPFOR vehicle resupply and QRF spawn from the HQ. Zones capture once OPFOR are cleared, then can be contested again if OPFOR return; evaluation runs about every 5 s.<br/>
+- <font color='#90EE90'>test</font> — Three objectives across the map (recover object, HVT kill/capture, or hostage) tied to one enemy network. Each site gets a codename on the target building. Clear them in any order.<br/>
+- <font color='#90EE90'>Search &amp; Destroy</font>  - Search a marked town zone (approx. 55 m search circle) for ammo caches in garrisoned buildings. Burning barrels mark cache buildings; task text states cache count and required destroy percentage.<br/><br/>
 
 <font color='#87CEEB'>MISSION BACKGROUND (LORE)</font><br/>
 Most missions include a short procedural background paragraph in the assigned intro, SMEAC Situation block, and an <font color='#FFD700'>Intel</font> diary entry. Flavour only — no gameplay effect.<br/><br/>

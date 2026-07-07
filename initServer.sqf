@@ -8,6 +8,7 @@ call compile preprocessFileLineNumbers "rsc\Config.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_Profile.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_Common.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_MissionSlots.sqf";
+call compile preprocessFileLineNumbers "rsc\FAC_MissionTypeLabels.sqf";
 call compile preprocessFileLineNumbers "rsc\ServerEntityRegistry.sqf";
 call compile preprocessFileLineNumbers "rsc\BaseNpcTalk.sqf";
 

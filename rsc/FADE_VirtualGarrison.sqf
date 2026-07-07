@@ -225,7 +225,7 @@ FADE_vg_register = {
         private _anch = [_entry] call FADE_vg_entryAnchor;
         if (count _anch >= 2) then {
             private _mn = format ["FADE_vg_dbg_%1_%2", _id, floor (random 1e6)];
-            createMarker [_mn, [(_anch select 0), (_anch select 1)]];
+            [_mn, [(_anch select 0), (_anch select 1)], ""] call FADE_createRegisteredMarker;
             _mn setMarkerType "mil_dot";
             _mn setMarkerColor "ColorYellow";
             _mn setMarkerAlpha 0.85;
@@ -246,6 +246,18 @@ FADE_vg_spawnOne = {
     private _positions = _entry get "positions";
     private _classPool = _entry get "classPool";
     private _st = _entry get "settings";
+
+    private _owner = _st getOrDefault ["owner", ""];
+    if (_owner find "op:" == 0) then {
+        private _opTid = _owner select [3];
+        if (missionNamespace getVariable ["FADE_operationAborted_" + _opTid, false]) exitWith {};
+    };
+    if (_owner find "mis:" == 0) then {
+        private _misTid = _owner select [4];
+        if (missionNamespace getVariable [format ["FADE_missionEnt_cleaned_%1", _misTid], false]) exitWith {};
+        if (missionNamespace getVariable ["FADE_invasionAborted_" + _misTid, false]) exitWith {};
+        if (missionNamespace getVariable ["FADE_raidAborted_" + _misTid, false]) exitWith {};
+    };
 
     if (!(_positions isEqualType []) || { count _positions == 0 }) exitWith {};
 
@@ -308,6 +320,7 @@ FADE_vg_spawnOne = {
     private _gref = _st get "groupsRef";
     if (!isNil "_gref" && { _gref isEqualType [] }) then { _gref pushBack _grp };
     private _owner = _st getOrDefault ["owner", ""];
+    if (_owner != "") then { _grp setVariable ["FADE_vgOwner", _owner, false] };
     if (_owner find "mis:" == 0) then {
         [_owner select [4], _grp] call FADE_missionEnt_registerGroup;
     };

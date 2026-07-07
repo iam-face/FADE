@@ -1,0 +1,115 @@
+// AOMissionInfil.sqf - AO infiltration civ-zone resolution
+if (!isServer) exitWith {};
+FADE_ao_resolveInfilCivZones = {
+    params [
+        "_aoCenter",
+        "_attackDir",
+        "_bluInfilRef",
+        "_opforInfilRef",
+        ["_dryFn", {}],
+        ["_findLandPosFn", {}]
+    ];
+
+    private _civEntries = [];
+    {
+        private _trig = missionNamespace getVariable [_x, objNull];
+        if (!isNull _trig) then {
+            private _p = getPosATL _trig;
+            if (_p isEqualType [] && { count _p >= 2 }) then {
+                _civEntries pushBack [_x, [(_p select 0), (_p select 1), (_p param [2, 0])]];
+            };
+        };
+    } forEach (missionNamespace getVariable ["FADE_civTriggerNames", []]);
+
+    private _cosA = cos _attackDir;
+    private _sinA = sin _attackDir;
+    private _fnc_depthScalar = {
+        params ["_pos"];
+        private _p = [_pos] call FADE_normPos3;
+        private _ac = [_aoCenter] call FADE_normPos3;
+        ((_p select 0) - (_ac select 0)) * _cosA + ((_p select 1) - (_ac select 1)) * _sinA
+    };
+
+    private _fnc_rankedNear = {
+        params ["_ref", "_wantBluforSide", "_excludeIds"];
+        private _refN = [_ref] call FADE_normPos3;
+        private _ranked = [];
+        {
+            _x params ["_id", "_pos"];
+            if (_id in _excludeIds) then { continue };
+            private _depth = [_pos] call _fnc_depthScalar;
+            private _onSide = if (_wantBluforSide) then { _depth >= 0 } else { _depth <= 0 };
+            if (!_onSide) then { continue };
+            _ranked pushBack [_refN distance2D ([_pos] call FADE_normPos3), _id, _pos];
+        } forEach _civEntries;
+        [_ranked, [], { _x select 0 }, "ASCEND"] call BIS_fnc_sortBy
+    };
+
+    private _fnc_pickZone = {
+        params ["_ref", "_wantBluforSide", "_excludeIds"];
+        private _ranked = [_ref, _wantBluforSide, _excludeIds] call _fnc_rankedNear;
+        if (_ranked isEqualTo []) exitWith { ["", []] };
+        private _best = _ranked select 0;
+        [_best select 1, _best select 2]
+    };
+
+    private _fnc_landAt = {
+        params ["_anchor", "_fallback"];
+        private _fb = if (_fallback isEqualType [] && { count _fallback >= 2 }) then { +_fallback } else { +_anchor };
+        private _out = [_anchor, 50, 500] call _findLandPosFn;
+        if (!(_out isEqualType []) || { count _out < 2 } || { !([_out] call _dryFn) }) then {
+            _out = [_anchor, 100, 800] call _findLandPosFn;
+        };
+        if (!(_out isEqualType []) || { count _out < 2 } || { !([_out] call _dryFn) }) then { _out = +_fb };
+        if (count _out < 3) then { _out set [2, 0] };
+        _out
+    };
+
+    private _bluPick = [_bluInfilRef, true, []] call _fnc_pickZone;
+    _bluPick params ["_bluId", "_bluZonePos"];
+    private _opforPick = [_opforInfilRef, false, if (_bluId == "") then { [] } else { [_bluId] }] call _fnc_pickZone;
+    _opforPick params ["_opforId", "_opforZonePos"];
+
+    if (_bluId == "") then {
+        private _pool = +_civEntries;
+        if (_opforId != "") then { _pool = _pool select { !((_x select 0) isEqualTo _opforId) } };
+        _pool = [_pool, [], { [_bluInfilRef] call FADE_normPos3 distance2D ([_x select 1] call FADE_normPos3) }, "ASCEND"] call BIS_fnc_sortBy;
+        if (count _pool > 0) then {
+            _bluId = (_pool select 0) select 0;
+            _bluZonePos = (_pool select 0) select 1;
+        };
+    };
+
+    if (_opforId == "" || { _opforId isEqualTo _bluId }) then {
+        private _excl = if (_bluId == "") then { [] } else { [_bluId] };
+        private _rankedOp = [_opforInfilRef, false, _excl] call _fnc_rankedNear;
+        if (_rankedOp isEqualTo []) then {
+            private _pool = _civEntries select { !((_x select 0) in _excl) };
+            if (_bluId != "" && { count _pool > 1 }) then {
+                private _bluDepth = [_bluZonePos] call _fnc_depthScalar;
+                private _oppPool = _pool select {
+                    private _d = [_x select 1] call _fnc_depthScalar;
+                    if (_bluDepth >= 0) then { _d < 0 } else { _d > 0 }
+                };
+                if (count _oppPool > 0) then { _pool = _oppPool };
+            };
+            _pool = [_pool, [], { [_opforInfilRef] call FADE_normPos3 distance2D ([_x select 1] call FADE_normPos3) }, "ASCEND"] call BIS_fnc_sortBy;
+            if (count _pool > 0) then {
+                _opforId = (_pool select 0) select 0;
+                _opforZonePos = (_pool select 0) select 1;
+            };
+        } else {
+            private _o = _rankedOp select 0;
+            _opforId = _o select 1;
+            _opforZonePos = _o select 2;
+        };
+    };
+
+    private _bluAnchor = if (_bluZonePos isEqualType [] && { count _bluZonePos >= 2 }) then { _bluZonePos } else { +_bluInfilRef };
+    private _opforAnchor = if (_opforZonePos isEqualType [] && { count _opforZonePos >= 2 }) then { _opforZonePos } else { +_opforInfilRef };
+    private _bluPos = [_bluAnchor, _bluInfilRef] call _fnc_landAt;
+    private _opforPos = [_opforAnchor, _opforInfilRef] call _fnc_landAt;
+
+    [[_bluId, _bluPos], [_opforId, _opforPos]]
+};
+

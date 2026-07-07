@@ -50,7 +50,7 @@ Descriptions in-game (**Manage Missions**) are the source of truth for objective
 | HVT | Find, kill, or capture a priority target. |
 | Intercept Convoy | Stop a moving column before it finishes its route. *(temporarily disabled in Missions GUI — route/spawn rework in progress)* |
 | Invasion | OPFOR beachhead push through nearest civil zones; retake INVASION to win. |
-| Operation | Clear and hold several linked zones. |
+| Operation | Clear outer zones, then capture the OPFOR HQ hub. |
 | Raid | Three linked objectives (mixed task types) across the map; approximate intel, detection-triggered QRF per zone. |
 | Search & Destroy | Find and destroy enemy ammo caches in a marked zone. |
 
@@ -89,3 +89,5 @@ Core mission runs on vanilla-friendly setup. **ACE** and **KAT** are expected fo
 Entry points: `initServer.sqf` (loads `rsc/server/`) and `initPlayerLocal.sqf`. Mission logic is split into `rsc/missions/` (one script per type); `rsc/Missions.sqf` dispatches. Shared helpers live in `rsc/FADE_*` and `rsc/FAC_*`. Local AI/editor notes may exist in `.cursor/agent-docs/` (gitignored).
 
 **Regression tests:** `[] call FAC_missionTestSuite_execAll` (debug-tools lobby param adds a scroll-wheel action). RPT filter: `[FAC TestSuite]`. Covers compile, RPCs, mission placement, SMEAC/intel per type, zone pickers, and client GUI scripts — not full mission playthroughs.
+
+**Mission playthrough tests:** `[] call FAC_playthroughSuite_execAll` (second dev scroll-wheel action). RPT filter: `[FAC Playthrough]`. Runs all 19 mission types in **≤10 minutes** with **no player input** after exec (server teleports + win cheats). Phases: (1) init checks, (2) per-type win simulation, (4) short task-state assertions. Abort: `[] call FAC_playthroughSuite_abort`. Tune `FAC_playthroughSuite__suiteBudgetSec` and phase toggles in `rsc/MissionPlaythroughProfiles.sqf`.

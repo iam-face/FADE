@@ -9,7 +9,9 @@ FADE_runMission_EscapeEvasion = {
         "_unitCount", "_unitClasses", "_scaleOpforCount", "_fnc_createMissionTask", "_showAssignedHint",
         "_defaultSituationTaskText", "_defaultExecutionTaskText", "_defaultAdminTaskText", "_defaultCommandTaskText",
         "_defaultSituationHtml", "_defaultSituationHintHtml", "_friendlyPlayerCount", "_friendlyFactionName",
-        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea"
+        "_estimatedOpforCount", "_opforCountFactor", "_intelFormatter", "_topographyGrid", "_topographyArea",
+        "_mapPickRawAnchor", "_mapPickSnappedCenter", "_mapPickResolvedR", "_convoyEndRaw", "_convoyEndAnchor", "_raidZoneClicks",
+        "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     private _enemyUnitsEe = +_enemyUnits;
     _enemyUnitsEe = [_enemyUnitsEe] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
