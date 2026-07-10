@@ -76,12 +76,36 @@ FAC_ensureMissionsGui_mapPicks = {
     };
 };
 
+// Re-compile overlay helpers when missing (prior syntax error can leave the whole file unloaded).
+FAC_ensureMissionsGui_overlay = {
+    if (
+        isNil "FAC_missionPickOverlay_destroy" ||
+        { isNil "FAC_missionPickOverlay_estimateHelpH" } ||
+        { isNil "FAC_missionPickOverlay_createShell" }
+    ) then {
+        call compile preprocessFileLineNumbers "rsc\MissionPickOverlay.sqf";
+    };
+    if (isNil "FAC_missionPickOverlay_destroy") exitWith {
+        diag_log "[FAC] MissionPickOverlay.sqf failed to compile; mission pick overlays unavailable.";
+        false
+    };
+    true
+};
+
 FAC_ensureMissionsGui = {
     call FAC_ensureLobbyParams;
     if (missionNamespace getVariable ["FAC_clientGui_missions", false]) exitWith {
+        call FAC_ensureMissionsGui_overlay;
+        if (isNil "FAC_missionsGui_descListW") then {
+            call compile preprocessFileLineNumbers "rsc\MissionsGui.sqf";
+            missionNamespace setVariable ["FAC_missionsGui_fnc", FAC_missionsGui_fnc];
+        };
         [] call FAC_ensureMissionsGui_mapPicks;
     };
-    call compile preprocessFileLineNumbers "rsc\MissionPickOverlay.sqf";
+    if (isNil "FADE_textureText_wrap") then {
+        call compile preprocessFileLineNumbers "rsc\FADE_ClientCommon.sqf";
+    };
+    call FAC_ensureMissionsGui_overlay;
     call compile preprocessFileLineNumbers "rsc\MissionsGui.sqf";
     call compile preprocessFileLineNumbers "rsc\EscapeEvasionPickGui.sqf";
     call compile preprocessFileLineNumbers "rsc\GeoGuesserPickGui.sqf";
@@ -98,9 +122,11 @@ FAC_ensureMissionsGui = {
 
 FAC_ensureScenarioGui = {
     call FAC_ensureLobbyParams;
+    if (isNil "FADE_getPlayableFactions") then {
+        call compile preprocessFileLineNumbers "rsc\FADE_FactionScenario.sqf";
+    };
     if (missionNamespace getVariable ["FAC_clientGui_scenario", false]) exitWith {};
     call compile preprocessFileLineNumbers "rsc\ScenarioGui.sqf";
-    missionNamespace setVariable ["FAC_scenarioGui_fnc", FAC_scenarioGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_scenario", true];
 };
 
@@ -232,11 +258,12 @@ missionNamespace setVariable ["FAC_ensureVehicleGui", FAC_ensureVehicleGui];
 missionNamespace setVariable ["FAC_ensureFiresGui", FAC_ensureFiresGui];
 missionNamespace setVariable ["FAC_ensureMedicalTrainingGui", FAC_ensureMedicalTrainingGui];
 missionNamespace setVariable ["FAC_ensureMissionsGui", FAC_ensureMissionsGui];
+missionNamespace setVariable ["FAC_ensureMissionsGui_overlay", FAC_ensureMissionsGui_overlay];
 missionNamespace setVariable ["FAC_ensureScenarioGui", FAC_ensureScenarioGui];
 missionNamespace setVariable ["FAC_ensureCivTalkGui", FAC_ensureCivTalkGui];
-missionNamespace setVariable ["FAC_ensureJukeboxGui", FAC_ensureJukeboxGui];
 missionNamespace setVariable ["FAC_ensureCQBGui", FAC_ensureCQBGui];
 missionNamespace setVariable ["FAC_ensureSniperGui", FAC_ensureSniperGui];
 missionNamespace setVariable ["FAC_ensureRangeGui", FAC_ensureRangeGui];
 missionNamespace setVariable ["FAC_ensureTeleportGui", FAC_ensureTeleportGui];
 missionNamespace setVariable ["FAC_ensureRecruitGui", FAC_ensureRecruitGui];
+missionNamespace setVariable ["FAC_ensureJukeboxGui", FAC_ensureJukeboxGui];

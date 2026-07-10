@@ -21,7 +21,7 @@ FADE_zone_createCaptureMarkerPair = {
 
     private _iconName = _mName + "_icon";
     private _mi = [_iconName, _centerN, _taskId] call FADE_createRegisteredMarker;
-    _mi setMarkerType "hd_flag";
+    _mi setMarkerType ([ "flag" ] call FADE_marker_getType);
     _mi setMarkerColor _markerColor;
     _mi setMarkerText _markerText;
 

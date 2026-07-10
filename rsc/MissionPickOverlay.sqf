@@ -33,6 +33,28 @@ FAC_missionPickOverlay_restoreMissionsBase = {
     };
 };
 
+// Estimate help text height from wrapped line count (size 0.85 structured text).
+FAC_missionPickOverlay_estimateHelpH = {
+    params ["_helpText", ["_innerW", 0.56], ["_lineH", 0.031]];
+    private _charsPerLine = ((round (_innerW * 95)) max 36) min 72;
+    private _lines = 0;
+    private _blocks = _helpText splitString (toString [10]);
+    private _bi = 0;
+    private _bCount = count _blocks;
+    while { _bi < _bCount } do {
+        private _block = _blocks select _bi;
+        if (_block isEqualTo "") then {
+            _lines = _lines + 1;
+        } else {
+            private _wrapLines = ceil (count _block / _charsPerLine);
+            if (_wrapLines < 1) then { _wrapLines = 1 };
+            _lines = _lines + _wrapLines;
+        };
+        _bi = _bi + 1;
+    };
+    (_lines * _lineH + 0.010) max 0.11 min 0.30
+};
+
 // Returns array of created controls.
 // _layout: [bgX, bgY, bgW, bgH, titleH, helpH] — defaults to full-width panel.
 FAC_missionPickOverlay_createShell = {
@@ -130,6 +152,7 @@ FAC_missionPick_createParticipantFooter = {
 missionNamespace setVariable ["FAC_missionPickOverlay_restoreMissionsBase", FAC_missionPickOverlay_restoreMissionsBase];
 missionNamespace setVariable ["FAC_missionPickOverlay_setBaseVisible", FAC_missionPickOverlay_setBaseVisible];
 missionNamespace setVariable ["FAC_missionPickOverlay_destroy", FAC_missionPickOverlay_destroy];
+missionNamespace setVariable ["FAC_missionPickOverlay_estimateHelpH", FAC_missionPickOverlay_estimateHelpH];
 missionNamespace setVariable ["FAC_missionPickOverlay_createShell", FAC_missionPickOverlay_createShell];
 missionNamespace setVariable ["FAC_missionPick_stylePrimary", FAC_missionPick_stylePrimary];
 missionNamespace setVariable ["FAC_missionPick_styleNeutral", FAC_missionPick_styleNeutral];

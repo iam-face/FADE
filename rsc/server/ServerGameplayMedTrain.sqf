@@ -349,7 +349,8 @@ missionNamespace setVariable ["FADE_aoRegisterObject", FADE_aoRegisterObject];
 FADE_cleanupMissionEntities = {
     params ["_taskId", ["_missionType", ""], ["_setAbortFlags", true]];
     if (_taskId == "") exitWith {};
-    if (!isNil "FADE_mission_unpinCivZonesForTask") then { [_taskId] call FADE_mission_unpinCivZonesForTask };
+    // Civ-zone unpin is deferred to FADE_missionEnt_scheduledCleanup so ambient roadblocks/patrols
+    // do not respawn OPFOR at the objective while players are still on site after abort.
     if (missionNamespace getVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], false]) exitWith {};
 
     if (_missionType == "AreaOfOperations") then {

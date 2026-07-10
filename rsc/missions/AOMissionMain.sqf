@@ -143,29 +143,6 @@ private _zoneHalfDepth = 1000;
 private _captureRadius = 50;
 private _attackDir = (floor random 4) * 90;  // Random cardinal: 0=E, 90=S, 180=W, 270=N - BLUFOR spawn on this edge, attack toward opposite
 
-// #region agent log
-private _fnc_dbgAoLandFrac = {
-    params ["_center", "_halfD", "_halfW", "_dir", "_dryFnLocal"];
-    private _dryN = 0;
-    private _totalN = 0;
-    for "_fi" from -2 to 2 do {
-        for "_ri" from -2 to 2 do {
-            private _fwd = (_fi / 2) * _halfD * 2;
-            private _lat = (_ri / 2) * _halfW * 2;
-            private _p = if (_fwd == 0 && { _lat == 0 }) then { +_center } else {
-                private _pF = [_center, _fwd, _dir] call BIS_fnc_relPos;
-                if (_lat == 0) then { _pF } else { [_pF, _lat, _dir + 90] call BIS_fnc_relPos };
-            };
-            _totalN = _totalN + 1;
-            if ([_p] call _dryFnLocal) then { _dryN = _dryN + 1 };
-        };
-    };
-    if (_totalN < 1) then { 0 } else { _dryN / _totalN }
-};
-diag_log format ["#DBG89f3ea {""sessionId"":""89f3ea"",""hypothesisId"":""H1"",""location"":""AOMission.sqf:destPos"",""message"":""AO anchor after dry snap"",""data"":{""destPos"":%1,""centerDry"":%2,""fromMapClick"":%3,""grid"":""%4""},""timestamp"":%5}", _destPos, [_destPos] call _dryFn, _fromMapClick, mapGridPosition _destPos, diag_tickTime];
-diag_log format ["#DBG89f3ea {""sessionId"":""89f3ea"",""hypothesisId"":""H5"",""location"":""AOMission.sqf:zone"",""message"":""AO zone land sample"",""data"":{""attackDir"":%1,""landFrac"":%2,""halfSize"":%3},""timestamp"":%4}", _attackDir, [_destPos, _zoneHalfDepth, _zoneHalfWidth, _attackDir, _dryFn] call _fnc_dbgAoLandFrac, _zoneHalfDepth, diag_tickTime];
-// #endregion
-
 // Task: side-visible so all players can join the AO with the same SMEAC task details.
 private _taskBuilderAo = missionNamespace getVariable ["FADE_buildMissionTaskSmeacText", {}];
 private _friendlyPlayerCountAo = [_sideFriendly] call (missionNamespace getVariable ["FADE_countFriendlyPlayers", { 0 }]);
@@ -289,8 +266,6 @@ private _objSpecs = [
     if (_aoObjPlacementFailed) exitWith {};
     _x params ["_dist", "_dir"];
     private _pos = [];
-    private _tryBeforeLand = [];
-    private _tryBeforeDry = false;
     for "_try" from 0 to 29 do {
         private _latOffset = if (_forEachIndex == 1) then { (random 101) - 50 } else { (random 1000) - 500 };
         private _tryPos = if (_dist <= 0) then {
@@ -300,24 +275,11 @@ private _objSpecs = [
             [_p, _latOffset, _dir + 90] call BIS_fnc_relPos
         };
         if (_tryPos isEqualType [] && { count _tryPos < 3 }) then { _tryPos set [2, 0] };
-        // #region agent log
-        _tryBeforeLand = +_tryPos;
-        _tryBeforeDry = [_tryBeforeLand] call _dryFn;
-        // #endregion
         _tryPos = [_tryPos, 25, 120, 5, 1, 0.4, 0, [], _tryPos] call _fnc_findLandPos;
-        // #region agent log
-        if (_try == 0 || { _try == 29 }) then {
-            diag_log format ["#DBG89f3ea {""sessionId"":""89f3ea"",""hypothesisId"":""H2"",""location"":""AOMission.sqf:objLoop"",""message"":""objective land find"",""data"":{""objIdx"":%1,""tryN"":%2,""before"":%3,""beforeDry"":%4,""after"":%5,""afterDry"":%6},""timestamp"":%7}", _forEachIndex, _try, _tryBeforeLand, _tryBeforeDry, _tryPos, if (_tryPos isEqualType [] && { count _tryPos >= 2 }) then { [_tryPos] call _dryFn } else { false }, diag_tickTime];
-        };
-        // #endregion
         if (_tryPos isEqualType [] && { count _tryPos >= 2 } && { [_tryPos] call _dryFn }) exitWith { _pos = _tryPos };
     };
     if (count _pos < 2 || { !([_pos] call _dryFn) }) then { _pos = [_destPos, 50, 600] call _fnc_findLandPos };
     if (count _pos < 2 || { !([_pos] call _dryFn) }) then { _pos = [_destPos, 100, 1200] call _fnc_findLandPos };
-    // #region agent log
-    private _mkrTest = if (count _pos >= 2) then { [_pos, 100] call _mkrJitter } else { [] };
-    diag_log format ["#DBG89f3ea {""sessionId"":""89f3ea"",""hypothesisId"":""H4"",""location"":""AOMission.sqf:objFinal"",""message"":""objective final pos"",""data"":{""objIdx"":%1,""pos"":%2,""posDry"":%3,""usedDestFallback"":%4,""markerJitter"":%5,""markerDry"":%6},""timestamp"":%7}", _forEachIndex, _pos, if (count _pos >= 2) then { [_pos] call _dryFn } else { false }, (count _pos >= 2 && { _pos distance2D _destPos < 5 }), _mkrTest, if (count _mkrTest >= 2) then { [_mkrTest] call _dryFn } else { false }, diag_tickTime];
-    // #endregion
     if (count _pos < 2 || { !([_pos] call _dryFn) }) then { _aoObjPlacementFailed = true } else { _points pushBack _pos };
 } forEach _objSpecs;
 if (_aoObjPlacementFailed || { count _points < 3 }) exitWith {
@@ -366,7 +328,7 @@ private _pointMarkers = [];
 {
     private _ptName = "FADE_ao_pt_" + _taskId + str _forEachIndex;
     private _m = [_ptName, [_x, 100] call _mkrJitter, _taskId] call FADE_createRegisteredMarker;
-    _m setMarkerType "o_unknown";
+    _m setMarkerType (["unknown"] call FADE_marker_getType);
     _m setMarkerColor _markerEnemy;
     _m setMarkerText format ["OBJ %1", _forEachIndex + 1];
     _m setMarkerAlpha 0.9;
@@ -404,7 +366,7 @@ if (!(_opforInfilRef isEqualType []) || { count _opforInfilRef < 2 } || { !([_op
 if (!(_opforInfilRef isEqualType []) || { count _opforInfilRef < 2 } || { !([_opforInfilRef] call _dryFn) }) then { _opforInfilRef = +_opforEdgeCenter };
 if (count _opforInfilRef < 3) then { _opforInfilRef set [2, 0] };
 
-private _infilResolved = [_destPos, _attackDir, _bluInfilRef, _opforInfilRef, _dryFn, _fnc_findLandPos] call FADE_ao_resolveInfilCivZones;
+private _infilResolved = [_destPos, _attackDir, _bluInfilRef, _opforInfilRef, _dryFn, _fnc_findLandPos, _zoneHalfDepth, _zoneHalfWidth, 3000] call FADE_ao_resolveInfilCivZones;
 private _bluPack = _infilResolved select 0;
 private _opforPack = _infilResolved select 1;
 private _bluCivZoneId = _bluPack param [0, ""];
@@ -694,7 +656,8 @@ for "_g" from 0 to (1 + floor random 2) do {
     private _pos = [_bluSpawn, random 80, random 360] call BIS_fnc_relPos;
     private _classes = [];
     for "_i" from 0 to (4 + floor random 3) do { _classes pushBack (_friendlyUnits select (_i % _bluCount)) };
-    private _grp = [_pos, _sideFriendly, _classes] call BIS_fnc_spawnGroup;
+    private _grp = [_pos, _sideFriendly, _classes] call FADE_missionCreateInfantryGroupAt;
+    if (isNull _grp) then { continue };
     [_grp] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
     [_grp] call FADE_attachNightStrobes;
     _grp setFormation "LINE";
@@ -731,7 +694,8 @@ missionNamespace setVariable ["FADE_aoEntities_" + _taskId, [_aoAllGroups, _aoCo
                 private _squadSize = 4 + floor random 4;
                 private _classes = [];
                 for "_i" from 0 to (_squadSize - 1) do { _classes pushBack (_friendlyUnits select (_i % _bluCountSafe)) };
-                private _grp = [_pos, _sideFriendly, _classes] call BIS_fnc_spawnGroup;
+                private _grp = [_pos, _sideFriendly, _classes] call FADE_missionCreateInfantryGroupAt;
+                if (isNull _grp) then { continue };
                 [_grp] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
                 [_grp] call FADE_attachNightStrobes;
                 _grp setFormation "LINE";
@@ -791,7 +755,8 @@ missionNamespace setVariable ["FADE_aoEntities_" + _taskId, [_aoAllGroups, _aoCo
                     private _squadSize = [4 + floor random 4, 1] call _scaleOpforCount;
                     private _classes = [];
                     for "_i" from 0 to (_squadSize - 1) do { _classes pushBack (_enemyUnits select (_i % _enemyCount)) };
-                    private _grp = [_spawnPos, _sideEnemy, _classes] call BIS_fnc_spawnGroup;
+                    private _grp = [_spawnPos, _sideEnemy, _classes] call FADE_missionCreateInfantryGroupAt;
+                    if (isNull _grp) then { continue };
                     [_grp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
                     _grp setBehaviour "AWARE";
                     _grp setCombatMode "RED";
@@ -856,7 +821,8 @@ missionNamespace setVariable ["FADE_aoEntities_" + _taskId, [_aoAllGroups, _aoCo
                 private _squadSize = _minSize + floor random ((_maxSize - _minSize) + 1);
                 private _classes = [];
                 for "_i" from 0 to (_squadSize - 1) do { _classes pushBack (_enemyUnits select (_i % _enemyCount)) };
-                private _grp = [_spawnPos, _sideEnemy, _classes] call BIS_fnc_spawnGroup;
+                private _grp = [_spawnPos, _sideEnemy, _classes] call FADE_missionCreateInfantryGroupAt;
+                if (isNull _grp) then { continue };
                 [_grp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
                 _grp setBehaviour "AWARE";
                 _grp setCombatMode "RED";

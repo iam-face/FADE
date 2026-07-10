@@ -61,17 +61,30 @@ FADE_runMission_HVT = {
     private _guardCount = [6 + floor random 4, 2] call _scaleOpforCount;
     private _guardGroup = [_targetBuilding, _hvtSlot, _guardCount, _sideEnemy, _enemyUnits] call FADE_objective_garrisonBuilding;
     private _buildingCenterPatrol = getPosATL _targetBuilding;
+    private _hvtSurvey = [_hvtObjectivePos, _patrolRadius * 2] call FADE_aoSurvey_build;
     private _patrolGroups = [
         _buildingCenterPatrol,
         _patrolRadius,
         _patrolGroupCount,
         _sideEnemy,
         _enemyUnits,
-        _diffMul
+        _diffMul,
+        _hvtSurvey
     ] call FADE_objective_spawnPatrols;
 
+    private _hvtObjectivePos = getPosATL _targetBuilding;
+    if (count _hvtObjectivePos < 3) then { _hvtObjectivePos = [(_hvtObjectivePos select 0), (_hvtObjectivePos select 1), 0] };
+
+    private _areaGroups = [];
+    [_hvtObjectivePos, [_targetBuilding], _sideEnemy, _enemyUnits, _diffMul, _areaGroups] call FADE_objective_spawnImmediateAreaGarrison;
+
     private _hvtVgHintObjs = [];
-    [_taskId, _targetBuilding, _buildingCenterPatrol, _patrolGroups, _hvtVgHintObjs, _enemyUnits, _diffMul] call FADE_objective_registerNearbyGarrisons;
+    private _innerGarRad = missionNamespace getVariable ["FADE_raidTargetImmediateGarrisonRadiusM", 250];
+    private _nearGarRad = missionNamespace getVariable ["FADE_garrisonMissionNearbyRadiusM", 450];
+    [
+        _taskId, _targetBuilding, _buildingCenterPatrol, _areaGroups + _patrolGroups, _hvtVgHintObjs, _enemyUnits, _diffMul,
+        _nearGarRad, -1, 1, [_targetBuilding], _hvtObjectivePos, _innerGarRad
+    ] call FADE_objective_registerNearbyGarrisons;
 
     private _hvtBarrel = objNull;
     private _buildingCenter = getPosATL _targetBuilding;
@@ -91,9 +104,7 @@ FADE_runMission_HVT = {
     [_player, _taskId, _hvtTaskLine, "HVT", getPosATL _targetBuilding, "target"] call _fnc_createMissionTask;
     private _markerName = "FADE_hvt_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    private _hvtObjectivePos = getPosATL _targetBuilding;
-    if (count _hvtObjectivePos < 3) then { _hvtObjectivePos = [(_hvtObjectivePos select 0), (_hvtObjectivePos select 1), 0] };
-    [_taskId, _markerName, _hvtObjectivePos, _patrolRadius, _markerEnemy, "mil_objective", _operationName, -1, -1, [_hvtObjectivePos]] call FADE_mission_createObjectiveMarker;
+    private _markerOut = [_taskId, _markerName, _hvtObjectivePos, _patrolRadius, _markerEnemy, "objective", _operationName, -1, -1, [_hvtObjectivePos]] call FADE_mission_createObjectiveMarker;
 
     private _grid = mapGridPosition (getPosATL _targetBuilding);
     private _brief = format ["HVT%1%1Search area (approx.): Grid %2%1Designation: %3  -  %4%1%1Locate and neutralise or capture the high-value target. Secure the area and move the target to extraction as ordered.", toString [10], _grid, _hvtCodename, _hvtTypeName] + _briefGuiTail;
@@ -101,8 +112,10 @@ FADE_runMission_HVT = {
     [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFFFFF'>HVT: %2 -- %3</t><br/><br/><t color='#FFFFFF'>Eliminate or capture and return to base.</t>", _grid, _hvtCodename, _hvtTypeName]] call _showAssignedHint;
     [_player, "HVT"] call FADE_notifyOthersMissionStarted;
 
-    private _allGroups = [_hvtGroup, _guardGroup] + _patrolGroups;
+    private _allGroups = [_hvtGroup, _guardGroup] + _areaGroups + _patrolGroups;
     [[_guardGroup] + _patrolGroups, _basePos] call FADE_registerEnemyRetreat;
+
+    [_taskId, "HVT", _hvtObjectivePos, _markerOut, _allGroups, _markerEnemy] call FADE_fieldIntel_startForMission;
 
     [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
     if (!isNull _hvtBarrel) then { [_taskId, _hvtBarrel] call FADE_missionEnt_registerObject };

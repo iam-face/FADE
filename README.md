@@ -1,6 +1,6 @@
 # FADE (Face’s Dynamic Environment)
 
-**Beta 6** — multiplayer **Arma 3** sandbox on **Altis**. No Zeus required: boards and GUIs at the base let players set the scenario, spawn vehicles, run training ranges, and start dynamic missions. Aimed at **rotary**, **joint fires**, and **infantry** practice (listen server or dedicated).
+**Beta 7** — multiplayer **Arma 3** sandbox on **Altis**. No Zeus required: boards and GUIs at the base let players set the scenario, spawn vehicles, run training ranges, and start dynamic missions. Aimed at **rotary**, **joint fires**, and **infantry** practice (listen server or dedicated).
 
 **Repo folder:** `CTB_FAC_FADE.Altis` · **Players:** up to **31**
 
@@ -10,9 +10,9 @@
 
 1. **Manage Scenario** — weather, time, factions, enemy threat, civilians, gear policy, and related options.
 2. **Manage Missions** — pick a mission type, read the in-GUI blurb, start (some missions use a map or player picker).
-3. **Terminals & boards** — vehicles, loadouts, **HQ recruit board** (spawn/dismiss friendly AI with preset loadouts), fast travel, CQB, jukebox, medical training, firing/AT range, sniper range, FIRES range.
+3. **Terminals & boards** — vehicles, loadouts, **HQ recruit board** (spawn/dismiss friendly AI with preset loadouts), fast travel, CQB, **jukebox** (`Radio_1`–`Radio_4`), medical training, firing/AT range, sniper range, FIRES range.
 
-Most settings are **server-authoritative** and sync to joining players. **Lobby parameters** (`description.ext`) can lock GUIs to group leaders, set starting defaults (civilians, OPFOR threat, civ talk, intel access, jukebox, ACE Arsenal, and more), and optional **DEBUG** overlays (garrison building markers, civilian town active/idle markers, spawn systemChat). Admins and Zeus usually override leader-only locks.
+Most settings are **server-authoritative** and sync to joining players. **Lobby parameters** (`description.ext`) can lock GUIs to group leaders, set starting defaults (civilians, OPFOR threat, civ talk, intel access, base music, ACE Arsenal, and more), and optional **DEBUG** overlays (garrison building markers, civilian town active/idle markers, spawn systemChat). Admins and Zeus usually override leader-only locks.
 
 ---
 
@@ -26,7 +26,7 @@ Most settings are **server-authoritative** and sync to joining players. **Lobby 
 - **Training** — CQB shoothouse; medical dummies (ACE + KAM); firing/AT and sniper ranges; FIRES terminal with fall-of-shot screens.
 - **World life** — ambient civilians in map-derived zones; talk to civilians for tips; building intel packages; dynamic roadblocks.
 - **Fast travel** — boards around the base area (base, medical, pads, range, CQB, locker, pub, etc.).
-- **Jukebox** — base radios and personal **Ctrl+'** player music.
+- **Jukebox** — `Radio_1`–`Radio_4` + vehicle loudspeaker (`@CTB - Mission Sounds Library`); Scenario Admin stop-all
 - **Briefing** — map diary with scenario notes and joint-fires reference material.
 
 ---
@@ -51,7 +51,7 @@ Descriptions in-game (**Manage Missions**) are the source of truth for objective
 | Intercept Convoy | Stop a moving column before it finishes its route. *(temporarily disabled in Missions GUI — route/spawn rework in progress)* |
 | Invasion | OPFOR beachhead push through nearest civil zones; retake INVASION to win. |
 | Operation | Clear outer zones, then capture the OPFOR HQ hub. |
-| Raid | Three linked objectives (mixed task types) across the map; approximate intel, detection-triggered QRF per zone. |
+| Raid | Three linked objectives (mixed task types) across the map; each target building marked on the map. |
 | Search & Destroy | Find and destroy enemy ammo caches in a marked zone. |
 
 ### Single [S] — per player, up to 3 concurrent
@@ -70,9 +70,23 @@ Descriptions in-game (**Manage Missions**) are the source of truth for objective
 
 Feature backlog: **[TODO.md](TODO.md)**.
 
-**Upcoming mission types:** Point defense, SEAD/DEAD (destroy enemy air defences), Hunt (civilian interviews / intel to locate hidden camp or HVT).
+**Recently shipped (faction flexibility):**
+- **Any-side player faction** — Scenario GUI friendly list: all EAST/WEST/GUER `CfgFactionClasses` entries; enemy list filtered to opposed sides (GUER hostile to both majors); auto-correct + hint on Apply; mission-start validation; player side sync on Apply.
 
-Shipped in this pass: **Raid**, **Invasion**, procedural **lore**, **AAA** engagement fix, and **OPFOR drones** (ambient UAV patrol + QRF vectoring).
+**Upcoming mission types:** Point defense, SEAD/DEAD (destroy enemy air defences). **Operation v2** (intel-gated multi-objective grid) replaces the standalone Hunt concept — see TODO §11.
+
+**Recently shipped (DRO/DCO-inspired pass):**
+- **100 m grid search zones** on HVT, Hostage, S&D, Asset Retrieval, and Raid — standardised **`mil_*`** map markers mission-wide
+- **Body search field intel** — search dead OPFOR to refine search zones (server-authoritative; dedicated-safe)
+- **Terrain survey (`FADE_AoSurvey`)** — road/flat/forest/building buckets for patrol WP placement
+- **Jukebox** — Sig/CTB loudspeaker at `Radio_1`–`Radio_4` and in-vehicle loudspeaker; Scenario Admin stop-all
+
+**Deferred (separate tasks):**
+- **Operation v2** — intel-gated 3×3 km grid, three hidden objectives via civ talk / body search; supersedes current Operation + Hunt
+- **Commander mode / RCT-C** — embedded-map UI for AI support tasking
+- **OPFOR roadblocks revisit** — use `FADE_aoSurvey` road buckets to place blocks on routes players actually use
+
+Previously shipped: **Raid**, **Invasion**, procedural **lore**, **AAA** engagement fix, and **OPFOR drones** (ambient UAV patrol + QRF vectoring).
 
 - **Intercept Convoy** — temporarily disabled (`FADE_disabledMissionTypes`); fix subdivided route waypoints, road spawn helper, and RPT errors before re-enabling.
 
@@ -89,5 +103,9 @@ Core mission runs on vanilla-friendly setup. **ACE** and **KAT** are expected fo
 Entry points: `initServer.sqf` (loads `rsc/server/`) and `initPlayerLocal.sqf`. Mission logic is split into `rsc/missions/` (one script per type); `rsc/Missions.sqf` dispatches. Shared helpers live in `rsc/FADE_*` and `rsc/FAC_*`. Local AI/editor notes may exist in `.cursor/agent-docs/` (gitignored).
 
 **Regression tests:** `[] call FAC_missionTestSuite_execAll` (debug-tools lobby param adds a scroll-wheel action). RPT filter: `[FAC TestSuite]`. Covers compile, RPCs, mission placement, SMEAC/intel per type, zone pickers, and client GUI scripts — not full mission playthroughs.
+
+**Offline SQF lint (no Arma):** Install the recommended **[SQF-VM Language Server](https://marketplace.visualstudio.com/items?itemName=SQF-VM.sqf-vm-language-server)** extension in Cursor/VS Code — syntax and preprocessor diagnostics as you edit. CLI batch check: `powershell -ExecutionPolicy Bypass -File tools\sqfvm\Invoke-FadeSqfLint.ps1 -InstallIfMissing` (downloads SQF-VM runtime to `tools/sqfvm/bin/`). Task: **SQF: Lint mission scripts (SQF-VM CLI)**. Suppress a line: `#pragma sls disable line CODE` (see extension docs). SQF-VM is static analysis only; it does not run `compile preprocessFileLineNumbers` chains or prove mission behaviour.
+
+**Headless dedicated-server tests (optional, slow with full modset):** `powershell -ExecutionPolicy Bypass -File tools\headless\Run-FadeHeadlessTest.ps1` — boots `C:\Arma3Server` via `Face\local_server`, runs **MissionTestSuite** server checks, parses RPT, exits non-zero on failure. Modes: `-Mode boot`, `-Mode compile` (default), `-Mode playthrough`, `-Mode all`. Config: `tools\headless\headless.local.json`. Cursor agent workflow: `.cursor/skills/fade-headless-test/SKILL.md`.
 
 **Mission playthrough tests:** `[] call FAC_playthroughSuite_execAll` (second dev scroll-wheel action). RPT filter: `[FAC Playthrough]`. Runs all 19 mission types in **≤10 minutes** with **no player input** after exec (server teleports + win cheats). Phases: (1) init checks, (2) per-type win simulation, (4) short task-state assertions. Abort: `[] call FAC_playthroughSuite_abort`. Tune `FAC_playthroughSuite__suiteBudgetSec` and phase toggles in `rsc/MissionPlaythroughProfiles.sqf`.

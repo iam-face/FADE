@@ -35,14 +35,59 @@ missionNamespace setVariable ["FAC_missionsGui_missionList", _sorted];
 // Default intro when no mission selected
 FAC_missionsGui_defaultDesc = "Select a mission to see the commander’s intent and expected tasks. After you start, check your Tasks panel and map markers for full orders, grids, and completion criteria.";
 
-// Scrollable read-only description (one lbAdd per line; RscEdit does not scroll when disabled).
+// Word-wrap one paragraph to fit listbox row width; returns array of lines.
+FAC_missionsGui_wrapParagraph = {
+    params ["_text", "_maxChars"];
+    if (_text isEqualTo "") exitWith { [""] };
+    private _words = _text splitString " ";
+    private _lines = [];
+    private _line = "";
+    private _wi = 0;
+    private _wCount = count _words;
+    while { _wi < _wCount } do {
+        private _word = _words select _wi;
+        private _test = if (_line == "") then { _word } else { _line + " " + _word };
+        if ((count _test) > _maxChars && { _line != "" }) then {
+            _lines pushBack _line;
+            _line = _word;
+        } else {
+            _line = _test;
+        };
+        _wi = _wi + 1;
+    };
+    if (_line != "") then { _lines pushBack _line };
+    _lines
+};
+
+// Matches DescText width in description.ext (RscDisplayMissions).
+FAC_missionsGui_descListW = 0.63;
+
+// Scrollable read-only description (one lbAdd per wrapped line; RscEdit does not scroll when disabled).
 FAC_missionsGui_setDescList = {
     params ["_lb", ["_text", ""]];
+    disableSerialization;
     lbClear _lb;
     if (_text isEqualTo "") exitWith { _lb lbSetCurSel -1 };
+    if (!(_text isEqualType "")) then { _text = str _text };
     private _flat = (_text splitString (toString [13])) joinString "";
-    private _lines = _flat splitString (toString [10]);
-    { _lb lbAdd _x } forEach _lines;
+    private _nl = toString [10];
+    private _maxChars = ((round (FAC_missionsGui_descListW * 105)) max 42) min 88;
+    private _outLines = [];
+    private _paras = _flat splitString _nl;
+    private _pi = 0;
+    private _pCount = count _paras;
+    while { _pi < _pCount } do {
+        private _para = _paras select _pi;
+        if (_para isEqualTo "") then {
+            _outLines pushBack "";
+        } else {
+            private _paraLines = [_para, _maxChars] call FAC_missionsGui_wrapParagraph;
+            { _outLines pushBack _x } forEach _paraLines;
+        };
+        _pi = _pi + 1;
+    };
+    { _lb lbAdd _x } forEach _outLines;
+    if (lbSize _lb > 0) then { _lb lbSetCurSel 0 };
     _lb lbSetCurSel -1;
 };
 
@@ -107,14 +152,19 @@ FAC_missionsGui_fnc = {
             if !(["FAC_playerCanUseMissionsGui"] call FAC_lobbyParams_callAccess) exitWith {
                 systemChat "Missions GUI access denied by lobby settings.";
             };
+            if (!isNil "FAC_ensureMissionsGui_overlay") then { call FAC_ensureMissionsGui_overlay };
             if (!createDialog "RscDisplayMissions") then {
                 systemChat "MISSIONS GUI: RESOURCE NOT FOUND.";
             };
         };
         case "onLoad": {
+            disableSerialization;
             private _display = findDisplay 60002;
             if (isNull _display) exitWith {};
-            if (!isNil "FAC_escapeEvasionPickGui_fnc_destroyOverlay") then { [] call FAC_escapeEvasionPickGui_fnc_destroyOverlay };
+            if (!isNil "FAC_ensureMissionsGui_overlay") then { call FAC_ensureMissionsGui_overlay };
+            if (!isNil "FAC_escapeEvasionPickGui_fnc_destroyOverlay" && { !isNil "FAC_missionPickOverlay_destroy" }) then {
+                [] call FAC_escapeEvasionPickGui_fnc_destroyOverlay;
+            };
             uinamespace setVariable ["FAC_missionsGui_fnc", FAC_missionsGui_fnc];
             missionNamespace setVariable ["FAC_missions_abortPendingTime", -99];
             missionNamespace setVariable ["FAC_missions_abortSlotPending", ["", -99]];

@@ -29,7 +29,6 @@ FADE_runMission_Raid = {
     private _raidTimeoutSec = missionNamespace getVariable ["FADE_raidTimeoutSec", 0];
     private _baseDistForComplete = 100;
     private _qrfDetectRadius = missionNamespace getVariable ["FADE_raidQrfDetectionRadiusM", 350];
-    private _searchZoneRadius = missionNamespace getVariable ["FADE_missionApproxZoneRadiusM", 55];
     private _variantLabels = missionNamespace getVariable ["FADE_raid_variantLabels", createHashMap];
 
     [] call FADE_ensureBisTaskSetParent;
@@ -198,7 +197,7 @@ FADE_runMission_Raid = {
 
     private _topoRaid = [_raidCenter] call (missionNamespace getVariable ["FADE_getTopographySummary", { ["UNKNOWN", "Unknown area"] }]);
     private _raidExecText = format [
-        "<t align='left' color='#C0C0C0'>Each objective has a map marker and search circle; the building lies inside the circle.</t><br/>" +
+        "<t align='left' color='#C0C0C0'>Each objective is marked on the map at the target building.</t><br/>" +
         "<t align='left' color='#C0C0C0'>Committed assault may draw enemy attention and follow-on forces.</t><br/>" +
         "<t align='left' color='#C0C0C0'>Clear objectives in any order; follow map markers and child tasks.</t>"
     ];
@@ -247,6 +246,8 @@ FADE_runMission_Raid = {
     // ---- Pass 2: spawn zones ----
     private _spawnFailed = false;
     for "_zi" from 0 to (_raidZoneCount - 1) do {
+        if (missionNamespace getVariable ["FADE_raidAborted_" + _taskId, false]) exitWith { _spawnFailed = true };
+        if ((_taskId call BIS_fnc_taskState) == "CANCELED") exitWith { _spawnFailed = true };
         private _zoneEntry = _zonesPicked select _zi;
         private _zoneCenter = _zoneEntry select 1;
         private _plannedVariant = _zoneVariantsPlanned select _zi;
@@ -274,9 +275,13 @@ FADE_runMission_Raid = {
 
         [_taskId, _zoneGroups] call FADE_missionEnt_bindGroups;
         { if (!isNull _x) then { [_taskId, _x] call FADE_missionEnt_registerObject } } forEach _zoneObjects;
+        if (_actualVariant == "RecoverHostage" && { _watcherPayload isEqualType [] } && { count _watcherPayload > 0 }) then {
+            private _hostageUnit = _watcherPayload select 0;
+            if (!isNull _hostageUnit) then { [_taskId, _hostageUnit] call FADE_missionEnt_registerObject };
+        };
 
         private _buildingPos = [_zoneWinPos] call FADE_normPos3;
-        [_taskId, _zoneMarkerName, _buildingPos, _searchZoneRadius, _markerEnemy, "mil_objective", _zoneCodename, -1, -1, [_buildingPos]] call FADE_mission_createObjectiveMarker;
+        [_taskId, _zoneMarkerName, _buildingPos, 0, _markerEnemy, "objective", _zoneCodename, 0] call FADE_mission_createObjectiveMarker;
 
         if (_zi == 0) then {
             [_sideFriendly, _zoneMarkerName] call FADE_raid_assignMarkersToFriendlies;
@@ -286,7 +291,8 @@ FADE_runMission_Raid = {
             [_childTaskId, _buildingPos] call BIS_fnc_taskSetDestination;
         };
 
-        [_zoneGroups, _basePos] call FADE_registerEnemyRetreat;
+        private _enemyRetreatGrps = _zoneGroups select { !isNull _x && { _x isEqualType grpNull } && { side _x == _sideEnemy } };
+        [_enemyRetreatGrps, _basePos] call FADE_registerEnemyRetreat;
 
         private _zoneTargetName = "";
         if (_actualVariant in ["KillHVT", "CaptureHVT", "RecoverHostage"] && { _watcherPayload isEqualType [] } && { count _watcherPayload > 0 } && { !isNull (_watcherPayload select 0) }) then {
@@ -450,7 +456,6 @@ FADE_runMission_Raid = {
     if (_spawnFailed) exitWith {
         missionNamespace setVariable ["FADE_raidZoneState_" + _taskId, nil];
         missionNamespace setVariable ["FADE_raidAborted_" + _taskId, nil];
-        if (!isNil "FADE_mission_unpinCivZonesForTask") then { [_taskId] call FADE_mission_unpinCivZonesForTask };
         [_taskId, "", _player, 5] call FADE_mission_completeCleanup;
     };
 
@@ -550,7 +555,6 @@ FADE_runMission_Raid = {
             };
             [_player, _failMsg] call FADE_missionFailHint;
         };
-        if (!isNil "FADE_mission_unpinCivZonesForTask") then { [_taskId] call FADE_mission_unpinCivZonesForTask };
         [_taskId, "", _player, 60] call FADE_mission_completeCleanup;
         missionNamespace setVariable ["FADE_raidZoneState_" + _taskId, nil];
         missionNamespace setVariable ["FADE_raidAborted_" + _taskId, nil];

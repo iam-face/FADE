@@ -6,6 +6,9 @@
 FADE_missionEnt_scheduledCleanup = {
     params ["_taskId", ["_delay", 60], ["_player", objNull]];
     if (_taskId == "") exitWith {};
+    private _schedKey = format ["FADE_missionEnt_scheduled_%1", _taskId];
+    if (missionNamespace getVariable [_schedKey, false]) exitWith {};
+    missionNamespace setVariable [_schedKey, true];
     [_taskId, _delay, _player] spawn {
         params ["_tid", "_d", "_player"];
         [_tid, _player] call FADE_cleanupMissionMarkers;
@@ -66,6 +69,10 @@ FADE_abortMission = {
         };
         [_taskId, "CANCELED"] call BIS_fnc_taskSetState;
         [_taskId, _missionType, true] call FADE_cleanupMissionEntities;
+        if (_missionType in ["Raid", "Invasion", "Operation"]) then {
+            private _unpinDelay = missionNamespace getVariable ["FADE_missionAbortUnpinDelaySec", 60];
+            [_taskId, _unpinDelay, _player] call FADE_missionEnt_scheduledCleanup;
+        };
     } else {
         [_markerName] call FADE_deleteMarkerSafe;
         [_markerNameEnd] call FADE_deleteMarkerSafe;
@@ -167,7 +174,6 @@ FADE_abortMissionSlot = {
         };
     };
 };
-publicVariable "FADE_abortMissionSlot";
 
 // Jukebox: stop-all (also Scenario Admin); must be defined before FADE_adminCleanupAction references it.
 FAC_jukebox_stopAllMusic = {
@@ -198,7 +204,6 @@ FAC_jukebox_stopAllMusic = {
 };
 publicVariable "FAC_jukebox_stopAllMusic";
 
-// Admin cleanup actions from Scenario GUI.
 FADE_adminCleanupAction = {
     params ["_action", "_requester"];
     if (_action == "stopAllMusic") exitWith {
@@ -248,16 +253,9 @@ FADE_adminCleanupAction = {
         case "despawnOpfor": {
             if (!isNil "FADE_opforAir_despawnAll") then { call FADE_opforAir_despawnAll };
             if (!isNil "FADE_opforDrone_despawnAll") then { call FADE_opforDrone_despawnAll };
-            {
-                if (!isNull _x && { side _x == east }) then { deleteVehicle _x };
-            } forEach allUnits;
-            {
-                if (!isNull _x && { side _x == east }) then {
-                    { deleteVehicle _x } forEach crew _x;
-                    deleteVehicle _x;
-                };
-            } forEach vehicles;
-            ["Admin cleanup complete: OPFOR despawned."] remoteExec ["systemChat", _requester];
+            private _se = missionNamespace getVariable ["FADE_sideEnemy", east];
+            [sideEmpty, _se] call FADE_despawnScenarioWorldUnits;
+            ["Admin cleanup complete: scenario enemy units despawned."] remoteExec ["systemChat", _requester];
         };
         case "makeZeus": {
             private _oldScript = _requester getVariable ["FAC_scriptGrantedCurator", objNull];
@@ -294,6 +292,9 @@ FADE_adminCleanupAction = {
             _requester setVariable ["FAC_scriptGrantedCurator", nil, true];
             [format ["%1 is no longer Zeus (script module removed).", name _requester]] remoteExec ["systemChat", 0];
         };
+        case "stopAllMusic": {
+            [_requester] call FAC_jukebox_stopAllMusic;
+        };
         case "teleportAllToBase": {
             // Same anchor as Fast Travel HQ (rsc/TeleportGui.sqf FAC_teleportGui_destBaseKey)
             private _baseObj = missionNamespace getVariable ["teleportBase", objNull];
@@ -323,9 +324,6 @@ FADE_adminCleanupAction = {
                 _idx = _idx + 1;
             } forEach allPlayers;
             [format ["Admin: all players teleported to HQ / teleportBase (by %1).", name _requester]] remoteExec ["systemChat", 0];
-        };
-        case "stopAllMusic": {
-            [_requester] call FAC_jukebox_stopAllMusic;
         };
         default {
             ["Admin cleanup failed: unknown action."] remoteExec ["systemChat", _requester];

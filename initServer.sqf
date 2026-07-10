@@ -32,7 +32,16 @@ call compile preprocessFileLineNumbers "rsc\server\ServerServices.sqf";
 
 missionNamespace setVariable ["FADE_clientInitReady", true, true];
 publicVariable "FADE_clientInitReady";
+diag_log "[FAC profile] FADE_serverInitReady";
 
 if (_facProf0 >= 0) then {
     diag_log format ["[FAC profile] initServer total (thin shell + modules): %1 s", diag_tickTime - _facProf0];
+};
+
+// Headless dedicated-server auto-test (tools/headless — headless_test.flg in mission root).
+if (fileExists "headless_test.flg") then {
+    [] spawn {
+        call compile preprocessFile "rsc\FADE_HeadlessTest.sqf";
+        [] call FADE_headlessTest_boot;
+    };
 };

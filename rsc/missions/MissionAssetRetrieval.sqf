@@ -179,7 +179,7 @@ FADE_runMission_AssetRetrieval = {
 
         private _markerName = "FADE_asset_" + _taskId;
         _player setVariable ["FADE_myMissionMarker", _markerName, true];
-        [_taskId, _markerName, _center, _areaRadius, "ColorOrange", "mil_objective", _operationName, -1, -1, [_center]] call FADE_mission_createObjectiveMarker;
+        private _markerOut = [_taskId, _markerName, _center, _areaRadius, "ColorOrange", "objective", _operationName, -1, -1, [_center]] call FADE_mission_createObjectiveMarker;
 
         private _grid = mapGridPosition _center;
         private _brief = format ["ASSET RETRIEVAL  -  VEHICLE%1%1Objective area (approx.): Grid %2%1%1Recover the enemy vehicle %3 and return it to base per task limits. Secure the site, clear threats, and move the asset by the best available method.", toString [10], _grid, _vehicleName] + _briefGuiTail;
@@ -194,12 +194,12 @@ FADE_runMission_AssetRetrieval = {
         [
             _taskId, _basePos, _markerName, _player, _assetVehicle, _center, _areaRadius,
             _enemyUnitsAsset, _sideEnemy, _baseEnemyClass, _scaleOpforCount, _dryPos,
-            _arQrfPos, _arDetect
+            _arQrfPos, _arDetect, _markerOut
         ] spawn {
             params [
                 "_taskId", "_basePos", "_markerName", "_player", "_assetVehicle", "_center", "_areaRadius",
                 "_enemyUnitsAsset", "_sideEnemy", "_baseEnemyClass", "_scaleOpforCount", "_dryPos",
-                "_arQrfPos", "_arDetect"
+                "_arQrfPos", "_arDetect", "_markerOut"
             ];
             private _allGroups = [];
             private _guardCountSpawned = 0;
@@ -280,6 +280,7 @@ FADE_runMission_AssetRetrieval = {
             [_allGroups, _basePos] call FADE_registerEnemyRetreat;
             missionNamespace setVariable ["FADE_assetEntities_" + _taskId, _allGroups];
             [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
+            [_taskId, "AssetRetrieval", _center, _markerOut, _allGroups, "ColorOrange"] call FADE_fieldIntel_startForMission;
             [_taskId, _arQrfPos, _basePos, _enemyUnitsAsset, _allGroups, _arDetect] call FADE_counterAttackStart;
             private _baseDist = 1000;
             waitUntil {
@@ -459,7 +460,7 @@ FADE_runMission_AssetRetrieval = {
 
     private _markerName = "FADE_asset_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
-    [_taskId, _markerName, _center, _areaRadius, "ColorOrange", "mil_objective", _operationName, -1, -1, [_center]] call FADE_mission_createObjectiveMarker;
+    private _markerOut = [_taskId, _markerName, _center, _areaRadius, "ColorOrange", "objective", _operationName, -1, -1, [_center]] call FADE_mission_createObjectiveMarker;
 
     private _grid = mapGridPosition _center;
     private _brief = format ["ASSET RETRIEVAL  -  OBJECT%1%1Objective area (approx.): Grid %2%1%1Recover %3 (most likely indoors inside a defended building). Clear the site and use Pick up on the package to complete.", toString [10], _grid, _assetName] + _briefGuiTail;
@@ -474,12 +475,12 @@ FADE_runMission_AssetRetrieval = {
     [
         _taskId, _center, _basePos, _markerName, _player, _assetObjects, _house, _houseBps, _assetIdx,
         _enemyUnitsAsset, _sideEnemy, _baseEnemyClass, _scaleOpforCount, _dryPos, _areaRadius,
-        _arQrfPos, _arDetect
+        _arQrfPos, _arDetect, _markerOut
     ] spawn {
         params [
             "_taskId", "_center", "_basePos", "_markerName", "_player", "_assetObjects", "_house", "_houseBps", "_assetIdx",
             "_enemyUnitsAsset", "_sideEnemy", "_baseEnemyClass", "_scaleOpforCount", "_dryPos", "_areaRadius",
-            "_arQrfPos", "_arDetect"
+            "_arQrfPos", "_arDetect", "_markerOut"
         ];
         private _allGroups = [];
         private _vgArHintObjs = [];
@@ -667,6 +668,7 @@ FADE_runMission_AssetRetrieval = {
         missionNamespace setVariable ["FADE_assetEntities_" + _taskId, _allGroups];
         missionNamespace setVariable ["FADE_assetObjects_" + _taskId, _assetObjects];
         [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
+        [_taskId, "AssetRetrieval", _center, _markerOut, _allGroups, "ColorOrange"] call FADE_fieldIntel_startForMission;
         [_taskId, _arQrfPos, _basePos, _enemyUnitsAsset, _allGroups, _arDetect] call FADE_counterAttackStart;
         waitUntil {
             sleep 2;
