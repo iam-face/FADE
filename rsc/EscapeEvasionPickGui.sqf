@@ -3,6 +3,7 @@
 // =============================================================================
 if (hasInterface) then {
     FAC_escapeEvasionPickGui_fnc_destroyOverlay = {
+        if (isNil "FAC_missionPickOverlay_destroy") exitWith {};
         ["FAC_eePick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
     };
 

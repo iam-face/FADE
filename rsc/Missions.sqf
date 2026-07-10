@@ -67,6 +67,19 @@ if (count _friendlyUnits == 0) exitWith {
     if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
     [_player, "MISSION ERROR", "No friendly units configured."] call FADE_missionErrorHint;
 };
+private _factionIssueRun = [
+    missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"],
+    missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"]
+] call FADE_scenarioFactionsDescribeIssue;
+if (_factionIssueRun != "") exitWith {
+    if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
+    [_player, "SCENARIO ERROR", "Friendly and enemy factions are incompatible. Update Manage Scenario → Factions."] call FADE_missionErrorHint;
+};
+private _needsEnemyUnits = _missionType in ["TroopExtract", "CAS", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion"];
+if (_needsEnemyUnits && { count _enemyUnits == 0 }) exitWith {
+    if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
+    [_player, "MISSION ERROR", "No enemy units configured for the chosen enemy faction."] call FADE_missionErrorHint;
+};
 
 private _isGlobalMission = _missionType in (missionNamespace getVariable ["FADE_globalMissionTypes", []]);
 

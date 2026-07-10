@@ -310,6 +310,14 @@ FADE_enemyPatrol_despawnForZone = {
     [_zoneId] call FADE_enemyPatrol_despawnVgOwnerGroups;
 };
 
+FADE_enemyPatrol_despawnAll = {
+    if (!isNil "FADE_enemyPatrolZoneState" && { FADE_enemyPatrolZoneState isEqualType createHashMap }) then {
+        private _ids = +(keys FADE_enemyPatrolZoneState);
+        { [_x] call FADE_enemyPatrol_despawnForZone } forEach _ids;
+    };
+};
+missionNamespace setVariable ["FADE_enemyPatrol_despawnAll", FADE_enemyPatrol_despawnAll];
+
 // Spawn enemy patrol: infantry groups, 1-2 road vehicles (car type) with cargo and cycle waypoints, 2-4 garrisoned buildings with burning barrel
 FADE_enemyPatrol_spawnForZone = {
     params ["_center", "_zoneId"];

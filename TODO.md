@@ -326,9 +326,11 @@ Same checklist as §2 Raid: **FADE_MissionCompile**, **ServerGameplayMissions** 
 
 ---
 
-## 5. Commander mechanic (command tent)
+## 5. Commander mechanic (command tent) — RCT-C
 
-**Goal:** **BLUFOR commander** UI at command tent — recruit/manage AI (infantry, vehicles, aircraft), map waypoints, dismiss — **no Zeus**.
+**Status:** **Deferred** — separate implementation task after Operation v2.
+
+**Goal:** **BLUFOR commander** UI at command tent — recruit/manage AI (infantry, vehicles, aircraft), map waypoints, dismiss — **no Zeus**. Working name **RCT-C** (Regimental Combat Team — Charlie) for AI support elements taskable from an embedded map UI.
 
 ### Expected approach
 
@@ -710,31 +712,54 @@ Mirror OPFOR air wiring:
 
 ## 10. Hunt mission (intel → locate camp / HVT)
 
-**Goal:** Global **[G]** — enemy **camp** or **HVT** location is **hidden** at start; players **interview civilians**, search buildings, or recover intel objects to narrow the search area; assault phase unlocks after enough intel.
+**Status:** **Superseded** — standalone Hunt is **not planned**. Intel-gated locate-and-assault gameplay moves to **Operation v2** (§11), reusing **`FADE_FieldIntel`**, civilian talk, and grid search zones shipped in the DRO/DCO pass.
 
-### Expected approach
+---
 
-- **Hidden objective:** true position stored server-side; map shows only region-tier hint (e.g. nearest **CIV_T_*** name) until intel thresholds met.
-- **Intel sources** (stackable):
-  - **Civilian talk** — extend ambient **`FADE_civ*`** / talk actions: chance to grant grid refinement or “rumour” marker.
-  - **Building search** — reuse intel package / hold-search pattern from existing building intel.
-  - **Recover object** — laptop, map, phone at decoy sites (Asset Retrieval branch).
-- **Intel meter:** 0–100; each source adds points; at 25/50/75% shrink search ellipse; at 100% reveal exact marker + optional task waypoint.
-- **Assault:** on reveal, spawn or activate garrison / HVT at true pos (**MissionHVT.sqf** / **Clear Area** spawn helpers).
-- **Win:** HVT killed/captured or camp cleared per variant; **Fail:** HVT escapes after reveal (vehicle flee) or timeout with intel <100%.
-- **Registration:** **MissionHunt.sqf**, global type; no map-click required (random region) or optional anchor like HVT.
+## 11. Operation v2 (intel-gated multi-objective grid)
+
+**Goal:** Global **[G]** replacement for current **Operation** — players receive a **3×3 km grid** (100 m cells) with **three hidden objectives** inside; intel from **civilian interviews** and **body search** (existing **`FADE_FieldIntel`**) narrows zones before assault.
+
+### Expected approach (separate implementation task)
+
+1. **New runner:** `rsc/missions/OperationMissionV2.sqf` — do not extend current Operation loop in place; mirror **Raid** multi-zone bootstrap + **FieldIntel** per child task.
+2. **Zone layout:** single map pick or random anchor → compute 9×9 grid overlay; pick 3 objective cells server-side (hidden true positions); initial markers show full grid or coarse sub-regions only.
+3. **Intel sources:** stack **`FADE_fieldIntel_addPoints`** from body search (wired) + extend **`FADE_civ*`** talk to grant points / grid refinement (reuse Hunt design notes below).
+4. **Assault variants:** per revealed objective, delegate to **`FADE_raid_spawnZone`** variant picker (KillHVT / RecoverObject / RecoverHostage) — same pool as Raid.
+5. **Win:** all three objectives cleared; **Fail:** timeout or critical objective fail (hostage/HVT).
+6. **Registration:** new type `"OperationV2"` or replace `"Operation"` after playtest — keep current Operation until v2 passes headless + playthrough suite.
+7. **Hunt:** do not register; remove from README upcoming list when v2 ships.
+
+### Reuse from Hunt notes (intel mechanics)
+
+- **Intel meter:** 0–100; 25/50/75/100% shrink search grid; 100% snap + task destination (already in **`FADE_FieldIntel_applyGeometry`**).
+- **Civilian talk** — extend ambient talk actions: chance to grant grid refinement or rumour marker.
+- **Building search** — optional v2: intel package / hold-search at decoy sites.
 
 ### Open questions
 
-- [ ] Camp clear vs HVT kill/capture — random variant or player choice in GUI?
-- [ ] Decoy camps (false intel) in v1 or v2?
-- [ ] Require minimum civilian talk count vs any intel path to 100%?
+- [ ] Replace Operation in GUI immediately or run both behind lobby flag during beta?
+- [ ] Show full 3×3 km grid at start vs only outer border until first intel?
+- [ ] Decoy objectives (false intel) in v1 or v2?
+
+---
+
+## 12. OPFOR roadblocks — revisit placement
+
+**Goal:** Dynamic roadblocks should sit on **roads players actually drive** (or are driving on), not arbitrary map segments.
+
+### Expected approach (separate task)
+
+1. Audit current roadblock spawn in **ServerWorld** / ambient OPFOR modules — document current `nearRoads` / random point logic.
+2. When placing a block, call **`FADE_aoSurvey_build`** at candidate civ zone or player-traffic centroid; prefer **`roadsNear`** samples weighted by distance to **BASE_1** exit routes and recent player vehicle positions (if tracked).
+3. Optional: bias toward **`roadsFar`** ring for outer checkpoints vs inner **`roadsNear`** for ambush.
+4. **MissionTestSuite:** placement smoke — block position within 25 m of a road segment.
 
 ---
 
 ## Cross-cutting checklist (new missions + systems)
 
-When shipping **Raid**, **Invasion**, **Point defense**, **SEAD/DEAD**, **Hunt**, **Commander**, or **Radio voice**:
+When shipping **Raid**, **Invasion**, **Point defense**, **SEAD/DEAD**, **Operation v2**, **Commander**, or **Radio voice**:
 
 1. **FADE_MissionCompile.sqf** module list  
 2. **ServerGameplayMissions.sqf** types / placement flags  
@@ -746,6 +771,63 @@ When shipping **Raid**, **Invasion**, **Point defense**, **SEAD/DEAD**, **Hunt**
 8. **SCRIPT_INDEX.md** + **AGENTS_REFERENCE.md**  
 9. **MissionTestSuite.sqf** compile + RPC smoke  
 10. **Lore** hook when §3 done  
+
+---
+
+## Any-side player faction (scenario)
+
+**Goal:** Players can pick **any** `CfgFactionClasses` entry as the friendly faction (WEST, EAST, GUER, CIV). Enemy faction list is filtered to **opposed** side(s). Invalid combos (same faction, same side, forgotten enemy change) are caught and corrected or blocked.
+
+### Current state
+
+| Area | Today |
+|------|--------|
+| **ScenarioGui** | Friendly list = side `1` only; enemy list = side `0` only (`FAC_scenarioGui_getFactionsForSide`) |
+| **Server apply** | `FADE_applyScenarioSettings` already derives `FADE_sideFriendly` / `FADE_sideEnemy` from each faction's `CfgFactionClasses >> side` |
+| **Mission spawns** | Use `FADE_sideFriendly`, `FADE_sideEnemy`, `FADE_*Units` — not hardcoded BLUFOR/OPFOR (AO labels are cosmetic) |
+| **Startup overrides** | `ServerBootstrap.sqf` rejects `FADE_startupFactionFriendly` unless side `== 1`, enemy unless side `== 0` |
+| **Player Arma side** | Eden slots are `B_Soldier_F` (WEST). Many checks use `side _x == FADE_sideFriendly` for **players** (OPFOR air, AO capture, intel) — **breaks** if friendly faction is EAST without a player-side strategy |
+
+### Opposition map (shipped)
+
+| Friendly side | Enemy sides offered |
+|---------------|---------------------|
+| EAST (0) | WEST + GUER |
+| WEST (1) | EAST + GUER |
+| GUER (2) | EAST + WEST (opposed to all combat sides except CIV) |
+| CIV (3) | **Not playable** — excluded from friendly list |
+
+Helper: `FADE_getOpposedSideNums` + `FADE_getFactionsForOpposedSides` (server + client GUI).
+
+### Invalid combo handling (recommended — layered)
+
+1. **GUI (primary UX)** — On friendly list change: rebuild enemy list from opposed sides; if current enemy pick is same faction, same side, or not in list → auto-select first valid entry; optional inline warning text on Factions tab.
+2. **Apply (server)** — `FADE_normalizeScenarioFactions` in `FADE_applyScenarioSettings`: auto-fix enemy faction if still invalid; append hint line to existing SCENARIO UPDATE hint (do **not** silently `setSide` on spawned AI).
+3. **Mission start (safety net)** — Central check in `FADE_runMission` / `FADE_startMission`: block if `friendlySideNum == enemySideNum` or `friendlyFaction == enemyFaction` or `count enemyUnits == 0` (partially exists per-runner today).
+4. **Do not** force side-swap on live spawned units — breaks mod identity, markers, and AI state; fix picks instead.
+
+### Player-side sync (required for non-WEST friendly)
+
+Pick one approach before shipping:
+
+- **A (preferred for coop):** On scenario Apply, `joinSilent` players into a group on `FADE_sideFriendly` (or respawn prompt) so `side player` matches scenario.
+- **B (lighter):** `FADE_isScenarioFriendlyUnit` treats all `isPlayer` as friendly for counts/tasks; `setFriend` matrix on Apply so AI hostility matches scenario regardless of player slot side (more edge cases in MP).
+
+Also update **LoadoutGui** (currently uses `side player`, not scenario faction) and **Briefing** BLUFOR/OPFOR prose.
+
+### Files to touch
+
+| File | Change |
+|------|--------|
+| `rsc/server/ServerBootstrapFactions.sqf` | `FADE_getOpposedSideNums`, `FADE_getAllFactions`, `FADE_normalizeScenarioFactions`, `FADE_scenarioFactionsValid` |
+| `rsc/ScenarioGui.sqf` | All-faction friendly list; dynamic enemy list on friendly change; validation UI |
+| `rsc/server/ServerBootstrapScenario.sqf` | Call normalize on apply; extend hint text |
+| `rsc/server/ServerBootstrap.sqf` | Remove side `== 1` / `== 0` gate on startup faction overrides |
+| `rsc/Missions.sqf` / `ServerGameplayMissionsStart.sqf` | Central faction validation before dispatch |
+| `rsc/LoadoutGui.sqf` | Scenario faction scope when limiting gear |
+| `initPlayerLocal.sqf` | Player side / friendship sync on `FADE_applyScenarioClientSync` |
+| `rsc/MissionTestSuite.sqf` | Cases: RU friendly → NATO enemy; same-side block; auto-correct on apply |
+| `rsc/Briefing.sqf` | Neutral “friendly / hostile” wording |
 
 ---
 

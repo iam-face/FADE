@@ -27,6 +27,18 @@ FADE_getIdentityDisplayName = {
 
 FADE_recoverObjectClass = "Land_PlasticCase_01_small_gray_F";
 
+// Armoured vest + helmet for HVT/hostage units (reduces accidental frags).
+FADE_objective_applyProtectiveGear = {
+    params ["_unit"];
+    if (isNull _unit) exitWith {};
+    private _vest = missionNamespace getVariable ["FADE_objectiveProtectiveVest", "V_CarrierRigKBT_01_Olive_F"];
+    private _helm = missionNamespace getVariable ["FADE_objectiveProtectiveHelmet", "H_Helmet_Skate"];
+    removeVest _unit;
+    removeHeadgear _unit;
+    if (isClass (configFile >> "CfgWeapons" >> _vest)) then { _unit addVest _vest };
+    if (isClass (configFile >> "CfgWeapons" >> _helm)) then { _unit addHeadgear _helm };
+};
+
 FADE_getRecoverObjectDisplayName = {
     params [["_class", FADE_recoverObjectClass]];
     private _cfg = configFile >> "CfgVehicles" >> _class;
@@ -45,12 +57,69 @@ FADE_smeac_recoverObjectIntelLine = {
     ]
 };
 
+// Roads, bridges, barriers, etc. — not valid indoor objective sites.
+FADE_objective_isInfrastructureClass = {
+    params ["_building"];
+    if (isNull _building) exitWith { true };
+    private _cls = toLower (typeOf _building);
+    private _reject = [
+        "bridge", "pier", "breakwater", "canal", "duct", "fence", "barrier",
+        "blockpost", "gate", "ladder", "platform", "ramp", "runway", "helipad",
+        "crater", "scaffolding", "billboard", "powerline", "pylon", "antenna",
+        "pipe", "pole", "tunnel", "underpass", "overpass"
+    ];
+    private _bad = false;
+    { if (_cls find _x >= 0) exitWith { _bad = true } } forEach _reject;
+    _bad
+};
+
+// Enterable House/Building in a settlement cluster (not an isolated bridge or road object).
+FADE_objective_isSettlementBuilding = {
+    params ["_building", ["_clusterRadius", -1]];
+    if (isNull _building) exitWith { false };
+    if ([_building] call FADE_objective_isInfrastructureClass) exitWith { false };
+    if (count (_building buildingPos -1) < 1) exitWith { false };
+    if (_clusterRadius < 0) then {
+        _clusterRadius = missionNamespace getVariable ["FADE_objectiveBuildingClusterRadiusM", 120];
+    };
+    private _minCluster = missionNamespace getVariable ["FADE_objectiveBuildingMinClusterSize", 2];
+    if (_minCluster <= 1) exitWith { true };
+    private _bldPos = getPosATL _building;
+    private _neighbours = (nearestObjects [_bldPos, ["House", "Building"], _clusterRadius]) select {
+        !(_x isEqualTo _building) &&
+        { [_x] call FADE_objective_isInfrastructureClass isEqualTo false } &&
+        { count (_x buildingPos -1) >= 1 }
+    };
+    (count _neighbours) >= (_minCluster - 1)
+};
+
+// Prefer dense clusters, then nearer to the search centre; random among top scorers.
+FADE_objective_pickBestBuilding = {
+    params ["_candidates", "_searchPos"];
+    if (_candidates isEqualTo []) exitWith { objNull };
+    private _clusterR = missionNamespace getVariable ["FADE_objectiveBuildingClusterRadiusM", 120];
+    private _scored = _candidates apply {
+        private _bld = _x;
+        private _bp = getPosATL _bld;
+        private _nearCount = (nearestObjects [_bp, ["House", "Building"], _clusterR]) select {
+            [_x] call FADE_objective_isInfrastructureClass isEqualTo false &&
+            { count (_x buildingPos -1) >= 1 }
+        };
+        private _score = (count _nearCount) * 1000 - (_bp distance2D _searchPos);
+        [_score, _bld]
+    };
+    _scored = [_scored, [], { _x select 0 }, "DESCEND"] call BIS_fnc_sortBy;
+    private _topN = 3 min count _scored;
+    (selectRandom (_scored select [0, _topN])) select 1
+};
+
 FADE_objective_findBuilding = {
     params ["_pos", "_radius", "_minSlots"];
-    private _buildings = (nearestObjects [_pos, ["House", "Building"], _radius]) call BIS_fnc_arrayShuffle;
-    private _found = objNull;
-    { if (count (_x buildingPos -1) >= _minSlots) exitWith { _found = _x } } forEach _buildings;
-    _found
+    private _candidates = (nearestObjects [_pos, ["House", "Building"], _radius]) select {
+        count (_x buildingPos -1) >= _minSlots &&
+        { [_x] call FADE_objective_isSettlementBuilding }
+    };
+    [_candidates, _pos] call FADE_objective_pickBestBuilding
 };
 
 FADE_objective_findBuildingRelaxed = {
@@ -66,11 +135,12 @@ FADE_objective_findBuildingAtCenters = {
     params ["_centers", "_radius", "_minSlots", ["_shuffle", true]];
     private _found = objNull;
     {
-        private _buildings = nearestObjects [_x, ["House", "Building"], _radius];
-        if (_shuffle) then { _buildings = _buildings call BIS_fnc_arrayShuffle };
-        {
-            if (count (_x buildingPos -1) >= _minSlots) exitWith { _found = _x };
-        } forEach _buildings;
+        private _candidates = (nearestObjects [_x, ["House", "Building"], _radius]) select {
+            count (_x buildingPos -1) >= _minSlots &&
+            { [_x] call FADE_objective_isSettlementBuilding }
+        };
+        if (_shuffle) then { _candidates = _candidates call BIS_fnc_arrayShuffle };
+        _found = [_candidates, _x] call FADE_objective_pickBestBuilding;
         if (!isNull _found) exitWith {};
     } forEach _centers;
     _found
@@ -132,13 +202,20 @@ FADE_objective_garrisonBuilding = {
 };
 
 FADE_objective_spawnPatrols = {
-    params ["_center", "_radius", "_numPatrols", "_sideEnemy", "_enemyUnits", "_diffMul"];
+    params ["_center", "_radius", "_numPatrols", "_sideEnemy", "_enemyUnits", "_diffMul", ["_survey", createHashMap]];
     private _out = [];
+    private _surveyFn = missionNamespace getVariable ["FADE_aoSurvey_pickRoadWaypoint", {}];
     for "_p" from 0 to (_numPatrols - 1) do {
-        private _angle = random 360;
-        private _dist = 60 + random ((_radius - 60) max 1);
-        private _sp = [(_center select 0) + _dist * (cos _angle), (_center select 1) + _dist * (sin _angle), 0];
-        _sp = [[_sp, 0, 15, 3, 1, 0.4, 0, [], _sp], _sp] call FADE_findSafePosArray;
+        private _sp = [];
+        if (_survey isEqualType createHashMap && { count (_survey getOrDefault ["roadsNear", []]) > 0 } && { random 1 < 0.55 }) then {
+            _sp = [_survey, _center, _center] call _surveyFn;
+        };
+        if (count _sp < 2) then {
+            private _angle = random 360;
+            private _dist = 60 + random ((_radius - 60) max 1);
+            _sp = [(_center select 0) + _dist * (cos _angle), (_center select 1) + _dist * (sin _angle), 0];
+            _sp = [[_sp, 0, 15, 3, 1, 0.4, 0, [], _sp], _sp] call FADE_findSafePosArray;
+        };
         if (_sp isEqualType [] && { count _sp >= 2 }) then {
             _sp = [(_sp select 0), (_sp select 1), (_sp param [2, 0])];
             private _size = [5 + floor random 4, _diffMul, 2] call FADE_raid_applyScale;
@@ -152,10 +229,16 @@ FADE_objective_spawnPatrols = {
                 [_grp] call FAC_applyEnemyScenarioToGroup;
                 _grp setBehaviour "SAFE";
                 for "_w" from 0 to 2 do {
-                    private _a = _w * 120 + random 40;
-                    private _d = 50 + random ((_radius - 50) max 1);
-                    private _wp = [(_center select 0) + _d * (cos _a), (_center select 1) + _d * (sin _a), 0];
-                    _wp = [[_wp, 0, 12, 3, 1, 0.4, 0, [], _wp], _wp] call FADE_findSafePosArray;
+                    private _wp = [];
+                    if (_survey isEqualType createHashMap && { count (_survey getOrDefault ["roadsNear", []]) > 0 } && { random 1 < 0.6 }) then {
+                        _wp = [_survey, _center, _center] call _surveyFn;
+                    };
+                    if (count _wp < 2) then {
+                        private _a = _w * 120 + random 40;
+                        private _d = 50 + random ((_radius - 50) max 1);
+                        _wp = [(_center select 0) + _d * (cos _a), (_center select 1) + _d * (sin _a), 0];
+                        _wp = [[_wp, 0, 12, 3, 1, 0.4, 0, [], _wp], _wp] call FADE_findSafePosArray;
+                    };
                     if (_wp isEqualType [] && { count _wp >= 2 }) then {
                         _wp = [(_wp select 0), (_wp select 1), (_wp param [2, 0])];
                         private _wpH = _grp addWaypoint [_wp, 0];
@@ -174,6 +257,7 @@ FADE_objective_spawnPatrols = {
 FADE_objective_spawnHVTInBuilding = {
     params ["_building", "_slotIdx", "_sideEnemy", "_enemyUnits", ["_hvtCodename", ""], ["_preferOfficer", true]];
     private _bps = _building buildingPos -1;
+    if (_slotIdx < 0 || { _slotIdx >= count _bps }) exitWith { [objNull, grpNull, "", ""] };
     private _hvtPos = _bps select _slotIdx;
     if (count _hvtPos < 3) then { _hvtPos = [(_hvtPos select 0), (_hvtPos select 1), (_hvtPos param [2, 0])] };
     private _officerClasses = if (_preferOfficer) then { _enemyUnits select { ("officer" in (toLower _x)) } } else { [] };
@@ -193,27 +277,26 @@ FADE_objective_spawnHVTInBuilding = {
     removeHeadgear _hvt;
     if (_hvtCodename isEqualTo "") then { _hvtCodename = [] call FADE_pickHvtCodename };
     _hvt setIdentity ("FADE_hvt_" + _hvtCodename);
+    _hvt setUnitPos "MIDDLE";
     [_hvt, _hvtPos] spawn {
         params ["_u", "_p"];
         sleep 0.2;
+        if (isNull _u) exitWith {};
         _u setPos _p;
         removeAllWeapons _u;
         removeAllItems _u;
-        removeHeadgear _u;
-        private _berets = ["H_Beret_02", "H_Beret_Colonel", "H_Beret_Blk", "H_Beret_ocamo", "H_Beret_red", "H_Beret_gen_F"];
-        { if (isClass (configFile >> "CfgWeapons" >> _x)) exitWith { _u addHeadgear _x } } forEach _berets;
-        sleep 0.3;
-        _u setPos _p;
-        if (!isNull _u) then { _u allowDamage true };
+        [_u] call FADE_objective_applyProtectiveGear;
+        _u allowDamage true;
+        // ASIS keeps helmet/vest; call blocks until death so use spawn. "NONE" strips all gear.
+        [_u, "SIT_LOW", "ASIS", { !alive _this }, "COMBAT"] spawn BIS_fnc_ambientAnimCombat;
     };
-    _hvt setUnitPos "MIDDLE";
-    [_hvt, "SIT_LOW", "NONE", { !alive _this }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
     [_hvt, _hvtGrp, _hvtCodename, _hvtClass]
 };
 
 FADE_objective_spawnHostageInBuilding = {
     params ["_building", "_hostageIdx", ["_identityKey", ""]];
     private _bps = _building buildingPos -1;
+    if (_hostageIdx < 0 || { _hostageIdx >= count _bps }) exitWith { [objNull, grpNull] };
     private _hPos = _bps select _hostageIdx;
     if (count _hPos < 3) then { _hPos = [(_hPos select 0), (_hPos select 1), (_hPos param [2, 0])] };
     private _civClasses = +(missionNamespace getVariable ["FADE_civUnitClasses", ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"]]);
@@ -221,16 +304,35 @@ FADE_objective_spawnHostageInBuilding = {
     private _hostageIdPool = +(missionNamespace getVariable ["FADE_hostageIdentities", ["FADE_hostage_PhilCassidy", "FADE_hostage_WarrenWazzaDriscoll"]]);
     private _hostageGrp = createGroup CIVILIAN;
     private _hostage = _hostageGrp createUnit [selectRandom _civClasses, _hPos, [], 0, "NONE"];
+    if (isNull _hostage) exitWith {
+        deleteGroup _hostageGrp;
+        [objNull, grpNull]
+    };
     if (_identityKey isEqualTo "" && { count _hostageIdPool > 0 }) then { _identityKey = selectRandom _hostageIdPool };
     if !(_identityKey isEqualTo "") then { _hostage setIdentity _identityKey };
     removeAllWeapons _hostage;
     removeAllItems _hostage;
-    removeHeadgear _hostage;
     removeGoggles _hostage;
-    _hostage addGoggles "G_Blindfold_01_black_F";
+    _hostage allowDamage false;
     _hostage disableAI "PATH";
+    _hostage disableAI "MOVE";
+    _hostage setPosATL _hPos;
     _hostage setUnitPos "MIDDLE";
-    _hostage switchMove "Acts_ExecutionVictim_Loop";
+    [_hostage, _hPos] spawn {
+        params ["_u", "_p"];
+        sleep 0.2;
+        if (isNull _u) exitWith {};
+        _u setPosATL _p;
+        removeAllWeapons _u;
+        removeAllItems _u;
+        if (!alive _u) exitWith {};
+        [_u] call FADE_objective_applyProtectiveGear;
+        if (goggles _u == "") then { _u addGoggles "G_Blindfold_01_black_F" };
+        _u setUnitPos "MIDDLE";
+        _u switchMove "Acts_ExecutionVictim_Loop";
+        sleep 0.3;
+        if (alive _u) then { _u allowDamage true };
+    };
     [_hostage, _hostageGrp]
 };
 
@@ -238,20 +340,37 @@ FADE_objective_spawnHostageInBuilding = {
 FADE_objective_addHostageToGroup = {
     params ["_hostageGroup", "_building", "_slotIdx", ["_identityKey", ""]];
     private _bps = _building buildingPos -1;
+    if (_slotIdx < 0 || { _slotIdx >= count _bps }) exitWith { [objNull, ""] };
     private _hPos = _bps select _slotIdx;
     if (count _hPos < 3) then { _hPos = [(_hPos select 0), (_hPos select 1), (_hPos param [2, 0])] };
     private _civClasses = +(missionNamespace getVariable ["FADE_civUnitClasses", ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"]]);
     if (_civClasses isEqualTo []) then { _civClasses = ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"] };
     private _hostage = _hostageGroup createUnit [selectRandom _civClasses, _hPos, [], 0, "NONE"];
+    if (isNull _hostage) exitWith { [objNull, ""] };
     if !(_identityKey isEqualTo "") then { _hostage setIdentity _identityKey };
     removeAllWeapons _hostage;
     removeAllItems _hostage;
-    removeHeadgear _hostage;
     removeGoggles _hostage;
-    _hostage addGoggles "G_Blindfold_01_black_F";
+    _hostage allowDamage false;
     _hostage disableAI "PATH";
+    _hostage disableAI "MOVE";
+    _hostage setPosATL _hPos;
     _hostage setUnitPos "MIDDLE";
-    _hostage switchMove "Acts_ExecutionVictim_Loop";
+    [_hostage, _hPos] spawn {
+        params ["_u", "_p"];
+        sleep 0.2;
+        if (isNull _u) exitWith {};
+        _u setPosATL _p;
+        removeAllWeapons _u;
+        removeAllItems _u;
+        if (!alive _u) exitWith {};
+        [_u] call FADE_objective_applyProtectiveGear;
+        if (goggles _u == "") then { _u addGoggles "G_Blindfold_01_black_F" };
+        _u setUnitPos "MIDDLE";
+        _u switchMove "Acts_ExecutionVictim_Loop";
+        sleep 0.3;
+        if (alive _u) then { _u allowDamage true };
+    };
     [_hostage, name _hostage]
 };
 
@@ -293,7 +412,8 @@ FADE_objective_findBuildingsWithMinSlots = {
     private _found = [];
     if (_fromMapClick) then {
         _found = (nearestObjects [_searchCenter, ["House", "Building"], _buildRadius]) select {
-            count (_x buildingPos -1) >= _minSlots
+            count (_x buildingPos -1) >= _minSlots &&
+            { [_x] call FADE_objective_isSettlementBuilding }
         };
     } else {
         private _attempt = 0;
@@ -302,7 +422,10 @@ FADE_objective_findBuildingsWithMinSlots = {
             private _pos = [_minDist] call _findPosFn;
             if (count _pos >= 2) then {
                 private _buildings = nearestObjects [_pos, ["House", "Building"], _buildRadius];
-                _found = _buildings select { count (_x buildingPos -1) >= _minSlots };
+                _found = _buildings select {
+                    count (_x buildingPos -1) >= _minSlots &&
+                    { [_x] call FADE_objective_isSettlementBuilding }
+                };
             };
         };
     };
@@ -374,6 +497,100 @@ FADE_objective_addRecoverHoldAction = {
     ];
 };
 
+// Immediate OPFOR in a radius around objective building(s): spawned at mission start (no virtual garrison).
+FADE_objective_spawnImmediateAreaGarrison = {
+    params [
+        "_targetPos",
+        ["_excludeBuildings", []],
+        "_sideEnemy",
+        "_enemyUnits",
+        "_diffMul",
+        ["_groupsRef", []]
+    ];
+    if (count _targetPos < 2 || { _enemyUnits isEqualTo [] }) exitWith { _groupsRef };
+    private _excludeList = if (_excludeBuildings isEqualType []) then {
+        +_excludeBuildings
+    } else {
+        if (isNull _excludeBuildings) then { [] } else { [_excludeBuildings] };
+    };
+    private _center = [_targetPos] call FADE_normPos3;
+    private _radius = missionNamespace getVariable ["FADE_raidTargetImmediateGarrisonRadiusM", 250];
+    private _bChance = missionNamespace getVariable ["FADE_garrisonMissionNearbyBuildingChance", 0.25];
+    private _slotChance = missionNamespace getVariable ["FADE_vgNearbySlotChance", 0.165];
+    private _maxPerBld = missionNamespace getVariable ["FADE_raidImmediateGarrisonMaxPerBuilding", 2];
+    private _applyScale = missionNamespace getVariable ["FADE_raid_applyScale", {
+        params ["_baseCount", "_difficultyMul", ["_minCount", 1], ["_maxCount", -1]];
+        private _baseFn = missionNamespace getVariable ["FADE_scaleOpforCount", { params ["_b"]; _b }];
+        [_baseCount * _difficultyMul, _minCount, _maxCount] call _baseFn
+    }];
+    private _maxTotal = [10 + floor random 8, _diffMul, 4, 28] call _applyScale;
+    private _outdoorTarget = [3 + floor random 4, _diffMul, 2, 10] call _applyScale;
+
+    private _allBuildings = (nearestObjects [_center, ["House", "Building"], _radius]) select {
+        !(_x in _excludeList) && { count (_x buildingPos -1) >= 1 }
+    };
+    private _candidates = _allBuildings select { random 1 < _bChance };
+    if (_candidates isEqualTo [] && { count _allBuildings > 0 }) then {
+        _candidates = [selectRandom _allBuildings];
+    };
+
+    private _spawned = 0;
+    {
+        if (_spawned >= _maxTotal) exitWith {};
+        private _bld = _x;
+        private _bps = _bld buildingPos -1;
+        private _slots = [];
+        private _inBld = 0;
+        {
+            if (_inBld >= _maxPerBld || { _spawned >= _maxTotal }) exitWith {};
+            if (random 1 < _slotChance) then {
+                private _p = _x;
+                if (count _p < 3) then { _p = [(_p select 0), (_p select 1), (_p param [2, 0])] };
+                _slots pushBack _p;
+                _inBld = _inBld + 1;
+                _spawned = _spawned + 1;
+            };
+        } forEach _bps;
+
+        if (count _slots > 0) then {
+            private _grp = createGroup _sideEnemy;
+            {
+                private _u = _grp createUnit [selectRandom _enemyUnits, _x, [], 0, "NONE"];
+                if (!isNull _u) then {
+                    _u setPosATL _x;
+                    _u setUnitPos "MIDDLE";
+                    [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                };
+            } forEach _slots;
+            if (count units _grp > 0) then {
+                [_grp] call FAC_applyEnemyScenarioToGroup;
+                _groupsRef pushBack _grp;
+            } else { deleteGroup _grp };
+        };
+    } forEach _candidates;
+
+    for "_g" from 1 to _outdoorTarget do {
+        if (_spawned >= _maxTotal) exitWith {};
+        private _angle = random 360;
+        private _dist = 45 + random ((_radius - 45) max 1);
+        private _sp = _center getPos [_dist, _angle];
+        _sp = [[_sp, 0, 25, 4, 1, 0.4, 0, [], _center], _sp] call FADE_findSafePosArray;
+        if (_sp isEqualType [] && { count _sp >= 2 } && { !surfaceIsWater _sp }) then {
+            if (count _sp < 3) then { _sp = [(_sp select 0), (_sp select 1), 0] };
+            private _grp = createGroup _sideEnemy;
+            private _u = _grp createUnit [selectRandom _enemyUnits, _sp, [], 0, "NONE"];
+            if (!isNull _u) then {
+                _u setPosATL _sp;
+                _u setUnitPos "MIDDLE";
+                [_grp] call FAC_applyEnemyScenarioToGroup;
+                _groupsRef pushBack _grp;
+                _spawned = _spawned + 1;
+            } else { deleteGroup _grp };
+        };
+    };
+    _groupsRef
+};
+
 // Lazy-load nearby building garrisons + barrel hints (HVT / Hostage pattern).
 FADE_objective_registerNearbyGarrisons = {
     params [
@@ -387,7 +604,9 @@ FADE_objective_registerNearbyGarrisons = {
         ["_searchRadius", -1],
         ["_maxBuildings", -1],
         ["_emptyFallbackMax", -1],
-        ["_excludeBuildings", []]
+        ["_excludeBuildings", []],
+        ["_excludeCenter", []],
+        ["_excludeRadius", -1]
     ];
     private _vgFn = missionNamespace getVariable ["FADE_vg_register", {}];
     if (_vgFn isEqualTo {}) exitWith {};
@@ -399,10 +618,13 @@ FADE_objective_registerNearbyGarrisons = {
         missionNamespace getVariable ["FADE_garrisonMissionNearbyRadiusM", 450]
     };
     private _surroundBChance = missionNamespace getVariable ["FADE_garrisonMissionNearbyBuildingChance", 0.25];
+    private _hasExcl = _excludeRadius > 0 && { _excludeCenter isEqualType [] } && { count _excludeCenter >= 2 };
+    private _exclC = if (_hasExcl) then { [_excludeCenter] call FADE_normPos3 } else { [0, 0, 0] };
     private _surroundFull = (nearestObjects [_zoneCenter, ["House", "Building"], _surroundRadius] select {
         !(_x in _excludeBuildings) &&
         { isNull _anchorBuilding || { !(_x isEqualTo _anchorBuilding) } } &&
-        { count (_x buildingPos -1) >= 1 }
+        { count (_x buildingPos -1) >= 1 } &&
+        { !_hasExcl || { (getPosATL _x) distance2D _exclC >= _excludeRadius } }
     });
     private _surroundBuildings = _surroundFull select { random 1 < _surroundBChance };
     if (count _surroundBuildings == 0 && { count _surroundFull > 0 }) then {
@@ -462,10 +684,10 @@ FADE_objective_spawnRecoverObject = {
     _objCase setPosATL _objPos;
     _objCase setDir (getDir _bld);
 
-    private _guardCount = [6 + floor random 4, _diffMul, 2] call FADE_raid_applyScale;
+    private _guardCount = [3 + floor random 2, _diffMul, 1] call FADE_raid_applyScale;
     private _zoneGroups = [[_bld, _objIdx, _guardCount, _sideEnemy, _enemyUnits] call FADE_objective_garrisonBuilding];
     _zoneGroups append ([_zoneCenter, _patrolRadius, ([1 + floor random 3, _diffMul, 1] call FADE_raid_applyScale), _sideEnemy, _enemyUnits, _diffMul] call FADE_objective_spawnPatrols);
-    [true, _zoneGroups, [_objCase], getPosATL _bld, []]
+    [true, _zoneGroups, [_objCase], getPosATL _bld, [], _bld]
 };
 
 FADE_objective_spawnKillHVT = {
@@ -477,11 +699,15 @@ FADE_objective_spawnKillHVT = {
     private _hvtIdx = if (count _bps >= 3) then { 1 + floor random ((count _bps) - 2) } else { 0 };
     private _hvtData = [_bld, _hvtIdx, _sideEnemy, _enemyUnits, _hvtCodename] call FADE_objective_spawnHVTInBuilding;
     _hvtData params ["_hvt", "_hvtGrp"];
+    if (isNull _hvt) exitWith {
+        if (!isNull _hvtGrp) then { deleteGroup _hvtGrp };
+        [false, [], [], [0, 0, 0], []]
+    };
 
-    private _guardCount = [6 + floor random 4, _diffMul, 2] call FADE_raid_applyScale;
+    private _guardCount = [3 + floor random 2, _diffMul, 1] call FADE_raid_applyScale;
     private _zoneGroups = [_hvtGrp, [_bld, _hvtIdx, _guardCount, _sideEnemy, _enemyUnits] call FADE_objective_garrisonBuilding];
     _zoneGroups append ([_zoneCenter, _patrolRadius, ([1 + floor random 3, _diffMul, 1] call FADE_raid_applyScale), _sideEnemy, _enemyUnits, _diffMul] call FADE_objective_spawnPatrols);
-    [true, _zoneGroups, [], getPosATL _bld, [_hvt]]
+    [true, _zoneGroups, [], getPosATL _bld, [_hvt], _bld]
 };
 
 FADE_objective_spawnCaptureHVT = {
@@ -492,25 +718,36 @@ FADE_objective_spawnCaptureHVT = {
 FADE_objective_spawnRecoverHostage = {
     params ["_zoneCenter", "_buildRadius", "_hostageMinSlots", "_sideEnemy", "_enemyUnits", "_diffMul", ["_patrolRadius", 200], ["_hostageIdentity", ""]];
     private _bld = [_zoneCenter, _buildRadius, _hostageMinSlots] call FADE_objective_findBuildingRelaxed;
-    if (isNull _bld) exitWith { [false, [], [], [0, 0, 0], []] };
+    if (isNull _bld) exitWith { [false, [], [], [0, 0, 0], [], objNull] };
 
     private _bps = _bld buildingPos -1;
-    private _hIdx = floor ((count _bps) / 2);
+    private _hIdx = if (count _bps >= 3) then { 1 + floor random ((count _bps) - 2) } else { 0 };
     private _hostageData = [_bld, _hIdx, _hostageIdentity] call FADE_objective_spawnHostageInBuilding;
     _hostageData params ["_hostage", "_hostageGrp"];
+    if (isNull _hostage || { isNull _hostageGrp }) exitWith { [false, [], [], [0, 0, 0], [], objNull] };
 
-    private _guardCount = [5 + floor random 4, _diffMul, 2] call FADE_raid_applyScale;
+    private _guardCount = [2 + floor random 2, _diffMul, 1] call FADE_raid_applyScale;
     private _zoneGroups = [_hostageGrp, [_bld, _hIdx, _guardCount, _sideEnemy, _enemyUnits] call FADE_objective_garrisonBuilding];
     _zoneGroups append ([_zoneCenter, _patrolRadius, ([1 + floor random 3, _diffMul, 1] call FADE_raid_applyScale), _sideEnemy, _enemyUnits, _diffMul] call FADE_objective_spawnPatrols);
-    [true, _zoneGroups, [], getPosATL _bld, [_hostage]]
+    if (!alive _hostage) exitWith {
+        { if (!isNull _x) then { { deleteVehicle _x } forEach units _x; deleteGroup _x } } forEach (_zoneGroups select { _x isEqualType grpNull });
+        [false, [], [], [0, 0, 0], [], objNull]
+    };
+    [true, _zoneGroups, [], getPosATL _bld, [_hostage], _bld]
 };
 
+missionNamespace setVariable ["FADE_objective_spawnImmediateAreaGarrison", FADE_objective_spawnImmediateAreaGarrison];
+missionNamespace setVariable ["FADE_raid_spawnImmediateAreaGarrison", FADE_objective_spawnImmediateAreaGarrison];
+missionNamespace setVariable ["FADE_objective_applyProtectiveGear", FADE_objective_applyProtectiveGear];
 missionNamespace setVariable ["FADE_pickHvtCodename", FADE_pickHvtCodename];
 missionNamespace setVariable ["FADE_pickHostageIdentity", FADE_pickHostageIdentity];
 missionNamespace setVariable ["FADE_getIdentityDisplayName", FADE_getIdentityDisplayName];
 missionNamespace setVariable ["FADE_recoverObjectClass", FADE_recoverObjectClass];
 missionNamespace setVariable ["FADE_getRecoverObjectDisplayName", FADE_getRecoverObjectDisplayName];
 missionNamespace setVariable ["FADE_smeac_recoverObjectIntelLine", FADE_smeac_recoverObjectIntelLine];
+missionNamespace setVariable ["FADE_objective_isInfrastructureClass", FADE_objective_isInfrastructureClass];
+missionNamespace setVariable ["FADE_objective_isSettlementBuilding", FADE_objective_isSettlementBuilding];
+missionNamespace setVariable ["FADE_objective_pickBestBuilding", FADE_objective_pickBestBuilding];
 missionNamespace setVariable ["FADE_objective_findBuilding", FADE_objective_findBuilding];
 missionNamespace setVariable ["FADE_objective_findBuildingRelaxed", FADE_objective_findBuildingRelaxed];
 missionNamespace setVariable ["FADE_objective_findBuildingAtCenters", FADE_objective_findBuildingAtCenters];

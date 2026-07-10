@@ -446,6 +446,12 @@ FADE_runMission_EscapeEvasion = {
     private _eeSpawnQrf = {
         params ["_tid", "_detP", "_zc", "_baseQ", "_enemyUnitsLoc", "_applyLoc", "_sideEn"];
         [_tid] call _eeDeleteQrf;
+        private _objPos = if (!isNull _detP) then { getPosATL _detP } else { +_zc };
+        private _footGrps = [];
+        private _footFn = missionNamespace getVariable ["FADE_counterAttack_spawnFootWave", {}];
+        if (!(_footFn isEqualTo {}) && { count _objPos >= 2 }) then {
+            [_tid, _objPos, _enemyUnitsLoc, _footGrps, _applyLoc] call _footFn;
+        };
         private _staging = _zc getPos [2200 + random 1800, random 360];
         private _roadHit = [_staging, 500, [], -1, [], getPosATL _detP] call FADE_findOpforGroundVehicleRoadSpawn;
         if (_roadHit isEqualTo []) exitWith {};

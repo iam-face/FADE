@@ -408,7 +408,7 @@ class RscDisplayScenario: RscDisplayEmpty {
         class LblCivFootCap: RscText { idc = 60651; text = "Max alive: 55 (0 = unlimited)"; x = 0.52; y = 0.298; w = 0.44; h = 0.022; sizeEx = 0.023; colorText[] = {0.75, 0.85, 1, 1}; };
         class ScenCivDensHdr: RscText { idc = 60951; text = "Town foot-civ density scale"; x = 0.52; y = 0.332; w = 0.44; h = 0.022; sizeEx = 0.024; colorText[] = {0.95, 0.95, 0.95, 1}; };
         class SlCivDensity: RscXSliderH { idc = 60652; x = 0.52; y = 0.360; w = 0.44; h = 0.028; onSliderPosChanged = "['sliderChanged', _this] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class LblCivDensity: RscText { idc = 60653; text = "Scale: 1.00x (capital→local tiers)"; x = 0.52; y = 0.392; w = 0.44; h = 0.022; sizeEx = 0.023; colorText[] = {0.75, 0.85, 1, 1}; };
+        class LblCivDensity: RscText { idc = 60653; text = "Scale: 1.00x (capital to local tiers)"; x = 0.52; y = 0.392; w = 0.44; h = 0.022; sizeEx = 0.023; colorText[] = {0.75, 0.85, 1, 1}; };
         // --- Factions tab (hidden by default) ---
         class FacHdr: RscText { idc = 60910; show = 0; text = "Enemy AI"; x = 0.04; y = 0.100; w = 0.50; h = 0.030; sizeEx = 0.034; colorText[] = FAC_COLOR_TEXT_HDR; };
         class FacPatrolLbl: RscText { idc = 60911; show = 0; text = "Patrols"; x = 0.04; y = 0.134; w = 0.10; h = 0.022; sizeEx = 0.025; colorText[] = {0.95, 0.95, 0.95, 1}; };

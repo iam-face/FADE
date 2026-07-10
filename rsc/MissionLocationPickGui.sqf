@@ -2,6 +2,11 @@
 // MissionLocationPickGui.sqf  -  Random vs map-click overlay on Manage Missions (60002)
 // =============================================================================
 if (hasInterface) then {
+    FAC_missionLocationPickGui_fnc_destroyOverlay = {
+        if (isNil "FAC_missionPickOverlay_destroy") exitWith {};
+        ["FAC_mlocPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
+    };
+
     FAC_missionLocationPickGui_fnc_missionDisplayName = {
         params ["_typeId"];
         private _dn = _typeId;
@@ -26,9 +31,16 @@ if (hasInterface) then {
                 if (isNull _display) exitWith {
                     systemChat "MISSION: open Manage Missions first, then start a mission.";
                 };
+                if (isNil "FAC_missionPickOverlay_createShell") exitWith {
+                    systemChat "MISSION: location overlay not loaded.";
+                };
                 disableSerialization;
-                ["FAC_mlocPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
-                [false] call FAC_missionPickOverlay_setBaseVisible;
+                if (!isNil "FAC_missionPickOverlay_destroy") then {
+                    [] call FAC_missionLocationPickGui_fnc_destroyOverlay;
+                };
+                if (!isNil "FAC_missionPickOverlay_setBaseVisible") then {
+                    [false] call FAC_missionPickOverlay_setBaseVisible;
+                };
                 uinamespace setVariable ["FAC_missionLocPick_type", _missionType];
                 private _titleName = [_missionType] call FAC_missionLocationPickGui_fnc_missionDisplayName;
                 private _helpText = if (_missionType == "InterceptConvoy") then {
@@ -64,14 +76,24 @@ if (hasInterface) then {
                     }
                     }
                 };
-                private _layout = [0.18, 0.18, 0.64, 0.48, 0.046, 0.15];
-                _layout params ["_bgX", "_bgY", "_bgW", "_bgH", "_titleH", "_helpH"];
-                private _controls = [_display, format ["%1 - CHOOSE LOCATION", toUpper _titleName], _helpText, 60340, _layout] call FAC_missionPickOverlay_createShell;
                 private _padX = 0.04;
-                private _innerX = _bgX + _padX;
+                private _bgW = 0.64;
+                private _bgX = 0.18;
+                private _titleH = 0.046;
                 private _innerW = _bgW - (_padX * 2);
+                private _helpH = 0.15;
+                if (!isNil "FAC_missionPickOverlay_estimateHelpH") then {
+                    _helpH = [_helpText, _innerW] call FAC_missionPickOverlay_estimateHelpH;
+                };
+                if (!(_helpH isEqualType 0)) then { _helpH = 0.15 };
                 private _btnH = 0.052;
                 private _btnGap = 0.012;
+                private _btnBlock = (_btnH * 3) + (_btnGap * 2) + 0.028;
+                private _bgH = _titleH + 0.012 + _helpH + _btnBlock + 0.016;
+                private _bgY = ((1 - _bgH) / 2) max 0.08;
+                private _layout = [_bgX, _bgY, _bgW, _bgH, _titleH, _helpH];
+                private _controls = [_display, format ["%1 - CHOOSE LOCATION", toUpper _titleName], _helpText, 60340, _layout] call FAC_missionPickOverlay_createShell;
+                private _innerX = _bgX + _padX;
                 private _btnY = _bgY + _titleH + _helpH + 0.028;
                 private _bRandom = _display ctrlCreate ["RscButton", 60343];
                 _bRandom ctrlSetPosition [_innerX, _btnY, _innerW, _btnH];
@@ -105,7 +127,7 @@ if (hasInterface) then {
             case "random": {
                 private _mt = uinamespace getVariable ["FAC_missionLocPick_type", ""];
                 if (_mt == "") exitWith {};
-                ["FAC_mlocPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
+                [] call FAC_missionLocationPickGui_fnc_destroyOverlay;
                 if (_mt in ["TroopInsert", "TroopExtract"]) then {
                     uinamespace setVariable ["FAC_troopTransport_mapAnchor", []];
                     uinamespace setVariable ["FAC_troopInsert_lzAnchor", nil];
@@ -125,7 +147,7 @@ if (hasInterface) then {
                 if (_mt in ["TroopInsert", "TroopExtract"]) exitWith {
                     systemChat "TROOP INSERT / EXTRACT: random location only — use START from Manage Missions.";
                 };
-                ["FAC_mlocPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
+                [] call FAC_missionLocationPickGui_fnc_destroyOverlay;
                 private _missionsDisp = findDisplay 60002;
                 if (_mt != "TroopInsert" && { _mt != "TroopExtract" } && { !isNull _missionsDisp }) then { closeDialog 60002 };
                 if (_mt == "InterceptConvoy") exitWith {
@@ -147,7 +169,7 @@ if (hasInterface) then {
                 };
             };
             case "cancel": {
-                ["FAC_mlocPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
+                [] call FAC_missionLocationPickGui_fnc_destroyOverlay;
             };
             default { };
         };
