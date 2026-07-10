@@ -114,14 +114,14 @@ FADE_runMission_Cargo = {
     private _campLandingRadius = 50;
     [_taskId, _markerName + "_zone", _destPos, _campLandingRadius, "ColorOrange"] call FADE_mission_createRadiusMarker;
     private _marker = [_markerName, [_destPos] call FADE_normPos3, _taskId] call FADE_createRegisteredMarker;
-    _marker setMarkerType "loc_bunker";
+    _marker setMarkerType (["objective"] call FADE_marker_getType);
     _marker setMarkerColor "ColorOrange";
     _marker setMarkerText _operationName;
 
     // Cargo box pickup marker - only visible while this mission is active
     private _cargoPickupMarkerName = "FADE_cargoPickup_" + _taskId;
     private _cargoPickupMarker = [_cargoPickupMarkerName, [_cargoPos] call FADE_normPos3, _taskId] call FADE_createRegisteredMarker;
-    _cargoPickupMarker setMarkerType "mil_box";
+    _cargoPickupMarker setMarkerType (["box"] call FADE_marker_getType);
     _cargoPickupMarker setMarkerColor "ColorWEST";
     _cargoPickupMarker setMarkerText _operationName;
 

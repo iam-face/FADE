@@ -192,8 +192,9 @@ FADE_raid_trySpawnVariant = {
     private _buildRadiusObj = missionNamespace getVariable ["FADE_raidBuildSearchRadiusM", 450];
     private _buildRadiusHostage = missionNamespace getVariable ["FADE_raidBuildSearchRadiusM", 450];
     private _patrolRadius = missionNamespace getVariable ["FADE_raidPatrolRadiusM", 90];
-    private _nearGarRadius = missionNamespace getVariable ["FADE_raidNearbyGarrisonRadiusM", 130];
+    private _nearGarRadius = missionNamespace getVariable ["FADE_garrisonMissionNearbyRadiusM", 450];
     private _nearGarMax = missionNamespace getVariable ["FADE_raidNearbyGarrisonMaxPerZone", 4];
+    private _innerGarExclude = missionNamespace getVariable ["FADE_raidTargetImmediateGarrisonRadiusM", 250];
     private _hvtMinSlots = 10;
     private _objMinSlots = 6;
     private _hostageMinSlots = 5;
@@ -212,15 +213,24 @@ FADE_raid_trySpawnVariant = {
             [_zoneCenter, _buildRadiusHostage, _hostageMinSlots, _sideEnemy, _enemyUnits, _diffMul, _patrolRadius, _hostageIdentity] call FADE_objective_spawnRecoverHostage
         };
     };
-    _result params ["_ok", "_groups", "_objects", "_winPos", "_payload"];
+    _result params ["_ok", "_groups", "_objects", "_winPos", "_payload", ["_anchorBld", objNull]];
     if (_ok && { _variant == "RecoverObject" } && { count _objects > 0 } && { _childTaskId != "" }) then {
         [_objects select 0, _childTaskId] call FADE_objective_addRecoverHoldAction;
     };
     if (_ok && { _missionTaskId != "" }) then {
-        private _nearB = nearestObjects [_winPos, ["House", "Building"], 35];
-        if (count _nearB > 0) then {
+        private _targetBld = _anchorBld;
+        if (isNull _targetBld) then {
+            private _nearB = nearestObjects [_winPos, ["House", "Building"], 35];
+            _targetBld = if (count _nearB > 0) then { _nearB select 0 } else { objNull };
+        };
+        [_winPos, if (isNull _targetBld) then { [] } else { [_targetBld] }, _sideEnemy, _enemyUnits, _diffMul, _groups] call FADE_objective_spawnImmediateAreaGarrison;
+        if (!isNull _targetBld) then {
             private _vgBarrels = [];
-            [_missionTaskId, _nearB select 0, _zoneCenter, _groups, _vgBarrels, _enemyUnits, _diffMul, _nearGarRadius, _nearGarMax, 1] call FADE_objective_registerNearbyGarrisons;
+            private _excl = if (!isNull _targetBld) then { [_targetBld] } else { [] };
+            [
+                _missionTaskId, _targetBld, _zoneCenter, _groups, _vgBarrels, _enemyUnits, _diffMul,
+                _nearGarRadius, _nearGarMax, 1, _excl, _winPos, _innerGarExclude
+            ] call FADE_objective_registerNearbyGarrisons;
             { _objects pushBack _x } forEach _vgBarrels;
         };
     };
@@ -249,11 +259,6 @@ FADE_raid_spawnZone = {
     {
         private _attempt = [_x, _zoneCenter, _sideEnemy, _enemyUnits, _diffMul, _childTaskId, _missionTaskId, _targetAssign] call FADE_raid_trySpawnVariant;
         _attempt params ["_ok", "_usedVariant", "_g", "_o", "_wp", "_pl"];
-        // #region agent log
-        private _buildR = missionNamespace getVariable ["FADE_raidBuildSearchRadiusM", 450];
-        private _nearBld = count (nearestObjects [_zoneCenter, ["House", "Building"], _buildR]);
-        diag_log format ["#DBG89f3ea {""sessionId"":""89f3ea"",""hypothesisId"":""H5"",""location"":""FADE_RaidHelpers.sqf:spawnZone"",""message"":""variant attempt"",""data"":{""variant"":""%1"",""ok"":%2,""buildRadius"":%3,""nearBuildings"":%4,""zoneCenter"":%5},""timestamp"":%6}", _x, _ok, _buildR, _nearBld, _zoneCenter, diag_tickTime];
-        // #endregion
         if (_ok) exitWith {
             _finalVariant = _usedVariant;
             _groups = _g;
@@ -263,9 +268,6 @@ FADE_raid_spawnZone = {
         };
     } forEach _tryListUnique;
     if (_finalVariant == "") exitWith {
-        // #region agent log
-        diag_log format ["#DBG89f3ea {""sessionId"":""89f3ea"",""hypothesisId"":""H5"",""location"":""FADE_RaidHelpers.sqf:spawnZone"",""message"":""all variants failed"",""data"":{""zoneCenter"":%1,""tried"":%2},""timestamp"":%3}", _zoneCenter, _tryListUnique, diag_tickTime];
-        // #endregion
         [false, "", [], [], [0, 0, 0], []]
     };
     [true, _finalVariant, _groups, _objects, _winPos, _payload]

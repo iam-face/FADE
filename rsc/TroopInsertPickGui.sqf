@@ -13,6 +13,7 @@ if (hasInterface) then {
     FAC_tiPick_clr_cancel = FAC_theme_btnDanger;
 
     FAC_troopInsertPickGui_fnc_destroyOverlay = {
+        if (isNil "FAC_missionPickOverlay_destroy") exitWith {};
         ["FAC_tiPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
     };
 

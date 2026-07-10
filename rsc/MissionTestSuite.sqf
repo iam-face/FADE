@@ -70,23 +70,7 @@ FAC_missionTestSuite__placementMinDist = {
 // #region agent log
 FAC_facDebugAgentLog = {
     params ["_hypothesisId", "_location", "_message", ["_data", []]];
-    private _dataStr = if (_data isEqualType []) then { str _data } else { str _data };
-    private _ts = round (diag_tickTime * 1000);
-    private _line = format [
-        "{\"sessionId\":\"add34b\",\"hypothesisId\":\"%1\",\"location\":\"%2\",\"message\":\"%3\",\"data\":%4,\"timestamp\":%5}",
-        _hypothesisId, _location, _message, _dataStr, _ts
-    ];
-    diag_log format ["[DBG-add34b] %1", _line];
-    private _cfg = str missionConfigFile;
-    private _idx = _cfg find "\description.ext";
-    if (_idx > 0) then {
-        private _dir = _cfg select [1, _idx - 1];
-        private _fh = openFile [_dir + "\debug-add34b.log", "Append"];
-        if (!isNil "_fh" && { _fh >= 0 }) then {
-            writeLine [_fh, _line];
-            closeFile _fh;
-        };
-    };
+    diag_log format ["[DBG-add34b] hypothesis=%1 location=%2 message=%3 data=%4", _hypothesisId, _location, _message, _data];
 };
 // #endregion
 
@@ -121,20 +105,20 @@ FAC_missionTestSuite__collectModuleManifest = {
 
 // Runners that use custom param globals instead of FADE_missionRun_getContext (anti-regression exempt).
 FAC_missionTestSuite__getContextExemptPaths = [
-    "rsc\\missions\\AOMission.sqf",
-    "rsc\\missions\\AOMissionInfil.sqf",
-    "rsc\\missions\\AOMissionMain.sqf",
-    "rsc\\missions\\AOMissionRunner.sqf",
-    "rsc\\missions\\OperationMission.sqf",
-    "rsc\\missions\\OperationMissionPick.sqf",
-    "rsc\\missions\\OperationMissionMain.sqf",
-    "rsc\\missions\\OperationMissionRunner.sqf",
-    "rsc\\missions\\MissionInvasion.sqf",
-    "rsc\\missions\\MissionInvasionHelpers.sqf",
-    "rsc\\missions\\MissionInvasionMain.sqf",
-    "rsc\\missions\\MissionInvasionRunner.sqf",
-    "rsc\\missions\\TroopInsertMission.sqf",
-    "rsc\\missions\\TroopExtractMission.sqf"
+    "rsc\missions\AOMission.sqf",
+    "rsc\missions\AOMissionInfil.sqf",
+    "rsc\missions\AOMissionMain.sqf",
+    "rsc\missions\AOMissionRunner.sqf",
+    "rsc\missions\OperationMission.sqf",
+    "rsc\missions\OperationMissionPick.sqf",
+    "rsc\missions\OperationMissionMain.sqf",
+    "rsc\missions\OperationMissionRunner.sqf",
+    "rsc\missions\MissionInvasion.sqf",
+    "rsc\missions\MissionInvasionHelpers.sqf",
+    "rsc\missions\MissionInvasionMain.sqf",
+    "rsc\missions\MissionInvasionRunner.sqf",
+    "rsc\missions\TroopInsertMission.sqf",
+    "rsc\missions\TroopExtractMission.sqf"
 ];
 
 FAC_missionTestSuite_runServer = {
@@ -752,6 +736,7 @@ FAC_missionTestSuite_runServer = {
         if (_chk) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): %1", _x]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): %1", _x]; };
     } forEach [
         "FADE_raid_pickCellName", "FADE_raid_pickObjectiveCodenames", "FADE_raid_spawnZone", "FADE_objective_findBuilding",
+        "FADE_objective_isSettlementBuilding", "FADE_objective_pickBestBuilding",
         "FADE_raid_applyScale", "FADE_objective_spawnRecoverObject", "FADE_objective_registerNearbyGarrisons", "FADE_raid_startIntelMonitor",
         "FADE_objective_findBuildingsWithMinSlots", "FADE_objective_addHostageToGroup", "FADE_objective_garrisonBuildingSlots",
         "FADE_objective_spawnPatrolsPerBuilding", "FADE_objective_spawnHostageInBuilding", "FADE_pickHostageIdentity"
@@ -786,8 +771,74 @@ FAC_missionTestSuite_runServer = {
         "FADE_mission_applyPickupGroupPosture", "FADE_mission_casevacCasualtyPrep", "FADE_mission_csarPilotWoundPrep",
         "FADE_zone_createCaptureMarkerPair", "FADE_zone_tickOperationCapture", "FADE_zone_tickInvasionHold",
         "FADE_troopMission_liveParticipants", "FADE_troopMission_runTransportWave", "FADE_troopMission_clearParticipantMissionVars",
-        "FADE_pickHvtCodename", "FADE_getIdentityDisplayName", "FADE_objective_findBuildingForMission"
+        "FADE_pickHvtCodename", "FADE_getIdentityDisplayName", "FADE_objective_findBuildingForMission",
+        "FADE_marker_getType", "FADE_map_gridCellsForSearchZone", "FADE_map_gridCellOrigin",
+        "FADE_map_gridBoundsForSearchZone",
+        "FADE_aoSurvey_build", "FADE_fieldIntel_startForMission", "FADE_fieldIntel_endMission", "FADE_fieldIntel_endRaidZones",
+        "FADE_map_gridOriginOffset"
     ];
+
+    diag_log "[FAC TestSuite] --- MARKERS / GRID / FIELD INTEL ---";
+
+    if (!isNil "FADE_marker_getType") then {
+        _ok = (["objective"] call FADE_marker_getType) == "mil_objective" && { (["flag"] call FADE_marker_getType) == "mil_flag" };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_marker_getType"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_marker_getType"; };
+    };
+
+    if (!isNil "FADE_map_gridCellsForSearchZone") then {
+        private _testCenter = [FADE_basePos select 0 + 500, FADE_basePos select 1 + 500, 0];
+        private _truePos = [_testCenter select 0 + 120, _testCenter select 1 - 80, 0];
+        private _cells = [_testCenter, 200, [_truePos]] call FADE_map_gridCellsForSearchZone;
+        _ok = _cells isEqualType [] && { count _cells >= 1 };
+        if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_map_gridCellsForSearchZone (%1 cells)", count _cells]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_map_gridCellsForSearchZone"; };
+        private _off = [] call FADE_map_gridOriginOffset;
+        private _origin = [_testCenter] call FADE_map_gridCellOrigin;
+        _ok = (_origin select 0) == (_off select 0) + (floor (((_testCenter select 0) - (_off select 0)) / 100)) * 100;
+        if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_map_gridCellOrigin Altis offset %1", _origin]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_map_gridCellOrigin Altis offset %1", _origin]; };
+    };
+
+    if (!isNil "FADE_map_gridBoundsForSearchZone") then {
+        private _bounds = [FADE_basePos, 125, [FADE_basePos]] call FADE_map_gridBoundsForSearchZone;
+        _bounds params ["_bCentre", "_bHalf", "_bCells"];
+        _ok = _bCells >= 1 && { (_bHalf select 0) >= 50 } && { (_bHalf select 1) >= 50 } && { (_bHalf select 0) mod 50 == 0 } && { (_bHalf select 1) mod 50 == 0 };
+        if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_map_gridBoundsForSearchZone %1 cells half=%2", _bCells, _bHalf]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_map_gridBoundsForSearchZone %1", _bounds]; };
+    };
+
+    if (!isNil "FADE_mission_computeSearchZone") then {
+        private _anchor = [12000, 15000, 0];
+        private _truePos = [12080, 14920, 0];
+        private _nominal = 180;
+        private _computed = [_anchor, _nominal, 0, [_truePos]] call FADE_mission_computeSearchZone;
+        _computed params ["_mPos", "_mRad"];
+        _ok = (_truePos distance2D _mPos) <= (_mRad + 1);
+        if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_mission_computeSearchZone contains true pos (r=%1)", _mRad]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_mission_computeSearchZone contains true pos dist=%1 rad=%2", _truePos distance2D _mPos, _mRad]; };
+        private _shrinkNom = (_nominal * 0.25) max 45;
+        private _shrunk = [_anchor, _shrinkNom, 0, [_truePos]] call FADE_mission_computeSearchZone;
+        _shrunk params ["_sPos", "_sRad"];
+        _ok = (_truePos distance2D _sPos) <= (_sRad + 1);
+        if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_mission_computeSearchZone shrink contains true pos (r=%1)", _sRad]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_mission_computeSearchZone shrink contains true pos dist=%1 rad=%2", _truePos distance2D _sPos, _sRad]; };
+    };
+
+    if (!isNil "FADE_aoSurvey_build") then {
+        private _survey = [FADE_basePos, 400] call FADE_aoSurvey_build;
+        _ok = _survey isEqualType createHashMap && { _survey getOrDefault ["center", []] isEqualType [] } && { (_survey getOrDefault ["roadsNear", []]) isEqualType [] };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_aoSurvey_build"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_aoSurvey_build"; };
+    };
+
+    if (!isNil "FADE_fieldIntel_applyGeometry") then {
+        private _fiAnchor = [13000, 16000, 0];
+        private _fiTrue = [13090, 15910, 0];
+        private _fiState = [
+            "FADE_test_fieldIntel", "HVT", _fiTrue, _fiAnchor, [_fiTrue],
+            "ellipse", "", "FADE_test_fieldIntel_zone", [], 200,
+            75, 50, "ColorEAST", "FADE_test_fieldIntel"
+        ];
+        private _applied = [_fiState, 75, false] call FADE_fieldIntel_applyGeometry;
+        private _zoneR = _applied select 9;
+        private _zonePos = _applied select 3;
+        _ok = (_fiTrue distance2D _zonePos) <= (_zoneR + 1);
+        if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_fieldIntel_applyGeometry contains true pos (r=%1)", _zoneR]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_fieldIntel_applyGeometry contains true pos"; };
+    };
 
     if (!isNil "FADE_missionRun_getContext") then {
         private _ctx = call FADE_missionRun_getContext;
@@ -863,7 +914,7 @@ FAC_missionTestSuite_runServer = {
     ];
 
     if (!isNil "FADE_missionModuleList") then {
-        _ok = !("rsc\\missions\\MissionTroopExtract.sqf" in FADE_missionModuleList);
+        _ok = !("rsc\missions\MissionTroopExtract.sqf" in FADE_missionModuleList);
         if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): MissionTroopExtract.sqf removed from module list"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): MissionTroopExtract.sqf still in FADE_missionModuleList"; };
     };
 
@@ -880,6 +931,91 @@ FAC_missionTestSuite_runServer = {
     } else {
         _fail = _fail + 1;
         diag_log "[FAC TestSuite] FAIL (server): ConfigDefaults not loaded";
+    };
+
+    diag_log "[FAC TestSuite] --- FACTION SCENARIO ---";
+    if (!isNil "FADE_normalizeScenarioFactions") then {
+        private _normRu = ["OPF_F", "OPF_F"] call FADE_normalizeScenarioFactions;
+        _ok = (_normRu select 0) == "OPF_F" && { (_normRu select 1) != "OPF_F" } && { "same_faction" in (_normRu select 2) };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log format ["[FAC TestSuite] PASS (server): normalize corrects same faction (%1 vs %2)", _normRu select 0, _normRu select 1];
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): normalize same faction %1", _normRu];
+        };
+        private _oppEast = [0] call FADE_getOpposedSideNums;
+        _ok = 1 in _oppEast && { 2 in _oppEast } && { !(0 in _oppEast) };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log format ["[FAC TestSuite] PASS (server): EAST opposed sides %1", _oppEast];
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): EAST opposed sides %1", _oppEast];
+        };
+        private _oppGuer = [2] call FADE_getOpposedSideNums;
+        _ok = 0 in _oppGuer && { 1 in _oppGuer } && { !(2 in _oppGuer) };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): GUER opposed to EAST and WEST only";
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): GUER opposed sides %1", _oppGuer];
+        };
+        _ok = (["CIV_F", "BLU_F"] call FADE_scenarioFactionsDescribeIssue) in ["friendly_not_playable", "civ_friendly"];
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): CIV rejected as friendly faction";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): CIV friendly rejection";
+        };
+        _ok = ["BLU_F", "OPF_F"] call FADE_scenarioFactionsDescribeIssue == "";
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): BLU vs OPF valid";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): BLU vs OPF should be valid";
+        };
+        if (!isNil "FADE_despawnScenarioWorldUnits" && { !isNil "FADE_enemyPatrol_despawnAll" }) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): FADE_despawnScenarioWorldUnits installed";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): FADE_despawnScenarioWorldUnits missing";
+        };
+        if (!isNil "FADE_dummyUnits_refreshForScenarioFaction") then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): FADE_dummyUnits_refreshForScenarioFaction installed";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): FADE_dummyUnits_refreshForScenarioFaction missing";
+        };
+        if (!isNil "FADE_anyScenarioMissionActive") then {
+            private _savedGlobal = +(missionNamespace getVariable ["FADE_globalMission", []]);
+            private _savedSingles = +(missionNamespace getVariable ["FADE_singleMissions", []]);
+            missionNamespace setVariable ["FADE_globalMission", []];
+            missionNamespace setVariable ["FADE_singleMissions", []];
+            _ok = !([] call FADE_anyScenarioMissionActive);
+            missionNamespace setVariable ["FADE_globalMission", ["AreaOfOperations", objNull, [0, 0, 0], "", "Test Op"]];
+            private _okActive = [] call FADE_anyScenarioMissionActive;
+            missionNamespace setVariable ["FADE_globalMission", _savedGlobal];
+            missionNamespace setVariable ["FADE_singleMissions", _savedSingles];
+            if (_ok && { _okActive }) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): FADE_anyScenarioMissionActive";
+            } else {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): FADE_anyScenarioMissionActive";
+            };
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): FADE_anyScenarioMissionActive missing";
+        };
+    } else {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): FADE_normalizeScenarioFactions missing";
     };
 
     _ok = (missionNamespace getVariable ["FADE_minDistBetweenMissions", -1]) == 2000 && { !isNil "FADE_missionMapClickRadiusTiers" };
@@ -1236,7 +1372,11 @@ FAC_missionTestSuite_runClient = {
 
     private _fncNames = [
         "FADE_showMissionHint",
-        "FADE_applyScenarioClientSync",
+        "FADE_normalizeScenarioFactions",
+        "FADE_scenarioFactionsDescribeIssue",
+        "FADE_getPlayableFactions",
+        "FADE_getOpposedSideNums",
+        "FADE_isScenarioFriendlyUnit",
         "FADE_applyMissionSlotsClientSync",
         "FADE_aiSideChat_exec",
         "FAC_playerCanUseMissionsGui",

@@ -30,12 +30,15 @@ FADE_runMission_SearchDestroy = {
         private _c = +_pos;
         if (count _c < 3) then { _c = [(_c select 0), (_c select 1), 0] };
         private _buildings = nearestObjects [_c, ["House", "Building"], _radius];
-        private _cands = _buildings call BIS_fnc_arrayShuffle;
+        private _cands = _buildings select {
+            count (_x buildingPos -1) >= 2 &&
+            { [_x] call FADE_objective_isSettlementBuilding }
+        };
+        _cands = _cands call BIS_fnc_arrayShuffle;
         private _pickedTrial = [];
         {
             if (count _pickedTrial >= 3) exitWith {};
-            private _bps = _x buildingPos -1;
-            if (count _bps >= 2) then { _pickedTrial pushBack _x };
+            _pickedTrial pushBack _x;
         } forEach _cands;
         if (count _pickedTrial >= 3) then {
             [_c, _pickedTrial select [0, 3]]
@@ -338,8 +341,10 @@ FADE_runMission_SearchDestroy = {
         if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
     };
     private _sdAnchor = [_sdBldPos] call FADE_mission_positionsCentroid;
-    private _sdMarkerOut = [_taskId, _markerName, _sdAnchor, _areaRadius, _markerEnemy, "mil_objective", _operationName, -1, -1, _sdBldPos] call FADE_mission_createObjectiveMarker;
+    private _sdMarkerOut = [_taskId, _markerName, _sdAnchor, _areaRadius, _markerEnemy, "objective", _operationName, -1, -1, _sdBldPos] call FADE_mission_createObjectiveMarker;
     private _displayRadius = _sdMarkerOut param [3, _areaRadius];
+
+    [_taskId, "SearchDestroy", _sdAnchor, _sdMarkerOut, _allGroups, _markerEnemy] call FADE_fieldIntel_startForMission;
 
     private _grid = mapGridPosition _center;
     private _cacheCount = count _sdAmmoObjs;

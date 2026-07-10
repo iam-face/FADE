@@ -457,6 +457,19 @@ FADE_applyMissionSlotsClientSync = {
 
     missionNamespace setVariable ["FADE_currentMissionPlayer", _curPlayer];
 
+    private _fn = missionNamespace getVariable ["FAC_scenarioGui_onMissionSlotsSync", {}];
+    if (_fn isEqualType {}) then { [] call _fn };
+
+};
+
+
+
+// True while a global or single mission slot is in use (blocks scenario faction changes).
+FADE_anyScenarioMissionActive = {
+    private _global = missionNamespace getVariable ["FADE_globalMission", []];
+    if (_global isEqualType [] && { count _global >= 1 }) exitWith { true };
+    private _singles = missionNamespace getVariable ["FADE_singleMissions", []];
+    (_singles isEqualType []) && { count _singles > 0 }
 };
 
 
@@ -466,6 +479,8 @@ missionNamespace setVariable ["FADE_missionSlots_publish", FADE_missionSlots_pub
 missionNamespace setVariable ["FADE_missionSlots_set", FADE_missionSlots_set];
 
 missionNamespace setVariable ["FADE_applyMissionSlotsClientSync", FADE_applyMissionSlotsClientSync];
+
+missionNamespace setVariable ["FADE_anyScenarioMissionActive", FADE_anyScenarioMissionActive];
 
 missionNamespace setVariable ["FADE_hqMainBoard_update", FADE_hqMainBoard_update];
 

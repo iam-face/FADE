@@ -171,9 +171,9 @@ publicVariable "FAC_loadoutGui_serverRequestApplyToMember";
 call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";
 
 FADE_serverBootstrapModuleList = [
-    "rsc\\server\\ServerBootstrapFactions.sqf",
-    "rsc\\server\\ServerBootstrapOpforAir.sqf",
-    "rsc\\server\\ServerBootstrapScenario.sqf"
+    "rsc\server\ServerBootstrapFactions.sqf",
+    "rsc\server\ServerBootstrapOpforAir.sqf",
+    "rsc\server\ServerBootstrapScenario.sqf"
 ];
 missionNamespace setVariable ["FADE_serverBootstrapModuleList", FADE_serverBootstrapModuleList];
 

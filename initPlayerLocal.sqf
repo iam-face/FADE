@@ -17,10 +17,12 @@ FAC_surrenderChallenge_debugKeys = false;
 
 // Config (client subset) so FADE_* flags e.g. FADE_debugBIScp apply before optional BIS CP stubs
 call compile preprocessFileLineNumbers "rsc\ConfigClient.sqf";
+call compile preprocessFileLineNumbers "rsc\FADE_FactionScenario.sqf";
 call compile preprocessFileLineNumbers "rsc\FAC_MissionTypeLabels.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_ClientCommon.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_MissionSlots.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_IntelClient.sqf";
+call compile preprocessFileLineNumbers "rsc\FADE_FieldIntelClient.sqf";
 
 // Debug: optional BIS campaign function stubs - default off in Config (see rsc\DebugBIScpStub.sqf)
 call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";

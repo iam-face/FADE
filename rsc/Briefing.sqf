@@ -546,7 +546,7 @@ player createDiaryRecord ["Diary", ["Overview", "
 <font color='#FFD700' size='14'>FACE'S DYNAMIC ENVIRONMENT (FADE)  - SITUATION</font><br/><br/>
 
 <font color='#87CEEB'>NATURE</font><br/>
-FADE Beta 4 is a multiplayer dynamic sandbox on <font color='#90EE90'>Altis</font>. It is built for broad community training with emphasis on <font color='#B0D0FF'>helicopter operations</font> (insert, extract, CAS, resupply, sling-load, formation and terrain flying), plus <font color='#B0D0FF'>joint fires</font> practice, <font color='#B0D0FF'>dismounted / urban tasks</font>, medical drills, CQB, ranges and combined-arms scenarios. No Zeus is required for normal play.<br/><br/>
+FADE Beta 7 is a multiplayer dynamic sandbox on <font color='#90EE90'>Altis</font>. It is built for broad community training with emphasis on <font color='#B0D0FF'>helicopter operations</font> (insert, extract, CAS, resupply, sling-load, formation and terrain flying), plus <font color='#B0D0FF'>joint fires</font> practice, <font color='#B0D0FF'>dismounted / urban tasks</font>, medical drills, CQB, ranges and combined-arms scenarios. No Zeus is required for normal play.<br/><br/>
 
 <font color='#87CEEB'>HOW TO USE IT</font><br/>
 Spawn vehicles and gear at base, configure the theatre in <font color='#FFD700'>Manage Scenario</font>, then start dynamic missions from <font color='#FFD700'>Manage Missions</font> or <font color='#FFD700'>Ctrl+;</font>. Missions generate tasks, map markers and SMEAC-style hints. Scenario settings such as weather, factions, civilians, AI, AAA and access gates apply to the whole server once applied.<br/><br/>

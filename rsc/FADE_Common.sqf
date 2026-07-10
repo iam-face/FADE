@@ -321,9 +321,6 @@ FADE_findOpforGroundVehicleRoadSpawn = {
 
         if (count _best >= 2) then { _result = [_best, _bestDir] };
     };
-    // #region agent log
-    diag_log format ["#DBG89f3ea|findOpforRoad|roadCount=%1|resultCount=%2|hyp=H2", count _roads, count _result];
-    // #endregion
     _result
 };
 
@@ -348,9 +345,6 @@ FADE_missionSpawnOpforRoadVehicleCrewed = {
     private _wpRef = if (count _wpCenter >= 2) then { _wpCenter } else { _center };
     // Single-line private+assign: split declare/assign breaks on 2+ invocations of reused code blocks.
     private _roadSpawnOut = [_center, _roadSearchM, _existingVehs, -1, [], _face] call FADE_findOpforGroundVehicleRoadSpawn;
-    // #region agent log
-    diag_log format ["#DBG89f3ea|spawnRoadVehCrewed|outCount=%1|existingVehs=%2|hyp=H1", count _roadSpawnOut, count _existingVehs];
-    // #endregion
     if (!(_roadSpawnOut isEqualType []) || { count _roadSpawnOut < 2 }) exitWith { [objNull, grpNull] };
     private _roadPos = +(_roadSpawnOut select 0);
     private _roadDir = _roadSpawnOut select 1;

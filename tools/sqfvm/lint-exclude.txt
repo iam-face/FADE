@@ -1,0 +1,5 @@
+# Files valid in Arma but skipped by Invoke-FadeSqfLint.ps1 (SQF-VM parser gaps).
+# One repo-relative path per line. Lines starting with # are ignored.
+cba_settings.sqf
+rsc\MissionTestSuite.sqf
+rsc\FADE_HeadlessTest.sqf

@@ -72,8 +72,10 @@ FADE_runMission_Hostage = {
         private _hostageIdx = _startIdx + floor ((_minSlotsPerBuilding - 1) / 2);
         private _idKey = if (_h < count _hostageIdOrder) then { _hostageIdOrder select _h } else { selectRandom _hostageIdPool };
         private _hn = [_hostageGroup, _building, _hostageIdx, _idKey] call FADE_objective_addHostageToGroup;
-        _hostages pushBack (_hn select 0);
-        _hostageNames pushBack (_hn select 1);
+        if (!isNull (_hn select 0)) then {
+            _hostages pushBack (_hn select 0);
+            _hostageNames pushBack (_hn select 1);
+        };
 
         private _guardCount = [3 + floor random 4, 1] call _scaleOpforCount;
         private _guardSlotIndices = [];
@@ -93,8 +95,22 @@ FADE_runMission_Hostage = {
     private _missionCenter = getPosATL (_buildingsUsed select 0);
     if (count _missionCenter < 3) then { _missionCenter = [(_missionCenter select 0), (_missionCenter select 1), 0] };
 
+    private _hoBldPos = _buildingsUsed apply {
+        private _p = getPosATL _x;
+        if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
+    };
+    private _hoAnchor = [_hoBldPos] call FADE_mission_positionsCentroid;
+
+    private _areaGroups = [];
+    [_hoAnchor, _buildingsUsed, _sideEnemy, _enemyUnits, _diffMul, _areaGroups] call FADE_objective_spawnImmediateAreaGarrison;
+
     private _hoVgHintObjs = [];
-    [_taskId, objNull, _missionCenter, _guardGroups, _hoVgHintObjs, _enemyUnits, _diffMul, -1, -1, -1, _buildingsUsed] call FADE_objective_registerNearbyGarrisons;
+    private _innerGarRad = missionNamespace getVariable ["FADE_raidTargetImmediateGarrisonRadiusM", 250];
+    private _nearGarRad = missionNamespace getVariable ["FADE_garrisonMissionNearbyRadiusM", 450];
+    [
+        _taskId, objNull, _hoAnchor, _areaGroups + _guardGroups, _hoVgHintObjs, _enemyUnits, _diffMul,
+        _nearGarRad, -1, 1, _buildingsUsed, _hoAnchor, _innerGarRad
+    ] call FADE_objective_registerNearbyGarrisons;
 
     private _patrolGroups = [_buildingsUsed, _sideEnemy, _enemyUnits, _scaleOpforCount] call FADE_objective_spawnPatrolsPerBuilding;
 
@@ -107,12 +123,7 @@ FADE_runMission_Hostage = {
     private _markerName = "FADE_hostage_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _searchRadius = missionNamespace getVariable ["FADE_hostageSearchRadiusM", 125];
-    private _hoBldPos = _buildingsUsed apply {
-        private _p = getPosATL _x;
-        if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
-    };
-    private _hoAnchor = [_hoBldPos] call FADE_mission_positionsCentroid;
-    [_taskId, _markerName, _hoAnchor, _searchRadius, "ColorCIV", "mil_objective", _operationName, -1, -1, _hoBldPos] call FADE_mission_createObjectiveMarker;
+    private _markerOut = [_taskId, _markerName, _hoAnchor, _searchRadius, "ColorCIV", "objective", _operationName, -1, -1, _hoBldPos] call FADE_mission_createObjectiveMarker;
 
     private _grid = mapGridPosition _missionCenter;
     private _brief = format ["HOSTAGE%1%1Incident area (approx.): Grid %2%1%1Rescue civilians held by hostiles. Prioritise civilian safety and follow the task's ROE and handling procedures for recovered persons.", toString [10], _grid] + _briefGuiTail;
@@ -121,8 +132,10 @@ FADE_runMission_Hostage = {
     [_player, "Hostage"] call FADE_notifyOthersMissionStarted;
 
     private _initialHostageCount = count _hostages;
-    private _allGroups = [_hostageGroup] + _guardGroups + _patrolGroups;
+    private _allGroups = [_hostageGroup] + _guardGroups + _areaGroups + _patrolGroups;
     [_guardGroups + _patrolGroups, _basePos] call FADE_registerEnemyRetreat;
+
+    [_taskId, "Hostage", _hoAnchor, _markerOut, _guardGroups + _patrolGroups + _areaGroups, "ColorCIV"] call FADE_fieldIntel_startForMission;
 
     [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
     [_taskId, _missionCenter, _basePos, _enemyUnits, _allGroups, -1] call FADE_counterAttackStart;

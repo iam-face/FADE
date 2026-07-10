@@ -43,6 +43,16 @@ FADE_startMission = {
     if (!([_player] call FADE_playerCanUseMissionsGui)) exitWith {
         ["<t size='1.2' color='#FF6666'>ACCESS DENIED</t><br/><br/><t color='#E0E0E0'>Missions GUI is restricted to group leaders by lobby settings.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
+    private _ff = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"];
+    private _ef = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
+    private _factionIssue = [_ff, _ef] call FADE_scenarioFactionsDescribeIssue;
+    if (_factionIssue != "") exitWith {
+        [_player, "SCENARIO ERROR", "Friendly and enemy factions are incompatible. Open Manage Scenario → Factions and Apply."] call FADE_missionErrorHint;
+    };
+    private _spawnsEnemies = _missionType in ["TroopExtract", "CAS", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion"];
+    if (_spawnsEnemies && { count ([] call FADE_resolveScenarioEnemyUnits) == 0 }) exitWith {
+        [_player, "MISSION ERROR", "No enemy units configured for the chosen enemy faction."] call FADE_missionErrorHint;
+    };
     private _playerUid = getPlayerUID _player;
     private _isGlobal = _missionType in (missionNamespace getVariable ["FADE_globalMissionTypes", []]);
     private _isSingle = _missionType in (missionNamespace getVariable ["FADE_singleMissionTypes", []]);

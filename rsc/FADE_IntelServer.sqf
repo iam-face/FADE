@@ -154,7 +154,7 @@ FADE_intel_revealPackage = {
     private _broadcast = missionNamespace getVariable ["FADE_intelBroadcastToGroup", true];
     private _recipients = if (_broadcast) then {
         (units group _reader) select {
-            isPlayer _x && { alive _x } && { side group _x == missionNamespace getVariable ["FADE_sideFriendly", west] }
+            isPlayer _x && { alive _x } && { [_x] call FADE_isScenarioFriendlyUnit }
         };
     } else {
         [_reader]
@@ -215,7 +215,7 @@ FADE_intel_serverConsumeIntel = {
     private _maxD = (_obj getVariable ["FADE_intelInteractDistM", missionNamespace getVariable ["FADE_intelInteractDistM", 6]]) + _distSlackM;
     if ((_player distance _obj) > _maxD) exitWith {};
 
-    if (side group _player != missionNamespace getVariable ["FADE_sideFriendly", west]) exitWith {};
+    if (!([_player] call FADE_isScenarioFriendlyUnit)) exitWith {};
 
     _obj setVariable ["FADE_intelConsumed", true, true];
     private _center = _obj getVariable ["FADE_intelQueryCenter", []];

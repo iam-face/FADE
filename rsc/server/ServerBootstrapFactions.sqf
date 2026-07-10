@@ -38,7 +38,7 @@ private _tCfgVeh0 = if (missionNamespace getVariable ["FADE_profileMissionLoad",
         private _name = getText (_cfg >> "displayName");
         if (_name == "") then { _name = _class };
         _landPairs pushBack [_name, _class];
-        if (_side == 0 || _side == 2) then {
+        if (_side == 0 || _side == 1 || _side == 2) then {
             private _arr = FADE_enemyVehiclesByFaction getOrDefault [_faction, []];
             _arr pushBack _class;
             FADE_enemyVehiclesByFaction set [_faction, _arr];
@@ -57,7 +57,7 @@ private _tCfgVeh0 = if (missionNamespace getVariable ["FADE_profileMissionLoad",
     };
 
     // Ship (enemy only): for CAS vehicle spawns. Same side widening as land vehicles above.
-    if (_scope >= 2 && { _class isKindOf "Ship" } && { !(_class isKindOf "Air") } && { _side == 0 || _side == 2 }) then {
+    if (_scope >= 2 && { _class isKindOf "Ship" } && { !(_class isKindOf "Air") } && { _side == 0 || _side == 1 || _side == 2 }) then {
         private _arr = FADE_enemyVehiclesByFaction getOrDefault [_faction, []];
         _arr pushBack _class;
         FADE_enemyVehiclesByFaction set [_faction, _arr];
@@ -315,7 +315,7 @@ FADE_resolveScenarioFriendlyUnits = {
     };
     private _filter = missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }];
     _units = [_units] call _filter;
-    [_units, _ff, _snF, false] call FADE_filterUnitsForScenarioFaction
+    [_units, _ff, _snF, true] call FADE_filterUnitsForScenarioFaction
 };
 FADE_resolveScenarioEnemyUnits = {
     params [["_fallback", []]];
@@ -362,23 +362,23 @@ FADE_attachNightStrobes = {
 };
 missionNamespace setVariable ["FADE_attachNightStrobes", FADE_attachNightStrobes];
 
+call compile preprocessFileLineNumbers "rsc\FADE_FactionScenario.sqf";
+
 // Operation mission: BLUFOR / OPFOR within horizontal radius (distance2D).
 // Capture uses spawned OPFOR only; full count (incl. virtual garrison pending) for contested/QRF.
 FADE_op_countBluforPlayersInRadius = {
     params ["_center", "_r"];
     private _n = 0;
-    private _sf = missionNamespace getVariable ["FADE_sideFriendly", west];
     {
-        if (isPlayer _x && { alive _x } && { side _x == _sf } && { (_x distance2D _center) <= _r }) then { _n = _n + 1 };
+        if ([_x] call FADE_isScenarioFriendlyUnit && { isPlayer _x } && { alive _x } && { (_x distance2D _center) <= _r }) then { _n = _n + 1 };
     } forEach allPlayers;
     _n
 };
 FADE_op_countBluforInRadius = {
     params ["_center", "_r"];
     private _n = 0;
-    private _sf = missionNamespace getVariable ["FADE_sideFriendly", west];
     {
-        if (alive _x && { side _x == _sf } && { _x isKindOf "Man" } && { (_x distance2D _center) <= _r }) then { _n = _n + 1 };
+        if ([_x] call FADE_isScenarioFriendlyUnit && { alive _x } && { _x isKindOf "Man" } && { (_x distance2D _center) <= _r }) then { _n = _n + 1 };
     } forEach allUnits;
     _n
 };

@@ -1,0 +1,22 @@
+{
+  "files.associations": {
+    "description.ext": "cppext",
+    "*.hpp": "cppext",
+    "*.inc.hpp": "cppext",
+    "CfgFunctionsMission.hpp": "cppext"
+  },
+  "sqfVmLanguageServer.Executable.PathMappings": [
+    {
+      "physical": "${workspaceFolder}",
+      "virtual": "/"
+    }
+  ],
+  "[sqf]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": false
+  },
+  "[cppext]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": false
+  }
+}

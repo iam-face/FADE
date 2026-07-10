@@ -135,16 +135,27 @@ missionNamespace setVariable ["FADE_qrfFriendlyCentroidATL", FADE_qrfFriendlyCen
 // player centroid; driver MOVE+SAD waypoints refresh every FADE_qrfHuntWaypointIntervalS (default 60).
 // Not registered with FADE_registerEnemyRetreat (QRF keeps pressure); cleaned with mission groups.
 // -----------------------------------------------------------------------------
+FADE_counterAttack_missionEnded = {
+    params ["_taskId"];
+    if (_taskId == "") exitWith { false };
+    if (missionNamespace getVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], false]) exitWith { true };
+    if ((_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"]) exitWith { true };
+    if (missionNamespace getVariable ["FADE_raidAborted_" + _taskId, false]) exitWith { true };
+    false
+};
+
 FADE_counterAttack_spawnFootWave = {
     params ["_taskId", "_objectivePos", "_enemyUnits", "_allGroups", "_applyGrp"];
+    if ([_taskId] call FADE_counterAttack_missionEnded) exitWith {};
     if (count _objectivePos < 2 || { count _enemyUnits == 0 }) exitWith {};
     private _sideEnemy = missionNamespace getVariable ["FADE_sideEnemy", east];
     private _sqMin = (missionNamespace getVariable ["FADE_counterAttackFootSquadsMin", 2]) max 1;
     private _sqMax = (missionNamespace getVariable ["FADE_counterAttackFootSquadsMax", 3]) max _sqMin;
-    private _distMin = (missionNamespace getVariable ["FADE_counterAttackFootSpawnDistMin", 200]) max 50;
-    private _distMax = (missionNamespace getVariable ["FADE_counterAttackFootSpawnDistMax", 500]) max _distMin;
+    private _distMin = (missionNamespace getVariable ["FADE_counterAttackFootSpawnDistMin", 80]) max 30;
+    private _distMax = (missionNamespace getVariable ["FADE_counterAttackFootSpawnDistMax", 220]) max _distMin;
     private _sizeMin = (missionNamespace getVariable ["FADE_counterAttackFootSquadSizeMin", 4]) max 2;
     private _sizeMax = (missionNamespace getVariable ["FADE_counterAttackFootSquadSizeMax", 6]) max _sizeMin;
+    private _bldChance = missionNamespace getVariable ["FADE_counterAttackFootBuildingChance", 0.65];
     private _numSquads = _sqMin + floor random (1 + _sqMax - _sqMin);
     private _obj3 = if (count _objectivePos >= 3) then { +_objectivePos } else { [(_objectivePos select 0), (_objectivePos select 1), 0] };
     private _bearings = [];
@@ -159,16 +170,51 @@ FADE_counterAttack_spawnFootWave = {
         };
         _bearings pushBack _bearing;
         private _dist = _distMin + random (_distMax - _distMin);
-        private _raw = _obj3 getPos [_dist, _bearing];
-        private _spawnPos = [[_raw, 0, 35, 4, 1, 0.4, 0, [], _obj3], _raw] call FADE_findSafePosArray;
-        if (surfaceIsWater _spawnPos) then {
-            _spawnPos = [[_obj3, _distMin + random ((_distMax - _distMin) * 0.5), 40, 4, 1, 0.4, 0, [], _obj3], _spawnPos] call FADE_findSafePosArray;
-        };
-        if (surfaceIsWater _spawnPos) then { continue };
         private _sz = _sizeMin + floor random (1 + _sizeMax - _sizeMin);
+        private _unitPositions = [];
+        private _usedBuilding = false;
+        if (random 1 < _bldChance) then {
+            private _bldCandidates = (nearestObjects [_obj3, ["House", "Building"], _distMax]) select {
+                (getPosATL _x) distance2D _obj3 >= (_distMin * 0.5) &&
+                { count (_x buildingPos -1) >= 1 }
+            };
+            if (count _bldCandidates > 0) then {
+                private _bld = selectRandom _bldCandidates;
+                private _bps = (_bld buildingPos -1) call BIS_fnc_arrayShuffle;
+                private _want = _sz min count _bps;
+                for "_bi" from 0 to (_want - 1) do {
+                    private _p = _bps select _bi;
+                    if (count _p < 3) then { _p = [(_p select 0), (_p select 1), (_p param [2, 0])] };
+                    _unitPositions pushBack _p;
+                };
+                if (count _unitPositions > 0) then { _usedBuilding = true };
+            };
+        };
+        if (!_usedBuilding) then {
+            private _raw = _obj3 getPos [_dist, _bearing];
+            private _spawnPos = [[_raw, 0, 35, 4, 1, 0.4, 0, [], _obj3], _raw] call FADE_findSafePosArray;
+            if (surfaceIsWater _spawnPos) then {
+                _spawnPos = [[_obj3, _distMin + random ((_distMax - _distMin) * 0.5), 40, 4, 1, 0.4, 0, [], _obj3], _spawnPos] call FADE_findSafePosArray;
+            };
+            if (surfaceIsWater _spawnPos) then { continue };
+            for "_u" from 1 to _sz do {
+                private _off = if (_u == 1) then { [0, 0] } else { [3 + random 6, random 360] };
+                private _p = if (_off isEqualTo [0, 0]) then { +_spawnPos } else { _spawnPos getPos [_off select 0, _off select 1] };
+                if (count _p < 3) then { _p = [(_p select 0), (_p select 1), 0] };
+                _unitPositions pushBack _p;
+            };
+        };
+        if (_unitPositions isEqualTo []) then { continue };
         private _cls = [];
-        for "_u" from 1 to _sz do { _cls pushBack (selectRandom _enemyUnits) };
-        private _grp = [_spawnPos, _sideEnemy, _cls] call BIS_fnc_spawnGroup;
+        for "_u" from 1 to (count _unitPositions) do { _cls pushBack (selectRandom _enemyUnits) };
+        private _grp = createGroup _sideEnemy;
+        {
+            private _u = _grp createUnit [_cls select _forEachIndex, _x, [], 0, "NONE"];
+            if (!isNull _u) then {
+                _u setPosATL _x;
+                if (_usedBuilding) then { _u setUnitPos "MIDDLE" };
+            };
+        } forEach _unitPositions;
         if (isNull _grp || { count units _grp == 0 }) then { continue };
         [_grp] call _applyGrp;
         _grp setBehaviour "COMBAT";
@@ -256,6 +302,7 @@ FADE_counterAttackStart = {
 
         private _waveFn = {
             params ["_taskId", "_objectivePos", "_enemyUnits", "_allGroups", "_numTrucks", "_applyGrp", "_pollInterval", "_detectionRadius"];
+            if ([_taskId] call FADE_counterAttack_missionEnded) exitWith {};
             private _sideEnemy = missionNamespace getVariable ["FADE_sideEnemy", east];
             private _pairs = [];
             {
@@ -535,4 +582,5 @@ FADE_counterAttackStart = {
         };
     };
 };
+missionNamespace setVariable ["FADE_counterAttack_missionEnded", FADE_counterAttack_missionEnded];
 missionNamespace setVariable ["FADE_counterAttackStart", FADE_counterAttackStart];

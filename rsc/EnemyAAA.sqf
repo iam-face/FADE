@@ -8,6 +8,14 @@ if (!isServer) exitWith {};
 FADE_aaa_fallbackStatic = "O_HMG_01_high_F";
 FADE_aaa_fallbackManpads = "O_Soldier_AA_F";
 FADE_aaa_clusters = createHashMap;
+FADE_aaa_staticLightClassCache = createHashMap;
+missionNamespace setVariable ["FADE_aaa_staticLightClassCache", FADE_aaa_staticLightClassCache];
+
+FADE_aaa_cfgVehicleSideNum = {
+    params ["_cfg"];
+    private _sideCfg = _cfg >> "side";
+    if (isNumber _sideCfg) then { getNumber _sideCfg } else { -1 }
+};
 
 FADE_aaa_normalizeLevel = {
     params [["_lvl", "Off"]];
@@ -26,6 +34,8 @@ FADE_aaa_normalizeLevel = {
 FADE_aaa_getStaticLightClass = {
     params [["_faction", ""]];
     if (_faction == "") then { _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"] };
+    private _cache = missionNamespace getVariable ["FADE_aaa_staticLightClassCache", createHashMap];
+    if (_faction in _cache) exitWith { _cache get _faction };
     private _fallback = missionNamespace getVariable ["FADE_aaa_fallbackStatic", "O_HMG_01_high_F"];
     private _side = [_faction, 0] call (missionNamespace getVariable ["FADE_getFactionSideNum", { 0 }]);
     private _pick = "";
@@ -33,14 +43,17 @@ FADE_aaa_getStaticLightClass = {
         private _cfg = _x;
         private _class = configName _cfg;
         if (getNumber (_cfg >> "scope") < 2) then { continue };
-        if (getNumber (_cfg >> "side") != _side) then { continue };
+        if ([_cfg] call FADE_aaa_cfgVehicleSideNum != _side) then { continue };
         if !(_class isKindOf "StaticWeapon") then { continue };
         if (getText (_cfg >> "faction") != _faction) then { continue };
         private _dn = toLower getText (_cfg >> "displayName");
         if ((_dn find "hmg" >= 0) || { _dn find "gmg" >= 0 } || { _dn find "aa" >= 0 }) exitWith { _pick = _class };
         if (_pick == "") then { _pick = _class };
     } forEach ("true" configClasses (configFile >> "CfgVehicles"));
-    if (_pick != "") then { _pick } else { _fallback }
+    private _result = if (_pick != "") then { _pick } else { _fallback };
+    _cache set [_faction, _result];
+    missionNamespace setVariable ["FADE_aaa_staticLightClassCache", _cache];
+    _result
 };
 
 FADE_aaa_getStaticAAClass = {
@@ -52,7 +65,7 @@ FADE_aaa_getStaticAAClass = {
         private _cfg = _x;
         private _class = configName _cfg;
         if (getNumber (_cfg >> "scope") < 2) then { continue };
-        if (getNumber (_cfg >> "side") != _side) then { continue };
+        if ([_cfg] call FADE_aaa_cfgVehicleSideNum != _side) then { continue };
         if !(_class isKindOf "StaticWeapon") then { continue };
         private _dn = toLower getText (_cfg >> "displayName");
         private _isAA = (getNumber (_cfg >> "airLock") > 0) || { getNumber (_cfg >> "maneuvrability") > 0 };

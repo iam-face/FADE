@@ -10,6 +10,11 @@ Thumbs.db
 local_server/
 *.bat
 *.py
+headless_test.flg
+headless_test_result.txt
+tools/headless/headless.local.json
+tools/sqfvm/bin/
+tools/sqfvm/sqfvm.local.json
 # Agent / AI context (local only unless force-added); .cursor/rules stays tracked
 .cursor/agent-docs/
 .cursor/rules/

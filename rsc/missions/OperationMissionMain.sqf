@@ -774,7 +774,6 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, time];
     missionNamespace setVariable ["FADE_operationAborted_" + _taskId, true];
     private _vgOpX = missionNamespace getVariable ["FADE_vg_cancelPendingByOwner", {}];
     if (!(_vgOpX isEqualTo {})) then { [format ["op:%1", _taskId]] call _vgOpX };
-    if (!isNil "FADE_mission_unpinCivZonesForTask") then { [_taskId] call FADE_mission_unpinCivZonesForTask };
     sleep 1;
     if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then { [_player] call FADE_clearActiveMission };
     [_taskId, "", _player, 60] call FADE_mission_completeCleanup;
@@ -839,6 +838,18 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, time];
                     missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, time];
                     _didQrf = true;
                     private _from = _zones select _hqI;
+                    private _footGrps = [];
+                    private _footFn = missionNamespace getVariable ["FADE_counterAttack_spawnFootWave", {}];
+                    if (!(_footFn isEqualTo {})) then {
+                        [_taskId, _zoneCenter, _enemyUnits, _footGrps, _facApply] call _footFn;
+                        private _entFoot = missionNamespace getVariable ["FADE_operationEntities_" + _taskId, []];
+                        if (count _entFoot >= 1 && { count _footGrps > 0 }) then {
+                            private _grpsFoot = _entFoot select 0;
+                            { _grpsFoot pushBack _x } forEach _footGrps;
+                            _entFoot set [0, _grpsFoot];
+                            missionNamespace setVariable ["FADE_operationEntities_" + _taskId, _entFoot];
+                        };
+                    };
                     private _flOp = missionNamespace getVariable ["FADE_qrfSpawnHintFlare", {}];
                     if (!(_flOp isEqualTo {})) then { [_from, _zoneRadius] call _flOp };
                     private _nVeh = 1 + floor random 3;

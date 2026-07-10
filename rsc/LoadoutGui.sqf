@@ -67,6 +67,14 @@ FAC_loadoutGui_getPlayerFaction = {
     missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]
 };
 
+FAC_loadoutGui_getScenarioSide = {
+    missionNamespace getVariable ["FADE_sideFriendly", side player]
+};
+
+FAC_loadoutGui_getScenarioSideNum = {
+    missionNamespace getVariable ["FADE_scenarioFriendlySideNum", (side player) call BIS_fnc_sideID]
+};
+
 // Build one unit row from classname.
 FAC_loadoutGui_classToUnitRow = {
     params ["_class"];
@@ -126,17 +134,17 @@ FAC_loadoutGui_buildStdUnits = {
     params [["_factionScope", ""]];
     private _allUnits = [];
     if (_factionScope == "") then {
-        _allUnits = [side player] call FAC_loadoutGui_getUnitsForSide;
+        _allUnits = [[] call FAC_loadoutGui_getScenarioSide] call FAC_loadoutGui_getUnitsForSide;
     } else {
         if (!isNil "FADE_getUnitsForFaction") then {
-            private _sideNum = side player call BIS_fnc_sideID;
+            private _sideNum = [] call FAC_loadoutGui_getScenarioSideNum;
             private _classes = [_factionScope, _sideNum] call FADE_getUnitsForFaction;
             {
                 private _row = [_x] call FAC_loadoutGui_classToUnitRow;
                 if (count _row > 0) then { _allUnits pushBack _row };
             } forEach _classes;
         } else {
-            _allUnits = [side player, _factionScope] call FAC_loadoutGui_getUnitsForSide;
+            _allUnits = [[[] call FAC_loadoutGui_getScenarioSide, _factionScope] call FAC_loadoutGui_getUnitsForSide];
         };
     };
     if (missionNamespace getVariable ["FADE_limitGearToFriendlyFaction", false]) then {
@@ -161,7 +169,7 @@ FAC_loadoutGui_selectStdFaction = {
 
 // Faction keys for std-mode filter (CfgFactionClasses on player side — no unit scan).
 FAC_loadoutGui_collectStdFactionKeys = {
-    private _sideNum = side player call BIS_fnc_sideID;
+    private _sideNum = [] call FAC_loadoutGui_getScenarioSideNum;
     private _keys = [];
     {
         if (getNumber (_x >> "side") == _sideNum) then {
@@ -683,7 +691,7 @@ FAC_loadoutGui_fnc = {
             if (isNull _display) exitWith {};
             private _limitToBlu = missionNamespace getVariable ["FADE_limitGearToFriendlyFaction", false];
             private _limitToPreset = missionNamespace getVariable ["FADE_limitToPresetLoadouts", false];
-            if (_limitToBlu && { _mode != "std" }) exitWith { systemChat "Loadouts are limited to chosen BLUFOR faction."; };
+            if (_limitToBlu && { _mode != "std" }) exitWith { systemChat "Loadouts are limited to the chosen friendly faction."; };
             if (!_limitToBlu && { _limitToPreset } && { _mode != "preset" }) exitWith { systemChat "Loadouts are limited to preset loadouts."; };
             missionNamespace setVariable ["FAC_loadoutGui_listMode", _mode];
 

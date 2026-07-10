@@ -56,6 +56,7 @@ FAC_scenarioGui_adminContentIdcs = [60930, 60943, 60895, 60896, 60897, 60898, 60
 
 FAC_scenarioGui_getFactionDisplayName = {
     params ["_faction"];
+    if (!isNil "FADE_factionDisplayNameSafe") exitWith { [_faction] call FADE_factionDisplayNameSafe };
     if (_faction == "") exitWith { "Unknown" };
     if (!isNil "FAC_loadoutGui_getFactionDisplayName") exitWith { [_faction] call FAC_loadoutGui_getFactionDisplayName };
     private _dn = getText (configFile >> "CfgFactionClasses" >> _faction >> "displayName");
@@ -65,21 +66,34 @@ FAC_scenarioGui_getFactionDisplayName = {
 
 FAC_scenarioGui_getFactionsForSide = {
     params ["_sideNum"];
-    private _result = [];
+    [_sideNum] call FADE_collectFactionsForSideNums
+};
+
+FAC_scenarioGui_rebuildEnemyFactionList = {
+    params ["_display", ["_friendlyFaction", ""]];
+    if (_friendlyFaction == "") then {
+        _friendlyFaction = missionNamespace getVariable ["FAC_scenarioGui_pickFriendlyFaction", missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]];
+    };
+    private _enemyList = _display displayCtrl 60310;
+    if (isNull _enemyList) exitWith {};
+    missionNamespace setVariable ["FAC_scenarioGui_suppressFactionListEH", true];
+    lbClear _enemyList;
+    private _enemyFactions = [_friendlyFaction] call FADE_getEnemyFactionsForFriendlyFaction;
+    private _currentEnemy = missionNamespace getVariable ["FAC_scenarioGui_pickEnemyFaction", missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"]];
+    if ([_friendlyFaction, _currentEnemy] call FADE_scenarioFactionsDescribeIssue != "") then {
+        _currentEnemy = [_friendlyFaction, _currentEnemy] call FADE_pickDefaultEnemyFactionForFriendly;
+        missionNamespace setVariable ["FAC_scenarioGui_pickEnemyFaction", _currentEnemy];
+    };
+    private _enemySel = 0;
     {
-        private _faction = configName _x;
-        if (getNumber (_x >> "side") == _sideNum) then {
-            private _dn = getText (_x >> "displayName");
-            if (_dn == "" || { _dn find "STR_" == 0 }) then {
-                _dn = (_faction splitString "_") joinString " ";
-            };
-            _result pushBack [_faction, _dn];
-        };
-    } forEach ("true" configClasses (configFile >> "CfgFactionClasses"));
-    _result = _result apply { [_x select 1, _x select 0] };
-    _result sort true;
-    _result = _result apply { [_x select 1, _x select 0] };
-    _result
+        _x params ["_faction", "_dn"];
+        private _idx = _enemyList lbAdd _dn;
+        _enemyList lbSetData [_idx, _faction];
+        if (_faction == _currentEnemy) then { _enemySel = _idx };
+    } forEach _enemyFactions;
+    if (lbSize _enemyList > 0) then { _enemyList lbSetCurSel _enemySel };
+    missionNamespace setVariable ["FAC_scenarioGui_suppressFactionListEH", false];
+    [_display, 60310, _currentEnemy] call FAC_scenarioGui_commitFactionListToPick;
 };
 
 FAC_scenarioGui_adminCleanupButtonDefs = [
@@ -152,10 +166,13 @@ FAC_scenarioGui_commitFactionListToPick = {
     private _lb = _display displayCtrl _idc;
     if (isNull _lb) exitWith {};
     private _fac = _fallback;
-    private _i = lbCurSel _lb;
-    if (_i >= 0) then {
-        private _data = _lb lbData _i;
-        if (_data != "") then { _fac = _data };
+    // Hidden faction lists keep a stale lbCurSel (often index 0); only read selection while the tab is visible.
+    if (ctrlShown _lb) then {
+        private _i = lbCurSel _lb;
+        if (_i >= 0) then {
+            private _data = _lb lbData _i;
+            if (_data != "") then { _fac = _data };
+        };
     };
     if (_fac == "") exitWith {};
     switch _idc do {
@@ -168,10 +185,11 @@ FAC_scenarioGui_commitFactionListToPick = {
 // After lists become visible again, restore selection from stored picks (engine may reset list index while hidden).
 FAC_scenarioGui_syncFactionListsFromPicks = {
     params ["_display"];
+    missionNamespace setVariable ["FAC_scenarioGui_suppressFactionListEH", true];
     {
         _x params ["_idc", "_pickVar", "_default"];
         private _lb = _display displayCtrl _idc;
-        if (isNull _lb) exitWith {};
+        if (isNull _lb) then { continue };
         private _want = missionNamespace getVariable [_pickVar, _default];
         private _sel = -1;
         private _n = lbSize _lb;
@@ -185,6 +203,76 @@ FAC_scenarioGui_syncFactionListsFromPicks = {
         [60310, "FAC_scenarioGui_pickEnemyFaction", "OPF_F"],
         [60312, "FAC_scenarioGui_pickCivFaction", "CIV_F"]
     ];
+    missionNamespace setVariable ["FAC_scenarioGui_suppressFactionListEH", false];
+};
+
+// Fill faction listboxes (CfgFactionClasses scan — deferred until Factions tab / refresh).
+FAC_scenarioGui_populateFactionLists = {
+    params ["_display"];
+    if (isNull _display) exitWith {};
+
+    private _currentFriendly = missionNamespace getVariable ["FAC_scenarioGui_pickFriendlyFaction", missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]];
+    private _currentCiv = missionNamespace getVariable ["FAC_scenarioGui_pickCivFaction", missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"]];
+
+    private _friendlyList = _display displayCtrl 60311;
+    if (!isNull _friendlyList) then {
+        missionNamespace setVariable ["FAC_scenarioGui_suppressFactionListEH", true];
+        lbClear _friendlyList;
+        private _friendlyFactions = [] call FADE_getPlayableFactions;
+        private _friendlySel = 0;
+        {
+            _x params ["_faction", "_dn"];
+            private _idx = _friendlyList lbAdd _dn;
+            _friendlyList lbSetData [_idx, _faction];
+            if (_faction == _currentFriendly) then { _friendlySel = _idx };
+        } forEach _friendlyFactions;
+        if (lbSize _friendlyList > 0) then { _friendlyList lbSetCurSel _friendlySel };
+        missionNamespace setVariable ["FAC_scenarioGui_suppressFactionListEH", false];
+        [_display, 60311, _currentFriendly] call FAC_scenarioGui_commitFactionListToPick;
+    };
+
+    [_display, _currentFriendly] call FAC_scenarioGui_rebuildEnemyFactionList;
+
+    private _civList = _display displayCtrl 60312;
+    if (!isNull _civList) then {
+        missionNamespace setVariable ["FAC_scenarioGui_suppressFactionListEH", true];
+        lbClear _civList;
+        private _civFactions = [3] call FAC_scenarioGui_getFactionsForSide;
+        private _civSel = 0;
+        {
+            _x params ["_faction", "_dn"];
+            private _idx = _civList lbAdd _dn;
+            _civList lbSetData [_idx, _faction];
+            if (_faction == _currentCiv) then { _civSel = _idx };
+        } forEach _civFactions;
+        if (lbSize _civList > 0) then { _civList lbSetCurSel _civSel };
+        missionNamespace setVariable ["FAC_scenarioGui_suppressFactionListEH", false];
+        [_display, 60312, _currentCiv] call FAC_scenarioGui_commitFactionListToPick;
+    };
+
+    missionNamespace setVariable ["FAC_scenarioGui_factionListsReady", true];
+    [_display] call FAC_scenarioGui_syncFactionMissionLock;
+};
+
+// Disable faction lists while a global or single mission is active.
+FAC_scenarioGui_syncFactionMissionLock = {
+    params ["_display"];
+    private _locked = if (!isNil "FADE_anyScenarioMissionActive") then { [] call FADE_anyScenarioMissionActive } else { false };
+    {
+        private _lb = _display displayCtrl _x;
+        if (!isNull _lb) then {
+            _lb ctrlEnable !_locked;
+        };
+    } forEach [60310, 60311, 60312];
+    if (_locked) then {
+        [_display] call FAC_scenarioGui_syncFactionListsFromPicks;
+    };
+    _locked
+};
+
+FAC_scenarioGui_onMissionSlotsSync = {
+    private _d = findDisplay FAC_scenarioGui_IDD;
+    if (!isNull _d) then { [_d] call FAC_scenarioGui_syncFactionMissionLock };
 };
 
 FAC_scenarioGui_applyWeatherArrayToSliders = {
@@ -531,10 +619,21 @@ FAC_scenarioGui_fnc = {
             if (_tab == "factions") then {
                 private _d = findDisplay FAC_scenarioGui_IDD;
                 if (!isNull _d) then {
-                    [_d] call FAC_scenarioGui_syncFactionListsFromPicks;
-                    [_d, 60311, missionNamespace getVariable ["FAC_scenarioGui_pickFriendlyFaction", "BLU_F"]] call FAC_scenarioGui_commitFactionListToPick;
-                    [_d, 60310, missionNamespace getVariable ["FAC_scenarioGui_pickEnemyFaction", "OPF_F"]] call FAC_scenarioGui_commitFactionListToPick;
-                    [_d, 60312, missionNamespace getVariable ["FAC_scenarioGui_pickCivFaction", "CIV_F"]] call FAC_scenarioGui_commitFactionListToPick;
+                    // CfgFactionClasses scan is deferred until this tab (avoids CTD/hang on open with large modsets).
+                    if !(missionNamespace getVariable ["FAC_scenarioGui_factionListsReady", false]) then {
+                        [_d] call FAC_scenarioGui_populateFactionLists;
+                        if (!isNil "FADE_anyScenarioMissionActive" && { [] call FADE_anyScenarioMissionActive }) then {
+                            systemChat "Faction changes are locked while a mission is active. Abort missions first.";
+                        };
+                    } else {
+                        [_d] call FAC_scenarioGui_syncFactionListsFromPicks;
+                        [_d, 60311, missionNamespace getVariable ["FAC_scenarioGui_pickFriendlyFaction", "BLU_F"]] call FAC_scenarioGui_commitFactionListToPick;
+                        [_d, 60310, missionNamespace getVariable ["FAC_scenarioGui_pickEnemyFaction", "OPF_F"]] call FAC_scenarioGui_commitFactionListToPick;
+                        [_d, 60312, missionNamespace getVariable ["FAC_scenarioGui_pickCivFaction", "CIV_F"]] call FAC_scenarioGui_commitFactionListToPick;
+                        if ([_d] call FAC_scenarioGui_syncFactionMissionLock) then {
+                            systemChat "Faction changes are locked while a mission is active. Abort missions first.";
+                        };
+                    };
                 };
             };
             if (_tab == "admin") then {
@@ -666,48 +765,15 @@ FAC_scenarioGui_fnc = {
                 if (!isNull _skl) then { _skl ctrlSetText format ["%1", (round (_skv * 100)) / 100] };
             };
 
-            private _friendlyList = _d displayCtrl 60311;
-            lbClear _friendlyList;
-            private _friendlyFactions = [1] call FAC_scenarioGui_getFactionsForSide;
+            // Seed faction picks only — listboxes fill on Factions tab (or header Refresh).
             private _currentFriendly = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"];
-            private _friendlySel = 0;
-            {
-                _x params ["_faction", "_dn"];
-                private _idx = _friendlyList lbAdd _dn;
-                _friendlyList lbSetData [_idx, _faction];
-                if (_faction == _currentFriendly) then { _friendlySel = _idx };
-            } forEach _friendlyFactions;
-            if (lbSize _friendlyList > 0) then { _friendlyList lbSetCurSel _friendlySel };
-
-            private _enemyList = _d displayCtrl 60310;
-            lbClear _enemyList;
-            private _enemyFactions = [0] call FAC_scenarioGui_getFactionsForSide;
             private _currentEnemy = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
-            private _enemySel = 0;
-            {
-                _x params ["_faction", "_dn"];
-                private _idx = _enemyList lbAdd _dn;
-                _enemyList lbSetData [_idx, _faction];
-                if (_faction == _currentEnemy) then { _enemySel = _idx };
-            } forEach _enemyFactions;
-            if (lbSize _enemyList > 0) then { _enemyList lbSetCurSel _enemySel };
-
-            private _civList = _d displayCtrl 60312;
-            lbClear _civList;
-            private _civFactions = [3] call FAC_scenarioGui_getFactionsForSide;
             private _currentCiv = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
-            private _civSel = 0;
-            {
-                _x params ["_faction", "_dn"];
-                private _idx = _civList lbAdd _dn;
-                _civList lbSetData [_idx, _faction];
-                if (_faction == _currentCiv) then { _civSel = _idx };
-            } forEach _civFactions;
-            if (lbSize _civList > 0) then { _civList lbSetCurSel _civSel };
-
-            [_d, 60311, _currentFriendly] call FAC_scenarioGui_commitFactionListToPick;
-            [_d, 60310, _currentEnemy] call FAC_scenarioGui_commitFactionListToPick;
-            [_d, 60312, _currentCiv] call FAC_scenarioGui_commitFactionListToPick;
+            missionNamespace setVariable ["FAC_scenarioGui_pickFriendlyFaction", _currentFriendly];
+            missionNamespace setVariable ["FAC_scenarioGui_pickEnemyFaction", _currentEnemy];
+            missionNamespace setVariable ["FAC_scenarioGui_pickCivFaction", _currentCiv];
+            missionNamespace setVariable ["FAC_scenarioGui_factionListsReady", false];
+            missionNamespace setVariable ["FAC_scenarioGui_suppressFactionListEH", false];
 
             [] call FAC_scenarioGui_syncLimitGearBtns;
             [] call FAC_scenarioGui_syncCivBtns;
@@ -738,6 +804,11 @@ FAC_scenarioGui_fnc = {
 
         case "factionListChanged": {
             _params params ["_idc"];
+            if (missionNamespace getVariable ["FAC_scenarioGui_suppressFactionListEH", false]) exitWith {};
+            if (!isNil "FADE_anyScenarioMissionActive" && { [] call FADE_anyScenarioMissionActive }) exitWith {
+                private _d = findDisplay FAC_scenarioGui_IDD;
+                if (!isNull _d) then { [_d] call FAC_scenarioGui_syncFactionListsFromPicks };
+            };
             private _d = findDisplay FAC_scenarioGui_IDD;
             if (isNull _d) exitWith {};
             private _fb = switch _idc do {
@@ -747,6 +818,9 @@ FAC_scenarioGui_fnc = {
                 default { "BLU_F" };
             };
             [_d, _idc, _fb] call FAC_scenarioGui_commitFactionListToPick;
+            if (_idc == 60311) then {
+                [_d] call FAC_scenarioGui_rebuildEnemyFactionList;
+            };
         };
 
         case "weatherPresetChanged": {
@@ -868,7 +942,15 @@ FAC_scenarioGui_fnc = {
 
         case "headerRefresh": {
             private _d = findDisplay FAC_scenarioGui_IDD;
-            if (!isNull _d) then { ["onLoad", [_d]] call FAC_scenarioGui_fnc };
+            if (isNull _d) exitWith {};
+            ["onLoad", [_d]] call FAC_scenarioGui_fnc;
+            // Refresh also rebuilds faction lists if the Factions tab is open (or already filled once).
+            if (
+                (missionNamespace getVariable ["FAC_scenarioGui_tab", "scenario"]) == "factions"
+                || { missionNamespace getVariable ["FAC_scenarioGui_factionListsReady", false] }
+            ) then {
+                [_d] call FAC_scenarioGui_populateFactionLists;
+            };
         };
 
         case "adminCleanup": {
@@ -926,9 +1008,12 @@ FAC_scenarioGui_fnc = {
         case "apply": {
             private _d = findDisplay FAC_scenarioGui_IDD;
             if (isNull _d) exitWith {};
-            [_d, 60311, missionNamespace getVariable ["FAC_scenarioGui_pickFriendlyFaction", missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]]] call FAC_scenarioGui_commitFactionListToPick;
-            [_d, 60310, missionNamespace getVariable ["FAC_scenarioGui_pickEnemyFaction", missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"]]] call FAC_scenarioGui_commitFactionListToPick;
-            [_d, 60312, missionNamespace getVariable ["FAC_scenarioGui_pickCivFaction", missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"]]] call FAC_scenarioGui_commitFactionListToPick;
+            // Factions tab may be hidden — use stored picks only (commit would read stale lbCurSel).
+            if ((missionNamespace getVariable ["FAC_scenarioGui_tab", "scenario"]) == "factions") then {
+                [_d, 60311, missionNamespace getVariable ["FAC_scenarioGui_pickFriendlyFaction", missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]]] call FAC_scenarioGui_commitFactionListToPick;
+                [_d, 60310, missionNamespace getVariable ["FAC_scenarioGui_pickEnemyFaction", missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"]]] call FAC_scenarioGui_commitFactionListToPick;
+                [_d, 60312, missionNamespace getVariable ["FAC_scenarioGui_pickCivFaction", missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"]]] call FAC_scenarioGui_commitFactionListToPick;
+            };
             private _hour = missionNamespace getVariable ["FAC_scenarioGui_hour", 12];
             _hour = (round _hour) max 0 min 23;
 
@@ -943,10 +1028,28 @@ FAC_scenarioGui_fnc = {
             private _enemyFaction = missionNamespace getVariable ["FAC_scenarioGui_pickEnemyFaction", missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"]];
             private _civFaction = missionNamespace getVariable ["FAC_scenarioGui_pickCivFaction", missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"]];
 
+            private _factionChangeBlocked = false;
+            if (!isNil "FADE_anyScenarioMissionActive" && { [] call FADE_anyScenarioMissionActive }) then {
+                private _liveFriendly = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"];
+                private _liveEnemy = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
+                private _liveCiv = missionNamespace getVariable ["FADE_scenarioCivFaction", "CIV_F"];
+                if (_friendlyFaction != _liveFriendly || { _enemyFaction != _liveEnemy } || { _civFaction != _liveCiv }) then {
+                    _factionChangeBlocked = true;
+                    _friendlyFaction = _liveFriendly;
+                    _enemyFaction = _liveEnemy;
+                    _civFaction = _liveCiv;
+                    missionNamespace setVariable ["FAC_scenarioGui_pickFriendlyFaction", _liveFriendly];
+                    missionNamespace setVariable ["FAC_scenarioGui_pickEnemyFaction", _liveEnemy];
+                    missionNamespace setVariable ["FAC_scenarioGui_pickCivFaction", _liveCiv];
+                };
+            };
+
             private _limitGear = missionNamespace getVariable ["FAC_scenarioGui_limitGear", false];
             private _presetOnly = missionNamespace getVariable ["FAC_scenarioGui_preset", false];
             private _patrolsEnabled = missionNamespace getVariable ["FAC_scenarioGui_patrols", true];
-            private _enemySkill = sliderPosition (_d displayCtrl 60872);
+            private _enemySkill = missionNamespace getVariable ["FADE_enemySkill", 0.0];
+            private _skApply = _d displayCtrl 60872;
+            if (!isNull _skApply) then { _enemySkill = sliderPosition _skApply };
             _enemySkill = (_enemySkill max 0) min 1;
             private _enemyRouting = if (missionNamespace getVariable ["FAC_scenarioGui_routing", false]) then { 0.5 } else { 0 };
             private _enemyAAA = missionNamespace getVariable ["FAC_scenarioGui_aaa", "Off"];
@@ -979,7 +1082,6 @@ FAC_scenarioGui_fnc = {
                 _civDensityScale = ((round (sliderPosition _sCivDenA)) max 25 min 250) / 100;
             };
 
-            missionNamespace setVariable ["FADE_scenarioFriendlyFaction", _friendlyFaction];
             missionNamespace setVariable ["FADE_limitGearToFriendlyFaction", _limitGear];
             missionNamespace setVariable ["FADE_scenarioPatrols", _patrolsEnabled];
             missionNamespace setVariable ["FADE_enemySkill", _enemySkill];
@@ -1000,6 +1102,10 @@ FAC_scenarioGui_fnc = {
             private _civTalkInterpretersOnly = missionNamespace getVariable ["FAC_scenarioGui_civTalkInterpOnly", false];
             private _intelSpecialistsOnly = missionNamespace getVariable ["FAC_scenarioGui_intelSpecialistsOnly", false];
 
+            if (_factionChangeBlocked) then {
+                systemChat "Faction changes ignored — abort active missions first.";
+            };
+
             private _scenarioApplyArgs = [
                 _hour, _weather, _enemyFaction, _friendlyFaction, _civFaction, _limitGear, _presetOnly, player,
                 _patrolsEnabled, _enemySkill, _enemyRouting, _enemyAAA, _civiliansEnabled, _aoStrength,
@@ -1014,3 +1120,8 @@ FAC_scenarioGui_fnc = {
         };
     };
 };
+
+missionNamespace setVariable ["FAC_scenarioGui_IDD", FAC_scenarioGui_IDD];
+missionNamespace setVariable ["FAC_scenarioGui_fnc", FAC_scenarioGui_fnc];
+missionNamespace setVariable ["FAC_scenarioGui_onMissionSlotsSync", FAC_scenarioGui_onMissionSlotsSync];
+missionNamespace setVariable ["FAC_scenarioGui_syncFactionMissionLock", FAC_scenarioGui_syncFactionMissionLock];

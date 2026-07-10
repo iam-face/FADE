@@ -309,6 +309,68 @@ FADE_mission_computeSearchZone = {
     [_markerPos, _displayRadius]
 };
 
+// Delete grid search-zone marker and any legacy per-cell markers from older builds.
+FADE_mission_deleteGridZoneMarkers = {
+    params ["_zoneMarkerName", ["_markerNames", []]];
+    if (_zoneMarkerName == "") exitWith {};
+    [_zoneMarkerName] call FADE_deleteMarkerSafe;
+    {
+        if (_x find (_zoneMarkerName + "_") == 0) then {
+            [_x] call FADE_deleteMarkerSafe;
+        };
+    } forEach allMapMarkers;
+    if (_markerNames isEqualType []) then {
+        {
+            if (_x isEqualType "" && { _x != _zoneMarkerName }) then {
+                if (_x find (_zoneMarkerName + "_") == 0) then {
+                    [_x] call FADE_deleteMarkerSafe;
+                };
+            };
+        } forEach _markerNames;
+    };
+};
+
+// Single map-grid-aligned rectangle for a search zone (shrinks via field intel by recomputing bounds).
+FADE_mission_createGridZoneMarkers = {
+    params [
+        "_taskId",
+        "_zoneMarkerName",
+        "_center",
+        "_radiusM",
+        ["_markerColor", "ColorEAST"],
+        ["_mustInclude", []],
+        ["_alpha", -1]
+    ];
+    if (_zoneMarkerName == "") exitWith { [] };
+    private _boundsFn = missionNamespace getVariable ["FADE_map_gridBoundsForSearchZone", {}];
+    if (_boundsFn isEqualTo {}) exitWith { [] };
+    private _bounds = [_center, _radiusM, _mustInclude] call _boundsFn;
+    _bounds params ["_centre", "_halfSize", "_cellCount"];
+    if (_cellCount < 1) exitWith { [] };
+    private _zoneAlpha = if (_alpha < 0) then {
+        missionNamespace getVariable ["FADE_missionGridZoneAlpha", 0.35]
+    } else {
+        _alpha
+    };
+    {
+        if (_x find (_zoneMarkerName + "_") == 0) then {
+            [_x] call FADE_deleteMarkerSafe;
+        };
+    } forEach allMapMarkers;
+    private _m = if (getMarkerColor _zoneMarkerName != "") then {
+        _zoneMarkerName setMarkerPos _centre;
+        _zoneMarkerName
+    } else {
+        [_zoneMarkerName, _centre, _taskId] call FADE_createRegisteredMarker
+    };
+    _m setMarkerShape "RECTANGLE";
+    _m setMarkerSize _halfSize;
+    _m setMarkerBrush "SolidBorder";
+    _m setMarkerColor _markerColor;
+    _m setMarkerAlpha _zoneAlpha;
+    [_zoneMarkerName]
+};
+
 // Hollow ellipse border for mission search / completion radii (one marker, no fill).
 FADE_mission_createRadiusMarker = {
     params [
@@ -335,9 +397,8 @@ FADE_mission_createRadiusMarker = {
     _markerName
 };
 
-// Zone ellipse + centred objective icon (register both for cleanup). Circle and icon share jittered centre;
-// radius is expanded when needed so every mustContain point lies inside the border ring.
-// Returns [_iconMarker, _zoneMarker, _markerPos, _displayRadiusM].
+// Zone marker: one grid-aligned search rectangle (or ellipse) + centred objective icon. Returns
+// [_iconMarker, _zoneMarkerName, _markerPos, _displayRadius, _gridMarkerNames].
 FADE_mission_createObjectiveMarker = {
     params [
         "_taskId",
@@ -349,10 +410,17 @@ FADE_mission_createObjectiveMarker = {
         ["_markerText", ""],
         ["_jitterMaxM", -1],
         ["_zoneAlpha", -1],
-        ["_mustContain", []]
+        ["_mustContain", []],
+        ["_searchMode", ""]
     ];
+    private _mode = _searchMode;
+    if (_mode == "") then {
+        _mode = missionNamespace getVariable ["FADE_missionSearchZoneMode", "grid"];
+    };
     private _markerPosN = [_anchorPos] call FADE_normPos3;
     private _zoneRadius = _nominalZoneRadius;
+    private _gridNames = [];
+    private _zoneName = "";
     if (_nominalZoneRadius > 0) then {
         private _computed = [_anchorPos, _nominalZoneRadius, _jitterMaxM, _mustContain] call FADE_mission_computeSearchZone;
         _computed params ["_markerPosN", "_zoneRadius"];
@@ -369,16 +437,24 @@ FADE_mission_createObjectiveMarker = {
             };
         };
     };
-    private _zoneName = "";
-    if (_zoneRadius > 0) then {
-        _zoneName = _markerBaseName + "_zone";
-        [_taskId, _zoneName, _markerPosN, _zoneRadius, _markerColor, _zoneAlpha] call FADE_mission_createRadiusMarker;
+    if (_nominalZoneRadius > 0) then {
+        if (_mode == "grid") then {
+            _zoneName = _markerBaseName + "_grid";
+            _gridNames = [_taskId, _zoneName, _markerPosN, _zoneRadius, _markerColor, _mustContain, _zoneAlpha] call FADE_mission_createGridZoneMarkers;
+        } else {
+            _zoneName = _markerBaseName + "_zone";
+            [_taskId, _zoneName, _markerPosN, _zoneRadius, _markerColor, _zoneAlpha] call FADE_mission_createRadiusMarker;
+        };
+    };
+    private _iconType = _markerType;
+    if (_markerType in (keys (missionNamespace getVariable ["FADE_marker_typeMap", createHashMap]))) then {
+        _iconType = [_markerType] call FADE_marker_getType;
     };
     private _icon = [_markerBaseName, _markerPosN, _taskId] call FADE_createRegisteredMarker;
-    _icon setMarkerType _markerType;
+    _icon setMarkerType _iconType;
     _icon setMarkerColor _markerColor;
     if (_markerText != "") then { _icon setMarkerText _markerText };
-    [_markerBaseName, _zoneName, _markerPosN, _zoneRadius]
+    [_markerBaseName, _zoneName, _markerPosN, _zoneRadius, _gridNames]
 };
 
 // Cargo camp delayed despawn (success / fail / timeout paths).
@@ -414,6 +490,8 @@ missionNamespace setVariable ["FADE_mission_setRadiusMarkerColor", FADE_mission_
 missionNamespace setVariable ["FADE_mission_setRadiusMarkerGeometry", FADE_mission_setRadiusMarkerGeometry];
 missionNamespace setVariable ["FADE_mission_positionsCentroid", FADE_mission_positionsCentroid];
 missionNamespace setVariable ["FADE_mission_computeSearchZone", FADE_mission_computeSearchZone];
+missionNamespace setVariable ["FADE_mission_deleteGridZoneMarkers", FADE_mission_deleteGridZoneMarkers];
+missionNamespace setVariable ["FADE_mission_createGridZoneMarkers", FADE_mission_createGridZoneMarkers];
 missionNamespace setVariable ["FADE_mission_createRadiusMarker", FADE_mission_createRadiusMarker];
 missionNamespace setVariable ["FADE_mission_createObjectiveMarker", FADE_mission_createObjectiveMarker];
 missionNamespace setVariable ["FADE_cargo_cleanupSiteDeferred", FADE_cargo_cleanupSiteDeferred];

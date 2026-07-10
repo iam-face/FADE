@@ -3,7 +3,10 @@
 // =============================================================================
 
 FADE_missionModuleList = [
+    "rsc\FADE_Markers.sqf",
     "rsc\FADE_MissionSpawn.sqf",
+    "rsc\FADE_AoSurvey.sqf",
+    "rsc\FADE_FieldIntel.sqf",
     "rsc\FADE_MissionCommon.sqf",
     "rsc\FADE_RaidHelpers.sqf",
     "rsc\FADE_ObjectiveHelpers.sqf",

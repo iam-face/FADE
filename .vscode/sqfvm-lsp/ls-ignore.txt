@@ -1,0 +1,14 @@
+################################################################
+### SQF-VM: paths ignored for analysis (relative to repo root). ###
+### Not gitignore syntax — no wildcards or ! inversion.       ###
+### Restart the language server after editing this file.       ###
+################################################################
+.vscode\sqfvm-lsp
+tools
+rsc\archive
+mission.sqm
+new_world_funcs.txt
+old_world_funcs.txt
+headless_test.flg
+headless_test_result.txt
+cba_settings.sqf

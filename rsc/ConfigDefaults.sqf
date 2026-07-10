@@ -38,8 +38,12 @@ FADE_clearAreaCampRadiusM = 60;            // was 120
 FADE_raidZoneDetectRadiusM = 55;           // legacy intel refine trigger (unused when building marked at spawn)
 FADE_raidIntelRefineRadiusM = 28;          // was 55; legacy intel refine ring
 FADE_raidBuildSearchRadiusM = 450;         // building/objective spawn scan (match HVT/Hostage standalone missions)
+FADE_objectiveBuildingClusterRadiusM = 120; // neighbour scan — reject isolated infrastructure (bridges, etc.)
+FADE_objectiveBuildingMinClusterSize = 2;   // objective site + at least one other enterable building nearby
 FADE_raidPatrolRadiusM = 90;               // outdoor patrol waypoints within zone
-FADE_raidNearbyGarrisonRadiusM = 130;      // lazy nearby-building scan (subset chance below)
+FADE_raidTargetImmediateGarrisonRadiusM = 250; // immediate (non-lazy) garrison around each raid target building
+FADE_raidImmediateGarrisonMaxPerBuilding = 2;  // cap men per building in immediate ring (dispersed)
+FADE_raidNearbyGarrisonRadiusM = 450;      // lazy nearby-building scan outside immediate ring (subset chance below)
 FADE_raidNearbyGarrisonMaxPerZone = 4;     // cap deferred garrisons per objective (3 zones × N)
 FADE_raidIntelPollSec = 2;
 FADE_raidPlayerDifficultyStep = 0.15;     // extra garrison scale per friendly player beyond first
@@ -222,6 +226,29 @@ FADE_intelMapMarkerOnSpecific = true;
 FADE_intelMapMarkerTTL = 480;
 // Scenario GUI can require FADE_intelSpecialist role to process intel directly.
 FADE_intelSpecialistsOnly = false;
+
+// Mission search zones: "grid" (100 m map grid rectangles) or "ellipse" (border ring).
+FADE_missionSearchZoneMode = "grid";
+FADE_mapGridCellSizeM = 100;
+// Map grid SW-corner offset for Altis (100 m cells align at 50,150,250… not 0,100,200…).
+FADE_mapGridOriginOffsetX = 50;
+FADE_mapGridOriginOffsetY = 50;
+FADE_missionGridZoneAlpha = 0.35;
+// Field intel (body search): points toward 100% reveal; shrink steps at 25/50/75%.
+FADE_fieldIntelEnabled = true;
+FADE_fieldIntelMaxPoints = 100;
+FADE_fieldIntelBodySearchPointsLeader = 30;
+FADE_fieldIntelBodySearchPointsRegular = 18;
+FADE_fieldIntelBodySearchEmptyChance = 0.15;
+FADE_fieldIntelBodySearchHoldSec = 6;
+FADE_fieldIntelBodySearchDistM = 3;
+FADE_fieldIntelRevealSnapRadiusM = 45;
+FADE_fieldIntelMissions = ["HVT", "Hostage", "SearchDestroy", "AssetRetrieval", "Asset Retrieval"];
+// AO terrain survey (spawn / waypoint placement). See rsc/FADE_AoSurvey.sqf.
+FADE_aoSurveyEnabled = true;
+FADE_aoSurveyRoadSampleMax = 12;
+FADE_aoSurveyFlatSampleMax = 10;
+FADE_aoSurveyBuildingSampleMax = 8;
 // Client (initPlayerLocal): seconds between HQ auto-heal checks when inside radius of FADE_basePos.
 FADE_hqHealIntervalSec = 40;
 
@@ -609,6 +636,10 @@ FADE_dynamicRoadblockEeTMax = 0.96;
 // Escape & Evasion: OPFOR search heli first sortie when any evadee is this far from the civ-zone centre nearest their teleport position (m).
 FADE_eeSearchHeliMinDistFromAnchor = 1500;
 
+// HVT / hostage protective gear (applied after spawn animations; reduces accidental frags).
+FADE_objectiveProtectiveHelmet = "H_Helmet_Skate";
+FADE_objectiveProtectiveVest = "V_CarrierRigKBT_01_Olive_F";
+
 // HVT missions: codename suffix for FADE_hvt_* CfgIdentities (description.ext).
 FADE_hvtCodenamePool = ["Viktor", "Dmitri", "Sergei", "Ivan", "Pavel", "Boris", "Volkov", "Kozlov"];
 
@@ -624,10 +655,11 @@ FADE_counterAttackFirstDelayMin = 120;
 FADE_counterAttackFirstDelayMax = 360;
 FADE_counterAttackFootSquadsMin = 2;
 FADE_counterAttackFootSquadsMax = 3;
-FADE_counterAttackFootSpawnDistMin = 200;
-FADE_counterAttackFootSpawnDistMax = 500;
+FADE_counterAttackFootSpawnDistMin = 80;   // foot QRF tier: spawn near objective (often inside buildings)
+FADE_counterAttackFootSpawnDistMax = 220;
 FADE_counterAttackFootSquadSizeMin = 4;
 FADE_counterAttackFootSquadSizeMax = 6;
+FADE_counterAttackFootBuildingChance = 0.65; // prefer interior spawn so players do not see QRF pop-in
 // QRF spawn must be farther than this from FADE_basePos (road/safe pos). Cargo loads into trucks after drivers move (stagger sec).
 FADE_counterAttackMinDistFromBase = 1000;
 FADE_counterAttackCargoStaggerSec = 0.35;

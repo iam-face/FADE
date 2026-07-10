@@ -556,7 +556,13 @@ FADE_missionRun_getContext = {
 FADE_mission_completeCleanup = {
     params ["_taskId", "_markerName", "_player", ["_delay", 60], ["_extraMarkers", []]];
     if (_markerName != "") then { [_markerName] call FADE_deleteMarkerSafe };
+    if (_markerName != "") then {
+        private _gridPrefix = _markerName + "_grid";
+        if (getMarkerColor (_markerName + "_zone") != "") then { [_markerName + "_zone"] call FADE_deleteMarkerSafe };
+        [_gridPrefix] call FADE_mission_deleteGridZoneMarkers;
+    };
     { if (_x != "") then { [_x] call FADE_deleteMarkerSafe } } forEach _extraMarkers;
+    if (!isNil "FADE_fieldIntel_endMission") then { [_taskId] call FADE_fieldIntel_endMission };
     if (!isNull _player && { (_player getVariable ["FADE_myMissionTaskId", ""]) == _taskId }) then {
         [_player] call FADE_clearActiveMission;
     };
