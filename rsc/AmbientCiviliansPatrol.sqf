@@ -8,8 +8,12 @@ FADE_civ_filterClasses = {
         if (!(_c isEqualType "") || { _c == "" }) then { continue };
         private _cfg = configFile >> "CfgVehicles" >> _c;
         if (!isClass _cfg) then { continue };
-        if (getNumber (_cfg >> "scope") < 2) then { continue };
-        if (_unitsOnly && { !(_c isKindOf ["Man", configFile >> "CfgVehicles"]) }) then { continue };
+        private _scope = getNumber (_cfg >> "scope");
+        private _side = getNumber (_cfg >> "side");
+        // Align with CfgVehicles scan: civilian (side 3) may use scope 0/1; combat factions keep scope >= 2.
+        private _scopeOk = if (_side == 3) then { _scope >= 0 } else { _scope >= 2 };
+        if (!_scopeOk) then { continue };
+        if (_unitsOnly && { !(_c isKindOf "Man") }) then { continue };
         _out pushBack _c;
     } forEach _classes;
     _out
@@ -23,7 +27,15 @@ FADE_civ_getUnitClassesFromGui = {
     if (_faction == "") exitWith { [] };
     if (isNil "FADE_getUnitsForFaction") exitWith { [] };
     private _raw = [_faction, 3] call FADE_getUnitsForFaction;
-    [_raw, true] call FADE_civ_filterClasses  // true = units only (Man), avoids abstract/faction-named classes
+    private _filtered = [_raw, true] call FADE_civ_filterClasses;  // true = units only (Man), avoids abstract/faction-named classes
+    // #region agent log
+    diag_log format [
+        "[FAC DbgBrowser 62d308] H26 civUnitClasses faction=%1 raw=%2 filtered=%3 sample=%4",
+        _faction, count _raw, count _filtered,
+        if (count _filtered > 0) then { _filtered select 0 } else { if (count _raw > 0) then { _raw select 0 } else { "" } }
+    ];
+    // #endregion
+    _filtered
 };
 
 FADE_civ_getVehicleClassesFromGui = {
@@ -31,7 +43,15 @@ FADE_civ_getVehicleClassesFromGui = {
     if (_faction == "") exitWith { [] };
     if (isNil "FADE_getCivVehiclesForFaction") exitWith { [] };
     private _raw = [_faction] call FADE_getCivVehiclesForFaction;
-    [_raw, false] call FADE_civ_filterClasses  // false = vehicles, not units
+    private _filtered = [_raw, false] call FADE_civ_filterClasses;  // false = vehicles, not units
+    // #region agent log
+    diag_log format [
+        "[FAC DbgBrowser 62d308] H26 civVehClasses faction=%1 raw=%2 filtered=%3 sample=%4",
+        _faction, count _raw, count _filtered,
+        if (count _filtered > 0) then { _filtered select 0 } else { if (count _raw > 0) then { _raw select 0 } else { "" } }
+    ];
+    // #endregion
+    _filtered
 };
 
 // Road-parkable cars only (no ships/air)
@@ -327,7 +347,8 @@ FADE_enemyPatrol_spawnForZone = {
     // Never spawn ambient patrol within 1 km of player base (BASE_1)
     private _basePos = missionNamespace getVariable ["FADE_basePos", []];
     if (count _basePos >= 2 && { (_center distance _basePos) < 1000 }) exitWith {};
-    if (random 1 > 0.25) exitWith {};
+    private _townChance = missionNamespace getVariable ["FADE_enemyPatrolTownChance", 0.25];
+    if (random 1 > _townChance) exitWith {};
     private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", []];
     if (_enemyUnits isEqualTo []) exitWith {};
     private _groundUnits = [_enemyUnits] call FADE_filterNonSniperUnits;
@@ -342,6 +363,15 @@ FADE_enemyPatrol_spawnForZone = {
     private _zoneRadius = missionNamespace getVariable ["FADE_civSpawnRadius", 1000];
     if (_zoneRadius > 900) then { _zoneRadius = 800 };
     private _patrolPlClearM = missionNamespace getVariable ["FADE_enemyPatrolMinDistFromPlayersM", 400];
+    private _spawnMinD = missionNamespace getVariable ["FADE_enemyPatrolSpawnMinDistM", 60];
+    private _spawnMaxD = missionNamespace getVariable ["FADE_enemyPatrolSpawnMaxDistM", 280];
+    private _wpMinD = missionNamespace getVariable ["FADE_enemyPatrolWpMinDistM", 40];
+    private _wpMaxD = missionNamespace getVariable ["FADE_enemyPatrolWpMaxDistM", 200];
+    private _vehRoadSearchM = missionNamespace getVariable ["FADE_enemyPatrolVehicleRoadSearchM", 350];
+    _spawnMinD = (_spawnMinD max 20) min _spawnMaxD;
+    _spawnMaxD = _spawnMaxD max (_spawnMinD + 40);
+    _wpMinD = (_wpMinD max 15) min _wpMaxD;
+    _wpMaxD = _wpMaxD max (_wpMinD + 30);
     private _patrolFarFromPlayers = {
         params [["_pos", [0, 0, 0]], ["_minD", 400]];
         if (count _pos < 2) exitWith { false };
@@ -359,7 +389,7 @@ FADE_enemyPatrol_spawnForZone = {
         private _sp = [];
         for "_trySp" from 1 to 22 do {
             private _angle = random 360;
-            private _dist = 200 + random ((_zoneRadius - 200) max 1);
+            private _dist = _spawnMinD + random ((_spawnMaxD - _spawnMinD) max 1);
             private _rough = _center getPos [_dist, _angle];
             _sp = [[_rough, 0, 15, 3, 1, 0.4, 0, [], _rough], _rough] call FADE_findSafePosArray;
             if (!(_sp isEqualType []) || { count _sp < 2 }) then { _sp = +_rough };
@@ -376,10 +406,10 @@ FADE_enemyPatrol_spawnForZone = {
         private _grp = [_sp, _sideEnemy, _units] call FADE_missionCreateInfantryGroupAt;
         if (isNull _grp || { count units _grp == 0 }) then { continue };
         [_grp] call FAC_applyEnemyScenarioToGroup;
-        private _wpMaxDist = (_zoneRadius min 600) max 200;
-        private _patrolOk = [_grp, _center, 150, _wpMaxDist, 4, random 360, 90, "SAFE", "YELLOW", "LIMITED", true] call FADE_missionApplyPatrolCycle;
+        private _wpMaxDist = _wpMaxD;
+        private _patrolOk = [_grp, _center, _wpMinD, _wpMaxDist, 4, random 360, 90, "SAFE", "YELLOW", "LIMITED", true] call FADE_missionApplyPatrolCycle;
         if (!_patrolOk) then {
-            _patrolOk = [_grp, _sp, 40, 160, 4, random 360, 90, "SAFE", "YELLOW", "LIMITED", true] call FADE_missionApplyPatrolCycle;
+            _patrolOk = [_grp, _sp, 25, 120, 4, random 360, 90, "SAFE", "YELLOW", "LIMITED", true] call FADE_missionApplyPatrolCycle;
         };
         if (!_patrolOk) then { continue };
         _patrolGroups pushBack _grp;
@@ -406,7 +436,7 @@ FADE_enemyPatrol_spawnForZone = {
         private _u = objNull;
         private _wpPosA = [0, 0, 0];
         for "_v" from 0 to (_numVeh - 1) do {
-            _roadHit = [_center, _zoneRadius, _spawnedPatrolVehs, -1, [], _center] call FADE_findOpforGroundVehicleRoadSpawn;
+            _roadHit = [_center, _vehRoadSearchM, _spawnedPatrolVehs, -1, [], _center] call FADE_findOpforGroundVehicleRoadSpawn;
             if (!(_roadHit isEqualType []) || { count _roadHit < 2 }) then { continue };
             _roadPos = +(_roadHit param [0, []]);
             _roadDir = _roadHit param [1, 0];
@@ -436,7 +466,7 @@ FADE_enemyPatrol_spawnForZone = {
                 [_veh, _enemyUnits] call FADE_ensureEnemyVehicleGunner;
                 _vehGrp setBehaviour "SAFE";
                 _vehGrp setSpeedMode "LIMITED";
-                _wpPosA = [_center, _zoneRadius * 0.6] call FADE_civ_findSpawnPos;
+                _wpPosA = [_center, _wpMaxD * 0.85] call FADE_civ_findSpawnPos;
                 private _wp1 = _vehGrp addWaypoint [_wpPosA, 0];
                 _wp1 setWaypointType "MOVE";
                 _wp1 setWaypointSpeed "LIMITED";
@@ -448,15 +478,20 @@ FADE_enemyPatrol_spawnForZone = {
         };
     };
 
-    // 2-4 garrisoned buildings: 2-3 enemy units each, burning barrel outside (wider scan; subset of buildings).
-    private _ambGarExtra = missionNamespace getVariable ["FADE_garrisonAmbientRadiusExtraM", 300];
-    private _ambBChance = missionNamespace getVariable ["FADE_garrisonMissionNearbyBuildingChance", 0.25];
-    private _buildings = nearestObjects [_center, ["House", "Building"], _zoneRadius + _ambGarExtra];
+    // 2-4 garrisoned buildings near town centre (virtual garrison activates when players approach).
+    private _garScanR = missionNamespace getVariable ["FADE_garrisonAmbientScanRadiusM", 380];
+    private _ambBChance = missionNamespace getVariable ["FADE_garrisonAmbientBuildingChance", 0.55];
+    private _buildings = nearestObjects [_center, ["House", "Building"], _garScanR];
     private _buildingsWithPos = _buildings select {
         count (_x buildingPos -1) >= 2 && { [getPosATL _x] call _dryFn }
     };
+    private _ctrSort = +_center;
+    _buildingsWithPos = [_buildingsWithPos, [], { (getPosATL _x) distance2D _ctrSort }, "ASCEND"] call BIS_fnc_sortBy;
     private _thinnedBlds = _buildingsWithPos select { random 1 < _ambBChance };
-    if (count _thinnedBlds < ((2 min count _buildingsWithPos) max 1) && { count _buildingsWithPos > 0 }) then { _thinnedBlds = +_buildingsWithPos };
+    private _minGar = (2 min count _buildingsWithPos) max 0;
+    if (count _thinnedBlds < _minGar && { count _buildingsWithPos > 0 }) then {
+        _thinnedBlds = +(_buildingsWithPos select [0, _minGar min count _buildingsWithPos]);
+    };
     _thinnedBlds = _thinnedBlds call BIS_fnc_arrayShuffle;
     private _numGarrison = (2 + floor random 3) min count _thinnedBlds;
     private _vgFn = missionNamespace getVariable ["FADE_vg_register", {}];
@@ -473,7 +508,6 @@ FADE_enemyPatrol_spawnForZone = {
             private _p = _bldPos select (_indices select _i);
             if (count _p < 3) then { _p = [(_p select 0), (_p select 1), (if (count _p > 2) then { _p select 2 } else { 0 })] };
             if !([_p] call _dryFn) then { continue };
-            if !([_p, _patrolPlClearM] call _patrolFarFromPlayers) then { continue };
             _slotATL pushBack _p;
         };
         if (count _slotATL > 0 && { !(_vgFn isEqualTo {}) }) then {
@@ -487,7 +521,7 @@ FADE_enemyPatrol_spawnForZone = {
             _st set ["barrelRoll", missionNamespace getVariable ["FADE_vgLazyOutdoorHintChance", 0.5]];
             _st set ["barrelClasses", missionNamespace getVariable ["FADE_vgLazyOutdoorHintClasses", ["MetalBarrel_burning_F"]]];
             _st set ["barrelCenter", _bldCenter];
-            _st set ["barrelMinDistPlayersM", _patrolPlClearM];
+            _st set ["barrelMinDistPlayersM", -1];
             private _vgId = [_bld, _slotATL, _groundUnits, _st] call _vgFn;
             if (_vgId >= 0) then { _vgSlotsRegistered = _vgSlotsRegistered + 1 };
         } else {
@@ -571,7 +605,11 @@ FADE_enemyPatrol_spawnForZone = {
         _state set ["sniperGroups", _sniperGroups];
         _state set ["barrels", _barrels];
         FADE_enemyPatrolZoneState set [_zoneId, _state];
-        [format ["PATROL ZONE %1: %2 group(s), %3 vehicle(s), %4 garrison(s), %5 sniper(s)", _zoneId, count _patrolGroups, count _vehicles, count _garrisonGroups, count _sniperGroups]] call FADE_civ_debugChat;
+        [format ["PATROL ZONE %1: %2 group(s), %3 vehicle(s), %4 garrison(s), %5 sniper(s), VG=%6", _zoneId, count _patrolGroups, count _vehicles, count _garrisonGroups, count _sniperGroups, _vgSlotsRegistered]] call FADE_civ_debugChat;
+        // #region agent log
+        diag_log format ["[FAC DbgBrowser 62d308] H12 patrolZone=%1 spawnRing=%2-%3 wpRing=%4-%5 garScan=%6 blds=%7 vg=%8 garImmed=%9",
+            _zoneId, _spawnMinD, _spawnMaxD, _wpMinD, _wpMaxD, _garScanR, count _buildingsWithPos, _vgSlotsRegistered, count _garrisonGroups];
+        // #endregion
     };
 };
 

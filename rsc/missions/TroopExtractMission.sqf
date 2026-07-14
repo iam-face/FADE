@@ -88,7 +88,7 @@ private _fnc_spawnSquadInField = {
     private _wpPos = _atPos getPos [10, random 360];
     _wpPos = [[_wpPos, 0, 15, 2, 1, 0.3, 0, [], _wpPos], _wpPos] call FADE_findSafePosArray;
     if (count _wpPos < 2) then { _wpPos = _atPos getPos [10, random 360] };
-    private _grp = [_wpPos, _sideFriendly, _pickClasses] call BIS_fnc_spawnGroup;
+    private _grp = [_wpPos, _sideFriendly, _pickClasses] call FADE_spawnFriendlyInfantryGroupAt;
     [_grp] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
     [_grp] call (missionNamespace getVariable ["FADE_attachNightStrobes", {}]);
     if (_inContact) then {

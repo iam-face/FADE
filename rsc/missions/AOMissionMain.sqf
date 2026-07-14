@@ -8,6 +8,12 @@ private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", { par
 
 // Always use current scenario faction (config GUI); refetch so BLUFOR/OPFOR match chosen factions
 _friendlyUnits = [_friendlyUnits] call FADE_resolveScenarioFriendlyUnits;
+if (_friendlyUnits isEqualTo []) then {
+    private _ffAo = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"];
+    private _snAo = missionNamespace getVariable ["FADE_scenarioFriendlySideNum", 1];
+    _friendlyUnits = [_ffAo, _snAo] call FADE_getUnitsForFaction;
+    if (!isNil "FADE_filterUnitsArmed") then { _friendlyUnits = [_friendlyUnits] call FADE_filterUnitsArmed };
+};
 _enemyUnits = [_enemyUnits] call FADE_resolveScenarioEnemyUnits;
 
 private _sideFriendly = missionNamespace getVariable ["FADE_sideFriendly", west];
@@ -280,6 +286,14 @@ private _objSpecs = [
     };
     if (count _pos < 2 || { !([_pos] call _dryFn) }) then { _pos = [_destPos, 50, 600] call _fnc_findLandPos };
     if (count _pos < 2 || { !([_pos] call _dryFn) }) then { _pos = [_destPos, 100, 1200] call _fnc_findLandPos };
+    // OBJ 3 (OPFOR-side edge): coastal AOs may place the marker offshore — pull inland along assault axis.
+    if (_forEachIndex == 2 && { count _pos >= 2 } && { !([_pos] call _dryFn) }) then {
+        for "_inland" from 1 to 8 do {
+            private _tryIn = [_destPos, 350 + _inland * 80, _attackDir + 180] call BIS_fnc_relPos;
+            _tryIn = [[_tryIn, 0, 40, 5, 1, 0.4, 0, [], _tryIn], _tryIn] call FADE_findSafePosArray;
+            if (_tryIn isEqualType [] && { count _tryIn >= 2 } && { [_tryIn] call _dryFn }) exitWith { _pos = _tryIn };
+        };
+    };
     if (count _pos < 2 || { !([_pos] call _dryFn) }) then { _aoObjPlacementFailed = true } else { _points pushBack _pos };
 } forEach _objSpecs;
 if (_aoObjPlacementFailed || { count _points < 3 }) exitWith {
@@ -369,6 +383,7 @@ if (count _opforInfilRef < 3) then { _opforInfilRef set [2, 0] };
 private _infilResolved = [_destPos, _attackDir, _bluInfilRef, _opforInfilRef, _dryFn, _fnc_findLandPos, _zoneHalfDepth, _zoneHalfWidth, 3000] call FADE_ao_resolveInfilCivZones;
 private _bluPack = _infilResolved select 0;
 private _opforPack = _infilResolved select 1;
+private _infilOppositeOk = if ((count _infilResolved) > 2) then { _infilResolved select 2 } else { false };
 private _bluCivZoneId = _bluPack param [0, ""];
 private _bluSpawn = _bluPack param [1, +_bluInfilRef];
 private _opforCivZoneId = _opforPack param [0, ""];
@@ -381,6 +396,10 @@ if (!(_bluSpawn isEqualType []) || { count _bluSpawn < 2 } || { !([_bluSpawn] ca
 if (!(_opforSpawnPos isEqualType []) || { count _opforSpawnPos < 2 } || { !([_opforSpawnPos] call _dryFn) }) exitWith {
     [_player, _taskId] call FADE_clearActiveMission;
     [_player, "AO ERROR", "Could not place OPFOR infil on dry land. Try again.", "#FF6666"] call FADE_missionOutcomeHint;
+};
+if (!_infilOppositeOk) exitWith {
+    [_player, _taskId] call FADE_clearActiveMission;
+    [_player, "AO ERROR", "Could not place BLUFOR and OPFOR infiltrations on opposite sides of the AO. Try again.", "#FF6666"] call FADE_missionOutcomeHint;
 };
 if (_bluCivZoneId != "" && { _bluCivZoneId isEqualTo _opforCivZoneId }) exitWith {
     [_player, _taskId] call FADE_clearActiveMission;
@@ -521,38 +540,142 @@ private _fnc_spawnAoOpforVehicle = {
 
 missionNamespace setVariable ["FADE_aoSpawnVehFn_" + _taskId, _fnc_spawnAoOpforVehicle];
 
+private _tryAmbientAnim = missionNamespace getVariable ["FADE_tryAmbientCombatAnim", {}];
+
+private _fnc_snapAoObjDry = {
+    params ["_pos", ["_pullToward", _destPos], ["_preferDir", _attackDir + 180]];
+    private _out = +_pos;
+    if ([_out] call _dryFn) exitWith { _out };
+    for "_t" from 1 to 12 do {
+        private _tryIn = [_pullToward, 180 + _t * 70, _preferDir] call BIS_fnc_relPos;
+        _tryIn = [[_tryIn, 0, 40, 5, 1, 0.4, 0, [], _pullToward], _pullToward] call FADE_findSafePosArray;
+        if (_tryIn isEqualType [] && { count _tryIn >= 2 } && { [_tryIn] call _dryFn }) exitWith { _out = _tryIn };
+    };
+    if (!([_out] call _dryFn)) then {
+        private _dirIn = _pos getDir _pullToward;
+        for "_t" from 1 to 10 do {
+            private _tryIn = [_pos, 40 + _t * 35, _dirIn] call BIS_fnc_relPos;
+            _tryIn = [[_tryIn, 0, 35, 4, 1, 0.4, 0, [], _pullToward], _pullToward] call FADE_findSafePosArray;
+            if (_tryIn isEqualType [] && { count _tryIn >= 2 } && { [_tryIn] call _dryFn }) exitWith { _out = _tryIn };
+        };
+    };
+    if (count _out < 3) then { _out set [2, 0] };
+    _out
+};
+
+private _fnc_pickAoGuardPos = {
+    params ["_objPos", ["_fallbackCenter", _destPos]];
+    private _pos = [];
+    for "_try" from 1 to 20 do {
+        private _cand = [_objPos, 25 + random 85, random 360] call BIS_fnc_relPos;
+        _cand = [[_cand, 0, 35, 3, 1, 0.4, 0, [], _objPos], _objPos] call FADE_findSafePosArray;
+        if (!(_cand isEqualType []) || { count _cand < 2 }) then { _cand = [_objPos, 40 + random 50, random 360] call BIS_fnc_relPos };
+        if (count _cand < 3) then { _cand set [2, 0] };
+        if ([_cand] call _dryFn) exitWith { _pos = _cand };
+    };
+    if (_pos isEqualTo []) then {
+        private _dirIn = _objPos getDir _fallbackCenter;
+        for "_t" from 1 to 12 do {
+            private _cand = [_objPos, 30 + _t * 30, _dirIn] call BIS_fnc_relPos;
+            _cand = [[_cand, 0, 30, 3, 1, 0.4, 0, [], _fallbackCenter], _fallbackCenter] call FADE_findSafePosArray;
+            if (_cand isEqualType [] && { count _cand >= 2 } && { [_cand] call _dryFn }) exitWith { _pos = _cand };
+        };
+    };
+    _pos
+};
+
+private _fnc_createBluSquadNear = {
+    params ["_anchor", "_classes"];
+    private _pos = [_anchor, random 80, random 360] call BIS_fnc_relPos;
+    _pos = [[_pos, 0, 25, 3, 1, 0.4, 0, [], _anchor], _anchor] call FADE_findSafePosArray;
+    if (!(_pos isEqualType []) || { count _pos < 2 } || { !([_pos] call _dryFn) }) then { _pos = +_anchor };
+    if (count _pos < 3) then { _pos set [2, 0] };
+    [_pos, _sideFriendly, _classes] call FADE_missionCreateInfantryGroupAt
+};
+
+// BLUFOR first so infiltrators appear while OPFOR objective layout finishes spawning.
+private _bluCount = (count _friendlyUnits) max 1;
+if (_friendlyUnits isEqualTo []) exitWith {
+    [_player, _taskId] call FADE_clearActiveMission;
+    [_player, "AO ERROR", "No friendly unit classes available for BLUFOR spawns. Check scenario faction.", "#FF6666"] call FADE_missionOutcomeHint;
+};
+if (!([_bluSpawn] call _dryFn)) then {
+    private _landBlu = [_bluSpawn, 50, 400] call _fnc_findLandPos;
+    if (_landBlu isEqualType [] && { count _landBlu >= 2 } && { [_landBlu] call _dryFn }) then { _bluSpawn = _landBlu };
+};
+private _bluGroups = [];
+for "_g" from 0 to (1 + floor random 2) do {
+    private _classes = [];
+    for "_i" from 0 to (4 + floor random 3) do { _classes pushBack (_friendlyUnits select (_i % _bluCount)) };
+    private _grp = [_bluSpawn, _classes] call _fnc_createBluSquadNear;
+    if (isNull _grp) then { continue };
+    [_grp] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
+    [_grp] call FADE_attachNightStrobes;
+    _grp setFormation "LINE";
+    _grp setBehaviour "AWARE";
+    _grp setCombatMode "RED";
+    private _objectivesToTake = [_points, _captureRadius, _sideFriendly] call FADE_ao_pointsWithoutFriendlies;
+    { _grp addWaypoint [_x, 0] } forEach _objectivesToTake;
+    _bluGroups pushBack _grp;
+    [_taskId, _grp] call FADE_aoRegisterGroup;
+};
+// #region agent log
+diag_log format [
+    "[FAC DbgBrowser 62d308] H10 aoBluSpawn friendlyClasses=%1 bluGroups=%2 bluSpawn=%3 dry=%4",
+    count _friendlyUnits, count _bluGroups, _bluSpawn, [_bluSpawn] call _dryFn
+];
+// #endregion
+
 // BLUFOR assault bearing for turret / vehicle orientation (from snapped infil)
 _bluEdgeCenter = +_bluSpawn;
 
 {
-    private _objPos = _x;
+    private _objPos = +_x;
     private _objIdx = _forEachIndex;
+    if (_objIdx == 2) then { _objPos = [_objPos, _destPos, _attackDir + 180] call _fnc_snapAoObjDry };
+  // #region agent log
+    diag_log format [
+        "[FAC DbgBrowser 62d308] H10 aoObjStart objIdx=%1 pos=%2 dry=%3",
+        _objIdx, _objPos, [_objPos] call _dryFn
+    ];
+    // #endregion
 
-    // Guard group(s) at OBJ - spread positions (40-110 m, double previous dispersion), ambient combat anim like HVT/Hostage/Clear Area
+    // Guard group(s) at OBJ - spread positions (40-110 m), ambient combat anim on dry ground only
     private _numGuard = [if (_aoStrength == "High") then { 2 } else { 1 }, 1] call _scaleOpforCount;
     private _guardMin = if (_aoStrength == "Low") then { 3 } else { 6 };
     private _guardMax = if (_aoStrength == "Low") then { 6 } else { 10 };
+    private _objGuardsSpawned = 0;
     for "_g" from 0 to (_numGuard - 1) do {
         private _nGuard = [_guardMin + floor random ((_guardMax - _guardMin) + 1), 1] call _scaleOpforCount;
         private _staticGrp = createGroup _sideEnemy;
         for "_i" from 0 to (_nGuard - 1) do {
-            private _staticPos = [_objPos, 40 + random 70, random 360] call BIS_fnc_relPos;
-            _staticPos = [[_staticPos, 0, 35, 3, 1, 0.4, 0, [], _staticPos], _staticPos] call FADE_findSafePosArray;
-            if (!(_staticPos isEqualType []) || { count _staticPos < 2 }) then { _staticPos = [_objPos, 50 + random 50, random 360] call BIS_fnc_relPos };
-            if (count _staticPos < 3) then { _staticPos set [2, 0] };
+            private _staticPos = [_objPos, _destPos] call _fnc_pickAoGuardPos;
+            if (_staticPos isEqualTo []) then { continue };
             private _cls = _enemyUnits select (_i % _enemyCount);
             private _u = _staticGrp createUnit [_cls, _staticPos, [], 0, "NONE"];
             if (!isNull _u) then {
-                _u setUnitPos "MIDDLE";
-                [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                _u setPosATL _staticPos;
+                _u setUnitPos "UP";
+                if (!(_tryAmbientAnim isEqualTo {})) then { [_u] call _tryAmbientAnim };
+                _objGuardsSpawned = _objGuardsSpawned + 1;
             };
         };
-        [_staticGrp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
-        _staticGrp setBehaviour "COMBAT";
-        _staticGrp setCombatMode "RED";
-        _opforGroups pushBack _staticGrp;
-        [_taskId, _staticGrp] call FADE_aoRegisterGroup;
+        if (count units _staticGrp == 0) then {
+            deleteGroup _staticGrp;
+        } else {
+            [_staticGrp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
+            _staticGrp setBehaviour "COMBAT";
+            _staticGrp setCombatMode "RED";
+            _opforGroups pushBack _staticGrp;
+            [_taskId, _staticGrp] call FADE_aoRegisterGroup;
+        };
     };
+    // #region agent log
+    diag_log format [
+        "[FAC DbgBrowser 62d308] H10 aoObjGuards objIdx=%1 pos=%2 guardsSpawned=%3 dry=%4",
+        _objIdx, _objPos, _objGuardsSpawned, [_objPos] call _dryFn
+    ];
+    // #endregion
 
     // Patrol groups - count and size by strength; spawn 250 m from OBJ, waypoints with 100 m per-group dispersion
     private _numPatrol = [switch (_aoStrength) do { case "Low": { 2 }; case "Medium": { 3 }; default { 4 }; }, 1] call _scaleOpforCount;
@@ -572,6 +695,7 @@ _bluEdgeCenter = +_bluSpawn;
             _opforGroups pushBack _patrolGrp;
             [_taskId, _patrolGrp] call FADE_aoRegisterGroup;
         };
+        sleep 0;
     };
 
     // Static turrets (Mid and High): 2 per objective; not counted in FADE_aoVehicles_ cap. Face BLUFOR assault axis at spawn, then after 10s hull + doWatch toward nearest friendly
@@ -586,6 +710,14 @@ _bluEdgeCenter = +_bluSpawn;
             if (count _turretPos < 3) then { _turretPos set [2, 0] };
             private _turret = createVehicle [_turretClass, _turretPos, [], 0, "NONE"];
             _turret setPosATL _turretPos;
+            // #region agent log
+            if (missionNamespace getVariable ["FADE_aaa_debug", false]) then {
+                diag_log format [
+                    "[FAC DbgBrowser 62d308] H22 aoTurretSpawn task=%1 obj=%2 class=%3 typeOf=%4",
+                    _taskId, _objIdx, _turretClass, typeOf _turret
+                ];
+            };
+            // #endregion
             // Match EnemyAAA / vanilla statics: hull dir = bearing to target (no arbitrary offset).
             private _faceAssault = (getPosATL _turret) getDir _bluEdgeCenter;
             _turret setDir _faceAssault;
@@ -650,25 +782,6 @@ if (!isNil "FADE_registerEnemyRetreat" && { _opforGroups isEqualType [] } && { _
 };
 private _opforTargetCount = count _opforGroups;
 
-private _bluCount = (count _friendlyUnits) max 1;
-private _bluGroups = [];
-for "_g" from 0 to (1 + floor random 2) do {
-    private _pos = [_bluSpawn, random 80, random 360] call BIS_fnc_relPos;
-    private _classes = [];
-    for "_i" from 0 to (4 + floor random 3) do { _classes pushBack (_friendlyUnits select (_i % _bluCount)) };
-    private _grp = [_pos, _sideFriendly, _classes] call FADE_missionCreateInfantryGroupAt;
-    if (isNull _grp) then { continue };
-    [_grp] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
-    [_grp] call FADE_attachNightStrobes;
-    _grp setFormation "LINE";
-    _grp setBehaviour "AWARE";
-    _grp setCombatMode "RED";
-    private _objectivesToTake = [_points, _captureRadius, _sideFriendly] call FADE_ao_pointsWithoutFriendlies;
-    { _grp addWaypoint [_x, 0] } forEach _objectivesToTake;
-    _bluGroups pushBack _grp;
-    [_taskId, _grp] call FADE_aoRegisterGroup;
-};
-
 // Initial entity registry (reinforcement spawns use FADE_aoRegisterGroup)
 private _aoAllGroups = _bluGroups + _opforGroups;
 missionNamespace setVariable ["FADE_aoEntities_" + _taskId, [_aoAllGroups, _aoCompositionObjects]];
@@ -690,11 +803,10 @@ missionNamespace setVariable ["FADE_aoEntities_" + _taskId, [_aoAllGroups, _aoCo
             private _objectivesToTake = [_points, _captureRadius, _sideFriendly] call FADE_ao_pointsWithoutFriendlies;
             for "_s" from 0 to (_numToSpawn - 1) do {
                 if !([_taskId, _startTime, _timeout] call FADE_aoMissionActive) exitWith {};
-                private _pos = [_bluSpawn, 25 + random 50, random 360] call BIS_fnc_relPos;
                 private _squadSize = 4 + floor random 4;
                 private _classes = [];
                 for "_i" from 0 to (_squadSize - 1) do { _classes pushBack (_friendlyUnits select (_i % _bluCountSafe)) };
-                private _grp = [_pos, _sideFriendly, _classes] call FADE_missionCreateInfantryGroupAt;
+                private _grp = [_bluSpawn, _classes] call _fnc_createBluSquadNear;
                 if (isNull _grp) then { continue };
                 [_grp] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
                 [_grp] call FADE_attachNightStrobes;

@@ -127,6 +127,13 @@ FADE_objective_findBuildingRelaxed = {
     private _b = [_pos, _radius, _preferSlots] call FADE_objective_findBuilding;
     if (isNull _b) then { _b = [_pos, _radius, (_preferSlots * 0.6) max 3] call FADE_objective_findBuilding };
     if (isNull _b) then { _b = [_pos, _radius, 1] call FADE_objective_findBuilding };
+    if (isNull _b) then {
+        private _any = (nearestObjects [_pos, ["House", "Building"], _radius]) select {
+            !([_x] call FADE_objective_isInfrastructureClass) &&
+            { count (_x buildingPos -1) >= 1 }
+        };
+        if (count _any > 0) then { _b = [_any, _pos] call FADE_objective_pickBestBuilding };
+    };
     _b
 };
 
@@ -268,6 +275,10 @@ FADE_objective_spawnHVTInBuilding = {
     };
     private _hvtGrp = createGroup _sideEnemy;
     private _hvt = _hvtGrp createUnit [_hvtClass, getPosATL _building, [], 0, "NONE"];
+    if (isNull _hvt) exitWith {
+        deleteGroup _hvtGrp;
+        [objNull, grpNull, "", ""]
+    };
     _hvt disableAI "PATH";
     _hvt disableAI "MOVE";
     _hvt allowDamage false;
@@ -372,6 +383,67 @@ FADE_objective_addHostageToGroup = {
         if (alive _u) then { _u allowDamage true };
     };
     [_hostage, name _hostage]
+};
+
+// Server: clear captive animation and attach freed hostage to rescuer's group.
+FADE_objective_releaseHostage = {
+    params ["_hostage", "_player"];
+    if (isNull _hostage || { !alive _hostage }) exitWith { false };
+    if (_hostage getVariable ["FADE_hostageFreed", false]) exitWith { false };
+
+    _hostage setVariable ["FADE_hostageFreed", true, true];
+    _hostage switchMove "";
+    removeGoggles _hostage;
+    _hostage enableAI "PATH";
+    _hostage enableAI "MOVE";
+    _hostage enableAI "AUTOTARGET";
+    _hostage enableAI "TARGET";
+    _hostage setUnitPos "AUTO";
+    _hostage setBehaviour "SAFE";
+    _hostage setSpeedMode "LIMITED";
+    _hostage allowFleeing 0;
+
+    if (!isNull _player && { isPlayer _player } && { alive _player }) then {
+        private _pGrp = group _player;
+        if (!isNull _pGrp) then { [_hostage] joinSilent _pGrp };
+    };
+    true
+};
+
+FADE_hostage_serverFree = {
+    params ["_hostage", "_player"];
+    if (!isServer) exitWith {};
+    if (isNull _hostage || { isNull _player } || { !alive _hostage } || { !alive _player }) exitWith {};
+    if (!isPlayer _player) exitWith {};
+    if (_hostage getVariable ["FADE_hostageFreed", false]) exitWith {};
+    if (side _player != (missionNamespace getVariable ["FADE_sideFriendly", west])) exitWith {};
+
+    private _distM = missionNamespace getVariable ["FADE_hostageFreeDistM", 3];
+    if ((getPosATL _player) distance (getPosATL _hostage) > (_distM + 1.5)) exitWith {};
+
+    private _taskId = _hostage getVariable ["FADE_hostageTaskId", ""];
+    if (_taskId != "" && { (_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "FAILED", "CANCELED"] }) exitWith {};
+
+    if (!([_hostage, _player] call FADE_objective_releaseHostage)) exitWith {};
+
+    // #region agent log
+    diag_log format [
+        "[FAC DbgBrowser 62d308] H20 hostageFreed name=%1 player=%2 group=%3",
+        name _hostage, name _player, group _hostage
+    ];
+    // #endregion
+
+    private _msg = format ["%1 freed and attached to your group.", name _hostage];
+    [_msg] remoteExec ["FADE_showMissionHint", owner _player];
+};
+
+FADE_objective_registerHostageFreeHold = {
+    params ["_hostage", ["_taskId", ""]];
+    if (!isServer) exitWith {};
+    if (isNull _hostage || { !alive _hostage }) exitWith {};
+    _hostage setVariable ["FADE_hostageFreed", false, true];
+    if (_taskId != "") then { _hostage setVariable ["FADE_hostageTaskId", _taskId, true] };
+    [_hostage] remoteExec ["FADE_hostage_clientRegisterHold", 0, true];
 };
 
 // Garrison specific building slot indices (hostage missions).
@@ -481,6 +553,8 @@ FADE_objective_addRecoverHoldAction = {
     params ["_objCase", "_taskId"];
     missionNamespace setVariable ["FADE_assetIntelTaken_" + _taskId, false];
     _objCase setVariable ["FADE_recoverTaskId", _taskId, true];
+    private _displayName = [typeOf _objCase] call (missionNamespace getVariable ["FADE_getRecoverObjectDisplayName", { _this select 0 }]);
+    _objCase setVariable ["FADE_recoverObjectDisplayName", _displayName, true];
     _objCase addAction [
         "Pick up",
         {
@@ -766,3 +840,7 @@ missionNamespace setVariable ["FADE_objective_spawnRecoverObject", FADE_objectiv
 missionNamespace setVariable ["FADE_objective_spawnKillHVT", FADE_objective_spawnKillHVT];
 missionNamespace setVariable ["FADE_objective_spawnCaptureHVT", FADE_objective_spawnCaptureHVT];
 missionNamespace setVariable ["FADE_objective_spawnRecoverHostage", FADE_objective_spawnRecoverHostage];
+missionNamespace setVariable ["FADE_objective_releaseHostage", FADE_objective_releaseHostage];
+missionNamespace setVariable ["FADE_objective_registerHostageFreeHold", FADE_objective_registerHostageFreeHold];
+missionNamespace setVariable ["FADE_hostage_serverFree", FADE_hostage_serverFree];
+publicVariable "FADE_hostage_serverFree";

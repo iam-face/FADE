@@ -228,10 +228,11 @@ FADE_runMission_ClearArea = {
         };
     };
     [_allGroups, _basePos] call FADE_registerEnemyRetreat;
-    private _initialCount = 0;
-    { _initialCount = _initialCount + count units _x } forEach _allGroups;
+    private _spawnedInitial = 0;
+    { _spawnedInitial = _spawnedInitial + count units _x } forEach _allGroups;
     private _vgPendCa = missionNamespace getVariable ["FADE_vg_pendingMenForOwner", {}];
-    if (!(_vgPendCa isEqualTo {})) then { _initialCount = _initialCount + ([_misOwnCa] call _vgPendCa) };
+    private _vgPendingAtStart = if (!(_vgPendCa isEqualTo {})) then { [_misOwnCa] call _vgPendCa } else { 0 };
+    private _initialCount = _spawnedInitial + _vgPendingAtStart;
     if (_initialCount == 0) then {
         { if (!isNull _x) then { deleteVehicle _x } } forEach _areaVehicles;
         { if (!isNull _x) then { deleteVehicle _x } } forEach _campObjects;
@@ -255,27 +256,70 @@ FADE_runMission_ClearArea = {
         [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
         [_taskId, _center, _basePos, _enemyUnitsCA, _allGroups, _caDetect] call FADE_counterAttackStart;
         private _clearTimeout = 900;
-        [_taskId, _allGroups, _initialCount, _markerName, _player, _campObjects, _areaVehicles, _clearTimeout, _misOwnCa] spawn {
-            params ["_taskId", "_allGroups", "_initialCount", "_markerName", "_player", "_campObjects", "_areaVehicles", "_timeout", "_misOwnCa"];
+        [_taskId, _allGroups, _spawnedInitial, _markerName, _player, _campObjects, _areaVehicles, _clearTimeout, _misOwnCa, _center, _areaRadius] spawn {
+            params ["_taskId", "_allGroups", "_spawnedInitial", "_markerName", "_player", "_campObjects", "_areaVehicles", "_timeout", "_misOwnCa", "_center", "_areaRadius"];
+            private _zoneR = (_areaRadius * 1.35) max (_areaRadius + 40);
+            private _thresh = (_spawnedInitial max 1) * 0.2;
             private _start = time;
             private _vgPendF = missionNamespace getVariable ["FADE_vg_pendingMenForOwner", {}];
+            private _vgCancelEllipse = missionNamespace getVariable ["FADE_vg_cancelPendingInEllipse", {}];
+            private _vgCancelOwner = missionNamespace getVariable ["FADE_vg_cancelPendingByOwner", {}];
+            private _lastDbg = -1e9;
+            private _fnc_countAliveInZone = {
+                private _n = 0;
+                {
+                    {
+                        if (alive _x && { (_x distance2D _center) <= _zoneR }) then { _n = _n + 1 };
+                    } forEach units _x;
+                } forEach _allGroups;
+                _n
+            };
+            private _fnc_countAliveTotal = {
+                private _n = 0;
+                { _n = _n + ({ alive _x } count units _x) } forEach _allGroups;
+                _n
+            };
+            private _fnc_clearAreaMet = {
+                params ["_alive", "_aliveInZone"];
+                (_spawnedInitial == 0) || { (_alive <= _thresh) && { _aliveInZone <= _thresh } }
+            };
             waitUntil {
                 sleep 0.5;
                 if ((_taskId call BIS_fnc_taskState) in ["SUCCEEDED","CANCELED","FAILED"]) exitWith { true };
                 if (time - _start > _timeout) exitWith { true };
-                private _alive = 0;
-                { _alive = _alive + ({ alive _x } count units _x) } forEach _allGroups;
+                private _alive = call _fnc_countAliveTotal;
+                private _aliveInZone = call _fnc_countAliveInZone;
                 private _pend = if (!(_vgPendF isEqualTo {})) then { [_misOwnCa] call _vgPendF } else { 0 };
-                if ((_alive + _pend) <= _initialCount * 0.2) then {
+                // #region agent log
+                if (_aliveInZone == 0 || { time - _lastDbg > 45 }) then {
+                    _lastDbg = time;
+                    diag_log format [
+                        "[FAC DbgBrowser 62d308] H18 clearArea tick task=%1 alive=%2 inZone=%3 pend=%4 spawned=%5 thresh=%6 state=%7",
+                        _taskId, _alive, _aliveInZone, _pend, _spawnedInitial, _thresh, _taskId call BIS_fnc_taskState
+                    ];
+                };
+                // #endregion
+                if ([_alive, _aliveInZone] call _fnc_clearAreaMet) then {
+                    if (!(_vgCancelEllipse isEqualTo {})) then { [_center, _zoneR, _misOwnCa] call _vgCancelEllipse };
+                    if (!(_vgCancelOwner isEqualTo {}) && { _aliveInZone == 0 }) then { [_misOwnCa] call _vgCancelOwner };
+                    // #region agent log
+                    diag_log format [
+                        "[FAC DbgBrowser 62d308] H18 clearArea SUCCESS task=%1 alive=%2 inZone=%3 pend=%4",
+                        _taskId, _alive, _aliveInZone, _pend
+                    ];
+                    // #endregion
                     [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
                     true
                 } else { false };
             };
             if (!((_taskId call BIS_fnc_taskState) in ["SUCCEEDED","CANCELED","FAILED"])) then {
-                private _alive = 0;
-                { _alive = _alive + ({ alive _x } count units _x) } forEach _allGroups;
-                private _pend2 = if (!(_vgPendF isEqualTo {})) then { [_misOwnCa] call _vgPendF } else { 0 };
-                if ((_alive + _pend2) <= _initialCount * 0.2) then { [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState } else { [_taskId, "CANCELED"] call BIS_fnc_taskSetState };
+                private _alive = call _fnc_countAliveTotal;
+                private _aliveInZone = call _fnc_countAliveInZone;
+                if ([_alive, _aliveInZone] call _fnc_clearAreaMet) then {
+                    [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
+                } else {
+                    [_taskId, "CANCELED"] call BIS_fnc_taskSetState;
+                };
             };
             [_taskId, _markerName, _player, 60] call FADE_mission_completeCleanup;
         };

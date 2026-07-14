@@ -261,6 +261,25 @@ FADE_runMission_Raid = {
         private _spawnResult = [_plannedVariant, _zoneCenter, _sideEnemy, _enemyUnitsRaid, _diffMul, _childTaskId, _taskId, (_zoneTargetAssigns select _zi)] call FADE_raid_spawnZone;
         _spawnResult params ["_spawnOk", "_actualVariant", "_zoneGroups", "_zoneObjects", "_zoneWinPos", "_watcherPayload"];
 
+        if (!_spawnOk) then {
+            private _altEntry = [_zoneEntry, _candidates, _zonesPicked select [0, _zi], _minDistBetweenZones] call FADE_raid_pickAlternateZoneCenter;
+            if (_altEntry isNotEqualTo []) then {
+                _zoneEntry = _altEntry;
+                _zoneCenter = _zoneEntry select 1;
+                _zonesPicked set [_zi, _zoneEntry];
+                _spawnResult = [_plannedVariant, _zoneCenter, _sideEnemy, _enemyUnitsRaid, _diffMul, _childTaskId, _taskId, (_zoneTargetAssigns select _zi)] call FADE_raid_spawnZone;
+                _spawnResult params ["_spawnOk", "_actualVariant", "_zoneGroups", "_zoneObjects", "_zoneWinPos", "_watcherPayload"];
+                // #region agent log
+                if (_spawnOk) then {
+                    diag_log format [
+                        "[FAC DbgBrowser 62d308] H14 raidZoneRelocated obj=%1 codename=%2 newCenter=%3",
+                        _zoneNum, _zoneCodename, _zoneCenter
+                    ];
+                };
+                // #endregion
+            };
+        };
+
         if (!_spawnOk) exitWith {
             _spawnFailed = true;
             missionNamespace setVariable ["FADE_raidAborted_" + _taskId, true];
@@ -355,7 +374,7 @@ FADE_runMission_Raid = {
                 format ["Capture HVT %1 at marked building %2 (Grid %3) and return them (handcuffed/captive) within %4 m of base.", _zoneTargetName, _zoneCodename, mapGridPosition _buildingPos, _baseDistForComplete]
             };
             default {
-                format ["Rescue hostage %1 at marked building %2 (Grid %3) and return them alive within %4 m of base.", _zoneTargetName, _zoneCodename, mapGridPosition _buildingPos, _baseDistForComplete]
+                format ["Rescue hostage %1 at marked building %2 (Grid %3). Hold interact (5s) to free them, then return alive within %4 m of base.", _zoneTargetName, _zoneCodename, mapGridPosition _buildingPos, _baseDistForComplete]
             };
         };
         private _variantTitle = _variantLabels getOrDefault [_actualVariant, _actualVariant];

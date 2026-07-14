@@ -549,6 +549,9 @@ FAC_jukeboxGui_fnc = {
     switch _action do {
 
         case "open": {
+            // #region agent log
+            diag_log format ["[FAC DbgBrowser 62d308] H3 JukeboxGui open source=%1", missionNamespace getVariable ["FAC_jukebox_guiSource", ""]];
+            // #endregion
             if ((missionNamespace getVariable ["FAC_jukebox_guiSource", ""]) == "") exitWith {
                 systemChat "Jukebox: open from a radio prop or Vehicle loudspeaker (in a vehicle).";
             };

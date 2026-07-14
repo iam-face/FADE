@@ -551,7 +551,7 @@ FADE_civ_spawnZone = {
         [_zoneId, _center, _parkedWant] call FADE_civ_spawnZoneParkedVehicles;
     };
 
-    // Spawn ambient enemy patrol if enabled (25% chance per zone; skip mission-pinned zones e.g. Invasion sectors)
+    // Spawn ambient enemy patrol if enabled (FADE_enemyPatrolTownChance per zone; skip mission-pinned zones e.g. Invasion sectors)
     if (!([_zoneId] call FADE_civ_isZonePinned)) then {
         [_center, _zoneId] call FADE_enemyPatrol_spawnForZone;
     };

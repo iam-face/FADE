@@ -75,7 +75,8 @@ _landPairs sort true;
 FADE_landVehicleClasses = _landPairs apply { _x select 1 };
 
 // Civilian addon filter: only keep classes from same addon(s) as faction. Avoids mods polluting CIV_F.
-// If filter returns empty (e.g. CIV_F vanilla has no addon match), fall back to unfiltered or CIV_F defaults.
+// When faction has addons but no unit matches, return [] (not the full input) so strict scenario filters
+// do not treat the whole side pool as faction-valid.
 FADE_civ_filterByFactionAddon = {
     params ["_classes", "_faction", ["_isMan", true]];
     if (_classes isEqualTo [] || { _faction == "" }) exitWith { [] };
@@ -103,13 +104,28 @@ FADE_civ_filterByFactionAddon = {
             missionNamespace getVariable ["FADE_civRoadVehicleClasses", ["C_Offroad_01_F","C_Hatchback_01_F","C_SUV_01_F","C_Van_01_transport_F"]]
         };
     };
-    if (_out isEqualTo []) exitWith { _classes };
     _out
+};
+
+// True when _class is a spawnable human infantry unit (never vehicles / static / ships / aircraft).
+FADE_isInfantryManClass = {
+    params ["_class"];
+    if (!(_class isEqualType "") || { _class == "" }) exitWith { false };
+    if (!isClass (configFile >> "CfgVehicles" >> _class)) exitWith { false };
+    if (!(_class isKindOf "Man")) exitWith { false };
+    if (_class isKindOf "LandVehicle" || { _class isKindOf "Air" } || { _class isKindOf "Ship" } || { _class isKindOf "StaticWeapon" }) exitWith { false };
+    true
+};
+
+FADE_filterInfantryManClasses = {
+    params ["_classes"];
+    if (!(_classes isEqualType []) || { _classes isEqualTo [] }) exitWith { [] };
+    _classes select { [_x] call FADE_isInfantryManClass }
 };
 
 // Filter unit classnames to those that spawn with a primary weapon or sidearm.
 // We only accept CfgWeapons entries with type 1 (PrimaryWeapon) or 2 (Handgun).
-// Returns original list if filtering would empty the list, so missions still have spawn options.
+// When armed filter empties, fall back to unarmed infantry only (never return vehicles).
 FADE_filterUnitsArmed = {
     params ["_classes"];
     if (_classes isEqualTo [] || { !(_classes isEqualType []) }) exitWith { _classes };
@@ -128,11 +144,13 @@ FADE_filterUnitsArmed = {
             if (_hasPrimaryOrSidearm) then { _out pushBack _x };
         };
     } forEach _classes;
-    if (_out isEqualTo []) then { _classes } else { _out };
+    if (_out isEqualTo []) then { [_classes] call FADE_filterInfantryManClasses } else { _out };
 };
 // Backward-compatible alias used by existing mission scripts.
 FADE_filterEnemyUnitsArmed = FADE_filterUnitsArmed;
 FADE_filterFriendlyUnitsArmed = FADE_filterUnitsArmed;
+missionNamespace setVariable ["FADE_isInfantryManClass", FADE_isInfantryManClass];
+missionNamespace setVariable ["FADE_filterInfantryManClasses", FADE_filterInfantryManClasses];
 missionNamespace setVariable ["FADE_filterUnitsArmed", FADE_filterUnitsArmed];
 missionNamespace setVariable ["FADE_filterEnemyUnitsArmed", FADE_filterEnemyUnitsArmed];
 missionNamespace setVariable ["FADE_filterFriendlyUnitsArmed", FADE_filterFriendlyUnitsArmed];
@@ -156,7 +174,16 @@ FADE_filterUnitsForScenarioFaction = {
     };
     if (_out isEqualTo []) then { if (_strict) then { [] } else { _classes } } else { _out }
 };
+
+// Strict CfgVehicles faction filter with fallback when CfgGroups/addon resolution already produced units.
+FADE_filterUnitsForScenarioFactionSafe = {
+    params ["_classes", ["_faction", ""], ["_sideNum", -1], ["_strict", false]];
+    private _pre = +_classes;
+    private _scoped = [_pre, _faction, _sideNum, _strict] call FADE_filterUnitsForScenarioFaction;
+    if (_scoped isEqualTo [] && { count _pre > 0 }) then { _pre } else { _scoped }
+};
 missionNamespace setVariable ["FADE_filterUnitsForScenarioFaction", FADE_filterUnitsForScenarioFaction];
+missionNamespace setVariable ["FADE_filterUnitsForScenarioFactionSafe", FADE_filterUnitsForScenarioFactionSafe];
 
 // Cache for FADE_getUnitsForFaction / FADE_getCivVehiclesForFaction (invalidated on Scenario Apply)
 FADE_getUnitsForFaction_cache = createHashMap;
@@ -185,7 +212,51 @@ FADE_collectGroupUnitClasses = {
     } forEach ("true" configClasses _groupCfg);
     _out
 };
+
+// RHS/mod CfgGroups often nest categories 3+ deep (faction >> category >> squad >> units).
+FADE_collectCfgGroupUnitsDeep = {
+    params ["_groupCfg"];
+    private _out = [];
+    if (!isClass _groupCfg) exitWith { _out };
+    _out append ([_groupCfg] call FADE_collectGroupUnitClasses);
+    { _out append ([_x] call FADE_collectCfgGroupUnitsDeep) } forEach ("true" configClasses _groupCfg);
+    _out
+};
+
+// Mod fallback token: rhs_faction_socom -> "socom"; BLU_F -> "blu".
+FADE_factionUnitSearchToken = {
+    params ["_faction"];
+    if (!(_faction isEqualType "") || { _faction == "" }) exitWith { "" };
+    private _parts = _faction splitString "_";
+    _parts = _parts select {
+        private _p = toLower _x;
+        !(_p in ["rhs", "faction", "f", "opf", "blu", "ind", "civ", "guer", "g"])
+    };
+    if (_parts isEqualTo []) then { toLower _faction } else { toLower (_parts joinString "_") }
+};
+
+FADE_collectUnitsByFactionTokenFromSidePool = {
+    params ["_faction", "_sideNum", ["_token", ""]];
+    if (_token == "") then { _token = [_faction] call FADE_factionUnitSearchToken };
+    if (_token == "" || { count _token < 3 }) exitWith { [] };
+    private _cfgRoot = configFile >> "CfgVehicles";
+    private _pool = [];
+    {
+        if (_x select [count _x - 2, 2] != ("_" + str _sideNum)) then { continue };
+        _pool append (FADE_unitsByFactionSide getOrDefault [_x, []]);
+    } forEach (keys FADE_unitsByFactionSide);
+    private _out = [];
+    {
+        if (!(_x isEqualType "") || { !isClass (_cfgRoot >> _x) }) then { continue };
+        private _cfg = _cfgRoot >> _x;
+        if (getNumber (_cfg >> "side") != _sideNum) then { continue };
+        if (toLower _x find _token < 0) then { continue };
+        _out pushBackUnique _x;
+    } forEach _pool;
+    [_out, _faction, true] call FADE_civ_filterByFactionAddon
+};
 missionNamespace setVariable ["FADE_collectGroupUnitClasses", FADE_collectGroupUnitClasses];
+missionNamespace setVariable ["FADE_collectCfgGroupUnitsDeep", FADE_collectCfgGroupUnitsDeep];
 
 // Friendly group callsigns for RATEL-style sideChat (e.g. "Bravo 1-2")
 FADE_friendlyCallsignPhonetics = ["Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel"];
@@ -259,14 +330,18 @@ FADE_getUnitsForFaction = {
             default { ["East", "West", "Guerrilla"] };
         };
 
-        // 1) CfgGroups: iterate side categories, find faction sub-tree, collect Man classnames
+        // 1) CfgGroups: deep walk (RHS/mod nested categories); match faction name or token in sibling faction keys.
+        private _token = [_faction] call FADE_factionUnitSearchToken;
         {
-            private _grpCfg = configFile >> "CfgGroups" >> _x >> _faction;
-            if (isClass _grpCfg) then {
-                {
-                    { _out append ([_x] call FADE_collectGroupUnitClasses) } forEach ("true" configClasses _x);
-                } forEach ("true" configClasses _grpCfg);
-            };
+            private _sideRoot = configFile >> "CfgGroups" >> _x;
+            if (!isClass _sideRoot) then { continue };
+            {
+                private _facCfg = _x;
+                private _facName = configName _facCfg;
+                private _nameMatch = (_facName == _faction) || { count _token >= 3 && { toLower _facName find _token >= 0 } };
+                if (!_nameMatch) then { continue };
+                _out append ([_facCfg] call FADE_collectCfgGroupUnitsDeep);
+            } forEach ("true" configClasses _sideRoot);
         } forEach _sideCategories;
 
         // 2) Fallback: cache keyed by faction+sideNum, then addon-filtered side pool (mod units often use parent faction in CfgVehicles)
@@ -290,7 +365,18 @@ FADE_getUnitsForFaction = {
             _out = FADE_unitsByFactionSide getOrDefault [_faction + "_2", []];
         };
 
+        // 4) Mod fallback: classname token on side pool (e.g. rhs_faction_socom -> rhsusf_socom_* when CfgGroups faction key mismatches).
+        if (_out isEqualTo []) then {
+            _out = [_faction, _sideNum, _token] call FADE_collectUnitsByFactionTokenFromSidePool;
+        };
+
         _result = _out;
+        // #region agent log
+        if (_faction find "socom" >= 0 || { count _result == 0 }) then {
+            diag_log format ["[FAC DbgBrowser 62d308] H13 getUnitsForFaction faction=%1 side=%2 raw=%3 token=%4 sample=%5",
+                _faction, _sideNum, count _result, _token, if (count _result > 0) then { _result select 0 } else { "" }];
+        };
+        // #endregion
     };
     if (FADE_getUnitsForFaction_cache isEqualType createHashMap) then {
         FADE_getUnitsForFaction_cache set [_cacheKey, +_result];
@@ -315,7 +401,12 @@ FADE_resolveScenarioFriendlyUnits = {
     };
     private _filter = missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }];
     _units = [_units] call _filter;
-    [_units, _ff, _snF, true] call FADE_filterUnitsForScenarioFaction
+    private _scoped = [_units, _ff, _snF, true] call FADE_filterUnitsForScenarioFactionSafe;
+    _scoped = [_scoped] call FADE_filterInfantryManClasses;
+    if (_scoped isEqualTo [] && { _ff isEqualTo "BLU_F" }) then {
+        _scoped = [+(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_F"]])] call FADE_filterInfantryManClasses;
+    };
+    _scoped
 };
 FADE_resolveScenarioEnemyUnits = {
     params [["_fallback", []]];
@@ -440,13 +531,7 @@ FADE_getFactionSideNum = {
 };
 FADE_getFactionDisplayName = {
     params ["_faction"];
-    if (_faction == "") exitWith { "Unknown" };
-    private _dn = getText (configFile >> "CfgFactionClasses" >> _faction >> "displayName");
-    if (_dn == "" || { _dn find "STR_" == 0 }) then {
-        (_faction splitString "_") joinString " "
-    } else {
-        _dn
-    };
+    [_faction] call FADE_factionDisplayNameSafe
 };
 missionNamespace setVariable ["FADE_getFactionDisplayName", FADE_getFactionDisplayName];
 publicVariable "FADE_getFactionDisplayName";

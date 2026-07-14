@@ -24,12 +24,14 @@ FADE_runMission_AssetRetrieval = {
     private _baseEnemyClass = _enemyUnitsAsset select 0;
     private _assetBranch = if (random 1 < 0.66) then { 1 } else { 2 };
     private _areaRadius = missionNamespace getVariable ["FADE_missionApproxZoneRadiusM", 55];
+    private _center = +_destPos;
+    private _assetVehicle = objNull;
+    private _vehicleClass = "";
+    private _vehicleName = "";
+    private _runVehicleBranch = (_assetBranch == 2);
 
-    // Branch 2 (33%): recover enemy vehicle and return it near base.
-    if (_assetBranch == 2) exitWith {
-        // Prefer RHS UAZ (themed recovery target) but degrade gracefully so the branch
-        // doesn't dead-end when only vanilla content is loaded. Pick the first class that
-        // actually exists in CfgVehicles, falling back through CSAT/AAF/NATO unarmed offroads.
+    // Branch 2 (33%): recover enemy vehicle and return it near base. Falls through to package branch on spawn failure.
+    if (_runVehicleBranch) then {
         private _assetCandidates = [
             "RHS_UAZ_MSV_01",
             "rhsgref_BRDM2_msv",
@@ -39,55 +41,96 @@ FADE_runMission_AssetRetrieval = {
             "C_Offroad_01_F",
             "B_LSV_01_unarmed_F"
         ];
-        private _vehicleClass = "";
         {
             if (isClass (configFile >> "CfgVehicles" >> _x)) exitWith { _vehicleClass = _x };
         } forEach _assetCandidates;
-        if (_vehicleClass == "") exitWith {
-            [_player] call FADE_clearActiveMission;
-            [_player, "MISSION ERROR", "No recovery vehicle class available for this scenario."] call FADE_missionErrorHint;
-        };
-        private _vehicleCfg = configFile >> "CfgVehicles" >> _vehicleClass;
-        private _vehicleName = if (isClass _vehicleCfg) then { getText (_vehicleCfg >> "displayName") } else { _vehicleClass };
-        if (_vehicleName == "") then { _vehicleName = _vehicleClass };
+        if (_vehicleClass == "") then {
+            _runVehicleBranch = false;
+            // #region agent log
+            diag_log "[FAC DbgBrowser 62d308] H15 assetVeh no vehicle class — falling back to package branch";
+            // #endregion
+        } else {
+            private _vehicleCfg = configFile >> "CfgVehicles" >> _vehicleClass;
+            _vehicleName = if (isClass _vehicleCfg) then { getText (_vehicleCfg >> "displayName") } else { _vehicleClass };
+            if (_vehicleName == "") then { _vehicleName = _vehicleClass };
 
-        private _spawnRoadVehicleInZone = {
-            params ["_zoneCenter", "_vehClass"];
-            private _hit = [_zoneCenter, 350, [], -1, [], _zoneCenter] call FADE_findOpforGroundVehicleRoadSpawn;
-            if (_hit isEqualTo []) exitWith { [objNull, []] };
-            _hit params ["_candidate", "_dir"];
-            private _veh = createVehicle [_vehClass, _candidate, [], 0, "NONE"];
-            if (isNull _veh) exitWith { [objNull, []] };
+            private _roadSpawnFn = missionNamespace getVariable ["FADE_findOpforGroundVehicleRoadSpawn", { [] }];
+            private _spawnRoadVehicleAtCenter = {
+                params ["_zoneCenter", "_vehClass", ["_roadRadii", [350, 500, 650, 850]]];
+                if (count _zoneCenter < 2) exitWith { [objNull, []] };
+                private _norm = [_zoneCenter] call FADE_normPos3;
+                private _hit = [];
+                private _candidate = [0, 0, 0];
+                private _dir = 0;
+                {
+                    if (count _hit >= 2) exitWith {};
+                    _hit = [_norm, _x, [], -1, [], _norm] call _roadSpawnFn;
+                    if (_hit isEqualTo [] && { _forEachIndex > 0 }) then {
+                        _hit = [_norm, _x, [], -1, [], _norm, 10, 4, 3] call _roadSpawnFn;
+                    };
+                } forEach _roadRadii;
+                if (count _hit < 2) then {
+                    for "_offTry" from 1 to 10 do {
+                        _candidate = [[_norm, 4, 90, 4, 0, 0.35, 0, [], _norm], _norm] call FADE_findSafePosArray;
+                        if (_candidate isEqualType [] && { count _candidate >= 2 } && { [_candidate] call _dryPos }) exitWith {
+                            if (count _candidate < 3) then { _candidate = [(_candidate select 0), (_candidate select 1), 0] };
+                            _dir = random 360;
+                            _hit = [_candidate, _dir];
+                        };
+                        _hit = [];
+                    };
+                };
+                if (_hit isEqualTo []) exitWith { [objNull, []] };
+                _hit params ["_candidate", "_dir"];
+                private _veh = createVehicle [_vehClass, _candidate, [], 0, "NONE"];
+                if (isNull _veh) exitWith { [objNull, []] };
 
-            _veh allowDamage false;
-            _veh setPosATL _candidate;
-            _veh setDir _dir;
-            _veh setVectorUp surfaceNormal _candidate;
-            _veh setVelocity [0, 0, 0];
-            _veh setFuel 1;
-            _veh setDamage 0;
-            clearWeaponCargoGlobal _veh;
-            clearMagazineCargoGlobal _veh;
-            clearItemCargoGlobal _veh;
-            clearBackpackCargoGlobal _veh;
-            [_veh] spawn { params ["_v"]; sleep 2; if (!isNull _v) then { _v allowDamage true } };
+                _veh allowDamage false;
+                _veh setPosATL _candidate;
+                _veh setDir _dir;
+                _veh setVectorUp surfaceNormal _candidate;
+                _veh setVelocity [0, 0, 0];
+                _veh setFuel 1;
+                _veh setDamage 0;
+                clearWeaponCargoGlobal _veh;
+                clearMagazineCargoGlobal _veh;
+                clearItemCargoGlobal _veh;
+                clearBackpackCargoGlobal _veh;
+                [_veh] spawn { params ["_v"]; sleep 2; if (!isNull _v) then { _v allowDamage true } };
 
-            if (!alive _veh || { !canMove _veh }) then {
-                deleteVehicle _veh;
-                [objNull, []]
-            } else {
-                [_veh, _candidate]
+                if (!alive _veh) then {
+                    deleteVehicle _veh;
+                    [objNull, []]
+                } else {
+                    [_veh, _candidate]
+                };
             };
-        };
 
-        private _zones = +(missionNamespace getVariable ["FADE_civTriggerNames", []]);
-        private _zonesEligible = [_zones, _mapAnchor, 1500, _mapPickResolvedR] call FADE_fnc_assetZonesNearMapClick;
-        private _assetVehicle = objNull;
-        private _center = +_destPos;
-        if (_fromMapClick && { count _mapAnchor >= 2 }) then {
-            private _roadsNear = _mapAnchor nearRoads 500;
-            if (count _roadsNear > 0) then {
-                private _spawnRes = [_mapAnchor, _vehicleClass] call _spawnRoadVehicleInZone;
+            private _zones = +(missionNamespace getVariable ["FADE_civTriggerNames", []]);
+            private _zonesEligible = [_zones, _mapAnchor, 1500, _mapPickResolvedR] call FADE_fnc_assetZonesNearMapClick;
+            if (count _zonesEligible < 1) then {
+                _zonesEligible = [_zones, [], 1500, -1] call FADE_fnc_assetZonesNearMapClick;
+            };
+
+            private _searchCenters = [];
+            if (count _destPos >= 2) then { _searchCenters pushBack [_destPos select 0, _destPos select 1, 0] };
+            if (_fromMapClick && { count _mapAnchor >= 2 }) then { _searchCenters pushBack [_mapAnchor select 0, _mapAnchor select 1, 0] };
+            {
+                private _trig = missionNamespace getVariable [_x, objNull];
+                if (!isNull _trig) then {
+                    private _zc = getPosATL _trig;
+                    if (count _zc < 3) then { _zc = [(_zc select 0), (_zc select 1), 0] };
+                    _searchCenters pushBack _zc;
+                };
+            } forEach _zonesEligible;
+            if (count _searchCenters > 16) then { _searchCenters = (_searchCenters call BIS_fnc_arrayShuffle) select [0, 16] };
+
+            private _attemptN = 0;
+            {
+                if (!isNull _assetVehicle) exitWith {};
+                _attemptN = _attemptN + 1;
+                if (_attemptN mod 3 == 0) then { sleep 0 };
+                private _spawnRes = [_x, _vehicleClass] call _spawnRoadVehicleAtCenter;
                 private _vehTry = _spawnRes param [0, objNull];
                 private _posTry = _spawnRes param [1, []];
                 if (!isNull _vehTry) then {
@@ -95,47 +138,21 @@ FADE_runMission_AssetRetrieval = {
                     [_taskId, _assetVehicle] call FADE_missionEnt_registerVehicle;
                     _center = _posTry;
                 };
+            } forEach _searchCenters;
+
+            if (isNull _assetVehicle) then {
+                _runVehicleBranch = false;
+                // #region agent log
+                diag_log format [
+                    "[FAC DbgBrowser 62d308] H15 assetVeh spawn failed centers=%1 zones=%2 dest=%3 — package branch",
+                    count _searchCenters, count _zonesEligible, _destPos
+                ];
+                // #endregion
             };
         };
+    };
 
-        if (isNull _assetVehicle && { count _zonesEligible > 0 }) then {
-            if (!_fromMapClick && { count _destPos >= 2 }) then {
-                _zonesEligible = [_zonesEligible, [], {
-                    private _t = missionNamespace getVariable [_x, objNull];
-                    if (isNull _t) exitWith { 1e15 };
-                    (getPosATL _t) distance2D _destPos
-                }, "ASCEND"] call BIS_fnc_sortBy;
-            };
-            private _maxPasses = 4;
-            private _pass = 0;
-            while { isNull _assetVehicle && { _pass < _maxPasses } } do {
-                _pass = _pass + 1;
-                private _zonesTry = +_zonesEligible;
-                if (!_fromMapClick && { _pass > 1 }) then { _zonesTry = _zonesTry call BIS_fnc_arrayShuffle };
-                if (count _zonesTry > 8) then { _zonesTry = _zonesTry select [0, 8] };
-                {
-                    if (!isNull _assetVehicle) exitWith {};
-                    private _trig = missionNamespace getVariable [_x, objNull];
-                    if (isNull _trig) then { continue };
-                    private _zoneCenter = getPosATL _trig;
-                    if (_zoneCenter isEqualType [] && { count _zoneCenter < 3 }) then { _zoneCenter = [(_zoneCenter select 0), (_zoneCenter select 1), 0] };
-                    private _spawnRes = [_zoneCenter, _vehicleClass] call _spawnRoadVehicleInZone;
-                    private _vehTry = _spawnRes param [0, objNull];
-                    private _posTry = _spawnRes param [1, []];
-                    if (!isNull _vehTry) then {
-                        _assetVehicle = _vehTry;
-                        [_taskId, _assetVehicle] call FADE_missionEnt_registerVehicle;
-                        _center = _posTry;
-                    };
-                } forEach _zonesTry;
-            };
-        };
-
-        if (isNull _assetVehicle) exitWith {
-            [_player] call FADE_clearActiveMission;
-            [_player, "MISSION ERROR", "Could not spawn the recovery vehicle on a safe road near an eligible civ zone."] call FADE_missionErrorHint;
-        };
-
+    if (_runVehicleBranch && { !isNull _assetVehicle }) exitWith {
         missionNamespace setVariable ["FADE_assetIntelTaken_" + _taskId, false];
         missionNamespace setVariable ["FADE_assetEntities_" + _taskId, []];
         missionNamespace setVariable ["FADE_assetObjects_" + _taskId, [_assetVehicle]];
@@ -180,6 +197,7 @@ FADE_runMission_AssetRetrieval = {
         private _markerName = "FADE_asset_" + _taskId;
         _player setVariable ["FADE_myMissionMarker", _markerName, true];
         private _markerOut = [_taskId, _markerName, _center, _areaRadius, "ColorOrange", "objective", _operationName, -1, -1, [_center]] call FADE_mission_createObjectiveMarker;
+        [_taskId, "AssetRetrieval", _center, _markerOut, [], "ColorOrange"] call FADE_fieldIntel_startForMission;
 
         private _grid = mapGridPosition _center;
         private _brief = format ["ASSET RETRIEVAL  -  VEHICLE%1%1Objective area (approx.): Grid %2%1%1Recover the enemy vehicle %3 and return it to base per task limits. Secure the site, clear threats, and move the asset by the best available method.", toString [10], _grid, _vehicleName] + _briefGuiTail;
@@ -280,7 +298,7 @@ FADE_runMission_AssetRetrieval = {
             [_allGroups, _basePos] call FADE_registerEnemyRetreat;
             missionNamespace setVariable ["FADE_assetEntities_" + _taskId, _allGroups];
             [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
-            [_taskId, "AssetRetrieval", _center, _markerOut, _allGroups, "ColorOrange"] call FADE_fieldIntel_startForMission;
+            [_taskId, _allGroups] call FADE_fieldIntel_registerGroups;
             [_taskId, _arQrfPos, _basePos, _enemyUnitsAsset, _allGroups, _arDetect] call FADE_counterAttackStart;
             private _baseDist = 1000;
             waitUntil {
@@ -461,6 +479,7 @@ FADE_runMission_AssetRetrieval = {
     private _markerName = "FADE_asset_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _markerOut = [_taskId, _markerName, _center, _areaRadius, "ColorOrange", "objective", _operationName, -1, -1, [_center]] call FADE_mission_createObjectiveMarker;
+    [_taskId, "AssetRetrieval", _center, _markerOut, [], "ColorOrange"] call FADE_fieldIntel_startForMission;
 
     private _grid = mapGridPosition _center;
     private _brief = format ["ASSET RETRIEVAL  -  OBJECT%1%1Objective area (approx.): Grid %2%1%1Recover %3 (most likely indoors inside a defended building). Clear the site and use Pick up on the package to complete.", toString [10], _grid, _assetName] + _briefGuiTail;
@@ -668,7 +687,7 @@ FADE_runMission_AssetRetrieval = {
         missionNamespace setVariable ["FADE_assetEntities_" + _taskId, _allGroups];
         missionNamespace setVariable ["FADE_assetObjects_" + _taskId, _assetObjects];
         [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
-        [_taskId, "AssetRetrieval", _center, _markerOut, _allGroups, "ColorOrange"] call FADE_fieldIntel_startForMission;
+        [_taskId, _allGroups] call FADE_fieldIntel_registerGroups;
         [_taskId, _arQrfPos, _basePos, _enemyUnitsAsset, _allGroups, _arDetect] call FADE_counterAttackStart;
         waitUntil {
             sleep 2;

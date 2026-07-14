@@ -5,7 +5,7 @@ FADE_applyScenarioSettings = {
     // Scenario GUI sends one wrapped array so remoteExec always delivers a single _this (reliable with many args on dedicated servers).
     params ["_args"];
     if !(_args isEqualType []) exitWith {};
-    _args params ["_hour", "_weather", "_enemyFaction", "_friendlyFaction", "_civFaction", ["_limitGear", false], ["_presetOnly", false], ["_player", objNull], ["_patrolsEnabled", true], ["_enemySkill", 0.0], ["_enemyRouting", 0], ["_enemyAAA", "Off"], ["_civiliansEnabled", true], ["_aoStrength", "Medium"], ["_timeCompressionScale", 1], ["_opforPopulationSetting", "Low"], ["_teleportToPlayerMode", 0], ["_opforLauncherSetting", "Normal"], ["_opforAirSetting", "Off"], ["_operationZoneCount", 6], ["_weatherParams", []], ["_civGlobalMaxAlive", 55], ["_civDensityScale", 1], ["_civTalkInterpretersOnly", false], ["_intelSpecialistsOnly", false], ["_opforDroneSetting", "Off"]];
+    _args params ["_hour", "_weather", "_enemyFaction", "_friendlyFaction", "_civFaction", ["_limitGear", false], ["_presetOnly", false], ["_player", objNull], ["_patrolsEnabled", true], ["_enemySkill", 0.0], ["_enemyRouting", 0], ["_enemyAAA", "Off"], ["_civiliansEnabled", true], ["_aoStrength", "Medium"], ["_timeCompressionScale", 1], ["_opforPopulationSetting", "Low"], ["_teleportToPlayerMode", 0], ["_opforLauncherSetting", "Normal"], ["_opforAirSetting", "Off"], ["_operationZoneCount", 6], ["_weatherParams", []], ["_civGlobalMaxAlive", 55], ["_civDensityScale", 1], ["_civTalkInterpretersOnly", false], ["_intelSpecialistsOnly", false], ["_opforDroneSetting", "Off"], ["_opforPatrolTownChanceSetting", "Low"]];
     if (!([_player] call FADE_playerCanUseScenarioGui)) exitWith {
         if (!isNull _player) then {
             ["Scenario access denied by lobby settings."] remoteExec ["systemChat", _player];
@@ -65,6 +65,7 @@ FADE_applyScenarioSettings = {
         FADE_getCivVehiclesForFaction_cache = createHashMap;
         missionNamespace setVariable ["FADE_enemyAirVehicleClasses_cache", []];
         missionNamespace setVariable ["FADE_enemyDroneVehicleClasses_cache", []];
+        missionNamespace setVariable ["FADE_aaa_staticLightClassCache", createHashMap];
     };
     missionNamespace setVariable ["FADE_scenarioTime", _hour];
     missionNamespace setVariable ["FADE_scenarioWeather", _weather];
@@ -90,6 +91,9 @@ FADE_applyScenarioSettings = {
     missionNamespace setVariable ["FADE_opforAirSetting", _opforAirSetting, true];
     missionNamespace setVariable ["FADE_opforDroneSetting", _opforDroneSetting, true];
     missionNamespace setVariable ["FADE_operationZoneCount", _operationZoneCount, true];
+    _opforPatrolTownChanceSetting = [_opforPatrolTownChanceSetting] call FADE_normalizeOpforPatrolTownChanceSetting;
+    missionNamespace setVariable ["FADE_opforPatrolTownChanceSetting", _opforPatrolTownChanceSetting, true];
+    missionNamespace setVariable ["FADE_enemyPatrolTownChance", [_opforPatrolTownChanceSetting] call FADE_resolveOpforPatrolTownChance, true];
     if (_opforAirSetting == "Off" && { _prevOpforAir != "Off" }) then { call FADE_opforAir_despawnAll };
     if (_opforDroneSetting == "Off" && { _prevOpforDrone != "Off" } && { !isNil "FADE_opforDrone_despawnAll" }) then { call FADE_opforDrone_despawnAll };
     private _opforResolved = [_opforPopulationSetting] call FADE_resolveOpforPopulationScale;
@@ -104,6 +108,14 @@ FADE_applyScenarioSettings = {
     missionNamespace setVariable ["FADE_sideFriendly", [_friendlySideNum] call FADE_sideNumToSide, true];
     missionNamespace setVariable ["FADE_markerColorEnemy", ([_enemySideNum] call FADE_markerColorForSideNum), true];
     missionNamespace setVariable ["FADE_markerColorFriendly", ([_friendlySideNum] call FADE_markerColorForSideNum), true];
+    // #region agent log
+    diag_log format [
+        "[FAC DbgBrowser 62d308] H17 scenario opforAir=%1 opforDrone=%2 enemySide=%3 friendlySide=%4",
+        _opforAirSetting, _opforDroneSetting,
+        missionNamespace getVariable ["FADE_sideEnemy", east],
+        missionNamespace getVariable ["FADE_sideFriendly", west]
+    ];
+    // #endregion
 
     // Player side and friendships when combat factions change.
     if (_factionsChanged) then {
@@ -126,11 +138,18 @@ FADE_applyScenarioSettings = {
         _enemyUnits = [_enemyUnits] call FADE_filterUnitsArmed;
         _friendlyUnits = [_friendlyUnits] call FADE_filterUnitsArmed;
         _enemyUnits = [_enemyUnits] call FADE_filterEnemyUnitsByLauncherPolicy;
-        _enemyUnits = [_enemyUnits, _enemyFaction, _enemySideNum, false] call FADE_filterUnitsForScenarioFaction;
-        _friendlyUnits = [_friendlyUnits, _friendlyFaction, _friendlySideNum, true] call FADE_filterUnitsForScenarioFaction;
+        _enemyUnits = [_enemyUnits, _enemyFaction, _enemySideNum, false] call FADE_filterUnitsForScenarioFactionSafe;
+        _friendlyUnits = [_friendlyUnits, _friendlyFaction, _friendlySideNum, true] call FADE_filterUnitsForScenarioFactionSafe;
+        _friendlyUnits = [_friendlyUnits] call FADE_filterInfantryManClasses;
         if (_friendlyUnits isEqualTo [] && { _friendlyFaction isEqualTo "BLU_F" }) then {
-            _friendlyUnits = +(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"]]);
+            _friendlyUnits = [+(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"]])] call FADE_filterInfantryManClasses;
         };
+        // #region agent log
+        diag_log format [
+            "[FAC DbgBrowser 62d308] H8 applyFriendlyUnits faction=%1 count=%2 sample=%3",
+            _friendlyFaction, count _friendlyUnits, if ((count _friendlyUnits) > 0) then { _friendlyUnits select 0 } else { "" }
+        ];
+        // #endregion
 
         private _enemyVehicles = [_enemyFaction] call FADE_getEnemyVehiclesForFaction;
         private _friendlyVehicleClasses = [_friendlyFaction] call FADE_getFriendlyVehicleClasses;
@@ -306,10 +325,11 @@ if (_defCivVeh isEqualTo []) then { _defCivVeh = ["C_Offroad_01_F", "C_Hatchback
 _defEnemy = [_defEnemy] call FADE_filterUnitsArmed;
 _defFriendly = [_defFriendly] call FADE_filterUnitsArmed;
 _defEnemy = [_defEnemy] call FADE_filterEnemyUnitsByLauncherPolicy;
-_defEnemy = [_defEnemy, _enemyF, _enemySideNum0, false] call FADE_filterUnitsForScenarioFaction;
-_defFriendly = [_defFriendly, _friendlyF, _friendlySideNum0, true] call FADE_filterUnitsForScenarioFaction;
+_defEnemy = [_defEnemy, _enemyF, _enemySideNum0, false] call FADE_filterUnitsForScenarioFactionSafe;
+_defFriendly = [_defFriendly, _friendlyF, _friendlySideNum0, true] call FADE_filterUnitsForScenarioFactionSafe;
+_defFriendly = [_defFriendly] call FADE_filterInfantryManClasses;
 if (_defFriendly isEqualTo [] && { _friendlyF isEqualTo "BLU_F" }) then {
-    _defFriendly = +(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"]]);
+    _defFriendly = [+(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"]])] call FADE_filterInfantryManClasses;
 };
 private _defFriendlyVeh = [_friendlyF] call FADE_getFriendlyVehicleClasses;
 missionNamespace setVariable ["FADE_enemyUnits", +_defEnemy];
@@ -332,6 +352,8 @@ missionNamespace setVariable ["FADE_opforLauncherSetting", missionNamespace getV
 missionNamespace setVariable ["FADE_opforAirSetting", missionNamespace getVariable ["FADE_opforAirSetting", "Off"], true];
 missionNamespace setVariable ["FADE_opforDroneSetting", missionNamespace getVariable ["FADE_opforDroneSetting", "Off"], true];
 missionNamespace setVariable ["FADE_scenarioPatrols", missionNamespace getVariable ["FADE_scenarioPatrols", true], true];
+missionNamespace setVariable ["FADE_opforPatrolTownChanceSetting", missionNamespace getVariable ["FADE_opforPatrolTownChanceSetting", "Low"], true];
+missionNamespace setVariable ["FADE_enemyPatrolTownChance", [missionNamespace getVariable ["FADE_opforPatrolTownChanceSetting", "Low"]] call FADE_resolveOpforPatrolTownChance, true];
 missionNamespace setVariable ["FADE_enemySkill", missionNamespace getVariable ["FADE_enemySkill", 0.0], true];
 private _opforInit = [missionNamespace getVariable ["FADE_opforPopulationSetting", "Low"]] call FADE_resolveOpforPopulationScale;
 missionNamespace setVariable ["FADE_opforPopulationScale", _opforInit select 0, true];
@@ -368,7 +390,7 @@ diag_log format [
 
 // OPFOR ambient air (P24): bounded spawns toward BLUFOR players / base.
 [] spawn {
-    sleep 90;
+    sleep 60;
     while { true } do {
         sleep 45;
         if (!isServer) exitWith {};

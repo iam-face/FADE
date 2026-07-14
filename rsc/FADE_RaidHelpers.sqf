@@ -133,7 +133,7 @@ FADE_raid_variantFallbacks = {
     switch (_variant) do {
         case "RecoverHostage": { ["CaptureHVT", "KillHVT", "RecoverObject"] };
         case "CaptureHVT": { ["KillHVT", "RecoverObject"] };
-        case "KillHVT": { ["RecoverObject", "CaptureHVT"] };
+        case "KillHVT": { ["RecoverHostage", "RecoverObject", "CaptureHVT"] };
         default { ["KillHVT", "RecoverObject"] };
     };
 };
@@ -169,6 +169,25 @@ FADE_raid_resolveMapZonePicks = {
         _picked pushBack _entry;
     } forEach (_clicks select [0, _want]);
     if (count _picked < _want) then { [] } else { _picked }
+};
+
+// When primary zone center cannot host a variant, try another civ zone (spacing vs already-used zones).
+FADE_raid_pickAlternateZoneCenter = {
+    params ["_failedEntry", "_candidates", "_usedEntries", "_minSpacing"];
+    if (!(_failedEntry isEqualType []) || { count _failedEntry < 2 }) exitWith { [] };
+    private _usedNames = _usedEntries apply { _x select 0 };
+    private _pool = +(_candidates select { !((_x select 0) in _usedNames) });
+    _pool = _pool call BIS_fnc_arrayShuffle;
+    private _picked = [];
+    {
+        private _pos = _x select 1;
+        private _ok = true;
+        {
+            if ((_pos distance2D (_y select 1)) < _minSpacing) exitWith { _ok = false };
+        } forEach _usedEntries;
+        if (_ok) exitWith { _picked = _x };
+    } forEach _pool;
+    _picked
 };
 
 FADE_raid_trySpawnVariant = {
@@ -217,6 +236,9 @@ FADE_raid_trySpawnVariant = {
     if (_ok && { _variant == "RecoverObject" } && { count _objects > 0 } && { _childTaskId != "" }) then {
         [_objects select 0, _childTaskId] call FADE_objective_addRecoverHoldAction;
     };
+    if (_ok && { _variant == "RecoverHostage" } && { _payload isEqualType [] } && { count _payload > 0 } && { !isNull (_payload select 0) } && { _childTaskId != "" }) then {
+        [_payload select 0, _childTaskId] call FADE_objective_registerHostageFreeHold;
+    };
     if (_ok && { _missionTaskId != "" }) then {
         private _targetBld = _anchorBld;
         if (isNull _targetBld) then {
@@ -251,25 +273,59 @@ FADE_raid_spawnZone = {
     private _tryList = [_primaryVariant] + ([_primaryVariant] call FADE_raid_variantFallbacks);
     private _tryListUnique = [];
     { if (!(_x in _tryListUnique)) then { _tryListUnique pushBack _x } } forEach _tryList;
+    private _baseRadius = missionNamespace getVariable ["FADE_raidBuildSearchRadiusM", 450];
+    private _searchRadii = [
+        _baseRadius,
+        (_baseRadius + 150) min 900,
+        (_baseRadius + 300) min 1100
+    ];
+    private _searchCenters = [+_zoneCenter];
+    { _searchCenters pushBack ([_zoneCenter, _x, _forEachIndex * 90] call BIS_fnc_relPos) } forEach [120, 220, 340];
     private _finalVariant = "";
     private _groups = [];
     private _objects = [];
     private _winPos = [0, 0, 0];
     private _payload = [];
+    private _prevRadius = missionNamespace getVariable ["FADE_raidBuildSearchRadiusM", _baseRadius];
     {
-        private _attempt = [_x, _zoneCenter, _sideEnemy, _enemyUnits, _diffMul, _childTaskId, _missionTaskId, _targetAssign] call FADE_raid_trySpawnVariant;
-        _attempt params ["_ok", "_usedVariant", "_g", "_o", "_wp", "_pl"];
-        if (_ok) exitWith {
-            _finalVariant = _usedVariant;
-            _groups = _g;
-            _objects = _o;
-            _winPos = _wp;
-            _payload = _pl;
-        };
+        if (_finalVariant != "") exitWith {};
+        private _variant = _x;
+        {
+            if (_finalVariant != "") exitWith {};
+            private _radius = _x;
+            {
+                if (_finalVariant != "") exitWith {};
+                missionNamespace setVariable ["FADE_raidBuildSearchRadiusM", _radius];
+                private _attempt = [_variant, _x, _sideEnemy, _enemyUnits, _diffMul, _childTaskId, _missionTaskId, _targetAssign] call FADE_raid_trySpawnVariant;
+                _attempt params ["_ok", "_usedVariant", "_g", "_o", "_wp", "_pl"];
+                if (_ok) exitWith {
+                    _finalVariant = _usedVariant;
+                    _groups = _g;
+                    _objects = _o;
+                    _winPos = _wp;
+                    _payload = _pl;
+                };
+            } forEach _searchCenters;
+        } forEach _searchRadii;
     } forEach _tryListUnique;
+    missionNamespace setVariable ["FADE_raidBuildSearchRadiusM", _prevRadius];
     if (_finalVariant == "") exitWith {
+        // #region agent log
+        diag_log format [
+            "[FAC DbgBrowser 62d308] H14 raidSpawnZone failed variant=%1 center=%2 radii=%3",
+            _primaryVariant, _zoneCenter, _searchRadii
+        ];
+        // #endregion
         [false, "", [], [], [0, 0, 0], []]
     };
+    // #region agent log
+    if (_finalVariant != _primaryVariant) then {
+        diag_log format [
+            "[FAC DbgBrowser 62d308] H14 raidSpawnZone fallback primary=%1 used=%2 center=%3",
+            _primaryVariant, _finalVariant, _zoneCenter
+        ];
+    };
+    // #endregion
     [true, _finalVariant, _groups, _objects, _winPos, _payload]
 };
 

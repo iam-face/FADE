@@ -85,6 +85,7 @@ Feature backlog: **[TODO.md](TODO.md)**.
 - **Operation v2** — intel-gated 3×3 km grid, three hidden objectives via civ talk / body search; supersedes current Operation + Hunt
 - **Commander mode / RCT-C** — embedded-map UI for AI support tasking
 - **OPFOR roadblocks revisit** — use `FADE_aoSurvey` road buckets to place blocks on routes players actually use
+- **Portable FADE** — ship FADE as a mod + thin mission glue; Eden **FADE Player Base** module sets base location; auto-discover vehicle/AI spawns, civ zones, configs for non-Altis maps (see TODO §13)
 
 Previously shipped: **Raid**, **Invasion**, procedural **lore**, **AAA** engagement fix, and **OPFOR drones** (ambient UAV patrol + QRF vectoring).
 

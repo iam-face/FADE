@@ -38,20 +38,105 @@ FADE_vg_registerMissionSite = {
 };
 
 // createGroup + createUnit at one ATL (patrol groups; avoids BIS_fnc_spawnGroup stale-waypoint issues).
+FADE_missionEnsureInfantryGroupLeader = {
+    params ["_grp"];
+    if (isNull _grp) exitWith { grpNull };
+    {
+        if (!(_x isKindOf "Man")) then {
+            // #region agent log
+            diag_log format [
+                "[FAC DbgBrowser 62d308] H19 deleteNonMan type=%1 grp=%2",
+                typeOf _x, _grp
+            ];
+            // #endregion
+            deleteVehicle _x;
+        };
+    } forEach units _grp;
+    private _men = units _grp select { _x isKindOf "Man" && { alive _x } };
+    if (count _men == 0) exitWith {
+        deleteGroup _grp;
+        grpNull
+    };
+    private _ldr = leader _grp;
+    if (isNull _ldr || { !(_ldr isKindOf "Man") } || { !alive _ldr }) then {
+        _grp selectLeader (_men select 0);
+        // #region agent log
+        diag_log format [
+            "[FAC DbgBrowser 62d308] H19 selectLeader type=%1 grp=%2",
+            typeOf (leader _grp), _grp
+        ];
+        // #endregion
+    };
+    _grp
+};
+
 FADE_missionCreateInfantryGroupAt = {
     params ["_pos", "_side", "_classes"];
     private _spawnPos = [_pos] call FADE_normPos3;
+    private _clsIn = [_classes] call FADE_filterInfantryManClasses;
+    if (_clsIn isEqualTo []) exitWith { grpNull };
     private _grp = createGroup _side;
     {
-        private _u = _grp createUnit [_x, _spawnPos, [], 0, "NONE"];
-        if (!isNull _u) then { _u setPosATL _spawnPos };
-    } forEach _classes;
-    if (count units _grp == 0) then {
-        deleteGroup _grp;
-        grpNull
-    } else {
-        _grp
+        if (!([_x] call FADE_isInfantryManClass)) then {
+            // #region agent log
+            diag_log format ["[FAC DbgBrowser 62d308] H19 skipNonInfantry class=%1", _x];
+            // #endregion
+        } else {
+            private _u = _grp createUnit [_x, _spawnPos, [], 0, "NONE"];
+            if (!isNull _u) then {
+                if (_u isKindOf "Man") then {
+                    _u setPosATL _spawnPos;
+                } else {
+                    // #region agent log
+                    diag_log format [
+                        "[FAC DbgBrowser 62d308] H19 badCreateUnit class=%1 type=%2",
+                        _x, typeOf _u
+                    ];
+                    // #endregion
+                    deleteVehicle _u;
+                };
+            };
+        };
+    } forEach _clsIn;
+    [_grp] call FADE_missionEnsureInfantryGroupLeader
+};
+
+// BLUFOR / friendly mission spawns: infantry-only classes + leader sanity check.
+FADE_spawnFriendlyInfantryGroupAt = {
+    params ["_pos", "_side", "_classes"];
+    private _filtered = [_classes] call FADE_filterInfantryManClasses;
+    if (_filtered isEqualTo []) then {
+        private _fallback = +(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_F"]]);
+        _filtered = [_fallback] call FADE_filterInfantryManClasses;
+        // #region agent log
+        diag_log format [
+            "[FAC DbgBrowser 62d308] H19 friendlySpawn emptyPool fallbackCount=%1 side=%2",
+            count _filtered, _side
+        ];
+        // #endregion
     };
+    if (_filtered isEqualTo []) exitWith { grpNull };
+    private _grp = [_pos, _side, _filtered] call FADE_missionCreateInfantryGroupAt;
+    if (!isNull _grp) then {
+        private _ldr = leader _grp;
+        // #region agent log
+        diag_log format [
+            "[FAC DbgBrowser 62d308] H19 friendlySpawn ok count=%1 leader=%2 leaderIsMan=%3",
+            count units _grp, if (isNull _ldr) then { "null" } else { typeOf _ldr }, if (isNull _ldr) then { false } else { _ldr isKindOf "Man" }
+        ];
+        // #endregion
+    };
+    _grp
+};
+
+// Skip ambient combat on water/invalid ATL (avoids BIS_fnc_position scalar spam in ACE console).
+FADE_tryAmbientCombatAnim = {
+    params ["_unit", ["_stance", "STAND"], ["_variant", "FULL"]];
+    if (isNull _unit || { !alive _unit }) exitWith {};
+    private _dryFn = missionNamespace getVariable ["FADE_surfaceIsDry", { params ["_p"]; count _p >= 2 && { !surfaceIsWater [_p select 0, _p select 1] } }];
+    private _p = getPosATL _unit;
+    if (!(_p isEqualType []) || { count _p < 2 } || { !([_p] call _dryFn) }) exitWith {};
+    [_unit, _stance, _variant, { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
 };
 
 // Cyclic patrol route around _center. Clears existing waypoints, sets group orders, adds MOVE + CYCLE.
@@ -481,7 +566,10 @@ FADE_cargo_cleanupSiteDeferred = {
 missionNamespace setVariable ["FADE_vg_registerMissionSite", FADE_vg_registerMissionSite];
 missionNamespace setVariable ["FADE_spawnEnemyGroupAt", FADE_spawnEnemyGroupAt];
 missionNamespace setVariable ["FADE_createEnemyUnitAt", FADE_createEnemyUnitAt];
+missionNamespace setVariable ["FADE_missionEnsureInfantryGroupLeader", FADE_missionEnsureInfantryGroupLeader];
 missionNamespace setVariable ["FADE_missionCreateInfantryGroupAt", FADE_missionCreateInfantryGroupAt];
+missionNamespace setVariable ["FADE_spawnFriendlyInfantryGroupAt", FADE_spawnFriendlyInfantryGroupAt];
+missionNamespace setVariable ["FADE_tryAmbientCombatAnim", FADE_tryAmbientCombatAnim];
 missionNamespace setVariable ["FADE_missionApplyPatrolCycle", FADE_missionApplyPatrolCycle];
 missionNamespace setVariable ["FADE_missionSpawnGuards", FADE_missionSpawnGuards];
 missionNamespace setVariable ["FADE_mission_spawnFieldContactEnemies", FADE_mission_spawnFieldContactEnemies];

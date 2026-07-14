@@ -23,6 +23,7 @@ call compile preprocessFileLineNumbers "rsc\FADE_ClientCommon.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_MissionSlots.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_IntelClient.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_FieldIntelClient.sqf";
+call compile preprocessFileLineNumbers "rsc\FADE_HostageClient.sqf";
 
 // Debug: optional BIS campaign function stubs - default off in Config (see rsc\DebugBIScpStub.sqf)
 call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";
@@ -237,6 +238,9 @@ hint "FADE LOADING...";
 
 // Diary + reference subjects early (Intel tab must exist before civilian HUMINT can append during play).
 call compile preprocessFileLineNumbers "rsc\Briefing.sqf";
+// #region agent log
+diag_log "[FAC DbgBrowser 62d308] H1 initPlayerLocal post-Briefing.sqf";
+// #endregion
 
 // -----------------------------------------------------------------------------
 // Surrender Challenge  - client activation (unused while FAC_surrenderChallenge_playerEnabled is false)
@@ -415,6 +419,9 @@ if (count _initSlots > 0) then { [_initSlots] call FADE_applyMissionSlotsClientS
 call compile preprocessFileLineNumbers "rsc\CqbLoudspeaker.sqf";
 call compile preprocessFileLineNumbers "rsc\CutsceneClient.sqf";
 call compile preprocessFileLineNumbers "rsc\FAC_ClientBoardActions.sqf";
+// #region agent log
+diag_log "[FAC DbgBrowser 62d308] H1 initPlayerLocal post-FAC_ClientBoardActions (client init complete)";
+// #endregion
 [] call FAC_clientInstallBoardActions;
 
 // Dev: scroll-wheel entry for test suites (lobby param debug tools / Zeus).

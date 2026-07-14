@@ -83,7 +83,7 @@ private _fnc_spawnSquadAtBase = {
     private _classes = (_friendlyUnits select [0, _unitCount min count _friendlyUnits]);
     private _baseClass = _friendlyUnits select 0;
     for "_i" from (count _classes) to (_unitCount - 1) do { _classes pushBack _baseClass };
-    private _grp = [_atPos, _sideFriendly, _classes] call BIS_fnc_spawnGroup;
+    private _grp = [_atPos, _sideFriendly, _classes] call FADE_spawnFriendlyInfantryGroupAt;
     [_grp] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
     [_grp] call (missionNamespace getVariable ["FADE_attachNightStrobes", {}]);
     _grp setBehaviour "SAFE";

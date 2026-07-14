@@ -83,7 +83,8 @@ FADE_mission_spawnFriendlyPickupGroup = {
     } else {
         [_destPos] call FADE_mission_findPickupSpawnPos
     };
-    private _group = [_wpPos, _sideFriendly, _unitClasses] call BIS_fnc_spawnGroup;
+    private _group = [_wpPos, _sideFriendly, _unitClasses] call FADE_spawnFriendlyInfantryGroupAt;
+    if (isNull _group) exitWith { [grpNull, _wpPos] };
     {
         if (!isNull _x) then {
             _x setPosATL _wpPos;

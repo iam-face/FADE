@@ -67,26 +67,38 @@ FADE_dummyUnits_findBySlot = {
 FADE_dummyUnits_pickRandomFriendlyClass = {
     private _ff = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"];
     private _sn = missionNamespace getVariable ["FADE_scenarioFriendlySideNum", 1];
-    // Use scenario apply output — already faction-filtered (not the whole side pool).
-    private _pool = +(missionNamespace getVariable ["FADE_friendlyUnits", []]);
-    if (_pool isEqualTo [] && { !isNil "FADE_resolveScenarioFriendlyUnits" }) then {
+    private _pool = [];
+    private _poolSrc = "none";
+    // Live faction lookup first (CfgGroups + addon filter). Cached FADE_friendlyUnits can be side-wide
+    // when CfgVehicles faction fields drift from scenario picks.
+    if (!isNil "FADE_resolveScenarioFriendlyUnits") then {
         _pool = [[]] call FADE_resolveScenarioFriendlyUnits;
+        _poolSrc = "resolve";
     };
     if (_pool isEqualTo []) then {
         private _raw = [_ff, _sn] call FADE_getUnitsForFaction;
         if (!isNil "FADE_filterUnitsArmed") then {
             _raw = [_raw] call FADE_filterUnitsArmed;
         };
-        if (!isNil "FADE_filterUnitsForScenarioFaction") then {
-            _raw = [_raw, _ff, _sn, true] call FADE_filterUnitsForScenarioFaction;
-        };
         _pool = _raw;
+        _poolSrc = "getUnitsForFaction";
+    };
+    if (_pool isEqualTo []) then {
+        _pool = +(missionNamespace getVariable ["FADE_friendlyUnits", []]);
+        _poolSrc = "FADE_friendlyUnits";
     };
     if (_pool isEqualTo [] && { _ff isEqualTo "BLU_F" }) then {
         _pool = +(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_F"]]);
+        _poolSrc = "BLU_F_fallback";
     };
-    if (_pool isEqualTo []) exitWith { "B_Soldier_F" };
-    selectRandom _pool
+    private _picked = if (_pool isEqualTo []) then { "B_Soldier_F" } else { selectRandom _pool };
+    // #region agent log
+    diag_log format [
+        "[FAC DbgBrowser 62d308] H7 dummyPick faction=%1 poolSrc=%2 poolCount=%3 picked=%4 sample=%5",
+        _ff, _poolSrc, count _pool, _picked, if ((count _pool) > 0) then { _pool select 0 } else { "" }
+    ];
+    // #endregion
+    _picked
 };
 
 FADE_dummyUnits_setupStand = {
@@ -171,6 +183,13 @@ FADE_dummyUnits_spawnAtSlot = {
 // Apply scenario friendly faction: random class/loadout + correct side for all Eden dummies.
 FADE_dummyUnits_refreshForScenarioFaction = {
     if (!isServer) exitWith { 0 };
+    // #region agent log
+    diag_log format [
+        "[FAC DbgBrowser 62d308] H7 dummyRefresh faction=%1 friendlyUnitsCount=%2",
+        missionNamespace getVariable ["FADE_scenarioFriendlyFaction", ""],
+        count (missionNamespace getVariable ["FADE_friendlyUnits", []])
+    ];
+    // #endregion
     private _slots = call FADE_dummyUnits_captureSlots;
     private _refreshed = 0;
     {

@@ -45,19 +45,29 @@ FADE_getOpposedSideNums = {
     };
 };
 
-// Heavy with large modsets (CfgFactionClasses). Cache by side-num key.
-// Do NOT call getText on every faction: missing $STR_ keys spam RPT and can freeze/CTD the client
-// (seen when Scenario GUI scanned CUP/RHS/UK3CB CfgFactionClasses on open).
+// CfgFactionClasses display names (cached via FADE_collectFactionsForSideNums). Skip unresolved $STR_ keys.
 FADE_factionDisplayNameSafe = {
     params ["_faction", ["_cfg", configNull]];
     if (_faction == "") exitWith { "Unknown" };
-    (_faction splitString "_") joinString " "
+    if (isNull _cfg) then { _cfg = configFile >> "CfgFactionClasses" >> _faction };
+    if (!isClass _cfg) exitWith { (_faction splitString "_") joinString " " };
+    private _dn = getText (_cfg >> "displayName");
+    if (_dn == "" || { _dn find "STR_" == 0 }) exitWith {
+        (_faction splitString "_") joinString " "
+    };
+    _dn
 };
 
 FADE_collectFactionsForSideNums = {
     params [["_sideNums", []]];
+    // [3] call unwraps to scalar 3 — normalize so apply always receives an array.
+    if (_sideNums isEqualType 0) then { _sideNums = [_sideNums] };
+    if (!(_sideNums isEqualType [])) then { _sideNums = [] };
+    // #region agent log
+    diag_log format ["[FAC DbgBrowser 62d308] H11 collectFactionsForSideNums sideNums=%1", _sideNums];
+    // #endregion
     private _key = (_sideNums apply { str _x }) joinString ",";
-    private _cache = missionNamespace getVariable ["FADE_factionListCache", createHashMap];
+    private _cache = missionNamespace getVariable ["FADE_factionListCacheV2", createHashMap];
     if (_key in _cache) exitWith { +(_cache get _key) };
 
     private _result = [];
@@ -66,14 +76,14 @@ FADE_collectFactionsForSideNums = {
         private _sn = getNumber (_cfg >> "side");
         if (_sn in _sideNums) then {
             private _faction = configName _cfg;
-            _result pushBack [_faction, [_faction] call FADE_factionDisplayNameSafe];
+            _result pushBack [_faction, [_faction, _cfg] call FADE_factionDisplayNameSafe];
         };
     } forEach ("true" configClasses (configFile >> "CfgFactionClasses"));
     _result = _result apply { [_x select 1, _x select 0] };
     _result sort true;
     _result = _result apply { [_x select 1, _x select 0] };
     _cache set [_key, +_result];
-    missionNamespace setVariable ["FADE_factionListCache", _cache];
+    missionNamespace setVariable ["FADE_factionListCacheV2", _cache];
     +_result
 };
 
@@ -243,18 +253,37 @@ if (isServer) then {
         call FADE_syncPlayersToScenarioFriendlySide;
     };
 
+    // HashMap keys must be string/number — not Object/Group handles (getOrDefault errors at runtime).
+    FADE_scenario_despawnProtObjKey = {
+        params ["_obj"];
+        if (isNull _obj) exitWith { "" };
+        private _nid = netId _obj;
+        if (_nid isEqualTo "") then { _nid = format ["%1", _obj] };
+        _nid
+    };
+
+    FADE_scenario_despawnProtGrpKey = {
+        params ["_grp"];
+        if (isNull _grp) exitWith { "" };
+        private _gid = groupId _grp;
+        if (_gid isEqualType "") then { _gid } else { str _gid }
+    };
+
     FADE_scenario_buildDespawnProtectionCache = {
         private _objects = createHashMap;
         private _groups = createHashMap;
         {
-            if (!isNull _x) then { _objects set [_x, true] };
+            private _k = [_x] call FADE_scenario_despawnProtObjKey;
+            if (_k != "") then { _objects set [_k, true] };
         } forEach (missionNamespace getVariable ["FADE_rangeSpawned", []]);
         {
-            if (!isNull _x) then { _objects set [_x, true] };
+            private _k = [_x] call FADE_scenario_despawnProtObjKey;
+            if (_k != "") then { _objects set [_k, true] };
         } forEach (missionNamespace getVariable ["FADE_rangeSpawnedMen", []]);
         if (missionNamespace getVariable ["FADE_cqbDrillActive", false]) then {
             {
-                if (!isNull _x) then { _objects set [_x, true] };
+                private _k = [_x] call FADE_scenario_despawnProtObjKey;
+                if (_k != "") then { _objects set [_k, true] };
             } forEach (missionNamespace getVariable ["FADE_cqbSpawned", []]);
         };
         {
@@ -263,16 +292,22 @@ if (isServer) then {
             private _ent = missionNamespace getVariable [_x, createHashMap];
             if (!(_ent isEqualType createHashMap)) then { continue };
             {
-                if (!isNull _x) then { _objects set [_x, true] };
+                private _k = [_x] call FADE_scenario_despawnProtObjKey;
+                if (_k != "") then { _objects set [_k, true] };
             } forEach (_ent getOrDefault ["vehicles", []]);
             {
-                if (!isNull _x) then { _objects set [_x, true] };
+                private _k = [_x] call FADE_scenario_despawnProtObjKey;
+                if (_k != "") then { _objects set [_k, true] };
             } forEach (_ent getOrDefault ["objects", []]);
             {
-                if (!isNull _x) then { _groups set [_x, true] };
+                private _k = [_x] call FADE_scenario_despawnProtGrpKey;
+                if (_k != "") then { _groups set [_k, true] };
             } forEach (_ent getOrDefault ["groups", []]);
             {
-                if (_x isEqualType grpNull && { !isNull _x }) then { _groups set [_x, true] };
+                if (_x isEqualType grpNull && { !isNull _x }) then {
+                    private _k = [_x] call FADE_scenario_despawnProtGrpKey;
+                    if (_k != "") then { _groups set [_k, true] };
+                };
             } forEach (_ent getOrDefault ["groupRefs", []]);
         } forEach (allVariables missionNamespace);
         [_objects, _groups]
@@ -280,21 +315,35 @@ if (isServer) then {
 
     FADE_scenario_entityProtectedFromDespawnCached = {
         params ["_obj", "_objects", "_groups"];
+        // #region agent log
+        if (isNil "FADE_scenario_despawnDbgLogged") then {
+            FADE_scenario_despawnDbgLogged = true;
+            diag_log format ["[FAC DbgBrowser 62d308] H11 despawnProtCached keysAreStringNum objects=%1 groups=%2",
+                _objects isEqualType createHashMap, _groups isEqualType createHashMap];
+        };
+        // #endregion
         if (isNull _obj) exitWith { true };
         if (_obj isKindOf "Man" && { isPlayer _obj }) exitWith { true };
         if (_obj getVariable ["FADE_baseDummy", false]) exitWith { true };
-        if (_objects getOrDefault [_obj, false]) exitWith { true };
+        private _objKey = [_obj] call FADE_scenario_despawnProtObjKey;
+        if (_objKey != "" && { _objects getOrDefault [_objKey, false] }) exitWith { true };
         private _grp = grpNull;
         if (_obj isKindOf "Man") then { _grp = group _obj };
         if (_obj isKindOf "AllVehicles" && { count crew _obj > 0 }) then { _grp = group (driver _obj) };
-        if (!isNull _grp && { _groups getOrDefault [_grp, false] }) exitWith { true };
+        if (!isNull _grp) then {
+            private _grpKey = [_grp] call FADE_scenario_despawnProtGrpKey;
+            if (_grpKey != "" && { _groups getOrDefault [_grpKey, false] }) exitWith { true };
+        };
         false
     };
 
     FADE_scenario_groupIsMissionRegistered = {
         params ["_grp", ["_groups", createHashMap]];
         if (isNull _grp) exitWith { false };
-        if (_groups isEqualType createHashMap && { count _groups > 0 }) exitWith { _groups getOrDefault [_grp, false] };
+        if (_groups isEqualType createHashMap && { count _groups > 0 }) exitWith {
+            private _grpKey = [_grp] call FADE_scenario_despawnProtGrpKey;
+            _grpKey != "" && { _groups getOrDefault [_grpKey, false] }
+        };
         {
             if !(_x find "FADE_missionEnt_" == 0) then { continue };
             if ((_x find "FADE_missionEnt_cleaned_") == 0) then { continue };
@@ -341,6 +390,10 @@ if (isServer) then {
 
         private _cache = call FADE_scenario_buildDespawnProtectionCache;
         _cache params ["_protectedObjects", "_missionGroups"];
+        // #region agent log
+        diag_log format ["[FAC DbgBrowser 62d308] H6 despawnScenarioWorldUnits cache objects=%1 groups=%2 sides=%3",
+            count _protectedObjects, count _missionGroups, _sides];
+        // #endregion
 
         private _toDelete = [];
         {

@@ -92,6 +92,8 @@ FADE_runMission_Hostage = {
         [_player, "MISSION ERROR", "Could not place hostages."] call FADE_missionErrorHint;
     };
 
+    { [_x, _taskId] call FADE_objective_registerHostageFreeHold } forEach _hostages;
+
     private _missionCenter = getPosATL (_buildingsUsed select 0);
     if (count _missionCenter < 3) then { _missionCenter = [(_missionCenter select 0), (_missionCenter select 1), 0] };
 
@@ -116,7 +118,7 @@ FADE_runMission_Hostage = {
 
     private _hostageNamesLine = _hostageNames joinString "; ";
     private _taskHostageLine = format [
-        "Rescue hostages: %1. Return all alive to base (within 100 m). Excessive casualties among hostages will abort the task.",
+        "Rescue hostages: %1. Hold interact (5s) to free each captive, then return all alive to base (within 100 m). Excessive casualties among hostages will abort the task.",
         _hostageNamesLine
     ];
     [_player, _taskId, _taskHostageLine, "Hostage", _missionCenter, "run"] call _fnc_createMissionTask;
@@ -128,7 +130,7 @@ FADE_runMission_Hostage = {
     private _grid = mapGridPosition _missionCenter;
     private _brief = format ["HOSTAGE%1%1Incident area (approx.): Grid %2%1%1Rescue civilians held by hostiles. Prioritise civilian safety and follow the task's ROE and handling procedures for recovered persons.", toString [10], _grid] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
-    [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFFFFF'>%2 hostage(s): %3</t><br/><br/><t color='#FFFFFF'>Rescue and return all alive to base (within 100 m).</t>", _grid, count _hostages, _hostageNamesLine]] call _showAssignedHint;
+    [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFFFFF'>%2 hostage(s): %3</t><br/><br/><t color='#FFFFFF'>Hold interact to free each hostage, then return all alive to base (within 100 m).</t>", _grid, count _hostages, _hostageNamesLine]] call _showAssignedHint;
     [_player, "Hostage"] call FADE_notifyOthersMissionStarted;
 
     private _initialHostageCount = count _hostages;

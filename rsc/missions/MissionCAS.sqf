@@ -53,7 +53,7 @@ FADE_runMission_CAS = {
     [_taskId, _enemyGroups] call FADE_missionEnt_bindGroups;
     { _x addWaypoint [_friendlyPos, 0] } forEach _enemyGroups;
     private _casUnits = (_friendlyUnits select [0, 6 min count _friendlyUnits]);
-    private _friendlyGroup = [_friendlyPos, _sideFriendly, _casUnits] call BIS_fnc_spawnGroup;
+    private _friendlyGroup = [_friendlyPos, _sideFriendly, _casUnits] call FADE_spawnFriendlyInfantryGroupAt;
     [_taskId, _friendlyGroup] call FADE_missionEnt_registerGroup;
     [_friendlyGroup] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
     [_friendlyGroup] call FADE_attachNightStrobes;

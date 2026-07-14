@@ -258,6 +258,10 @@ FADE_vg_spawnOne = {
         if (missionNamespace getVariable ["FADE_invasionAborted_" + _misTid, false]) exitWith {};
         if (missionNamespace getVariable ["FADE_raidAborted_" + _misTid, false]) exitWith {};
     };
+    if (_owner find "invasion:" == 0) then {
+        private _invTid = _owner select [9];
+        if (missionNamespace getVariable ["FADE_invasionAborted_" + _invTid, false]) exitWith {};
+    };
 
     if (!(_positions isEqualType []) || { count _positions == 0 }) exitWith {};
 

@@ -757,6 +757,32 @@ Mirror OPFOR air wiring:
 
 ---
 
+## 13. Portable FADE (multi-map / mod packaging)
+
+**Goal:** Make FADE easy to port beyond Altis — ship as much as possible as an **Arma 3 mod**, so a fresh empty scenario can host FADE with minimal Eden setup.
+
+### Intent
+
+- Mission maker places a **FADE Player Base** module at a chosen location → that becomes the player base.
+- Base spawn is lean: key terminals / boards only; system auto-finds nearby vehicle and friendly-AI spawn points.
+- System auto-discovers civ zones, reads configs, and bootstraps the rest of the FADE stack.
+- Mission may only need drag-and-drop of required SQF / resource files into the mission folder (e.g. `initServer`, thin glue).
+
+### Expected approach (high level)
+
+1. **Mod content** — Move shared logic, configs, GUIs, and assets into a mod PBO; keep mission-specific Eden / init glue thin.
+2. **Base module** — Eden/Logic module defines `BASE_1` (or equivalent); auto-place terminals and resolve `HP_*` / `VEH_*` / friendly spawn proxies from nearby terrain.
+3. **World discovery** — Replace hard-coded Altis object names / location lists with runtime location / building / road surveys (reuse / extend `FADE_AoSurvey`, civ-zone-from-locations).
+4. **Mission glue** — Document minimal file set for a new map scenario (init chain + description.ext hooks).
+
+### Open questions
+
+- [ ] What stays mission-side vs mod-side (radio props, board textures, CQB ranges)?
+- [ ] How to version-match mod + thin mission templates across maps?
+- [ ] Fallback when auto-spawn discovery finds nothing suitable?
+
+---
+
 ## Cross-cutting checklist (new missions + systems)
 
 When shipping **Raid**, **Invasion**, **Point defense**, **SEAD/DEAD**, **Operation v2**, **Commander**, or **Radio voice**:

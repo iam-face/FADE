@@ -64,7 +64,7 @@ FADE_runMission_Cargo = {
     private _receiverClass = _friendlyUnits select 0;
     private _garrisonPos = [[_destPos, 0, 8, 2, 1, 0.3, 0, [], _destPos], _destPos] call FADE_findSafePosArray;
     if (count _garrisonPos < 2) then { _garrisonPos = _destPos };
-    private _garrisonGroup = [_garrisonPos, _sideFriendly, [_receiverClass]] call BIS_fnc_spawnGroup;
+    private _garrisonGroup = [_garrisonPos, _sideFriendly, [_receiverClass]] call FADE_spawnFriendlyInfantryGroupAt;
     [_taskId, _garrisonGroup] call FADE_missionEnt_registerGroup;
     [_garrisonGroup] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
     _garrisonGroup setBehaviour "SAFE";
@@ -86,7 +86,7 @@ FADE_runMission_Cargo = {
         private _psp = [(_destPos select 0) + _patrolDist * (cos _patrolAngle), (_destPos select 1) + _patrolDist * (sin _patrolAngle), 0];
         _psp = [[_psp, 0, 15, 3, 1, 0.3, 0, [], _psp], _psp] call FADE_findSafePosArray;
         if (count _psp < 2) then { _psp = _destPos };
-        private _pg_grp = [_psp, _sideFriendly, _patrolClasses] call BIS_fnc_spawnGroup;
+        private _pg_grp = [_psp, _sideFriendly, _patrolClasses] call FADE_spawnFriendlyInfantryGroupAt;
         [_pg_grp] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
         _pg_grp setBehaviour "SAFE";
         _pg_grp setCombatMode "GREEN";
