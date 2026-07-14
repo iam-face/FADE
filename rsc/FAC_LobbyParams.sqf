@@ -32,11 +32,14 @@ FAC_LOBBY_IDX_HQ_AUTO_HEAL       = 17;
 // MISSIONS
 FAC_LOBBY_IDX_AO_STRENGTH        = 18;
 // OPFOR
-FAC_LOBBY_IDX_OPFOR_PATROLS      = 19;
-FAC_LOBBY_IDX_OPFOR_THREAT       = 20;
+FAC_LOBBY_IDX_OPFOR_AIR           = 19;
+FAC_LOBBY_IDX_OPFOR_DRONES        = 20;
+FAC_LOBBY_IDX_OPFOR_PATROLS       = 21;
+FAC_LOBBY_IDX_OPFOR_PATROL_TOWN   = 22;
+FAC_LOBBY_IDX_OPFOR_THREAT        = 23;
 // WORLD
-FAC_LOBBY_IDX_STARTING_TIME      = 21;
-FAC_LOBBY_IDX_STARTING_WEATHER   = 22;
+FAC_LOBBY_IDX_STARTING_TIME       = 24;
+FAC_LOBBY_IDX_STARTING_WEATHER    = 25;
 
 FAC_lobbyParams_getArray = {
     if (!isNil "paramsArray" && { paramsArray isEqualType [] }) then { paramsArray } else { [] }
@@ -63,7 +66,10 @@ FAC_lobbyParams_read = {
     missionNamespace setVariable ["FAC_param_debugTools", _p param [FAC_LOBBY_IDX_DEBUG_TOOLS, 2]];
     missionNamespace setVariable ["FAC_param_jukeboxAccess", _p param [FAC_LOBBY_IDX_JUKEBOX, 0]];
     missionNamespace setVariable ["FAC_param_hqAutoHeal", _p param [FAC_LOBBY_IDX_HQ_AUTO_HEAL, 1]];
+    missionNamespace setVariable ["FAC_param_opforAir", _p param [FAC_LOBBY_IDX_OPFOR_AIR, 0]];
+    missionNamespace setVariable ["FAC_param_opforDrones", _p param [FAC_LOBBY_IDX_OPFOR_DRONES, 0]];
     missionNamespace setVariable ["FAC_param_opforPatrols", _p param [FAC_LOBBY_IDX_OPFOR_PATROLS, 1]];
+    missionNamespace setVariable ["FAC_param_opforPatrolTownChance", _p param [FAC_LOBBY_IDX_OPFOR_PATROL_TOWN, 0]];
 };
 
 // Population labels match Scenario GUI (Very Low … Insane). Other fields scale with threat tier.
@@ -139,6 +145,26 @@ FAC_lobbyParams_mapAoStrength = {
     };
 };
 
+FAC_lobbyParams_mapOpforPatrolTownChance = {
+    params ["_choice"];
+    switch ((round _choice) max 0 min 3) do {
+        case 1: { "Medium" };
+        case 2: { "High" };
+        case 3: { "Every" };
+        default { "Low" };
+    };
+};
+
+FAC_lobbyParams_mapOpforTierSetting = {
+    params ["_choice"];
+    switch ((round _choice) max 0 min 3) do {
+        case 1: { "Low" };
+        case 2: { "Normal" };
+        case 3: { "High" };
+        default { "Off" };
+    };
+};
+
 FAC_lobbyParams_applyScenarioDefaults = {
     if (!isServer) exitWith {};
     call FAC_lobbyParams_read;
@@ -148,12 +174,17 @@ FAC_lobbyParams_applyScenarioDefaults = {
 
     private _threat = missionNamespace getVariable ["FAC_param_opforThreat", 1];
     private _threatMap = [_threat] call FAC_lobbyParams_mapOpforThreat;
-    _threatMap params ["_pop", "_aaa", "_air", "_patrolsUnused", "_routing", "_launcher", "_skill", "_drone"];
+    _threatMap params ["_pop", "_aaa", "_airUnused", "_patrolsUnused", "_routing", "_launcher", "_skill", "_droneUnused"];
     missionNamespace setVariable ["FADE_opforPopulationSetting", _pop, true];
     missionNamespace setVariable ["FADE_enemyAAALevel", _aaa, true];
+    private _air = [missionNamespace getVariable ["FAC_param_opforAir", 0]] call FAC_lobbyParams_mapOpforTierSetting;
+    private _drone = [missionNamespace getVariable ["FAC_param_opforDrones", 0]] call FAC_lobbyParams_mapOpforTierSetting;
     missionNamespace setVariable ["FADE_opforAirSetting", [_air] call FADE_normalizeOpforThreatSetting, true];
     missionNamespace setVariable ["FADE_opforDroneSetting", [_drone] call FADE_normalizeOpforThreatSetting, true];
     missionNamespace setVariable ["FADE_scenarioPatrols", (missionNamespace getVariable ["FAC_param_opforPatrols", 1]) > 0, true];
+    private _patrolTown = [missionNamespace getVariable ["FAC_param_opforPatrolTownChance", 0]] call FAC_lobbyParams_mapOpforPatrolTownChance;
+    missionNamespace setVariable ["FADE_opforPatrolTownChanceSetting", _patrolTown, true];
+    missionNamespace setVariable ["FADE_enemyPatrolTownChance", [_patrolTown] call FADE_resolveOpforPatrolTownChance, true];
     missionNamespace setVariable ["FADE_enemyRouting", _routing, true];
     missionNamespace setVariable ["FADE_opforLauncherSetting", _launcher, true];
     missionNamespace setVariable ["FADE_enemySkill", (_skill max 0) min 1, true];
@@ -207,6 +238,8 @@ FAC_lobbyParams_publishAccessVars = {
         "FADE_aoStrength",
         "FADE_hqHealIntervalSec",
         "FADE_scenarioPatrols",
+        "FADE_opforPatrolTownChanceSetting",
+        "FADE_enemyPatrolTownChance",
         "FADE_enemyAAALevel",
         "FADE_opforAirSetting",
         "FADE_opforDroneSetting",

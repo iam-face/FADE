@@ -40,14 +40,36 @@ FADE_invasion_pickZones = {
     [_invasionZone] + (_pool select [0, _take])
 };
 
+// Alive OPFOR only (excludes virtual-garrison pending slots that block beachhead capture).
+FADE_invasion_countAliveEnemyInRadius = {
+    params ["_center", "_r"];
+    private _raw = missionNamespace getVariable ["FADE_op_countEnemyMenInRadius_raw", nil];
+    if (!isNil "_raw" && { _raw isEqualType {} }) then {
+        [_center, _r] call _raw
+    } else {
+        [_center, _r] call FADE_op_countEnemyMenInRadius
+    }
+};
+missionNamespace setVariable ["FADE_invasion_countAliveEnemyInRadius", FADE_invasion_countAliveEnemyInRadius];
+
 FADE_invasion_getPushTargetIdx = {
     params ["_held", "_zones", "_invasionCenter"];
-    private _candidates = [];
-    for "_i" from 1 to (count _zones - 1) do {
-        if (_held select _i) then { _candidates pushBack _i };
+    private _outerCount = (count _zones) - 1;
+    if (_outerCount < 1) exitWith { -1 };
+
+    // Primary objective: nearest BLUFOR-held town still on the route.
+    private _bluforHeld = [];
+    for "_i" from 1 to _outerCount do {
+        if (_held select _i) then { _bluforHeld pushBack _i };
     };
-    if (_candidates isEqualTo []) exitWith { -1 };
-    ([_candidates, [], { _invasionCenter distance2D (_zones select _x) }, "ASCEND"] call BIS_fnc_sortBy) select 0
+    if (count _bluforHeld > 0) exitWith {
+        ([_bluforHeld, [], { _invasionCenter distance2D (_zones select _x) }, "ASCEND"] call BIS_fnc_sortBy) select 0
+    };
+
+    // All route towns are OPFOR-held: keep pressure on the nearest outer zone (front line).
+    private _outer = [];
+    for "_i" from 1 to _outerCount do { _outer pushBack _i };
+    ([_outer, [], { _invasionCenter distance2D (_zones select _x) }, "ASCEND"] call BIS_fnc_sortBy) select 0
 };
 
 // FADE_getEnemyAirVehicleClasses + FADE_opforAir_fallbackHeliClasses (faction-safe transport pick).

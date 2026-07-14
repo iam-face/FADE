@@ -145,12 +145,33 @@ class Params
         default = 1;
     };
     // OPFOR (alphabetical)
+    class FAC_OpforAir
+    {
+        title = "OPFOR: Air";
+        values[] = {0, 1, 2, 3};
+        texts[] = {"Off", "Low", "Normal", "High"};
+        default = 0;
+    };
+    class FAC_OpforDrones
+    {
+        title = "OPFOR: Drones";
+        values[] = {0, 1, 2, 3};
+        texts[] = {"Off", "Low", "Normal", "High"};
+        default = 0;
+    };
     class FAC_OpforPatrols
     {
         title = "OPFOR: Patrols";
         values[] = {0, 1};
         texts[] = {"Off", "On"};
         default = 1;
+    };
+    class FAC_OpforPatrolTownChance
+    {
+        title = "OPFOR: Patrols town chance";
+        values[] = {0, 1, 2, 3};
+        texts[] = {"Low (25%)", "Medium (50%)", "High (75%)", "Every town (100%)"};
+        default = 0;
     };
     class FAC_OpforThreat
     {
@@ -438,23 +459,28 @@ class RscDisplayScenario: RscDisplayEmpty {
         class BtnPopHigh: RscButton { idc = 60889; show = 0; text = "High (1.5x)"; x = 0.469; y = 0.302; w = 0.132; h = 0.032; sizeEx = 0.021; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforPop', ['High']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
         class BtnPopVH: RscButton { idc = 60890; show = 0; text = "V.High (2x)"; x = 0.612; y = 0.302; w = 0.132; h = 0.032; sizeEx = 0.021; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforPop', ['VeryHigh']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
         class BtnPopIns: RscButton { idc = 60891; show = 0; text = "Insane (4x)"; x = 0.755; y = 0.302; w = 0.132; h = 0.032; sizeEx = 0.021; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforPop', ['Insane']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class FacAirLbl: RscText { idc = 60917; show = 0; text = "OPFOR air"; x = 0.04; y = 0.348; w = 0.22; h = 0.022; sizeEx = 0.025; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnAirOff: RscButton { idc = 60892; show = 0; text = "Off"; x = 0.04; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['setOpforAir', ['Off']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnAirLow: RscButton { idc = 60893; show = 0; text = "Low"; x = 0.152; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforAir', ['Low']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnAirNorm: RscButton { idc = 60894; show = 0; text = "Normal"; x = 0.264; y = 0.372; w = 0.115; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforAir', ['Normal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnAirHigh: RscButton { idc = 60957; show = 0; text = "High"; x = 0.386; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforAir', ['High']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class FacDroneLbl: RscText { idc = 60958; show = 0; text = "OPFOR drones"; x = 0.52; y = 0.348; w = 0.22; h = 0.022; sizeEx = 0.025; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class BtnDroneOff: RscButton { idc = 60959; show = 0; text = "Off"; x = 0.52; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['setOpforDrone', ['Off']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnDroneLow: RscButton { idc = 60960; show = 0; text = "Low"; x = 0.632; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforDrone', ['Low']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnDroneNorm: RscButton { idc = 60961; show = 0; text = "Normal"; x = 0.744; y = 0.372; w = 0.115; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforDrone', ['Normal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class BtnDroneHigh: RscButton { idc = 60962; show = 0; text = "High"; x = 0.866; y = 0.372; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforDrone', ['High']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class FacFactionHdr: RscText { idc = 60918; show = 0; text = "Factions (spawns)"; x = 0.04; y = 0.412; w = 0.55; h = 0.026; sizeEx = 0.030; colorText[] = FAC_COLOR_TEXT_HDR; };
-        class FriendlyLabel: RscText { idc = 60919; show = 0; text = "Friendly"; x = 0.04; y = 0.442; w = 0.30; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class FriendlyList: RscListBox { idc = 60311; show = 0; x = 0.04; y = 0.466; w = 0.30; h = 0.360; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; onLBSelChanged = "['factionListChanged', [60311]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class EnemyLabel: RscText { idc = 60920; show = 0; text = "Enemy"; x = 0.35; y = 0.442; w = 0.30; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class EnemyList: RscListBox { idc = 60310; show = 0; x = 0.35; y = 0.466; w = 0.30; h = 0.360; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; onLBSelChanged = "['factionListChanged', [60310]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
-        class CivListLabel: RscText { idc = 60921; show = 0; text = "Civilian"; x = 0.66; y = 0.442; w = 0.298; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
-        class CivList: RscListBox { idc = 60312; show = 0; x = 0.66; y = 0.466; w = 0.298; h = 0.360; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; onLBSelChanged = "['factionListChanged', [60312]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacPatTownLbl: RscText { idc = 60980; show = 0; text = "Patrols town chance"; x = 0.04; y = 0.348; w = 0.35; h = 0.024; sizeEx = 0.027; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnPatTownLow: RscButton { idc = 60981; show = 0; text = "Low (25%)"; x = 0.04; y = 0.372; w = 0.22; h = 0.034; sizeEx = 0.024; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['setPatrolTownChance', ['Low']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnPatTownMed: RscButton { idc = 60982; show = 0; text = "Medium (50%)"; x = 0.265; y = 0.372; w = 0.22; h = 0.034; sizeEx = 0.024; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setPatrolTownChance', ['Medium']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnPatTownHigh: RscButton { idc = 60983; show = 0; text = "High (75%)"; x = 0.49; y = 0.372; w = 0.22; h = 0.034; sizeEx = 0.024; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setPatrolTownChance', ['High']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnPatTownAll: RscButton { idc = 60984; show = 0; text = "Every (100%)"; x = 0.715; y = 0.372; w = 0.22; h = 0.034; sizeEx = 0.024; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setPatrolTownChance', ['Every']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacAirLbl: RscText { idc = 60917; show = 0; text = "OPFOR air"; x = 0.04; y = 0.418; w = 0.22; h = 0.022; sizeEx = 0.025; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnAirOff: RscButton { idc = 60892; show = 0; text = "Off"; x = 0.04; y = 0.442; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['setOpforAir', ['Off']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnAirLow: RscButton { idc = 60893; show = 0; text = "Low"; x = 0.152; y = 0.442; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforAir', ['Low']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnAirNorm: RscButton { idc = 60894; show = 0; text = "Normal"; x = 0.264; y = 0.442; w = 0.115; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforAir', ['Normal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnAirHigh: RscButton { idc = 60957; show = 0; text = "High"; x = 0.386; y = 0.442; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforAir', ['High']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacDroneLbl: RscText { idc = 60958; show = 0; text = "OPFOR drones"; x = 0.52; y = 0.418; w = 0.22; h = 0.022; sizeEx = 0.025; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class BtnDroneOff: RscButton { idc = 60959; show = 0; text = "Off"; x = 0.52; y = 0.442; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_ACTIVE; action = "['setOpforDrone', ['Off']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnDroneLow: RscButton { idc = 60960; show = 0; text = "Low"; x = 0.632; y = 0.442; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforDrone', ['Low']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnDroneNorm: RscButton { idc = 60961; show = 0; text = "Normal"; x = 0.744; y = 0.442; w = 0.115; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforDrone', ['Normal']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class BtnDroneHigh: RscButton { idc = 60962; show = 0; text = "High"; x = 0.866; y = 0.442; w = 0.105; h = 0.032; sizeEx = 0.025; colorBackground[] = FAC_COLOR_TAB_IDLE; action = "['setOpforDrone', ['High']] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class FacFactionHdr: RscText { idc = 60918; show = 0; text = "Factions (spawns)"; x = 0.04; y = 0.482; w = 0.55; h = 0.026; sizeEx = 0.030; colorText[] = FAC_COLOR_TEXT_HDR; };
+        class FriendlyLabel: RscText { idc = 60919; show = 0; text = "Friendly"; x = 0.04; y = 0.512; w = 0.30; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class FriendlyList: RscListBox { idc = 60311; show = 0; x = 0.04; y = 0.536; w = 0.30; h = 0.290; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; onLBSelChanged = "['factionListChanged', [60311]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class EnemyLabel: RscText { idc = 60920; show = 0; text = "Enemy"; x = 0.35; y = 0.512; w = 0.30; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class EnemyList: RscListBox { idc = 60310; show = 0; x = 0.35; y = 0.536; w = 0.30; h = 0.290; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; onLBSelChanged = "['factionListChanged', [60310]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
+        class CivListLabel: RscText { idc = 60921; show = 0; text = "Civilian"; x = 0.66; y = 0.512; w = 0.298; h = 0.022; sizeEx = 0.026; colorText[] = {0.95, 0.95, 0.95, 1}; };
+        class CivList: RscListBox { idc = 60312; show = 0; x = 0.66; y = 0.536; w = 0.298; h = 0.290; rowHeight = 0.034; sizeEx = 0.028; colorBackground[] = FAC_COLOR_BG_LIST; onLBSelChanged = "['factionListChanged', [60312]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]);"; };
         // --- Admin tab (full-width stack, even vertical rhythm) ---
         class AdmHdr: RscText { idc = 60930; show = 0; text = "Admin tools"; x = 0.06; y = 0.104; w = 0.88; h = 0.032; sizeEx = 0.036; colorText[] = FAC_COLOR_TEXT_HDR; };
         class AdmSub: RscText { idc = 60943; show = 0; text = "Destructive actions require a second click (Are you sure?)"; x = 0.06; y = 0.138; w = 0.88; h = 0.024; sizeEx = 0.026; colorText[] = {0.7, 0.75, 0.82, 1}; };

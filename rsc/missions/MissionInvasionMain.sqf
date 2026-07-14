@@ -301,18 +301,30 @@ private _wipedFrontMin = missionNamespace getVariable ["FADE_invasionWipedFrontS
 private _heliFirstDelay = missionNamespace getVariable ["FADE_invasionHeliFirstDelaySec", 75];
 private _helisPerWaveMax = missionNamespace getVariable ["FADE_invasionHelisPerWaveMax", 2];
 private _surgeHeliCd = missionNamespace getVariable ["FADE_invasionFrontSurgeHeliCooldown", 90];
+private _vehReinforceMin = missionNamespace getVariable ["FADE_invasionVehicleReinforceMin", 90];
 
-[_taskId, _zones, _zoneRadius, _invasionCenter, _enemyUnits, _facApply, _sideEnemy, _scaleOpforCount, _reinforceMin, _reinforceMax, _reinforceSpan, _sustainCheck, _sqMin, _sqSpan, _vehMax, _heliApproach, _groundMaxPerTick, _wipedFrontMin, _heliFirstDelay, _helisPerWaveMax, _surgeHeliCd] spawn {
-    params ["_taskId", "_zones", "_zoneRadius", "_invasionCenter", "_enemyUnits", "_facApply", "_sideEnemy", "_scaleOpforCount", "_reinforceMin", "_reinforceMax", "_reinforceSpan", "_sustainCheck", "_sqMin", "_sqSpan", "_vehMax", "_heliApproach", "_groundMaxPerTick", "_wipedFrontMin", "_heliFirstDelay", "_helisPerWaveMax", "_surgeHeliCd"];
+[_taskId, _zones, _zoneRadius, _invasionCenter, _enemyUnits, _facApply, _sideEnemy, _scaleOpforCount, _reinforceMin, _reinforceMax, _reinforceSpan, _sustainCheck, _sqMin, _sqSpan, _vehMax, _heliApproach, _groundMaxPerTick, _wipedFrontMin, _heliFirstDelay, _helisPerWaveMax, _surgeHeliCd, _vehReinforceMin] spawn {
+    params ["_taskId", "_zones", "_zoneRadius", "_invasionCenter", "_enemyUnits", "_facApply", "_sideEnemy", "_scaleOpforCount", "_reinforceMin", "_reinforceMax", "_reinforceSpan", "_sustainCheck", "_sqMin", "_sqSpan", "_vehMax", "_heliApproach", "_groundMaxPerTick", "_wipedFrontMin", "_heliFirstDelay", "_helisPerWaveMax", "_surgeHeliCd", "_vehReinforceMin"];
     scriptName "FADE_inv_sustain";
 
     private _lastHeliTime = time - _heliFirstDelay;
     private _lastSurgeHeliTime = -1e9;
+    private _lastVehTime = -1e9;
     private _targetSquads = _sqMin + floor random (_sqSpan + 1);
 
     private _fnc_missionActive = {
         !(missionNamespace getVariable ["FADE_invasionAborted_" + _taskId, false])
         && { !((_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"]) }
+    };
+
+    private _aliveEnemyFn = missionNamespace getVariable ["FADE_invasion_countAliveEnemyInRadius", {}];
+    private _fnc_aliveEnemyAt = {
+        params ["_center", "_radius"];
+        if (_aliveEnemyFn isEqualTo {}) then {
+            [_center, _radius] call FADE_op_countEnemyMenSpawnedInRadius
+        } else {
+            [_center, _radius] call _aliveEnemyFn
+        };
     };
 
     private _fnc_prunePushGroups = {
@@ -469,11 +481,37 @@ private _surgeHeliCd = missionNamespace getVariable ["FADE_invasionFrontSurgeHel
         if !(call _fnc_missionActive) exitWith {};
 
         private _held = missionNamespace getVariable ["FADE_invasionHeldState_" + _taskId, []];
-        if (count _held != count _zones) exitWith {};
-        if (_held select 0) exitWith {}; // BLUFOR holds beachhead — no more OPFOR reinforcements
+        if (count _held != count _zones) then {
+            // #region agent log
+            diag_log format [
+                "[FAC DbgBrowser 62d308] H24 invasionSustain heldMismatch task=%1 held=%2 zones=%3",
+                _taskId, count _held, count _zones
+            ];
+            // #endregion
+        } else {
+        if (_held select 0) exitWith {
+            // #region agent log
+            diag_log format ["[FAC DbgBrowser 62d308] H24 invasionSustain stop beachheadLost task=%1", _taskId];
+            // #endregion
+        };
+
+        private _bhPlayers = [_invasionCenter, _zoneRadius] call FADE_op_countBluforPlayersInRadius;
+        private _bhAliveE = [_invasionCenter, _zoneRadius] call _fnc_aliveEnemyAt;
+        if (_bhPlayers > 0 && { _bhAliveE == 0 }) then {
+            // #region agent log
+            diag_log format [
+                "[FAC DbgBrowser 62d308] H25 invasionSustain paused beachheadSecure task=%1 players=%2",
+                _taskId, _bhPlayers
+            ];
+            // #endregion
+        } else {
 
         private _pushIdx = [+_held, _zones, _invasionCenter] call FADE_invasion_getPushTargetIdx;
-        if (_pushIdx < 0) exitWith {};
+        if (_pushIdx < 0) then {
+            // #region agent log
+            diag_log format ["[FAC DbgBrowser 62d308] H24 invasionSustain noPushTarget task=%1 held=%2", _taskId, _held];
+            // #endregion
+        } else {
 
         private _targetCenter = [_zones select _pushIdx] call FADE_normPos3;
         private _aliveSquads = call _fnc_prunePushGroups;
@@ -483,7 +521,7 @@ private _surgeHeliCd = missionNamespace getVariable ["FADE_invasionFrontSurgeHel
             [_x, _targetCenter, _zoneRadius] call FADE_invasion_assignPushWp;
         } forEach (missionNamespace getVariable ["FADE_invasionPushGroups_" + _taskId, []]);
 
-        private _eCnt = [_targetCenter, _zoneRadius] call FADE_op_countEnemyMenSpawnedInRadius;
+        private _eCnt = [_targetCenter, _zoneRadius] call _fnc_aliveEnemyAt;
         private _bluCnt = [_targetCenter, _zoneRadius] call FADE_op_countBluforInRadius;
         private _frontHot = (_bluCnt > 0) && { (_eCnt == 0 || { _aliveSquads < 2 }) };
 
@@ -493,14 +531,17 @@ private _surgeHeliCd = missionNamespace getVariable ["FADE_invasionFrontSurgeHel
         if (_frontHot && { _aliveSquads == 0 }) then {
             _groundSpawn = (_groundSpawn max _wipedFrontMin) min (_groundMaxPerTick + 1);
         };
+        private _groundSpawned = 0;
         for "_gs" from 1 to _groundSpawn do {
             private _sp = [_invasionCenter, _zoneRadius] call FADE_invasion_findSpawnPos;
-            [_taskId, _sp, _targetCenter, _enemyUnits, _facApply, _sideEnemy, _scaleOpforCount, _zoneRadius] call FADE_invasion_spawnGroundSquad;
+            private _g = [_taskId, _sp, _targetCenter, _enemyUnits, _facApply, _sideEnemy, _scaleOpforCount, _zoneRadius] call FADE_invasion_spawnGroundSquad;
+            if (!isNull _g) then { _groundSpawned = _groundSpawned + 1 };
         };
         _aliveSquads = call _fnc_prunePushGroups;
 
         private _heliDue = (time - _lastHeliTime) >= (_reinforceMin + random _reinforceSpan);
         private _surgeHeli = _frontHot && { _aliveSquads <= 1 } && { (time - _lastSurgeHeliTime) >= _surgeHeliCd };
+        private _helisSpawned = 0;
         if (_heliDue || _surgeHeli) then {
             if (_aliveSquads < _targetSquads || _surgeHeli) then {
                 private _helisWant = 1;
@@ -508,34 +549,15 @@ private _surgeHeliCd = missionNamespace getVariable ["FADE_invasionFrontSurgeHel
                 private _lz = [_invasionCenter, 80] call FADE_findSafeLZ;
                 if (count _lz < 2) then { _lz = [_invasionCenter, _zoneRadius] call FADE_invasion_findSpawnPos };
                 for "_hi" from 1 to _helisWant do {
-                    if !([_lz, _targetCenter] call _fnc_heliInsertSquad) then {
+                    if ([_lz, _targetCenter] call _fnc_heliInsertSquad) then {
+                        _helisSpawned = _helisSpawned + 1;
+                    } else {
                         private _spG = [_invasionCenter, _zoneRadius] call FADE_invasion_findSpawnPos;
-                        [_taskId, _spG, _targetCenter, _enemyUnits, _facApply, _sideEnemy, _scaleOpforCount, _zoneRadius] call FADE_invasion_spawnGroundSquad;
+                        if (!isNull ([_taskId, _spG, _targetCenter, _enemyUnits, _facApply, _sideEnemy, _scaleOpforCount, _zoneRadius] call FADE_invasion_spawnGroundSquad)) then {
+                            _groundSpawned = _groundSpawned + 1;
+                        };
                     };
                     sleep 2;
-                };
-            };
-
-            private _capturedIdx = [];
-            for "_zi" from 1 to (count _zones - 1) do {
-                if !(_held select _zi) then { _capturedIdx pushBack _zi };
-            };
-            if (
-                count _capturedIdx > 0
-                && { call _fnc_alivePushVehs < _vehMax }
-            ) then {
-                private _spawnZoneIdx = ([_capturedIdx, [], { (_zones select _x) distance2D _targetCenter }, "ASCEND"] call BIS_fnc_sortBy) select 0;
-                private _spawnZone = [_zones select _spawnZoneIdx] call FADE_normPos3;
-                private _vehSp = [_spawnZone, _zoneRadius] call FADE_invasion_findSpawnPos;
-                private _existing = missionNamespace getVariable ["FADE_invasionPushVehicles_" + _taskId, []];
-                private _pack = [_vehSp, _targetCenter, _enemyUnits, _facApply, _existing, _zoneRadius] call FADE_invasion_makePushVeh;
-                _pack params [["_veh", objNull], ["_vGrp", grpNull], ["_cGrp", grpNull]];
-                if (!isNull _veh) then {
-                    _existing pushBack _veh;
-                    missionNamespace setVariable ["FADE_invasionPushVehicles_" + _taskId, _existing];
-                    [_taskId, _veh] call FADE_missionEnt_registerVehicle;
-                    if (!isNull _vGrp) then { [_taskId, _vGrp] call FADE_missionEnt_registerGroup };
-                    if (!isNull _cGrp) then { [_taskId, _cGrp] call FADE_missionEnt_registerGroup };
                 };
             };
 
@@ -543,6 +565,44 @@ private _surgeHeliCd = missionNamespace getVariable ["FADE_invasionFrontSurgeHel
             if (_surgeHeli) then { _lastSurgeHeliTime = time };
             _targetSquads = _sqMin + floor random (_sqSpan + 1);
         };
+
+        private _capturedIdx = [];
+        for "_zi" from 1 to (count _zones - 1) do {
+            if !(_held select _zi) then { _capturedIdx pushBack _zi };
+        };
+        private _vehSpawned = false;
+        if (
+            count _capturedIdx > 0
+            && { (time - _lastVehTime) >= _vehReinforceMin }
+            && { call _fnc_alivePushVehs < _vehMax }
+        ) then {
+            private _spawnZoneIdx = ([_capturedIdx, [], { (_zones select _x) distance2D _targetCenter }, "ASCEND"] call BIS_fnc_sortBy) select 0;
+            private _spawnZone = [_zones select _spawnZoneIdx] call FADE_normPos3;
+            private _vehSp = [_spawnZone, _zoneRadius] call FADE_invasion_findSpawnPos;
+            private _existing = missionNamespace getVariable ["FADE_invasionPushVehicles_" + _taskId, []];
+            private _pack = [_vehSp, _targetCenter, _enemyUnits, _facApply, _existing, _zoneRadius] call FADE_invasion_makePushVeh;
+            _pack params [["_veh", objNull], ["_vGrp", grpNull], ["_cGrp", grpNull]];
+            if (!isNull _veh) then {
+                _vehSpawned = true;
+                _lastVehTime = time;
+                _existing pushBack _veh;
+                missionNamespace setVariable ["FADE_invasionPushVehicles_" + _taskId, _existing];
+                [_taskId, _veh] call FADE_missionEnt_registerVehicle;
+                if (!isNull _vGrp) then { [_taskId, _vGrp] call FADE_missionEnt_registerGroup };
+                if (!isNull _cGrp) then { [_taskId, _cGrp] call FADE_missionEnt_registerGroup };
+            };
+        };
+
+        // #region agent log
+        diag_log format [
+            "[FAC DbgBrowser 62d308] H24 invasionSustain tick task=%1 pushIdx=%2 target=%3 squads=%4/%5 ground=%6 heliDue=%7 helis=%8 surge=%9 veh=%10 captured=%11 blu=%12 enemy=%13 frontHot=%14",
+            _taskId, _pushIdx, _targetCenter, _aliveSquads, _targetSquads, _groundSpawned, _heliDue, _helisSpawned, _surgeHeli, _vehSpawned, count _capturedIdx, _bluCnt, _eCnt, _frontHot
+        ];
+        // #endregion
+
+        }; // pushIdx >= 0
+        }; // beachhead not player-secured
+        }; // held count match
     };
 
 };
@@ -551,6 +611,9 @@ private _surgeHeliCd = missionNamespace getVariable ["FADE_invasionFrontSurgeHel
 [_player, _taskId, _zones, _zoneRadius, _markerFriendlyInv, _markerEnemyInv, _invOwner, _vgCancelEllipse, _vgCancelByOwner] spawn {
     params ["_player", "_taskId", "_zones", "_zoneRadius", "_markerFriendlyInv", "_markerEnemyInv", "_invOwner", "_vgCancelEllipse", "_vgCancelByOwner"];
     scriptName "FADE_inv_main";
+    private _zoneCivIds = missionNamespace getVariable ["FADE_invasionCivZoneIds_" + _taskId, []];
+    private _townNameFn = missionNamespace getVariable ["FADE_civZoneGetDisplayName", {}];
+    private _aliveEnemyFn = missionNamespace getVariable ["FADE_invasion_countAliveEnemyInRadius", {}];
     private _held = [];
     { _held pushBack (_forEachIndex != 0) } forEach _zones;
     private _markerNames = (missionNamespace getVariable ["FADE_invasionEntities_" + _taskId, [[], []]]) select 1;
@@ -560,19 +623,64 @@ private _surgeHeliCd = missionNamespace getVariable ["FADE_invasionFrontSurgeHel
         if (missionNamespace getVariable ["FADE_invasionAborted_" + _taskId, false]) exitWith { true };
         if ((_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"]) exitWith { true };
 
+        private _bhCenter = [_zones select 0] call FADE_normPos3;
+        private _bhPlayers = [_bhCenter, _zoneRadius] call FADE_op_countBluforPlayersInRadius;
+        private _bhAliveE = if (_aliveEnemyFn isEqualTo {}) then {
+            [_bhCenter, _zoneRadius] call FADE_op_countEnemyMenSpawnedInRadius
+        } else {
+            [_bhCenter, _zoneRadius] call _aliveEnemyFn
+        };
+        if (_bhPlayers > 0 && { _bhAliveE == 0 }) exitWith {
+            if (!(_vgCancelByOwner isEqualTo {})) then { [_invOwner] call _vgCancelByOwner };
+            if (!(_vgCancelEllipse isEqualTo {})) then { [_bhCenter, _zoneRadius, _invOwner] call _vgCancelEllipse };
+            missionNamespace setVariable ["FADE_invasionAborted_" + _taskId, true];
+            _held set [0, true];
+            missionNamespace setVariable ["FADE_invasionHeldState_" + _taskId, +_held];
+            // #region agent log
+            diag_log format [
+                "[FAC DbgBrowser 62d308] H25 invasionBeachheadWin task=%1 players=%2 aliveEnemy=%3",
+                _taskId, _bhPlayers, _bhAliveE
+            ];
+            // #endregion
+            [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
+            [_player, "The beachhead has been retaken. Invasion broken."] call FADE_missionSuccessHint;
+            true
+        };
+
         {
             private _center = _x;
             private _i = _forEachIndex;
             private _wasHeld = _held select _i;
             private _bluforCnt = [_center, _zoneRadius] call FADE_op_countBluforInRadius;
-            private _eCnt = [_center, _zoneRadius] call FADE_op_countEnemyMenSpawnedInRadius;
+            private _eCnt = if (_aliveEnemyFn isEqualTo {}) then {
+                [_center, _zoneRadius] call FADE_op_countEnemyMenSpawnedInRadius
+            } else {
+                [_center, _zoneRadius] call _aliveEnemyFn
+            };
             private _mArea = _markerNames select (_i * 2);
             private _mIcon = _markerNames select (_i * 2 + 1);
-            _held set [_i, [
+            private _nowHeld = [
                 _center, _zoneRadius, _wasHeld, _bluforCnt, _eCnt,
                 _mArea, _mIcon, _markerFriendlyInv, _markerEnemyInv,
                 _vgCancelEllipse, _invOwner
-            ] call FADE_zone_tickInvasionHold];
+            ] call FADE_zone_tickInvasionHold;
+            if (_i > 0 && { _wasHeld } && { !_nowHeld }) then {
+                private _civId = _zoneCivIds param [_i, ""];
+                private _townName = if (!(_townNameFn isEqualTo {})) then {
+                    [_civId, _center] call _townNameFn
+                } else {
+                    "Unknown area"
+                };
+                private _msg = format ["ZERO ALPHA: OPFOR HAS CAPTURED %1", _townName];
+                [_msg] remoteExec ["systemChat", 0];
+                // #region agent log
+                diag_log format [
+                    "[FAC DbgBrowser 62d308] H23 invasionOpforCapture zone=%1 town=%2 civId=%3 blu=%4 enemy=%5",
+                    _i, _townName, _civId, _bluforCnt, _eCnt
+                ];
+                // #endregion
+            };
+            _held set [_i, _nowHeld];
         } forEach _zones;
         missionNamespace setVariable ["FADE_invasionHeldState_" + _taskId, +_held];
 
