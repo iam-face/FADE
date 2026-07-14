@@ -1,5 +1,14 @@
 // ServerWorldQrf.sqf - counter-attack / QRF spawn loop
 // -----------------------------------------------------------------------------
+// RPT debug: grep "[FAC DbgBrowser 62d308] H21 QRF" (toggle FADE_qrfDebug in ConfigDefaults).
+FADE_qrfDbgLog = {
+    if !(missionNamespace getVariable ["FADE_qrfDebug", false]) exitWith {};
+    if (count _this < 1) exitWith {};
+    diag_log format (["[FAC DbgBrowser 62d308] H21 QRF " + (_this select 0)] + (_this select [1, count _this - 1]));
+};
+missionNamespace setVariable ["FADE_qrfDbgLog", FADE_qrfDbgLog];
+
+// -----------------------------------------------------------------------------
 // Counter-attack helpers - cargo capacity (cached per classname), RHS/vanilla fallbacks
 // -----------------------------------------------------------------------------
 // Returns emptyPositions "cargo" for a classname; caches in missionNamespace (spawn test once per class).
@@ -146,8 +155,12 @@ FADE_counterAttack_missionEnded = {
 
 FADE_counterAttack_spawnFootWave = {
     params ["_taskId", "_objectivePos", "_enemyUnits", "_allGroups", "_applyGrp"];
-    if ([_taskId] call FADE_counterAttack_missionEnded) exitWith {};
-    if (count _objectivePos < 2 || { count _enemyUnits == 0 }) exitWith {};
+    if ([_taskId] call FADE_counterAttack_missionEnded) exitWith {
+        ["footWave aborted missionEnded task=%1", _taskId] call FADE_qrfDbgLog;
+    };
+    if (count _objectivePos < 2 || { count _enemyUnits == 0 }) exitWith {
+        ["footWave aborted badArgs task=%1 objCount=%2 enemyUnits=%3", _taskId, count _objectivePos, count _enemyUnits] call FADE_qrfDbgLog;
+    };
     private _sideEnemy = missionNamespace getVariable ["FADE_sideEnemy", east];
     private _sqMin = (missionNamespace getVariable ["FADE_counterAttackFootSquadsMin", 2]) max 1;
     private _sqMax = (missionNamespace getVariable ["FADE_counterAttackFootSquadsMax", 3]) max _sqMin;
@@ -158,7 +171,9 @@ FADE_counterAttack_spawnFootWave = {
     private _bldChance = missionNamespace getVariable ["FADE_counterAttackFootBuildingChance", 0.65];
     private _numSquads = _sqMin + floor random (1 + _sqMax - _sqMin);
     private _obj3 = if (count _objectivePos >= 3) then { +_objectivePos } else { [(_objectivePos select 0), (_objectivePos select 1), 0] };
+    ["footWave start task=%1 squads=%2 obj=%3 dist=%4-%5", _taskId, _numSquads, _obj3, _distMin, _distMax] call FADE_qrfDbgLog;
     private _bearings = [];
+    private _squadsSpawned = 0;
     for "_i" from 1 to _numSquads do {
         private _bearing = random 360;
         private _tooClose = true;
@@ -227,7 +242,10 @@ FADE_counterAttack_spawnFootWave = {
         _wpS setWaypointType "SAD";
         _allGroups pushBack _grp;
         if (_taskId != "") then { [_taskId, _grp] call FADE_missionEnt_bindGroups };
+        _squadsSpawned = _squadsSpawned + 1;
+        ["footWave squad task=%1 grp=%2 units=%3 building=%4 bearing=%5 dist=%6", _taskId, _grp, count units _grp, _usedBuilding, _bearing, _dist] call FADE_qrfDbgLog;
     };
+    ["footWave done task=%1 spawned=%2/%3", _taskId, _squadsSpawned, _numSquads] call FADE_qrfDbgLog;
 };
 missionNamespace setVariable ["FADE_counterAttack_spawnFootWave", FADE_counterAttack_spawnFootWave];
 
@@ -246,7 +264,9 @@ FADE_counterAttackStart = {
         ["_footWave", false]
     ];
     if (!isServer) exitWith {};
-    if (count _objectivePos < 2 || { count _enemyUnits == 0 }) exitWith {};
+    if (count _objectivePos < 2 || { count _enemyUnits == 0 }) exitWith {
+        ["start aborted badArgs task=%1 obj=%2 units=%3", _taskId, count _objectivePos, count _enemyUnits] call FADE_qrfDbgLog;
+    };
     if (_detectionRadius <= 0) then {
         _detectionRadius = missionNamespace getVariable ["FADE_counterAttackDetectionRadius", 450];
     };
@@ -258,7 +278,12 @@ FADE_counterAttackStart = {
     private _numTrucks = (missionNamespace getVariable ["FADE_counterAttackTruckCount", 3]) max 1;
     private _pollInterval = (missionNamespace getVariable ["FADE_counterAttackPollInterval", 10]) max 1;
     private _applyGrp = missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}];
-    if (_applyGrp isEqualTo {}) exitWith {};
+    if (_applyGrp isEqualTo {}) exitWith {
+        ["start aborted no FAC_applyEnemyScenarioToGroup task=%1", _taskId] call FADE_qrfDbgLog;
+    };
+    ["start task=%1 obj=%2 detectR=%3 skipDetect=%4 footWave=%5 ambient1=%6 firstDelay=%7-%8 trucks=%9",
+        _taskId, _objectivePos, _detectionRadius, _skipDetectionWait, _footWave, _ambientSingleWave, _firstMin, _firstMax, _numTrucks
+    ] call FADE_qrfDbgLog;
 
     [_taskId, _objectivePos, _basePos, _enemyUnits, _allGroups, _detectionRadius, _firstMin, _firstMax, _betMin, _betMax, _numTrucks, _applyGrp, _pollInterval, _skipDetectionWait, _ambientSingleWave, _footWave] spawn {
         params [
@@ -279,6 +304,7 @@ FADE_counterAttackStart = {
         };
         private _detectionLogged = false;
         if (!_skipDetectionWait) then {
+            ["waitingDetection task=%1 radius=%2 obj=%3", _taskId, _detectionRadius, _objectivePos] call FADE_qrfDbgLog;
             // Wait for first contact in zone or mission end (slow poll - not per-frame)
             waitUntil {
                 sleep _pollInterval;
@@ -286,23 +312,35 @@ FADE_counterAttackStart = {
                 private _in = call _playersInZone;
                 if (_in && { !_detectionLogged }) then {
                     _detectionLogged = true;
+                    ["playerDetected task=%1 obj=%2 radius=%3", _taskId, _objectivePos, _detectionRadius] call FADE_qrfDbgLog;
                 };
                 _in
             };
-            if (call _taskDone) exitWith {};
+            if (call _taskDone) exitWith {
+                ["endedBeforeQrf task=%1 (during detection wait)", _taskId] call FADE_qrfDbgLog;
+            };
         } else {
-            if (call _taskDone) exitWith {};
+            ["skipDetectionWait task=%1 — first delay starts now", _taskId] call FADE_qrfDbgLog;
+            if (call _taskDone) exitWith {
+                ["endedBeforeQrf task=%1 (skipDetection)", _taskId] call FADE_qrfDbgLog;
+            };
         };
         private _maxWaves = if (_ambientSingleWave) then { 1 } else { 1 + floor random 3 };
+        ["plan task=%1 maxWaves=%2 footWave=%3", _taskId, _maxWaves, _footWave] call FADE_qrfDbgLog;
         if (_footWave) then {
             [_taskId, _objectivePos, _enemyUnits, _allGroups, _applyGrp] call FADE_counterAttack_spawnFootWave;
+        } else {
+            ["footWave skipped task=%1 (footWave=false — only Raid passes true by default)", _taskId] call FADE_qrfDbgLog;
         };
         private _firstDelaySec = _firstMin + random (_firstMax - _firstMin);
+        ["firstDelay task=%1 sleeping %2s before vehicle wave(s)", _taskId, round _firstDelaySec] call FADE_qrfDbgLog;
         sleep _firstDelaySec;
 
         private _waveFn = {
             params ["_taskId", "_objectivePos", "_enemyUnits", "_allGroups", "_numTrucks", "_applyGrp", "_pollInterval", "_detectionRadius"];
-            if ([_taskId] call FADE_counterAttack_missionEnded) exitWith {};
+            if ([_taskId] call FADE_counterAttack_missionEnded) exitWith {
+                ["vehicleWave aborted missionEnded task=%1", _taskId] call FADE_qrfDbgLog;
+            };
             private _sideEnemy = missionNamespace getVariable ["FADE_sideEnemy", east];
             private _pairs = [];
             {
@@ -314,7 +352,9 @@ FADE_counterAttackStart = {
                     };
                 };
             } forEach (missionNamespace getVariable ["FADE_civTriggerNames", []]);
-            if (count _pairs == 0) exitWith {};
+            if (count _pairs == 0) exitWith {
+                ["vehicleWave aborted noCivZones task=%1", _taskId] call FADE_qrfDbgLog;
+            };
             _pairs = [_pairs, [], { _x select 0 }, "ASCEND"] call BIS_fnc_sortBy;
             private _minBase = missionNamespace getVariable ["FADE_counterAttackMinDistFromBase", 1000];
             private _baseQ = FADE_basePos;
@@ -350,7 +390,10 @@ FADE_counterAttackStart = {
                     _stagingResolved = true;
                 };
             };
-            if (!_stagingResolved) exitWith {};
+            if (!_stagingResolved) exitWith {
+                ["vehicleWave aborted noRoadSpawn task=%1 obj=%2 nearestZone=%3", _taskId, _objectivePos, _nearOnly] call FADE_qrfDbgLog;
+            };
+            ["vehicleWave staging task=%1 road=%2 zoneCandidates=%3", _taskId, _roadPos, count _pairs] call FADE_qrfDbgLog;
             if ((_roadPos isEqualType []) && { count _roadPos >= 2 } && { count _roadPos < 3 }) then {
                 _roadPos = [(_roadPos select 0), (_roadPos select 1), 0];
             };
@@ -367,6 +410,7 @@ FADE_counterAttackStart = {
             private _centF = missionNamespace getVariable ["FADE_qrfFriendlyCentroidATL", {}];
             private _tgtMove = if (_huntQrf && {!(_centF isEqualTo {})}) then { [_objectivePos] call _centF } else { +_objectivePos };
             if (count _tgtMove < 3) then { _tgtMove = [(_tgtMove select 0), (_tgtMove select 1), 0] };
+            ["vehicleWave huntMode=%1 task=%2 tgt=%3", _huntQrf, _taskId, _tgtMove] call FADE_qrfDbgLog;
             private _dir = [_roadPos, _tgtMove] call BIS_fnc_dirTo;
             private _huntIv = (missionNamespace getVariable ["FADE_qrfHuntWaypointIntervalS", 60]) max 15;
 
@@ -414,6 +458,7 @@ FADE_counterAttackStart = {
                 _vehPick = [_vanFb, _minCargo] call FADE_counterAttack_filterClassesByMinCargo;
             };
             if (count _vehPick == 0) exitWith {
+                ["vehicleWave infantryFallback task=%1 (no cargo trucks) road=%2", _taskId, _roadPos] call FADE_qrfDbgLog;
                 private _sz = 4 + floor random 4;
                 private _cls = (_enemyUnits select [0, _sz min count _enemyUnits]);
                 for "_k" from (count _cls) to (_sz - 1) do { _cls pushBack (_enemyUnits select 0) };
@@ -444,6 +489,7 @@ FADE_counterAttackStart = {
                 };
             };
 
+            ["vehicleWave trucks task=%1 count=%2 classes=%3 road=%4", _taskId, _numTrucks, count _vehPick, _roadPos] call FADE_qrfDbgLog;
             private _cargoStagger = missionNamespace getVariable ["FADE_counterAttackCargoStaggerSec", 0.35];
             private _spawnedVehs = [];
             private _roadHit = [];
@@ -468,12 +514,22 @@ FADE_counterAttackStart = {
                     if (isNull _prev) then { _roadPos } else { (getPosATL _prev) getPos [14, _dir + 180] }
                 };
                 _roadHit = [_anchor, 450, _spawnedVehs, _minBase, _baseQ, _tgtMove] call FADE_findOpforGroundVehicleRoadSpawn;
-                if (_roadHit isEqualTo []) then { continue };
+                if (_roadHit isEqualTo []) then {
+                    ["vehicleWave skipTruck task=%1 idx=%2 noRoadNear anchor=%3", _taskId, _vi, _anchor] call FADE_qrfDbgLog;
+                    continue
+                };
                 _roadHit params ["_spawnPos", "_spawnDir"];
-                if (_spawnPos distance2D _baseQ <= _minBase) then { continue };
+                if (_spawnPos distance2D _baseQ <= _minBase) then {
+                    ["vehicleWave skipTruck task=%1 idx=%2 tooNearBase dist=%3 min=%4", _taskId, _vi, _spawnPos distance2D _baseQ, _minBase] call FADE_qrfDbgLog;
+                    continue
+                };
                 _vehGrp = createGroup _sideEnemy;
                 _veh = createVehicle [_vClass, _spawnPos, [], 0, "NONE"];
-                if (isNull _veh) then { deleteGroup _vehGrp; continue };
+                if (isNull _veh) then {
+                    ["vehicleWave skipTruck task=%1 idx=%2 createFailed class=%3", _taskId, _vi, _vClass] call FADE_qrfDbgLog;
+                    deleteGroup _vehGrp;
+                    continue
+                };
                 _veh setPosATL _spawnPos;
                 _veh setDir _spawnDir;
                 _veh setVectorUp surfaceNormal _spawnPos;
@@ -500,6 +556,7 @@ FADE_counterAttackStart = {
                 _wpS = _vehGrp addWaypoint [_tgtMove, 0];
                 _wpS setWaypointType "SAD";
                 _allGroups pushBack _vehGrp;
+                ["vehicleWave spawned task=%1 idx=%2 class=%3 pos=%4 cargoSeats=%5 hunt=%6", _taskId, _vi, _vClass, _spawnPos, _veh emptyPositions "cargo", _huntQrf] call FADE_qrfDbgLog;
                 if (_huntQrf) then {
                     [_vehGrp, _veh, _taskId, _objectivePos, _huntIv] spawn {
                         params ["_vehGrp", "_veh", "_taskId", "_objectivePos", "_iv"];
@@ -558,20 +615,28 @@ FADE_counterAttackStart = {
                         _cargoGrp setCombatMode "RED";
                         private _drop = if (_huntQrf && {!(_cf isEqualTo {})}) then { [_objectivePos] call _cf } else { +_objectivePos };
                         if (count _drop < 3) then { _drop = [(_drop select 0), (_drop select 1), 0] };
+                        ["cargoUnload task=%1 veh=%2 units=%3 hunt=%4 drop=%5", _taskId, _veh, count units _cargoGrp, _huntQrf, _drop] call FADE_qrfDbgLog;
                         private _wp = _cargoGrp addWaypoint [_drop, 0];
                         _wp setWaypointType "SAD";
                     };
                 };
             };
+            ["vehicleWave done task=%1 trucksSpawned=%2/%3", _taskId, count _spawnedVehs, _numTrucks] call FADE_qrfDbgLog;
         };
 
         private _waveNum = 0;
         while { _waveNum < _maxWaves && { !(call _taskDone) } } do {
             _waveNum = _waveNum + 1;
+            ["vehicleWave begin task=%1 wave=%2/%3", _taskId, _waveNum, _maxWaves] call FADE_qrfDbgLog;
             [_taskId, _objectivePos, _enemyUnits, _allGroups, _numTrucks, _applyGrp, _pollInterval, _detectionRadius] call _waveFn;
-            if (call _taskDone) exitWith {};
-            if (_waveNum >= _maxWaves) exitWith {};
+            if (call _taskDone) exitWith {
+                ["endedAfterWave task=%1 wave=%2", _taskId, _waveNum] call FADE_qrfDbgLog;
+            };
+            if (_waveNum >= _maxWaves) exitWith {
+                ["allWavesDone task=%1 waves=%2", _taskId, _waveNum] call FADE_qrfDbgLog;
+            };
             private _bw = _betMin + random (_betMax - _betMin);
+            ["betweenWaves task=%1 sleeping %2s waitingForPlayersInZone", _taskId, round _bw] call FADE_qrfDbgLog;
             sleep _bw;
             if (call _taskDone) exitWith {};
             waitUntil {
@@ -579,6 +644,7 @@ FADE_counterAttackStart = {
                 call _taskDone || { call _playersInZone }
             };
             if (call _taskDone) exitWith {};
+            ["betweenWaves ready task=%1 wave=%2 playersInZone=true", _taskId, _waveNum + 1] call FADE_qrfDbgLog;
         };
     };
 };

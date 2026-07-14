@@ -59,6 +59,17 @@ FADE_civ_checkZones = {
                     };
                 };
                 if (_alreadyActive || { _pinned } || { ([] call FADE_civ_countActiveNonPinnedZones) < _maxZ }) then {
+                    // #region agent log
+                    if (random 1 < 0.12) then {
+                        private _civN = count (call FADE_civ_getUnitClassesFromGui);
+                        private _vehN = count (call FADE_civ_getVehicleClassesFromGui);
+                        diag_log format [
+                            "[FAC DbgBrowser 62d308] H26 civZoneActivate id=%1 near=%2 civClasses=%3 vehClasses=%4 enabled=%5",
+                            _name, _nearCount, _civN, _vehN,
+                            missionNamespace getVariable ["FADE_civiliansEnabled", true]
+                        ];
+                    };
+                    // #endregion
                     [_trigger, _name] call FADE_civ_spawnZone;
                 };
             };

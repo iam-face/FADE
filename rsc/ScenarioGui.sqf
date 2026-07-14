@@ -49,6 +49,7 @@ FAC_scenarioGui_factionsContentIdcs = [
     60870, 60871, 60872, 60873, 60874, 60875, 60876, 60877, 60878, 60879, 60880,
     60881, 60882, 60883, 60884, 60886, 60887, 60888, 60889, 60890, 60891, 60892, 60893, 60894, 60957,
     60958, 60959, 60960, 60961, 60962,
+    60980, 60981, 60982, 60983, 60984,
     60310, 60311, 60312
 ];
 
@@ -56,12 +57,11 @@ FAC_scenarioGui_adminContentIdcs = [60930, 60943, 60895, 60896, 60897, 60898, 60
 
 FAC_scenarioGui_getFactionDisplayName = {
     params ["_faction"];
-    if (!isNil "FADE_factionDisplayNameSafe") exitWith { [_faction] call FADE_factionDisplayNameSafe };
     if (_faction == "") exitWith { "Unknown" };
+    private _fadeFn = missionNamespace getVariable ["FADE_getFactionDisplayName", nil];
+    if (!isNil "_fadeFn") exitWith { [_faction] call _fadeFn };
     if (!isNil "FAC_loadoutGui_getFactionDisplayName") exitWith { [_faction] call FAC_loadoutGui_getFactionDisplayName };
-    private _dn = getText (configFile >> "CfgFactionClasses" >> _faction >> "displayName");
-    if (_dn != "" && { _dn find "STR_" != 0 }) exitWith { _dn };
-    (_faction splitString "_") joinString " "
+    [_faction] call FADE_factionDisplayNameSafe
 };
 
 FAC_scenarioGui_getFactionsForSide = {
@@ -252,6 +252,17 @@ FAC_scenarioGui_populateFactionLists = {
 
     missionNamespace setVariable ["FAC_scenarioGui_factionListsReady", true];
     [_display] call FAC_scenarioGui_syncFactionMissionLock;
+    // #region agent log
+    private _sampleFriendly = if (lbSize (_display displayCtrl 60311) > 0) then {
+        (_display displayCtrl 60311) lbText 0
+    } else { "" };
+    diag_log format ["[FAC DbgBrowser 62d308] H5 populateFactionLists done friendly=%1 enemy=%2 civ=%3 sampleFriendly=%4",
+        lbSize (_display displayCtrl 60311),
+        lbSize (_display displayCtrl 60310),
+        lbSize (_display displayCtrl 60312),
+        _sampleFriendly
+    ];
+    // #endregion
 };
 
 // Disable faction lists while a global or single mission is active.
@@ -522,6 +533,20 @@ FAC_scenarioGui_syncOpforPopBtns = {
     } forEach _map;
 };
 
+FAC_scenarioGui_syncPatrolTownChanceBtns = {
+    private _d = findDisplay FAC_scenarioGui_IDD;
+    if (isNull _d) exitWith {};
+    private _v = [missionNamespace getVariable ["FAC_scenarioGui_patrolTownChance", "Low"]] call FADE_normalizeOpforPatrolTownChanceSetting;
+    private _map = [["Low", 60981], ["Medium", 60982], ["High", 60983], ["Every", 60984]];
+    {
+        _x params ["_name", "_idc"];
+        private _c = _d displayCtrl _idc;
+        if (!isNull _c) then {
+            _c ctrlSetBackgroundColor (if (_name == _v) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        };
+    } forEach _map;
+};
+
 FAC_scenarioGui_syncOpforAirBtns = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
@@ -598,6 +623,9 @@ FAC_scenarioGui_fnc = {
 
     switch _action do {
         case "open": {
+            // #region agent log
+            diag_log "[FAC DbgBrowser 62d308] H2 ScenarioGui open requested";
+            // #endregion
             if !(["FAC_playerCanUseScenarioGui"] call FAC_lobbyParams_callAccess) exitWith {
                 systemChat "Scenario GUI access denied by lobby settings.";
             };
@@ -617,6 +645,9 @@ FAC_scenarioGui_fnc = {
             [] call FAC_scenarioGui_syncHeaderTabs;
             [] call FAC_scenarioGui_syncAdminTabAccess;
             if (_tab == "factions") then {
+                // #region agent log
+                diag_log "[FAC DbgBrowser 62d308] H5 ScenarioGui setTab factions (populate lists)";
+                // #endregion
                 private _d = findDisplay FAC_scenarioGui_IDD;
                 if (!isNull _d) then {
                     // CfgFactionClasses scan is deferred until this tab (avoids CTD/hang on open with large modsets).
@@ -679,6 +710,7 @@ FAC_scenarioGui_fnc = {
             missionNamespace setVariable ["FAC_scenarioGui_aaa", _aaaNorm];
             missionNamespace setVariable ["FAC_scenarioGui_launcher", missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"]];
             missionNamespace setVariable ["FAC_scenarioGui_opforPop", missionNamespace getVariable ["FADE_opforPopulationSetting", "Low"]];
+            missionNamespace setVariable ["FAC_scenarioGui_patrolTownChance", missionNamespace getVariable ["FADE_opforPatrolTownChanceSetting", "Low"]];
             missionNamespace setVariable ["FAC_scenarioGui_opforAir", [missionNamespace getVariable ["FADE_opforAirSetting", "Off"]] call FADE_normalizeOpforThreatSetting];
             missionNamespace setVariable ["FAC_scenarioGui_opforDrone", [missionNamespace getVariable ["FADE_opforDroneSetting", "Off"]] call FADE_normalizeOpforThreatSetting];
             private _aoLobby = missionNamespace getVariable ["FADE_aoStrength", "Mid"];
@@ -787,6 +819,7 @@ FAC_scenarioGui_fnc = {
             [] call FAC_scenarioGui_syncAAABtns;
             [] call FAC_scenarioGui_syncLauncherBtns;
             [] call FAC_scenarioGui_syncOpforPopBtns;
+            [] call FAC_scenarioGui_syncPatrolTownChanceBtns;
             [] call FAC_scenarioGui_syncOpforAirBtns;
             [] call FAC_scenarioGui_syncOpforDroneBtns;
             [] call FAC_scenarioGui_syncAdminTabAccess;
@@ -927,6 +960,11 @@ FAC_scenarioGui_fnc = {
             missionNamespace setVariable ["FAC_scenarioGui_opforPop", _v];
             [] call FAC_scenarioGui_syncOpforPopBtns;
         };
+        case "setPatrolTownChance": {
+            _params params ["_v"];
+            missionNamespace setVariable ["FAC_scenarioGui_patrolTownChance", [_v] call FADE_normalizeOpforPatrolTownChanceSetting];
+            [] call FAC_scenarioGui_syncPatrolTownChanceBtns;
+        };
         case "setOpforAir": {
             _params params ["_v"];
             if !(_v in ["Off", "Low", "Normal", "High"]) then { _v = "Off" };
@@ -1057,6 +1095,7 @@ FAC_scenarioGui_fnc = {
             private _opforAirSetting = [missionNamespace getVariable ["FAC_scenarioGui_opforAir", "Off"]] call FADE_normalizeOpforThreatSetting;
             private _opforDroneSetting = [missionNamespace getVariable ["FAC_scenarioGui_opforDrone", "Off"]] call FADE_normalizeOpforThreatSetting;
             private _opforPopulationSetting = missionNamespace getVariable ["FAC_scenarioGui_opforPop", "Low"];
+            private _opforPatrolTownChanceSetting = [missionNamespace getVariable ["FAC_scenarioGui_patrolTownChance", "Low"]] call FADE_normalizeOpforPatrolTownChanceSetting;
             private _timeCompressionScale = missionNamespace getVariable ["FAC_scenarioGui_timeScale", 1];
             private _teleportToPlayerMode = missionNamespace getVariable ["FAC_scenarioGui_tpMode", 0];
             private _civiliansEnabled = missionNamespace getVariable ["FAC_scenarioGui_civs", true];
@@ -1088,6 +1127,8 @@ FAC_scenarioGui_fnc = {
             missionNamespace setVariable ["FADE_enemyRouting", _enemyRouting];
             missionNamespace setVariable ["FADE_enemyAAALevel", _enemyAAA];
             missionNamespace setVariable ["FADE_opforPopulationSetting", _opforPopulationSetting];
+            missionNamespace setVariable ["FADE_opforPatrolTownChanceSetting", _opforPatrolTownChanceSetting];
+            missionNamespace setVariable ["FADE_enemyPatrolTownChance", [_opforPatrolTownChanceSetting] call FADE_resolveOpforPatrolTownChance];
             missionNamespace setVariable ["FADE_opforLauncherSetting", _opforLauncherSetting];
             missionNamespace setVariable ["FADE_opforAirSetting", _opforAirSetting];
             missionNamespace setVariable ["FADE_opforDroneSetting", _opforDroneSetting];
@@ -1112,7 +1153,8 @@ FAC_scenarioGui_fnc = {
                 _timeCompressionScale, _opforPopulationSetting, _teleportToPlayerMode, _opforLauncherSetting,
                 _opforAirSetting, _operationZoneCount, _weatherParams,
                 _civGlobalMaxAlive, _civDensityScale,
-                _civTalkInterpretersOnly, _intelSpecialistsOnly, _opforDroneSetting
+                _civTalkInterpretersOnly, _intelSpecialistsOnly, _opforDroneSetting,
+                _opforPatrolTownChanceSetting
             ];
             [_scenarioApplyArgs] remoteExec ["FADE_applyScenarioSettings", 2];
             closeDialog 0;

@@ -16,11 +16,11 @@ if (isNil "FADE_roadblock_spawnBundle") exitWith {
     diag_log "[FADE] DynamicRoadblocks: RoadblockCommon not loaded.";
 };
 
-private _poll = missionNamespace getVariable ["FADE_dynamicRoadblockPollSec", 14];
+private _poll = missionNamespace getVariable ["FADE_dynamicRoadblockPollSec", 30];
 private _minBase = missionNamespace getVariable ["FADE_dynamicRoadblockMinDistFromBase", 2000];
 private _spawnMin = missionNamespace getVariable ["FADE_dynamicRoadblockSpawnMinM", 750];
 private _spawnMax = missionNamespace getVariable ["FADE_dynamicRoadblockSpawnMaxM", 2800];
-private _despawnDist = missionNamespace getVariable ["FADE_dynamicRoadblockDespawnM", 3600];
+private _despawnDist = missionNamespace getVariable ["FADE_dynamicRoadblockDespawnM", 1500];
 private _maxActive = missionNamespace getVariable ["FADE_dynamicRoadblockMaxActive", 5];
 private _minSpacing = missionNamespace getVariable ["FADE_dynamicRoadblockMinSpacingM", 450];
 private _spawnChance = missionNamespace getVariable ["FADE_dynamicRoadblockSpawnChance", 0.28];

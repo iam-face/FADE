@@ -88,7 +88,19 @@ FADE_fieldIntel_applyGeometry = {
         _computed params ["_markerPos", "_radius"];
     };
     if (_mode == "grid") then {
-        _gridNames = [_taskId, _zoneKey, _markerPos, _radius, _markerColor, _contain] call FADE_mission_createGridZoneMarkers;
+        if (_snapToTrue) then {
+            _gridNames = [_taskId, _zoneKey, _markerPos, _radius, _markerColor, _contain] call FADE_mission_createGridZoneMarkers;
+        } else {
+            if (_frac > 0 && { _zoneKey != "" } && { getMarkerColor _zoneKey != "" }) then {
+                _zoneKey setMarkerShape "ELLIPSE";
+                _zoneKey setMarkerBrush "Border";
+                _zoneKey setMarkerAlpha (missionNamespace getVariable ["FADE_missionRadiusMarkerAlpha", 1]);
+                [_zoneKey, _markerPos, _radius] call FADE_mission_setRadiusMarkerGeometry;
+                _gridNames = [_zoneKey];
+            } else {
+                _gridNames = [_taskId, _zoneKey, _markerPos, _radius, _markerColor, _contain] call FADE_mission_createGridZoneMarkers;
+            };
+        };
     } else {
         if (_zoneKey != "" && { markerShape _zoneKey != "" }) then {
             [_zoneKey, _markerPos, _radius] call FADE_mission_setRadiusMarkerGeometry;
@@ -99,7 +111,6 @@ FADE_fieldIntel_applyGeometry = {
         _iconMarker setMarkerPos ([_iconPos] call FADE_normPos3);
     };
     _state set [8, _gridNames];
-    _state set [11, _revealLevel];
     missionNamespace setVariable [[_taskId] call FADE_fieldIntel_missionKey, _state];
     _state
 };
@@ -120,8 +131,18 @@ FADE_fieldIntel_addPoints = {
     {
         if (_pts >= _x) then { _newLevel = _x };
     } forEach _thresholds;
+    if (_delta > 0) then {
+        [_state, _pts, _pts >= _maxPts] call FADE_fieldIntel_applyGeometry;
+        // #region agent log
+        diag_log format [
+            "[FAC DbgBrowser 62d308] H16 fieldIntel refine task=%1 pts=%2/%3 level=%4 radiusMode=%5",
+            _taskId, _pts, _maxPts, _newLevel, _state select 5
+        ];
+        // #endregion
+    };
     if (_newLevel > _prevLevel) then {
-        [_state, _newLevel, _newLevel >= 100] call FADE_fieldIntel_applyGeometry;
+        _state set [11, _newLevel];
+        missionNamespace setVariable [[_taskId] call FADE_fieldIntel_missionKey, _state];
         private _msg = switch (true) do {
             case (_newLevel >= 100): { "Intel confirms objective location — search area refined to grid." };
             case (_newLevel >= 75): { "Intel narrows the search area significantly." };
@@ -136,8 +157,12 @@ FADE_fieldIntel_addPoints = {
         };
     };
     if (missionNamespace getVariable ["FADE_intelDiaryLog", false]) then {
+        private _cumPct = round ((_pts / _maxPts) * 100);
         private _grid = mapGridPosition (_state select 2);
-        private _line = format ["%1: %2 (search refinement +%3%%).", _sourceLabel, _grid, round (_delta / _maxPts * 100)];
+        private _line = format [
+            "%1: objective grid %2 (search %3%% refined, +%4%% this find).",
+            _sourceLabel, _grid, _cumPct, round (_delta / _maxPts * 100)
+        ];
         [_line] remoteExec ["FADE_intel_clientAppendIntelDiary", 0];
     };
     true
@@ -228,6 +253,7 @@ FADE_fieldIntel_endMission = {
     missionNamespace setVariable [[_taskId] call FADE_fieldIntel_missionKey, nil];
 };
 
+missionNamespace setVariable ["FADE_fieldIntel_registerGroups", FADE_fieldIntel_registerGroups];
 missionNamespace setVariable ["FADE_fieldIntel_endRaidZones", FADE_fieldIntel_endRaidZones];
 missionNamespace setVariable ["FADE_fieldIntel_serverBodySearch", FADE_fieldIntel_serverBodySearch];
 missionNamespace setVariable ["FADE_fieldIntel_startForMission", FADE_fieldIntel_startForMission];

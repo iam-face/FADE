@@ -31,6 +31,91 @@ FADE_aaa_normalizeLevel = {
     };
 };
 
+// Non-combat statics (searchlights, lamps, props) must never be used as defense turrets.
+FADE_aaa_isNonCombatStatic = {
+    params ["_class"];
+    if (!isClass (configFile >> "CfgVehicles" >> _class)) exitWith { true };
+    private _lc = toLower _class;
+    private _dn = toLower getText (configFile >> "CfgVehicles" >> _class >> "displayName");
+    private _bad = [
+        "searchlight", "search_light", "portablelight", "portable_light", "chemlight",
+        "lamp", "flare", "speaker", "megaphone", "antenna", "satellite", "hescobox",
+        "sleepingbag", "tent", "flag", "sign", "barrier", "target"
+    ];
+    private _skip = false;
+    {
+        if ((_lc find _x) >= 0 || { (_dn find _x) >= 0 }) exitWith { _skip = true };
+    } forEach _bad;
+    _skip
+};
+
+// True when the static has a turret or hull weapon that is not a searchlight / utility device.
+FADE_aaa_staticHasArmedTurret = {
+    params ["_class"];
+    private _cfg = configFile >> "CfgVehicles" >> _class;
+    if (!isClass _cfg) exitWith { false };
+    private _armed = false;
+    private _fncWeaponArmed = {
+        params ["_w"];
+        private _wl = toLower _w;
+        if (_wl == "") exitWith { false };
+        if ((_wl find "searchlight") >= 0) exitWith { false };
+        if ((_wl find "flashlight") >= 0) exitWith { false };
+        if ((_wl find "irpointer") >= 0) exitWith { false };
+        if (!isClass (configFile >> "CfgWeapons" >> _w)) exitWith { false };
+        private _type = getNumber (configFile >> "CfgWeapons" >> _w >> "type");
+        // 1 MG, 2 rifle, 4 launcher, 16 cannon/arty
+        _type in [1, 2, 4, 16]
+    };
+    {
+        { if ([_x] call _fncWeaponArmed) exitWith { _armed = true } } forEach getArray (_x >> "weapons");
+    } forEach ("true" configClasses (_cfg >> "Turrets"));
+    if (!_armed) then {
+        { if ([_x] call _fncWeaponArmed) exitWith { _armed = true } } forEach getArray (_cfg >> "weapons");
+    };
+    _armed
+};
+
+FADE_aaa_scoreStaticTurret = {
+    params ["_class"];
+    private _lc = toLower _class;
+    private _dn = toLower getText (configFile >> "CfgVehicles" >> _class >> "displayName");
+    private _score = 10;
+    if ((_lc find "hmg" >= 0) || { _dn find "hmg" >= 0 }) then { _score = _score + 100 };
+    if ((_lc find "gmg" >= 0) || { _dn find "gmg" >= 0 }) then { _score = _score + 90 };
+    if ((_lc find "agst" >= 0) || { _dn find "agst" >= 0 }) then { _score = _score + 85 };
+    if ((_lc find "kord" >= 0) || { _dn find "kord" >= 0 }) then { _score = _score + 80 };
+    if ((_lc find "dshk" >= 0) || { _dn find "dshk" >= 0 }) then { _score = _score + 80 };
+    if ((_lc find "m2" >= 0) || { _dn find "m2" >= 0 }) then { _score = _score + 75 };
+    if ((_lc find "mk19" >= 0) || { _dn find "mk19" >= 0 }) then { _score = _score + 75 };
+    if ((_dn find "machinegun" >= 0) || { _dn find "machine gun" >= 0 }) then { _score = _score + 60 };
+    _score
+};
+
+FADE_aaa_pickBestStaticTurret = {
+    params ["_faction", "_side", ["_requireFaction", true]];
+    private _best = "";
+    private _bestScore = -1;
+    {
+        private _cfg = _x;
+        private _class = configName _cfg;
+        if (getNumber (_cfg >> "scope") < 2) then { continue };
+        if ([_cfg] call FADE_aaa_cfgVehicleSideNum != _side) then { continue };
+        if !(_class isKindOf "StaticWeapon") then { continue };
+        if ([_class] call FADE_aaa_isNonCombatStatic) then { continue };
+        if !([_class] call FADE_aaa_staticHasArmedTurret) then { continue };
+        private _fac = getText (_cfg >> "faction");
+        if (_requireFaction && { _fac != _faction }) then { continue };
+        private _score = [_class] call FADE_aaa_scoreStaticTurret;
+        if (!_requireFaction && { _fac != _faction }) then { _score = _score - 5 };
+        if (_score > _bestScore) then {
+            _bestScore = _score;
+            _best = _class;
+        };
+    } forEach ("true" configClasses (configFile >> "CfgVehicles"));
+    [_best, _bestScore]
+};
+
 FADE_aaa_getStaticLightClass = {
     params [["_faction", ""]];
     if (_faction == "") then { _faction = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"] };
@@ -38,19 +123,20 @@ FADE_aaa_getStaticLightClass = {
     if (_faction in _cache) exitWith { _cache get _faction };
     private _fallback = missionNamespace getVariable ["FADE_aaa_fallbackStatic", "O_HMG_01_high_F"];
     private _side = [_faction, 0] call (missionNamespace getVariable ["FADE_getFactionSideNum", { 0 }]);
-    private _pick = "";
-    {
-        private _cfg = _x;
-        private _class = configName _cfg;
-        if (getNumber (_cfg >> "scope") < 2) then { continue };
-        if ([_cfg] call FADE_aaa_cfgVehicleSideNum != _side) then { continue };
-        if !(_class isKindOf "StaticWeapon") then { continue };
-        if (getText (_cfg >> "faction") != _faction) then { continue };
-        private _dn = toLower getText (_cfg >> "displayName");
-        if ((_dn find "hmg" >= 0) || { _dn find "gmg" >= 0 } || { _dn find "aa" >= 0 }) exitWith { _pick = _class };
-        if (_pick == "") then { _pick = _class };
-    } forEach ("true" configClasses (configFile >> "CfgVehicles"));
-    private _result = if (_pick != "") then { _pick } else { _fallback };
+    ([_faction, _side, true] call FADE_aaa_pickBestStaticTurret) params ["_best", "_bestScore"];
+    if (_best == "") then {
+        ([_faction, _side, false] call FADE_aaa_pickBestStaticTurret) params ["_best", "_bestScore"];
+    };
+    private _result = if (_best != "") then { _best } else { _fallback };
+    if !([_result] call FADE_aaa_staticHasArmedTurret) then { _result = _fallback };
+    // #region agent log
+    if (missionNamespace getVariable ["FADE_aaa_debug", false]) then {
+        diag_log format [
+            "[FAC DbgBrowser 62d308] H22 turretClass faction=%1 picked=%2 score=%3 armed=%4 nonCombat=%5",
+            _faction, _result, _bestScore, [_result] call FADE_aaa_staticHasArmedTurret, [_result] call FADE_aaa_isNonCombatStatic
+        ];
+    };
+    // #endregion
     _cache set [_faction, _result];
     missionNamespace setVariable ["FADE_aaa_staticLightClassCache", _cache];
     _result
@@ -67,6 +153,8 @@ FADE_aaa_getStaticAAClass = {
         if (getNumber (_cfg >> "scope") < 2) then { continue };
         if ([_cfg] call FADE_aaa_cfgVehicleSideNum != _side) then { continue };
         if !(_class isKindOf "StaticWeapon") then { continue };
+        if ([_class] call FADE_aaa_isNonCombatStatic) then { continue };
+        if !([_class] call FADE_aaa_staticHasArmedTurret) then { continue };
         private _dn = toLower getText (_cfg >> "displayName");
         private _isAA = (getNumber (_cfg >> "airLock") > 0) || { getNumber (_cfg >> "maneuvrability") > 0 };
         private _nameAA = (_dn find "sam" >= 0) || { _dn find "flak" >= 0 } || { (_dn find "aa" >= 0) && { _dn find "hmg" < 0 } };

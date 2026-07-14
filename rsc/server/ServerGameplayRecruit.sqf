@@ -246,6 +246,10 @@ FADE_recruit_spawnUnit = {
     };
     _resolved params ["_spawnClass", "_loadout", "_medic", "_eng", "_exp", "_label"];
 
+    if (!([_spawnClass] call FADE_isInfantryManClass)) exitWith {
+        ["Recruit: spawn class is not infantry."] remoteExec ["systemChat", _requester];
+    };
+
     private _spawnPos = [_requester] call FADE_recruit_pickBSpPos;
     private _unit = _grp createUnit [_spawnClass, _spawnPos, [], 0, "NONE"];
     if (isNull _unit) exitWith {

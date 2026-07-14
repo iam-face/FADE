@@ -95,11 +95,53 @@ FADE_abortMission = {
 };
 
 // Recover-object pickup from scroll action (server). Marks the associated task SUCCEEDED and removes the object.
+FADE_resolveOperationNameForTaskId = {
+    params ["_taskId"];
+    if (_taskId isEqualTo "") exitWith { "Operation" };
+    private _root = _taskId;
+    private _raidIdx = _taskId find "_raid_obj_";
+    if (_raidIdx >= 0) then { _root = _taskId select [0, _raidIdx] };
+    private _global = missionNamespace getVariable ["FADE_globalMission", []];
+    if (count _global >= 5) then {
+        private _owner = _global param [1, objNull];
+        if (!isNull _owner && { (_owner getVariable ["FADE_myMissionTaskId", ""]) == _root }) exitWith {
+            _global param [4, "Operation"]
+        };
+    };
+    private _single = missionNamespace getVariable ["FADE_singleMissions", []];
+    private _found = "Operation";
+    {
+        if (count _x >= 5) then {
+            private _owner = _x param [1, objNull];
+            if (!isNull _owner && { (_owner getVariable ["FADE_myMissionTaskId", ""]) == _root }) exitWith {
+                _found = _x param [4, "Operation"];
+            };
+        };
+    } forEach _single;
+    _found
+};
+
 FADE_assetIntelTakeServer = {
     params ["_taskId", "_intelObj", ["_player", objNull]];
     if (!isServer) exitWith {};
     if (missionNamespace getVariable ["FADE_assetIntelTaken_" + _taskId, false]) exitWith {};
     missionNamespace setVariable ["FADE_assetIntelTaken_" + _taskId, true];
+
+    if (!isNull _player && { isPlayer _player }) then {
+        private _opName = [_taskId] call FADE_resolveOperationNameForTaskId;
+        private _objName = if (!isNull _intelObj) then {
+            private _stored = _intelObj getVariable ["FADE_recoverObjectDisplayName", ""];
+            if (_stored isEqualType "" && { _stored != "" }) then {
+                _stored
+            } else {
+                [typeOf _intelObj] call (missionNamespace getVariable ["FADE_getRecoverObjectDisplayName", { _this select 0 }])
+            }
+        } else {
+            [] call (missionNamespace getVariable ["FADE_getRecoverObjectDisplayName", { "objective package" }])
+        };
+        private _pickupMsg = format ["%1: %2 picked up %3!", _opName, name _player, _objName];
+        { [_pickupMsg] remoteExec ["systemChat", _x] } forEach allPlayers;
+    };
 
     private _taskState = _taskId call BIS_fnc_taskState;
     if (_taskState in ["CREATED", "ASSIGNED"]) then {

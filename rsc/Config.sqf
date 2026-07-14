@@ -17,6 +17,27 @@ FADE_normalizeOpforLauncherSetting = {
         default { "Normal" };
     };
 };
+FADE_normalizeOpforPatrolTownChanceSetting = {
+    params [["_setting", "Low"]];
+    switch (toLower (_setting + "")) do {
+        case "medium": { "Medium" };
+        case "high": { "High" };
+        case "every";
+        case "all";
+        case "100": { "Every" };
+        default { "Low" };
+    };
+};
+FADE_resolveOpforPatrolTownChance = {
+    params [["_setting", "Low"]];
+    private _set = [_setting] call FADE_normalizeOpforPatrolTownChanceSetting;
+    switch _set do {
+        case "Medium": { 0.5 };
+        case "High": { 0.75 };
+        case "Every": { 1 };
+        default { 0.25 };
+    };
+};
 FADE_opforAirSetting = "Off";               // Off | Low | Normal | High  -  OPFOR air after AI spots BLUFOR (FADE_opforThreatIntensity)
 FADE_opforDroneSetting = "Off";             // Off | Low | Normal | High  -  OPFOR UAV patrol + QRF vectoring (FADE_OpforDrones.sqf)
 

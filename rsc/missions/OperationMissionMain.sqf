@@ -837,10 +837,12 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, time];
             if (_w > 0 && _e > 0) then {
                     missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, time];
                     _didQrf = true;
+                    ["opQrf trigger task=%1 zoneIdx=%2 blu=%3 enemy=%4 center=%5", _taskId, _i, _w, _e, _zoneCenter] call FADE_qrfDbgLog;
                     private _from = _zones select _hqI;
                     private _footGrps = [];
                     private _footFn = missionNamespace getVariable ["FADE_counterAttack_spawnFootWave", {}];
                     if (!(_footFn isEqualTo {})) then {
+                        ["opQrf footWave task=%1 zone=%2", _taskId, _zoneCenter] call FADE_qrfDbgLog;
                         [_taskId, _zoneCenter, _enemyUnits, _footGrps, _facApply] call _footFn;
                         private _entFoot = missionNamespace getVariable ["FADE_operationEntities_" + _taskId, []];
                         if (count _entFoot >= 1 && { count _footGrps > 0 }) then {
@@ -853,6 +855,7 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, time];
                     private _flOp = missionNamespace getVariable ["FADE_qrfSpawnHintFlare", {}];
                     if (!(_flOp isEqualTo {})) then { [_from, _zoneRadius] call _flOp };
                     private _nVeh = 1 + floor random 3;
+                    ["opQrf vehicles task=%1 fromHQ=%2 nVeh=%3 zone=%4", _taskId, _from, _nVeh, _zoneCenter] call FADE_qrfDbgLog;
                     [_from, _zoneCenter, _enemyUnits, _facApply, _taskId, _nVeh, _zoneRadius, _spawnMinDistPl, _fncFindSpawn] call {
                         params ["_fromCenter", "_toCenter", "_enemyUnits", "_facApply", "_taskId", "_nVehs", "_zoneRadius", "_spawnMinDistPl", "_fncFindSpawn"];
                         private _sp = [_fromCenter, _zoneRadius, _spawnMinDistPl] call _fncFindSpawn;
@@ -862,6 +865,7 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, time];
                             if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
                         };
                         private _huntOp = (([_to3, _zoneRadius] call FADE_op_countBluforPlayersInRadius) == 0);
+                        ["opQrf vehPlan task=%1 spawn=%2 tgt=%3 hunt=%4", _taskId, _sp, _to3, _huntOp] call FADE_qrfDbgLog;
                         private _centFO = missionNamespace getVariable ["FADE_qrfFriendlyCentroidATL", {}];
                         private _wpTgt = if (_huntOp && {!(_centFO isEqualTo {})}) then { [_to3] call _centFO } else { +_to3 };
                         if (count _wpTgt < 3) then { _wpTgt = [(_wpTgt select 0), (_wpTgt select 1), 0] };
@@ -882,6 +886,7 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, time];
                             _pack params ["_veh", "_vGrp", "_cGrp"];
                             if (!isNull _veh) then {
                                 _qrfVehs pushBack _veh;
+                                ["opQrf vehSpawned task=%1 idx=%2 veh=%3 class=%4", _taskId, _qv, _veh, typeOf _veh] call FADE_qrfDbgLog;
                                 _veh setVariable ["FADE_opVehQrf", true, false];
                                 _veh engineOn true;
                                 private _wp1 = _vGrp addWaypoint [_wpTgt, 0];
@@ -948,6 +953,7 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, time];
                                         _cargoGrp setCombatMode "RED";
                                         private _drop = if (_huntOp && {!(_cf isEqualTo {})}) then { [_to3] call _cf } else { +_to3 };
                                         if (count _drop < 3) then { _drop = [(_drop select 0), (_drop select 1), 0] };
+                                        ["opQrf cargoUnload task=%1 veh=%2 units=%3 drop=%4", _taskId, _veh, count units _cargoGrp, _drop] call FADE_qrfDbgLog;
                                         private _wp = _cargoGrp addWaypoint [_drop, 0];
                                         _wp setWaypointType "SAD";
                                     };

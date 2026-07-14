@@ -43,6 +43,19 @@ FADE_ao_resolveInfilCivZones = {
         params ["_pos"];
         ([_pos] call _fnc_localAxes) select 0
     };
+    private _halfMargin = ((_zoneHalfDepth * 0.05) max 50) min 200;
+    private _fnc_onAoHalf = {
+        params ["_pos", "_wantBluforSide"];
+        if (!(_pos isEqualType []) || { count _pos < 2 }) exitWith { false };
+        private _depth = [_pos] call _fnc_depthScalar;
+        if (_wantBluforSide) then { _depth > _halfMargin } else { _depth < (-_halfMargin) }
+    };
+    private _fnc_oppositeHalves = {
+        params ["_bluPos", "_opforPos"];
+        if (!([_bluPos, true] call _fnc_onAoHalf)) exitWith { false };
+        if (!([_opforPos, false] call _fnc_onAoHalf)) exitWith { false };
+        (([_bluPos] call _fnc_depthScalar) * ([_opforPos] call _fnc_depthScalar)) < 0
+    };
 
     // Eligible civ zones: outside AO rectangle, within _maxCivDist of AO centre
     private _eligibleCiv = _civEntries select {
@@ -74,21 +87,41 @@ FADE_ao_resolveInfilCivZones = {
     };
 
     private _fnc_landAt = {
-        params ["_anchor", "_fallback"];
+        params ["_anchor", "_fallback", "_wantBluforSide"];
         private _fb = if (_fallback isEqualType [] && { count _fallback >= 2 }) then { +_fallback } else { +_anchor };
-        private _out = [_anchor, 50, 500] call _findLandPosFn;
-        if (!(_out isEqualType []) || { count _out < 2 } || { !([_out] call _dryFn) }) then {
-            _out = [_anchor, 100, 800] call _findLandPosFn;
+        private _edgeDir = if (_wantBluforSide) then { _attackDir } else { _attackDir + 180 };
+        private _tryDirs = [_edgeDir, _edgeDir + 25, _edgeDir - 25, _edgeDir + 50, _edgeDir - 50, _edgeDir + 90, _edgeDir - 90];
+        private _out = [];
+        if ([_anchor] call _dryFn && { [_anchor, _wantBluforSide] call _fnc_onAoHalf }) then { _out = +_anchor };
+        if (_out isEqualTo []) then {
+            {
+                private _dist = 50 + random 350;
+                private _cand = [_anchor, _dist, _x] call BIS_fnc_relPos;
+                _cand = [_cand, 25, 120] call _findLandPosFn;
+                if (_cand isEqualType [] && { count _cand >= 2 } && { [_cand] call _dryFn } && { [_cand, _wantBluforSide] call _fnc_onAoHalf }) exitWith {
+                    _out = _cand;
+                };
+            } forEach _tryDirs;
         };
-        if (!(_out isEqualType []) || { count _out < 2 } || { !([_out] call _dryFn) }) then { _out = +_fb };
+        if (_out isEqualTo []) then {
+            private _pushFrom = if ([_fb, _wantBluforSide] call _fnc_onAoHalf) then { +_fb } else { [_aoN, _zoneHalfDepth + 150, _edgeDir] call BIS_fnc_relPos };
+            _out = [_pushFrom, 25, 200] call _findLandPosFn;
+            if (!(_out isEqualType []) || { count _out < 2 } || { !([_out] call _dryFn) } || { !([_out, _wantBluforSide] call _fnc_onAoHalf) }) then {
+                if ([_pushFrom] call _dryFn && { [_pushFrom, _wantBluforSide] call _fnc_onAoHalf }) then {
+                    _out = +_pushFrom;
+                } else {
+                    _out = [];
+                };
+            };
+        };
         if (count _out < 3) then { _out set [2, 0] };
         _out
     };
 
     private _fnc_ensureOutsideAo = {
-        params ["_pos", "_edgeRef"];
-        if (_pos isEqualType [] && { count _pos >= 2 } && { !([_pos] call _fnc_isInsideAo) }) exitWith { _pos };
-        [_edgeRef, _edgeRef] call _fnc_landAt
+        params ["_pos", "_edgeRef", "_wantBluforSide"];
+        if (_pos isEqualType [] && { count _pos >= 2 } && { !([_pos] call _fnc_isInsideAo) } && { [_pos, _wantBluforSide] call _fnc_onAoHalf }) exitWith { _pos };
+        [_edgeRef, _edgeRef, _wantBluforSide] call _fnc_landAt
     };
 
     private _bluPick = [_bluInfilRef, true, [], _eligibleCiv] call _fnc_pickZone;
@@ -142,10 +175,33 @@ FADE_ao_resolveInfilCivZones = {
     // No eligible civ zone: fall back to precomputed AO edge references (outside the rectangle).
     private _bluAnchor = if (_bluZonePos isEqualType [] && { count _bluZonePos >= 2 }) then { _bluZonePos } else { +_bluInfilRef };
     private _opforAnchor = if (_opforZonePos isEqualType [] && { count _opforZonePos >= 2 }) then { _opforZonePos } else { +_opforInfilRef };
-    private _bluPos = [_bluAnchor, _bluInfilRef] call _fnc_landAt;
-    private _opforPos = [_opforAnchor, _opforInfilRef] call _fnc_landAt;
-    _bluPos = [_bluPos, _bluInfilRef] call _fnc_ensureOutsideAo;
-    _opforPos = [_opforPos, _opforInfilRef] call _fnc_ensureOutsideAo;
+    private _bluPos = [_bluAnchor, _bluInfilRef, true] call _fnc_landAt;
+    private _opforPos = [_opforAnchor, _opforInfilRef, false] call _fnc_landAt;
+    _bluPos = [_bluPos, _bluInfilRef, true] call _fnc_ensureOutsideAo;
+    _opforPos = [_opforPos, _opforInfilRef, false] call _fnc_ensureOutsideAo;
 
-    [[_bluId, _bluPos], [_opforId, _opforPos]]
+    private _oppositeOk = [_bluPos, _opforPos] call _fnc_oppositeHalves;
+    if (!_oppositeOk) then {
+        _bluPos = [_bluInfilRef, _bluInfilRef, true] call _fnc_landAt;
+        _opforPos = [_opforInfilRef, _opforInfilRef, false] call _fnc_landAt;
+        _bluPos = [_bluPos, _bluInfilRef, true] call _fnc_ensureOutsideAo;
+        _opforPos = [_opforPos, _opforInfilRef, false] call _fnc_ensureOutsideAo;
+        _oppositeOk = [_bluPos, _opforPos] call _fnc_oppositeHalves;
+    };
+
+    // #region agent log
+    diag_log format [
+        "[FAC DbgBrowser 62d308] H9 aoInfil attackDir=%1 bluDepth=%2 opDepth=%3 opposite=%4 bluZone=%5 opZone=%6 bluPos=%7 opPos=%8",
+        _attackDir,
+        [_bluPos] call _fnc_depthScalar,
+        [_opforPos] call _fnc_depthScalar,
+        _oppositeOk,
+        _bluId,
+        _opforId,
+        _bluPos,
+        _opforPos
+    ];
+    // #endregion
+
+    [[_bluId, _bluPos], [_opforId, _opforPos], _oppositeOk]
 };

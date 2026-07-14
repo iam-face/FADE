@@ -2,7 +2,7 @@
 // FADE_civZonesFromLocations.sqf  -  build CIV_T_* zone anchors from map Locations
 // =============================================================================
 // Server-only. Loaded from initServer after FADE_basePos is set.
-// Per-zone metadata in FADE_civZoneMeta (HashMap): locType, hasAmbientPop, buildingCount,
+// Per-zone metadata in FADE_civZoneMeta (HashMap): displayName, locType, hasAmbientPop, buildingCount,
 // parkedVehicles (2-6 by tier), footMult for walking civ count scaling.
 // Named locations with fewer than FADE_civZoneMinBuildings House/Building within
 // FADE_civZoneBuildingRadius are not designated as civ zones (no CIV_T_* anchor).
@@ -100,6 +100,7 @@ FADE_civZonesFromLocations_build = {
             missionNamespace setVariable [_zname, _obj];
 
             private _meta = createHashMap;
+            _meta set ["displayName", text _location];
             _meta set ["locType", _lt];
             _meta set ["hasAmbientPop", _hasPop];
             _meta set ["buildingCount", _nBld];
@@ -111,6 +112,7 @@ FADE_civZonesFromLocations_build = {
     } forEach _accepted;
 
     missionNamespace setVariable ["FADE_civTriggerIndexMax", _created];
+    missionNamespace setVariable ["FADE_civZoneMeta", FADE_civZoneMeta];
     private _popN = 0;
     {
         private _m = FADE_civZoneMeta get _x;
@@ -121,5 +123,29 @@ FADE_civZonesFromLocations_build = {
         _created, _minBld, _bldRadius, _skippedBld, _popN
     ];
 };
+
+// Town label for a CIV_T_* zone (e.g. Kavala); falls back to topography at _fallbackPos.
+FADE_civZoneGetDisplayName = {
+    params [["_zoneId", ""], ["_fallbackPos", [0, 0, 0]]];
+    if (_zoneId != "") then {
+        private _metaMap = if (!isNil "FADE_civZoneMeta" && { FADE_civZoneMeta isEqualType createHashMap }) then {
+            FADE_civZoneMeta
+        } else {
+            missionNamespace getVariable ["FADE_civZoneMeta", createHashMap]
+        };
+        if (_metaMap isEqualType createHashMap) then {
+            private _meta = _metaMap getOrDefault [_zoneId, createHashMap];
+            private _dn = _meta getOrDefault ["displayName", ""];
+            if (_dn isEqualType "" && { _dn != "" }) exitWith { _dn };
+        };
+    };
+    private _topoFn = missionNamespace getVariable ["FADE_getTopographySummary", {}];
+    if (!(_topoFn isEqualTo {}) && { _fallbackPos isEqualType [] } && { count _fallbackPos >= 2 }) then {
+        ([_fallbackPos] call _topoFn) select 1
+    } else {
+        "Unknown area"
+    };
+};
+missionNamespace setVariable ["FADE_civZoneGetDisplayName", FADE_civZoneGetDisplayName];
 
 true

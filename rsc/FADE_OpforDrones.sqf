@@ -85,22 +85,24 @@ FADE_opforDrone_isGroundPlayer = {
 };
 
 FADE_opforDrone_allFriendliesAtHq = {
-    params ["_friendlySide", "_hqR"];
+    params ["_hqR"];
     private _base = missionNamespace getVariable ["BASE_1", objNull];
     if (isNull _base) exitWith { false };
     private _bp = getPosATL _base;
+    private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _hasPl = false;
+    private _allInside = true;
     {
         if (side _x == _friendlySide && { alive _x } && { isPlayer _x }) then {
             _hasPl = true;
-            if ((_x distance2D _bp) > _hqR) exitWith { false };
+            if ((_x distance2D _bp) > _hqR) then { _allInside = false };
         };
     } forEach playableUnits;
-    _hasPl
+    _hasPl && _allInside
 };
 
 FADE_opforDrone_patrolCenter = {
-    private _friendlySide = [missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]] call FADE_opforAir_sideFromFactionCfg;
+    private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _acc = [0, 0, 0];
     private _n = 0;
     {
@@ -179,6 +181,22 @@ FADE_opforDrone_doSpawn = {
     if (isNull _uav) exitWith {};
     _uav setPosASL _spawnPos;
     createVehicleCrew _uav;
+    if (isNull driver _uav) then {
+        private _sideE = missionNamespace getVariable ["FADE_sideEnemy", east];
+        private _crewGrp = createGroup _sideE;
+        private _crewUnits = missionNamespace getVariable ["FADE_enemyUnits", ["O_Soldier_F"]];
+        private _pilot = _crewGrp createUnit [selectRandom _crewUnits, _spawnPos, [], 0, "NONE"];
+        if (!isNull _pilot) then { _pilot moveInDriver _uav };
+        if (isNull driver _uav) then {
+            { if (!isNull _x) then { deleteVehicle _x } } forEach units _crewGrp;
+            deleteGroup _crewGrp;
+            deleteVehicle _uav;
+            // #region agent log
+            diag_log format ["[FAC DbgBrowser 62d308] H17 opforDrone spawn failed no crew class=%1", _class];
+            // #endregion
+            exitWith {};
+        };
+    };
     private _grp = group (driver _uav);
     if (!isNull _grp) then {
         private _apply = missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}];
@@ -192,6 +210,12 @@ FADE_opforDrone_doSpawn = {
     _arr pushBack _uav;
     missionNamespace setVariable ["FADE_opforDrone_active", _arr];
     missionNamespace setVariable ["FADE_opforDrone_lastSpawnTime", time];
+    // #region agent log
+    diag_log format [
+        "[FAC DbgBrowser 62d308] H17 opforDrone spawned class=%1 at=%2 active=%3",
+        _class, _spawnPos, count _arr
+    ];
+    // #endregion
 };
 
 FADE_opforDrone_trySpawn = {
@@ -199,14 +223,18 @@ FADE_opforDrone_trySpawn = {
     private _setting = [missionNamespace getVariable ["FADE_opforDroneSetting", "Off"]] call FADE_normalizeOpforThreatSetting;
     if (_setting == "Off") exitWith {};
 
-    private _friendlySide = [missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"]] call FADE_opforAir_sideFromFactionCfg;
     private _hqR = missionNamespace getVariable ["FADE_opforAir_hqSafeRadius", 1000];
-    if ([_friendlySide, _hqR] call FADE_opforDrone_allFriendliesAtHq) exitWith {
+    if ([_hqR] call FADE_opforDrone_allFriendliesAtHq) exitWith {
         if ((count (missionNamespace getVariable ["FADE_opforDrone_active", []])) > 0) then { call FADE_opforDrone_despawnAll };
+        // #region agent log
+        if (random 1 < 0.05) then {
+            diag_log "[FAC DbgBrowser 62d308] H17 opforDrone suppressed (all friendlies at HQ)";
+        };
+        // #endregion
     };
 
-    private _hasPl = false;
-    { if (side _x == _friendlySide && { alive _x } && { isPlayer _x }) exitWith { _hasPl = true } } forEach playableUnits;
+    private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
+    private _hasPl = (playableUnits findIf { side _x == _friendlySide && { alive _x } && { isPlayer _x } }) >= 0;
     if (!_hasPl) exitWith {};
 
     private _intensity = [_setting] call FADE_opforDroneIntensity;
@@ -243,7 +271,10 @@ FADE_opforDrone_triggerQrf = {
     private _fl = missionNamespace getVariable ["FADE_qrfSpawnHintFlare", {}];
     if (!(_fl isEqualTo {})) then { [_pos3, 450] call _fl };
 
-    if (isNil "FADE_counterAttackStart" || { FADE_counterAttackStart isEqualTo {} }) exitWith {};
+    if (isNil "FADE_counterAttackStart" || { FADE_counterAttackStart isEqualTo {} }) exitWith {
+        ["droneQrf aborted counterAttackStart missing pos=%1", _pos3] call FADE_qrfDbgLog;
+    };
+    ["droneQrf start task=%1 pos=%2 ambientSingleWave", _taskId, _pos3] call FADE_qrfDbgLog;
     [_taskId, _pos3, _base, _enemyUnits, _groups, 450, true, 45, 120, true] call FADE_counterAttackStart;
 };
 
@@ -284,7 +315,7 @@ FADE_opforDrone_tickSpotting = {
 };
 
 [] spawn {
-    sleep 120;
+    sleep 60;
     while { true } do {
         sleep 45;
         if (!isServer) exitWith {};

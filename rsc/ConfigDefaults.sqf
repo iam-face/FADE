@@ -64,6 +64,7 @@ FADE_invasionSustainSquadsMax = 6;
 FADE_invasionGroundReinforceMaxPerTick = 2; // beachhead ground squads released per sustain poll (AO-style top-up)
 FADE_invasionWipedFrontSquadsMin = 2;      // minimum ground squads when push groups wiped but BLUFOR holds the front
 FADE_invasionWaveVehiclesMax = 2;          // after OPFOR captures at least one other zone
+FADE_invasionVehicleReinforceMin = 90;     // min seconds between vehicle spawns from captured sectors
 FADE_invasionSustainCheckSec = 20;         // sustain poll interval (AO ~25–50s)
 FADE_invasionHeliApproachDist = 2200;      // heli spawn distance from beachhead LZ (m)
 FADE_invasionHeliDespawnDist = 2000;       // delete reinforcement heli once this far from every player (m)
@@ -74,7 +75,7 @@ FADE_invasionBluforDefGroupsMax = 1;       // defender squads per BLUFOR-held zo
 FADE_invasionBluforDefSizeMin = 3;
 FADE_invasionBluforDefSizeMax = 5;
 // Enemy AAA (dynamic around airborne player aircraft)
-FADE_aaa_debug = false;
+FADE_aaa_debug = true;
 FADE_aaa_spawnDistMin = 1500;
 FADE_aaa_spawnDistMax = 2000;
 FADE_aaa_playerExclusionM = 200;
@@ -103,6 +104,8 @@ FADE_operationCleanupDistPlayers = 2000;
 FADE_operationCleanupInterval = 600;
 FADE_enemySkill = 0.0;         // Default enemy AI skill (Scenario GUI can override)
 FADE_scenarioPatrols = true;   // Ambient OPFOR patrols + dynamic roadblocks (Scenario GUI can override)
+FADE_opforPatrolTownChanceSetting = "Low";  // "Low" 25%, "Medium" 50%, "High" 75%, "Every" 100% per civ zone
+FADE_enemyPatrolTownChance = 0.25;           // Resolved from FADE_opforPatrolTownChanceSetting
 FADE_opforPopulationSetting = "Low";  // "VeryLow" 0.25x, "Low" 0.5x, "Normal" 1x, "High" 1.5x, "VeryHigh" 2x, "Insane" 4x
 FADE_opforLauncherSetting = "Normal";     // "Normal", "Reduced", "Minimal", "None"  -  AT launchers (not MANPADS AA)
 FADE_limitGearToFriendlyFaction = false;  // When true, Loadout and Vehicle GUIs restrict to chosen Friendly faction
@@ -507,7 +510,12 @@ FADE_civParkedVehicleClasses = [
     "C_Van_01_transport_F"
 ];
 FADE_civSpawnRadius = 1000;  // enemy patrol / parked road search (foot civs use FADE_civFootSpawnRadius)
-FADE_enemyPatrolMinDistFromPlayersM = 400;  // ambient enemy patrol: spawn positions must be at least this 2D m from every alive player
+FADE_enemyPatrolMinDistFromPlayersM = 400;  // ambient enemy patrol: infantry/vehicle spawn positions must be at least this 2D m from every alive player
+FADE_enemyPatrolSpawnMinDistM = 60;         // infantry spawn: min 2D m from civ zone centre (inner town)
+FADE_enemyPatrolSpawnMaxDistM = 280;        // infantry spawn: max 2D m from civ zone centre
+FADE_enemyPatrolWpMinDistM = 40;            // patrol cycle waypoint ring min from centre
+FADE_enemyPatrolWpMaxDistM = 200;           // patrol cycle waypoint ring max from centre
+FADE_enemyPatrolVehicleRoadSearchM = 350;   // road vehicle patrol: roads near centre only (not regional highways)
 FADE_enemyPatrolSniperZoneChance = 0.45;    // garrisoned patrol zones: chance of rooftop sniper(s)
 FADE_enemyPatrolSniperMaxPerZone = 2;       // max snipers per patrol zone (when zone roll succeeds)
 FADE_enemyPatrolSniperBuildingTries = 8;  // buildings tested per sniper placement attempt
@@ -564,11 +572,11 @@ FADE_checkpointDebug = false;
 // Dynamic roadblocks / ambush props along base <-> mission corridor (rsc\DynamicRoadblocks.sqf). Requires Enemy Patrols ON.
 // Counts all friendly players for distance (including helicopters) once beyond FADE_dynamicRoadblockMinDistFromBase (also minimum roadblock spawn distance from base).
 FADE_dynamicRoadblocksEnabled = true;
-FADE_dynamicRoadblockPollSec = 14;
+FADE_dynamicRoadblockPollSec = 30;
 FADE_dynamicRoadblockMinDistFromBase = 2000;  // eligible players + roadblock spawn positions must be at least this far from base
 FADE_dynamicRoadblockSpawnMinM = 750;         // roadblock this far from at least one such player
 FADE_dynamicRoadblockSpawnMaxM = 2800;
-FADE_dynamicRoadblockDespawnM = 3600;         // delete if no friendly player within this range
+FADE_dynamicRoadblockDespawnM = 1500;         // delete if no friendly player within this range
 // Civ-zone tied roadblock: when the zone despawns, keep the block if any alive human player is within this 2D m (0 = always despawn with zone)
 FADE_dynamicRoadblockZoneGoneRetainPlayerM = 1000;
 FADE_dynamicRoadblockMaxActive = 5;
@@ -597,8 +605,10 @@ FADE_garrisonClearAreaSearchExtraM = 150;
 FADE_garrisonEeBuildingSearchRadiusM = 900;
 // Operation: multiply zone radius used for garrison building scan (1 = legacy 0.95 * zone radius).
 FADE_garrisonOperationScanMult = 1.25;
-// Ambient enemy patrol zones: add to civ zone radius when scanning garrison candidates (m).
-FADE_garrisonAmbientRadiusExtraM = 300;
+// Ambient enemy patrol zones: building scan radius from zone centre (not full civ ellipse).
+FADE_garrisonAmbientScanRadiusM = 380;
+FADE_garrisonAmbientBuildingChance = 0.55;   // per-building roll for patrol-zone garrisons (missions use FADE_garrisonMissionNearbyBuildingChance)
+FADE_garrisonAmbientRadiusExtraM = 300;      // legacy extra on mission scan; patrol zones use FADE_garrisonAmbientScanRadiusM
 // Lazy building garrison (FADE_VirtualGarrison): outdoor barrel/campfire hint at register (before units activate); barrelRoll applies then.
 FADE_vgLazyOutdoorHintChance = 0.5;
 FADE_vgLazyOutdoorHintClasses = ["MetalBarrel_burning_F", "Campfire_burning_F"];
@@ -648,6 +658,8 @@ FADE_hostageIdentities = [
     "FADE_hostage_PhilCassidy",
     "FADE_hostage_WarrenWazzaDriscoll"
 ];
+FADE_hostageFreeHoldSec = 5;
+FADE_hostageFreeDistM = 3;
 
 // Counter-attack QRF (HVT / Hostage / Clear Area): seconds to wait after first player-in-zone before wave 1 (random between min..max).
 // Testing: short delay. Production: e.g. min 120, max 360.
@@ -665,6 +677,8 @@ FADE_counterAttackMinDistFromBase = 1000;
 FADE_counterAttackCargoStaggerSec = 0.35;
 // When QRF spawns with no players left in the objective / contested zone, driver waypoints retarget this often (friendly player centroid).
 FADE_qrfHuntWaypointIntervalS = 60;
+// RPT QRF lifecycle logs (detection, foot wave, vehicle staging, cargo unload, hunt mode). Grep H21 QRF.
+FADE_qrfDebug = true;
 
 FADE_vgPollEmptyIntervalS = 30;
 // Ambient civ: skip zone ticks when nearest player farther than this (defaults to activate dist).
