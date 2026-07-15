@@ -469,7 +469,7 @@ FADE_civTalk_topic = {
                 private _qrfTypes = missionNamespace getVariable ["FADE_globalMissionTypesWithQrf", []];
                 private _qrfRumour = (_mt != "") && { _mt in _qrfTypes } && { random 1 < 0.52 };
                 if (_qrfRumour) then {
-                    _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkRumoursPositiveQrf", ["Word is, when it gets loud, their trucks come quick."]]);
+                    _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkRumoursPositiveQrf", ["When shooting starts, their trucks show up fast."]]);
                 } else {
                     _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkRumoursPositive", ["They say the road is quiet."]]);
                 };

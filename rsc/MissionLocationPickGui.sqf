@@ -45,7 +45,7 @@ if (hasInterface) then {
                 private _titleName = [_missionType] call FAC_missionLocationPickGui_fnc_missionDisplayName;
                 private _helpText = if (_missionType == "InterceptConvoy") then {
                     format [
-                        "Random: convoy start and end are chosen automatically on roads (minimum route length applies).%1Map click: choose convoy start, then convoy end (%2 s per click). Each point snaps to the nearest road within 500 m; no minimum route length.%1%1Enemy corridor dots on the map show the expected convoy route between start and end.",
+                        "Random: convoy start and end chosen on roads (min route length applies).%1Map click: choose start, then end (%2 s per click). Each point snaps to the nearest road within 500 m (no min length).%1%1Enemy corridor dots show the expected route.",
                         toString [10, 10],
                         missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
                     ]
@@ -54,7 +54,7 @@ if (hasInterface) then {
                         private _rz = (round (missionNamespace getVariable ["FADE_raidObjectiveCount", 3])) max 2 min 5;
                         private _minD = missionNamespace getVariable ["FADE_minDistBetweenMissions", 2000];
                         format [
-                            "Random: three objective zones are chosen automatically from civ settlements.%1Map click: place %2 zones on the map (%3 s per click, timer resets after each zone). Zones must be at least %4 m apart; map stays open until all are placed. Each click snaps to the nearest eligible civ zone on the server.",
+                            "Random: three objective zones from civ settlements.%1Map click: place %2 zones (%3 s per click; timer resets each zone). Keep zones at least %4 m apart. Map stays open until all are placed. Each click snaps to the nearest civ zone.",
                             toString [10, 10],
                             _rz,
                             missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20],
@@ -63,13 +63,13 @@ if (hasInterface) then {
                     } else {
                     if (_missionType in (missionNamespace getVariable ["FADE_missionMapClickSnapCivZoneTypes", []])) then {
                         format [
-                            "Random: mission area is chosen automatically.%1Map click: snaps to the nearest civ settlement zone to your click, then places the mission there (%2 s limit).",
+                            "Random: mission area chosen automatically.%1Map click: snaps to the nearest civ zone to your click (%2 s limit).",
                             toString [10, 10],
                             missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
                         ]
                     } else {
                         format [
-                            "Random: mission area is chosen automatically.%1Map click: choose a point on the map (%2 s limit). The server searches 250 m, then 500 m, 1 km, 2.5 km, 5 km, then the whole map for a valid site as close as possible to your click.",
+                            "Random: mission area chosen automatically.%1Map click: pick a point (%2 s). Server searches 250 m, then 500 m, 1 km, 2.5 km, 5 km, then the whole map for a valid site near your click.",
                             toString [10, 10],
                             missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
                         ]
@@ -135,7 +135,7 @@ if (hasInterface) then {
                     ["open", [_mt]] call FAC_troopInsertPickGui_fnc;
                 } else {
                     [_mt, player, []] remoteExec ["FADE_startMission", 2];
-                    hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
+                    hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Orders will show in Tasks when ready.</t>";
                     missionNamespace setVariable ["FAC_missionsGui_tab", "active"];
                     [] call FAC_missionsGui_syncTabs;
                     [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
@@ -145,7 +145,7 @@ if (hasInterface) then {
                 private _mt = uinamespace getVariable ["FAC_missionLocPick_type", ""];
                 if (_mt == "") exitWith {};
                 if (_mt in ["TroopInsert", "TroopExtract"]) exitWith {
-                    systemChat "TROOP INSERT / EXTRACT: random location only — use START from Manage Missions.";
+                    systemChat "TROOP INSERT / EXTRACT: random location only - use START from Manage Missions.";
                 };
                 [] call FAC_missionLocationPickGui_fnc_destroyOverlay;
                 private _missionsDisp = findDisplay 60002;

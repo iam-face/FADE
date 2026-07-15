@@ -86,8 +86,7 @@ Feature backlog: **[TODO.md](TODO.md)**.
 - **Commander mode / RCT-C** — embedded-map UI for AI support tasking
 - **OPFOR roadblocks revisit** — use `FADE_aoSurvey` road buckets to place blocks on routes players actually use
 - **Portable FADE** — ship FADE as a mod + thin mission glue; Eden **FADE Player Base** module sets base location; auto-discover vehicle/AI spawns, civ zones, configs for non-Altis maps (see TODO §13)
-- **Player-facing copy (Humanizer)** — skill at `.cursor/skills/fade-player-copy/` (uses vendored Humanizer).
-  - Done: lore / Missions GUI / SMEAC; Briefing diary + Rotary filler; Intel About + field/building lines; **welcome hint**, **lobby overview** (`mission.sqm` / `description.ext`), **civ talk** pools (+ CivTalk OPFOR/car reply formats). Base NPC (S Wordsman) humour left alone.
+- **Player-facing copy (Humanizer)** — skill at `.cursor/skills/fade-player-copy/` (uses vendored Humanizer). Pass complete for narrative surfaces: lore, Missions GUI, SMEAC, Briefing/Intel, welcome, lobby overview, civ talk, per-mission briefs, setup chatter, FIRES/Sniper Info, and player-facing em-dash tidy.
 
 Previously shipped: **Raid**, **Invasion**, procedural **lore**, **AAA** engagement fix, and **OPFOR drones** (ambient UAV patrol + QRF vectoring).
 

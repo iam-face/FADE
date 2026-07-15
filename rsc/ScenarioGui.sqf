@@ -1144,7 +1144,7 @@ FAC_scenarioGui_fnc = {
             private _intelSpecialistsOnly = missionNamespace getVariable ["FAC_scenarioGui_intelSpecialistsOnly", false];
 
             if (_factionChangeBlocked) then {
-                systemChat "Faction changes ignored — abort active missions first.";
+                systemChat "Faction changes ignored - abort active missions first.";
             };
 
             private _scenarioApplyArgs = [
