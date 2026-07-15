@@ -15,10 +15,13 @@ headless_test_result.txt
 tools/headless/headless.local.json
 tools/sqfvm/bin/
 tools/sqfvm/sqfvm.local.json
-# Agent / AI context (local only unless force-added); .cursor/rules stays tracked
+# Agent / AI context: keep shared rules + skills; ignore local agent notes
 .cursor/agent-docs/
-.cursor/rules/
-.cursor
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
 *.docx
 *.doc
 
