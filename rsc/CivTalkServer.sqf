@@ -375,7 +375,7 @@ FADE_civTalk_topic = {
         case "greeting": {
             _sess set [4, true];
             if (_positive) then {
-                _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkGreetingPositive", ["Hello. Can I help you?", "Good day. What do you need?"]]);
+                _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkGreetingPositive", ["Hello. Can I help you?", "What do you need?"]]);
             } else {
                 _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkGreetingNegative", ["What do you want?", "Leave me alone."]]);
             };
