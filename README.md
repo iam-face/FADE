@@ -102,7 +102,7 @@ Core mission runs on vanilla-friendly setup. **ACE** and **KAT** are expected fo
 
 ## For contributors
 
-Entry points: `initServer.sqf` (loads `rsc/server/`) and `initPlayerLocal.sqf`. Mission logic is split into `rsc/missions/` (one script per type); `rsc/Missions.sqf` dispatches. Shared helpers live in `rsc/FADE_*` and `rsc/FAC_*`. Local AI/editor notes may exist in `.cursor/agent-docs/` (gitignored). Shared Cursor skills live under `.cursor/skills/` — **humanizer** (AI-tell scrub) and **fade-player-copy** (when/how to scrub player-visible FADE text).
+Entry points: `initServer.sqf` (loads `rsc/server/`) and `initPlayerLocal.sqf`. Mission logic is split into `rsc/missions/` (one script per type); `rsc/Missions.sqf` dispatches. Shared helpers live in `rsc/FADE_*` and `rsc/FAC_*`. Local AI/editor notes may exist in `.cursor/agent-docs/` (gitignored). Shared Cursor skills live under `.cursor/skills/` — **humanizer** (AI-tell scrub) and **fade-player-copy** (when/how to scrub player-visible FADE text). Always-on rule: `.cursor/rules/humanizer-writing.mdc` (key tells + pointer to those skills).
 
 **Regression tests:** `[] call FAC_missionTestSuite_execAll` (debug-tools lobby param adds a scroll-wheel action). RPT filter: `[FAC TestSuite]`. Covers compile, RPCs, mission placement, SMEAC/intel per type, zone pickers, and client GUI scripts — not full mission playthroughs.
 

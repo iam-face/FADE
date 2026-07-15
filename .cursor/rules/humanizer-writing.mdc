@@ -1,0 +1,37 @@
+---
+description: Prefer Humanizer skill for natural prose; key AI-writing tells to avoid
+alwaysApply: true
+---
+
+# Humanizer (always on)
+
+When writing or editing **prose** in this repo — especially player-facing FADE copy (GUI blurbs, briefs, diary, lore, hints, civ talk, overviews) — follow **`.cursor/skills/humanizer/SKILL.md`**. For FADE scope, voice, and what to leave alone, also follow **`.cursor/skills/fade-player-copy/SKILL.md`**.
+
+Do not invent brochure or LinkedIn voice for mission/UI text. Prefer short OPORD / SOP language. Keep CTB humour and doctrine Notes intact unless asked otherwise.
+
+## Process (from Humanizer)
+
+1. Identify AI patterns; rewrite instead of deleting meaning.
+2. Draft → ask what still sounds AI → final pass.
+3. Prefer `is` / `are` / `has`; concrete verbs and specifics.
+4. Player prose in this repo: ASCII ` - `, not em/en dashes.
+
+## Key tells to avoid
+
+| Pattern | Avoid | Prefer |
+|---------|--------|--------|
+| Significance inflation | pivotal, testament, underscores, evolving landscape | State the fact |
+| Promotional tone | nestled, vibrant, groundbreaking, stunning | Plain description |
+| Superficial -ing tails | highlighting…, ensuring…, showcasing… | Cut or make concrete |
+| AI vocabulary stack | delve, foster, intricate tapestry, moreover, additionally | Simpler words |
+| Copula avoidance | serves as, boasts, features | is / has |
+| Formula cadence | “It’s not just X, it’s Y”; rule of three | Direct claim |
+| Signposting | “Here’s what you need to know”; “Let’s dive in” | Start with content |
+| Em/en dashes | `—` / `–` in player strings | ` - ` or rewrite |
+| Empty stakes (FADE lore) | local support erodes, freedom of movement, prevent escalation | dig in, open the road, push further |
+
+**Clusters matter** — one em dash or one “however” is fine; several tells together should be rewritten.
+
+## FADE voice note
+
+For SMEAC, Intel, briefs, and training help: neutral and plain is correct. Do **not** inject blog personality. Concrete military verbs (seize, clear, extract, hold, destroy) over abstract nouns (stability, escalation).
