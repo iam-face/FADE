@@ -37,71 +37,71 @@ missionNamespace setVariable ["FADE_lore_pool_opforRole", [
     "local warlord's fighters"
 ]];
 
-// Tagged bundles: [context/instigator phrase, stakes, time pressure] — picked as one coherent set
+// Tagged bundles: [context/instigator phrase, stakes, time pressure] - picked as one coherent set
 missionNamespace setVariable ["FADE_lore_bundles", createHashMapFromArray [
     ["_combat", [
-        ["seized a relay station", "restore government control", "before reinforcements arrive"],
-        ["ambushed a supply convoy", "reopen supply lines", "before the enemy consolidates"],
-        ["occupied a civilian district", "secure the civilian population", "before local support erodes"],
-        ["cut off a key road", "deny the enemy freedom of movement", "within the current operational window"],
-        ["captured a forward outpost", "eliminate the threat before it spreads", "before the next enemy rotation"],
-        ["established a blocking position", "prevent further escalation", "while comms remain secure"],
-        ["moved heavy weapons into the area", "stabilise the sector", "before nightfall"]
+        ["seized a relay station", "retake the relay station", "before reinforcements arrive"],
+        ["ambushed a supply convoy", "reopen the supply route", "before they dig in"],
+        ["occupied a civilian district", "clear the district", "before they settle in"],
+        ["cut off a key road", "open that road again", "before night movement"],
+        ["captured a forward outpost", "retake the outpost", "before the next rotation"],
+        ["established a blocking position", "break the block", "while radios still work"],
+        ["moved heavy weapons into the area", "destroy or seize those weapons", "before nightfall"]
     ]],
     ["Raid", [
-        ["seized multiple objectives in the area", "strike each objective in sequence", "before enemy reinforcements consolidate"],
-        ["split forces across nearby settlements", "deny the enemy freedom of movement", "before they mass reserves"],
-        ["fortified several civilian hubs", "restore government control", "before the enemy digs in further"]
+        ["seized several sites in the area", "hit each objective in turn", "before reinforcements link up"],
+        ["split forces across nearby towns", "keep them from linking up", "before they mass reserves"],
+        ["fortified several towns", "clear the defended sites", "before they dig in further"]
     ]],
     ["HVT", [
-        ["is coordinating attacks from a concealed location", "capture or eliminate the high-value target", "before they relocate"],
-        ["has been traced through communications intercepts", "neutralise the target and exploit any intelligence found", "before the trail goes cold"],
-        ["is believed to be meeting subordinate commanders", "conduct a deliberate strike on the HVT", "before the meeting disperses"]
+        ["is coordinating attacks from a hidden location", "capture or kill the HVT", "before they relocate"],
+        ["was located through signals intercept", "take the target and collect any intel", "before the trail goes cold"],
+        ["is meeting subordinate commanders", "strike while they are still there", "before the meeting breaks up"]
     ]],
     ["Hostage", [
-        ["is holding civilians in a built-up area", "recover all hostages with minimal collateral", "before captors escalate violence"],
-        ["has barricaded inside local structures", "secure the hostages and contain the captors", "before a deadline passes"],
+        ["is holding civilians in a built-up area", "get the hostages out alive", "before the captors get violent"],
+        ["has barricaded inside local buildings", "secure the hostages and pin the captors", "before a deadline passes"],
         ["is using civilians as human shields", "isolate the captors and free the hostages", "before they are moved"]
     ]],
     ["InterceptConvoy", [
-        ["is moving logistics along the main supply route", "intercept and destroy the convoy", "before it reaches its destination"],
-        ["is escorting heavy weapons eastbound", "halt the column and destroy priority vehicles", "before escorts break contact"],
-        ["is using civilian traffic as cover on the MSR", "identify and stop the convoy", "before it clears the intercept zone"]
+        ["is moving supplies along the main supply route", "stop and destroy the convoy", "before it reaches its destination"],
+        ["is escorting heavy weapons eastbound", "halt the column and wreck the priority vehicles", "before escorts break contact"],
+        ["is using civilian traffic as cover on the MSR", "find and stop the convoy", "before it clears the intercept zone"]
     ]],
     ["CSAR", [
         ["has search teams sweeping toward the survivor", "recover the isolated personnel", "before they are captured or killed"],
-        ["is blocking likely exfiltration routes", "extract the survivor under fire", "before the perimeter tightens"],
-        ["has air search assets coordinating with ground patrols", "reach the survivor first", "before contact is lost"]
+        ["is blocking likely escape routes", "extract the survivor under fire", "before the perimeter closes"],
+        ["has air search working with ground patrols", "reach the survivor first", "before contact is lost"]
     ]],
     ["CASEVAC", [
-        ["has wounded requiring urgent evacuation", "recover the casualty to higher care", "within the golden hour"],
-        ["may contest the pickup site", "complete the medical evacuation", "before the casualty deteriorates"],
-        ["is probing toward the casualty location", "stabilise and extract the patient", "before the LZ is compromised"]
+        ["has wounded needing urgent lift", "get the casualty to higher care", "within the golden hour"],
+        ["may contest the pickup site", "finish the medical evacuation", "before the casualty worsens"],
+        ["is probing toward the casualty", "stabilise and extract the patient", "before the LZ is lost"]
     ]],
     ["Invasion", [
-        ["is landing assault echelons on the coastline", "contain the beachhead before it expands", "before follow-on waves arrive"],
-        ["is pushing inland from a lodgement", "defend key population centres", "before enemy forces link up"],
-        ["has established an initial foothold", "repel the assault and restore the line", "before armour is ashore"]
+        ["is landing assault echelons on the coast", "hold the beachhead before it grows", "before follow-on waves arrive"],
+        ["is pushing inland from a lodgement", "hold the key towns", "before enemy forces link up"],
+        ["has established an initial foothold", "throw the assault back", "before armour is ashore"]
     ]],
     ["_logistics", [
-        ["the route passes near reported hostile activity", "complete the mission without unnecessary delay", "within the assigned flight window"],
-        ["limited LZ availability has been forecast", "deliver the package on the first suitable approach", "before the receiving unit displaces"],
-        ["ground security at the site is thin", "insert or extract as briefed", "before conditions worsen"]
+        ["the route runs near reported hostiles", "finish the lift without delay", "within the assigned flight window"],
+        ["LZ options look limited", "get the package in on the first workable approach", "before the receiving unit moves"],
+        ["ground security at the site is thin", "insert or extract as briefed", "before conditions get worse"]
     ]],
     ["Cargo", [
-        ["forward units are running short of critical supplies", "deliver priority cargo to the receiving party", "before stocks are exhausted"],
+        ["forward units are short on critical supplies", "deliver the cargo to the receiving party", "before stocks run out"],
         ["the drop zone is active but exposed", "complete the resupply run", "within the current lift window"],
-        ["receiving troops are preparing to displace", "get materiel on the ground", "before the site is abandoned"]
+        ["receiving troops are about to move", "get the load on the ground", "before the site is abandoned"]
     ]],
     ["MineClearing", [
-        ["has contaminated key routes through the area", "clear safe passage for follow-on forces", "before convoys are committed"],
-        ["has emplaced mines along likely avenues of approach", "confirm cleared lanes", "before night movement begins"],
-        ["has denied movement along the MSR", "breach or bypass the hazard area", "before logistics are halted"]
+        ["has mined key routes through the area", "clear a safe lane for follow-on forces", "before convoys commit"],
+        ["has laid mines on likely approach routes", "confirm cleared lanes", "before night movement begins"],
+        ["has blocked movement on the MSR", "breach or bypass the hazard", "before logistics stop"]
     ]],
     ["GeoGuesser", [
-        ["requires confirmation of terrain and settlement data", "complete the reconnaissance training objective", "within the exercise window"],
-        ["tests map-reading and orientation skills", "locate the assigned grid feature", "before the training period ends"],
-        ["is a non-combat familiarisation task", "execute the recon drill as briefed", "during daylight hours"]
+        ["needs a terrain and settlement check", "finish the map recon drill", "within the exercise window"],
+        ["tests map reading and orientation", "find the assigned grid feature", "before the training period ends"],
+        ["is a non-combat familiarisation task", "run the recon drill as briefed", "during daylight hours"]
     ]]
 ]];
 
@@ -124,179 +124,179 @@ missionNamespace setVariable ["FADE_lore_pool_uncertainty_combat", [
     "Reports indicate",
     "HUMINT suggests",
     "SIGINT places",
-    "All-source assessment:",
-    "Latest intelligence confirms"
+    "Current picture:",
+    "Latest reports show"
 ]];
 
 missionNamespace setVariable ["FADE_lore_pool_uncertainty_logistics", [
     "Mission order states",
     "Tasking directs",
-    "Operations cell confirms",
-    "Fragmentary order:",
+    "Ops cell confirms",
+    "FRAGO:",
     "Current tasking requires"
 ]];
 
 // Per-type templates: [short headline, situation sentence, commander's intent sentence]
 missionNamespace setVariable ["FADE_lore_templates", createHashMapFromArray [
     ["Raid", [
-        ["{opNameUpper} — multi-objective raid near {region}.",
-         "{instigatorCap} in the {region} area (grid {grid}). Estimated enemy presence: {echelon}. {civSituation} Operations are {distancePhrase}.",
+        ["{opNameUpper} - multi-site raid near {region}.",
+         "{instigatorCap} in the {region} area (grid {grid}). Estimated enemy presence: {echelon}. {civSituation} Ops are {distancePhrase}.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook} during {timePhase}. {weatherPhrase}."],
         ["{opNameUpper}: coordinated strikes near {region}.",
-         "Multiple {opforRole} objectives are active around {region}. {instigatorCap}. Enemy strength is assessed at {echelon}.",
-         "{factionFriendly} {bluforRole} is authorised to {stakes} {timeHook}."]
+         "Multiple {opforRole} objectives are active around {region}. {instigatorCap}. Enemy strength assessed at {echelon}.",
+         "{factionFriendly} {bluforRole} is cleared to {stakes} {timeHook}."]
     ]],
     ["Operation", [
-        ["{opNameUpper} — clearance near {region}.",
+        ["{opNameUpper} - clearance near {region}.",
          "{articleOpforRoleCap} holds several settlements near {region} (grid {grid}). {civSituation} Contact expected at {echelon} strength.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}. {weatherPhrase}."],
-        ["{opNameUpper}: zone operations — {region}.",
+        ["{opNameUpper}: zone ops - {region}.",
          "{articleOpforRoleCap} is consolidating around {region}. Activity is {distancePhrase} from friendly base.",
          "{factionFriendly} {bluforRole} must {stakes} {timeHook} during {timePhase}."]
     ]],
     ["Invasion", [
-        ["{opNameUpper} — defensive stand near {region}.",
-         "{articleOpforRoleCap} {instigator} toward {region}. {civSituation} Assault echelons estimated at {echelon}.",
+        ["{opNameUpper} - defensive stand near {region}.",
+         "{articleOpforRoleCap} {instigator} toward {region}. {civSituation} Assault strength estimated at {echelon}.",
          "{factionFriendly} {bluforRole} must {stakes} {timeHook}. {weatherPhrase}."],
-        ["{opNameUpper}: contain enemy push — {region}.",
-         "{articleOpforRoleCap} is executing an assault from the {region} sector (grid {grid}).",
+        ["{opNameUpper}: contain enemy push - {region}.",
+         "{articleOpforRoleCap} is attacking from the {region} sector (grid {grid}).",
          "{factionFriendly} {bluforRole} is ordered to {stakes} {timeHook} during {timePhase}."]
     ]],
     ["AreaOfOperations", [
-        ["{opNameUpper} — AO near {region}.",
-         "{articleOpforRoleCap} activity near {region} threatens stability. Grid {grid}; enemy at roughly {echelon}. {civSituation}",
+        ["{opNameUpper} - AO near {region}.",
+         "{articleOpforRoleCap} activity near {region} (grid {grid}); enemy at roughly {echelon}. {civSituation}",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}. {weatherPhrase}."],
         ["{opNameUpper}: seize objectives near {region}.",
          "Command assigns {factionFriendly} {bluforRole} to the {region} sector. Area is {distancePhrase}.",
          "Priority is to {stakes} {timeHook} during {timePhase}."]
     ]],
     ["HVT", [
-        ["{opNameUpper} — HVT near {region}.",
+        ["{opNameUpper} - HVT near {region}.",
          "{factionEnemy} {opforRole} commander {instigator} near {region} (grid {grid}). {civSituation} Local security at {echelon} level.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}; positive identification required."],
-        ["{opNameUpper}: high-value target — {region}.",
+        ["{opNameUpper}: high-value target - {region}.",
          "{factionEnemy} leadership has been traced to {region}. {weatherPhrase}.",
          "{factionFriendly} {bluforRole} is tasked to {stakes} {timeHook} during {timePhase}."]
     ]],
     ["Hostage", [
-        ["{opNameUpper} — hostages near {region}.",
+        ["{opNameUpper} - hostages near {region}.",
          "{articleOpforRoleCap} {instigator} near {region} (grid {grid}). {civSituation}",
-         "{factionFriendly} {bluforRole} must {stakes} {timeHook}; minimise collateral damage."],
-        ["{opNameUpper}: hostage recovery — {region}.",
+         "{factionFriendly} {bluforRole} must {stakes} {timeHook}; watch your fires around civilians."],
+        ["{opNameUpper}: hostage recovery - {region}.",
          "Hostages are believed held by {articleOpforRole} near {region}. Enemy presence: {echelon}.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}. {weatherPhrase}."]
     ]],
     ["ClearArea", [
-        ["{opNameUpper} — clear {region}.",
+        ["{opNameUpper} - clear {region}.",
          "{articleOpforRoleCap} has fortified positions near {region} (grid {grid}). Estimated garrison: {echelon}. {civSituation}",
          "{factionFriendly} {bluforRole} must {stakes} {timeHook} during {timePhase}."],
-        ["{opNameUpper}: clearance op — {region}.",
-         "Enemy {opforRole} presence near {region} requires deliberate clearance. Area is {distancePhrase}.",
+        ["{opNameUpper}: clearance - {region}.",
+         "Enemy {opforRole} near {region} needs deliberate clearance. Area is {distancePhrase}.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}. {weatherPhrase}."]
     ]],
     ["SearchDestroy", [
-        ["{opNameUpper} — caches near {region}.",
-         "{articleOpforRoleCap} stockpiles supplies near {region} (grid {grid}). Guard force assessed at {echelon}.",
+        ["{opNameUpper} - caches near {region}.",
+         "{articleOpforRoleCap} has stockpiles near {region} (grid {grid}). Guard force assessed at {echelon}.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}. {civSituation}"],
-        ["{opNameUpper}: search and destroy — {region}.",
+        ["{opNameUpper}: search and destroy - {region}.",
          "Caches linked to {articleOpforRole} are reported near {region}.",
          "{factionFriendly} {bluforRole} must {stakes} {timeHook} during {timePhase}."]
     ]],
     ["AssetRetrieval", [
-        ["{opNameUpper} — asset recovery near {region}.",
-         "Critical materiel is held by {articleOpforRole} near {region} (grid {grid}). Security at {echelon}. {civSituation}",
-         "{factionFriendly} {bluforRole} must {stakes} {timeHook}; secure and exfiltrate the package."],
-        ["{opNameUpper}: retrieve equipment — {region}.",
+        ["{opNameUpper} - asset recovery near {region}.",
+         "Priority gear is held by {articleOpforRole} near {region} (grid {grid}). Security at {echelon}. {civSituation}",
+         "{factionFriendly} {bluforRole} must {stakes} {timeHook}; secure and extract the package."],
+        ["{opNameUpper}: retrieve equipment - {region}.",
          "{factionEnemy} captured friendly equipment near {region}. Area is {distancePhrase}.",
          "{factionFriendly} {bluforRole} is tasked to {stakes} {timeHook}. {weatherPhrase}."]
     ]],
     ["AssetRetrievalVeh", [
-        ["{opNameUpper} — vehicle recovery near {region}.",
+        ["{opNameUpper} - vehicle recovery near {region}.",
          "A priority vehicle is held at a road site near {region} (grid {grid}). Dismounted security at {echelon}.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}."]
     ]],
     ["InterceptConvoy", [
-        ["{opNameUpper} — convoy intercept near {region}.",
-         "{factionEnemy} {instigator}. Intercept geometry favours action near {region} (grid {grid}).",
+        ["{opNameUpper} - convoy intercept near {region}.",
+         "{factionEnemy} {instigator}. Best intercept window is near {region} (grid {grid}).",
          "{factionFriendly} {bluforRole} must {stakes} {timeHook}. {weatherPhrase}."],
-        ["{opNameUpper}: stop the column — {region}.",
-         "{factionEnemy} logistics are transiting near {region}. Escort strength roughly {echelon}.",
+        ["{opNameUpper}: stop the column - {region}.",
+         "{factionEnemy} logistics are moving near {region}. Escort strength roughly {echelon}.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook} during {timePhase}."]
     ]],
     ["CAS", [
-        ["{opNameUpper} — CAS near {region}.",
+        ["{opNameUpper} - CAS near {region}.",
          "{articleOpforRoleCap} is pressing friendly positions near {region} (grid {grid}). {civSituation}",
-         "{factionFriendly} {bluforRole} must {stakes} {timeHook}; coordinate fires with friendlies on the ground."],
-        ["{opNameUpper}: fire support — {region}.",
+         "{factionFriendly} {bluforRole} must {stakes} {timeHook}; talk fires with friendlies on the ground."],
+        ["{opNameUpper}: fire support - {region}.",
          "Friendly troops near {region} are in contact with {articleOpforRole}. Enemy strength about {echelon}.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}. {weatherPhrase}."]
     ]],
     ["CSAR", [
-        ["{opNameUpper} — CSAR near {region}.",
+        ["{opNameUpper} - CSAR near {region}.",
          "Isolated personnel are down near {region} (grid {grid}). {articleOpforRoleCap} {instigator}.",
          "{factionFriendly} {bluforRole} must {stakes} {timeHook}. {civSituation} {weatherPhrase}."],
-        ["{opNameUpper}: recover survivor — {region}.",
+        ["{opNameUpper}: recover survivor - {region}.",
          "A survivor is isolated near {region}. {articleOpforRoleCap} patrols are active; threat at {echelon}.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook} during {timePhase}."]
     ]],
     ["EscapeEvasion", [
-        ["{opNameUpper} — E&E near {region}.",
+        ["{opNameUpper} - E&E near {region}.",
          "Separated friendly personnel are evading {articleOpforRole} near {region} (grid {grid}).",
          "{factionFriendly} {bluforRole} must {stakes} {timeHook}. {civSituation}"],
-        ["{opNameUpper}: extract evaders — {region}.",
+        ["{opNameUpper}: extract evaders - {region}.",
          "{articleOpforRoleCap} patrols are sweeping near {region}. Area is {distancePhrase}.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}. {weatherPhrase}."]
     ]],
     ["TroopInsert", [
-        ["{opNameUpper} — insertion near {region}.",
+        ["{opNameUpper} - insertion near {region}.",
          "{factionFriendly} {bluforRole} is tasked to insert troops near {region} (grid {grid}). {instigatorCap}.",
          "Complete the insertion {timeHook}; {weatherPhrase} during {timePhase}."],
-        ["{opNameUpper}: heliborne insert — {region}.",
+        ["{opNameUpper}: heliborne insert - {region}.",
          "Assault force lift to LZ near {region}. {civSituation}",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}."]
     ]],
     ["TroopExtract", [
-        ["{opNameUpper} — extraction near {region}.",
-         "ground team requires pickup near {region} (grid {grid}). {instigatorCap}.",
+        ["{opNameUpper} - extraction near {region}.",
+         "Ground team needs pickup near {region} (grid {grid}). {instigatorCap}.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}; {weatherPhrase}."],
-        ["{opNameUpper}: troop extract — {region}.",
+        ["{opNameUpper}: troop extract - {region}.",
          "Extraction LZ is near {region}. {civSituation} Threat assessed at {echelon}.",
          "Recover all personnel {timeHook} during {timePhase}."]
     ]],
     ["Cargo", [
-        ["{opNameUpper} — resupply near {region}.",
+        ["{opNameUpper} - resupply near {region}.",
          "{factionFriendly} {bluforRole} will deliver cargo near {region} (grid {grid}). {instigatorCap}.",
-         "Route is not task-organised for deliberate enemy engagement; {stakes} {timeHook}."],
-        ["{opNameUpper}: logistics run — {region}.",
+         "This is a logistics run, not a deliberate fight; {stakes} {timeHook}."],
+        ["{opNameUpper}: logistics run - {region}.",
          "Priority resupply to receiving party near {region}. {weatherPhrase}.",
          "{factionFriendly} {bluforRole} must {stakes} {timeHook} during {timePhase}."]
     ]],
     ["CASEVAC", [
-        ["{opNameUpper} — CASEVAC near {region}.",
-         "casualty evacuation is required near {region} (grid {grid}). {instigatorCap}.",
+        ["{opNameUpper} - CASEVAC near {region}.",
+         "Casualty evacuation required near {region} (grid {grid}). {instigatorCap}.",
          "{factionFriendly} {bluforRole} must {stakes} {timeHook}; {civSituation}"],
-        ["{opNameUpper}: medical evacuation — {region}.",
-         "Wounded personnel need aeromedical evacuation near {region}. Threat at {echelon}.",
+        ["{opNameUpper}: medical evacuation - {region}.",
+         "Wounded need aeromedical evacuation near {region}. Threat at {echelon}.",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook}; {weatherPhrase}."]
     ]],
     ["MineClearing", [
-        ["{opNameUpper} — route clearance near {region}.",
+        ["{opNameUpper} - route clearance near {region}.",
          "{articleOpforRoleCap} {instigator} near {region} (grid {grid}).",
-         "{factionFriendly} {bluforRole} must {stakes} {timeHook}; treat all movement as contested until cleared."],
-        ["{opNameUpper}: breach lane — {region}.",
+         "{factionFriendly} {bluforRole} must {stakes} {timeHook}; treat the route as contested until cleared."],
+        ["{opNameUpper}: breach lane - {region}.",
          "Suspected hazard area near {region}. {civSituation}",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook} during {timePhase}."]
     ]],
     ["GeoGuesser", [
-        ["TRAINING — {opNameUpper} near {region}.",
+        ["TRAINING - {opNameUpper} near {region}.",
          "{factionFriendly} {bluforRole} {instigator} near {region} (grid {grid}). No live enemy task-organised.",
          "Complete the training objective {timeHook}. {weatherPhrase}."],
-        ["{opNameUpper}: map recon exercise — {region}.",
+        ["{opNameUpper}: map recon exercise - {region}.",
          "Non-combat familiarisation near {region}. {civSituation}",
          "{factionFriendly} {bluforRole} will {stakes} {timeHook} during {timePhase}."]
     ]],
     ["_default", [
-        ["{opNameUpper} — tasking near {region}.",
+        ["{opNameUpper} - tasking near {region}.",
          "{articleOpforRoleCap} activity is reported near {region} (grid {grid}). Estimated {echelon}. {civSituation}",
          "{factionFriendly} {bluforRole} must {stakes} {timeHook}. {weatherPhrase}."],
         ["{opNameUpper}: mission near {region}.",
@@ -399,18 +399,18 @@ FADE_lore_opforBaseline = {
 FADE_lore_weatherPhrase = {
     params ["_weather"];
     switch (_weather) do {
-        case "Overcast": { "Overcast conditions may reduce stand-off observation" };
-        case "Foggy": { "Fog limits visibility and slows ground movement" };
-        case "Rain": { "Rain may degrade flight profiles and sensor employment" };
-        case "Storm": { "Storms may force tight windows for rotary-wing operations" };
+        case "Overcast": { "Overcast may cut long-range observation" };
+        case "Foggy": { "Fog cuts visibility and slows movement" };
+        case "Rain": { "Rain may degrade flying and sensors" };
+        case "Storm": { "Storms may shrink the window for helicopters" };
         case "FaceMission": { "Weather matches the Face mission profile" };
-        default { "Visibility is favourable under current conditions" };
+        default { "Current weather is workable" };
     };
 };
 
 FADE_lore_timePhase = {
     params ["_hour"];
-    if (_hour >= 5 && _hour < 8) exitWith { "the dawn period" };
+    if (_hour >= 5 && _hour < 8) exitWith { "dawn" };
     if (_hour < 17) exitWith { "daylight hours" };
     if (_hour < 20) exitWith { "dusk" };
     "hours of darkness"
@@ -419,9 +419,9 @@ FADE_lore_timePhase = {
 FADE_lore_distancePhrase = {
     params ["_distM"];
     switch (true) do {
-        case (_distM < 3000): { "within close supporting range of friendly base" };
+        case (_distM < 3000): { "close to friendly base" };
         case (_distM < 8000): { "in the outer operating area" };
-        default { "deep in contested territory" };
+        default { "far from base in contested ground" };
     };
 };
 
@@ -444,14 +444,14 @@ FADE_lore_civSituation = {
         };
     } forEach (missionNamespace getVariable ["FADE_civTriggerNames", []]);
     if (_nearestD > 2500) exitWith {
-        "Sparse civilian activity is expected; maintain positive identification."
+        "Sparse civilian activity expected; confirm IDs before shooting."
     };
     private _lt = _nearestMeta getOrDefault ["locType", ""];
     switch (_lt) do {
         case "NameCityCapital";
-        case "NameCity": { format ["Dense civilian population expected in the %1 area; minimise collateral damage.", _region] };
-        case "NameVillage": { format ["Village traffic is expected near %1; unknown individuals may observe operations.", _region] };
-        default { "Civilians may be present; exercise caution and positive identification." };
+        case "NameCity": { format ["Dense civilian area around %1; watch your fires.", _region] };
+        case "NameVillage": { format ["Village traffic near %1; locals may watch you work.", _region] };
+        default { "Civilians may be present; confirm IDs." };
     };
 };
 
@@ -530,6 +530,7 @@ FADE_lore_smeacBlockHtml = {
     _smeacHtml
 };
 
+// SMEAC Situation append - lore BACKGROUND is separate (FADE_lore_formatSmeacHtml); keep API stable.
 FADE_lore_appendSituationHtml = {
     params ["_situationHtml", ["_smeacHtml", ""]];
     _situationHtml

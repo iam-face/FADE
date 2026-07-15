@@ -86,7 +86,9 @@ Feature backlog: **[TODO.md](TODO.md)**.
 - **Commander mode / RCT-C** — embedded-map UI for AI support tasking
 - **OPFOR roadblocks revisit** — use `FADE_aoSurvey` road buckets to place blocks on routes players actually use
 - **Portable FADE** — ship FADE as a mod + thin mission glue; Eden **FADE Player Base** module sets base location; auto-discover vehicle/AI spawns, civ zones, configs for non-Altis maps (see TODO §13)
-- **Player-facing copy (Humanizer)** — dry milsim / CTB voice pass on GUI blurbs, procedural lore, diary, welcome hint; skill at `.cursor/skills/fade-player-copy/` (uses vendored Humanizer). Priority: `MissionLore.sqf` → `MissionsGui.sqf` → `Briefing.sqf` → welcome / lobby overview → civ talk pools. Leave MOTD jokes, doctrine CFF/CAS notes, and button chrome alone unless asked.
+- **Player-facing copy (Humanizer)** — skill at `.cursor/skills/fade-player-copy/` (uses vendored Humanizer).
+  - Done this pass: `MissionLore.sqf` pools/templates, `MissionsGui.sqf` blurbs/rules, SMEAC INTEL/MLCOA + BACKGROUND fallback (`FADE_MissionCommon.sqf`), shared `briefGuiTail`.
+  - Still open: Diary Overview / welcome hint / lobby overview; civ talk pools; doctrine Notes soft filler (Rotary intro).
 
 Previously shipped: **Raid**, **Invasion**, procedural **lore**, **AAA** engagement fix, and **OPFOR drones** (ambient UAV patrol + QRF vectoring).
 
