@@ -39,7 +39,7 @@ FADE_generateOperationName = {
 FADE_notifyOthersMissionStarted = {
     params ["_player", "_missionDisplayName"];
     private _others = allPlayers select { !isNull _x && { _x != _player } };
-    { [format ["%1 started %2 — check your Tasks panel for the mission brief.", name _player, _missionDisplayName]] remoteExec ["systemChat", _x] } forEach _others;
+    { [format ["%1 started %2 - check Tasks for the brief.", name _player, _missionDisplayName]] remoteExec ["systemChat", _x] } forEach _others;
 };
 
 // Returns true if _pos is at least FADE_minDistBetweenMissions from global and all single mission positions

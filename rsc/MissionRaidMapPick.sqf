@@ -51,8 +51,8 @@ FAC_raidMapPick_fnc_finish = {
     missionNamespace setVariable ["FAC_raidMapPick_zones", nil];
     if (visibleMap) then { openMap false };
     if (_timedOut) then {
-        hint "Raid zone pick cancelled — not all objectives were placed.";
-        systemChat "Raid zone pick cancelled — not all objectives were placed.";
+        hint "Raid zone pick cancelled - not all objectives were placed.";
+        systemChat "Raid zone pick cancelled - not all objectives were placed.";
     };
 };
 
@@ -76,8 +76,8 @@ FAC_raidMapPick_fnc_onClick = {
     if (count _clickPos < 2) exitWith { false };
     if (surfaceIsWater _clickPos) exitWith {
         if (!visibleMap) then { openMap true };
-        hint "Cannot select water — pick again.";
-        systemChat "Cannot select water — pick again.";
+        hint "Cannot select water - pick again.";
+        systemChat "Cannot select water - pick again.";
         false
     };
 
@@ -89,13 +89,13 @@ FAC_raidMapPick_fnc_onClick = {
             _tooClose = true;
             if (!visibleMap) then { openMap true };
             hint format [
-                "Too close to objective %1 (grid %2) — need at least %3 m between zones.",
+                "Too close to objective %1 (grid %2) - need at least %3 m between zones.",
                 _forEachIndex + 1,
                 mapGridPosition _x,
                 _minD
             ];
             systemChat format [
-                "RAID: too close to zone %1 — need %2 m separation.",
+                "RAID: too close to zone %1 - need %2 m separation.",
                 _forEachIndex + 1,
                 _minD
             ];
@@ -131,9 +131,9 @@ FAC_raidMapPick_fnc_onClick = {
         // #endregion
         [_zones, player] spawn {
             params ["_zones", "_pl"];
-            systemChat "RAID: Zones submitted — setting up mission, please wait...";
+            systemChat "RAID: Zones submitted - setting up mission...";
             ["Raid", _pl, [], "", "", "", [], _zones] remoteExec ["FADE_startMission", 2];
-            hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
+            hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Orders will show in Tasks when ready.</t>";
         };
         true
     };

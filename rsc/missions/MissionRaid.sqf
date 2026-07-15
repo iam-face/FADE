@@ -163,11 +163,11 @@ FADE_runMission_Raid = {
             case "RecoverHostage": { format ["hostage %1 (%2 network)", _targetName, _cellName] };
             default {
                 private _objName = [] call (missionNamespace getVariable ["FADE_getRecoverObjectDisplayName", { "priority package" }]);
-                format ["recover %1 (%2 network) — likely indoors in a defended building", _objName, _cellName]
+                format ["recover %1 (%2 network) - likely indoors in a defended building", _objName, _cellName]
             };
         };
         _zoneSummaryLines pushBack format [
-            "%1 (Grid %2): %3 — %4",
+            "%1 (Grid %2): %3 - %4",
             _codename,
             _grid,
             (_variantLabels getOrDefault [_variant, _variant]),
@@ -204,13 +204,13 @@ FADE_runMission_Raid = {
     if ("RecoverObject" in _zoneVariantsPlanned) then {
         private _recoverObjName = [] call (missionNamespace getVariable ["FADE_getRecoverObjectDisplayName", { "priority package" }]);
         _raidExecText = _raidExecText + format [
-            "<br/><t align='left' color='#C0C0C0'>Recover-object objectives: %1 — most likely indoors inside defended buildings.</t>",
+            "<br/><t align='left' color='#C0C0C0'>Recover-object objectives: %1 - most likely indoors in defended buildings.</t>",
             _recoverObjName
         ];
     };
     private _raidSituationText = if (_intelFormatter isEqualTo {}) then {
         format [
-            "<t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='#B0B0B0'>%1 — garrisons at %2 separate sites.</t>",
+            "<t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='#B0B0B0'>%1 - garrisons at %2 separate sites.</t>",
             _enemyFactionName,
             _raidZoneCount
         ]
@@ -334,7 +334,7 @@ FADE_runMission_Raid = {
             _zoneSummaryLines set [
                 _zi,
                 format [
-                    "%1 (Grid %2): %3 — %4",
+                    "%1 (Grid %2): %3 - %4",
                     _zoneCodename,
                     mapGridPosition _zoneCenter,
                     (_variantLabels getOrDefault [_actualVariant, _actualVariant]),
@@ -347,7 +347,7 @@ FADE_runMission_Raid = {
             _zoneSummaryLines set [
                 _zi,
                 format [
-                    "%1 (Grid %2): %3 — recover %4 (%5 network) — likely indoors in a defended building",
+                    "%1 (Grid %2): %3 - recover %4 (%5 network) - likely indoors in a defended building",
                     _zoneCodename,
                     mapGridPosition _zoneCenter,
                     (_variantLabels getOrDefault [_actualVariant, _actualVariant]),
@@ -462,7 +462,7 @@ FADE_runMission_Raid = {
             if (_result == "SUCCEEDED" && { markerShape _zoneMarkerName != "" }) then {
                 _zoneMarkerName setMarkerPos _zoneWinPos;
                 _zoneMarkerName setMarkerType "mil_objective";
-                _zoneMarkerName setMarkerText format ["%1 — CLEAR", _zoneCodename];
+                _zoneMarkerName setMarkerText format ["%1 - CLEAR", _zoneCodename];
             };
             private _arr = +(missionNamespace getVariable ["FADE_raidZoneState_" + _taskId, []]);
             if (_zi >= 0 && { _zi < count _arr }) then {
@@ -567,7 +567,7 @@ FADE_runMission_Raid = {
                 "Raid timed out before all objectives were cleared."
             } else {
                 if ("FAILED" in _arrF) then {
-                    "A raid objective failed — hostage lost or capture HVT was killed."
+                    "A raid objective failed - hostage lost or capture HVT was killed."
                 } else {
                     "Raid failed."
                 }

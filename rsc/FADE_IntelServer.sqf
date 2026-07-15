@@ -79,28 +79,28 @@ FADE_intel_buildLines = {
 
     if (count _rbCenters > 0 && { count _lines < 3 && { random 1 < 0.5 } }) then {
         private _rb = selectRandom _rbCenters;
-        _lines pushBack format ["Road network: obstruction / watch reported near grid %1.", mapGridPosition _rb];
+        _lines pushBack format ["Roadblock / watch reported near grid %1.", mapGridPosition _rb];
     };
 
     if (_pendingMen > 0 && { count _lines < 3 && { random 1 < 0.65 } }) then {
-        _lines pushBack format ["Garrison traffic: ~%1 OPFOR positions still tied to structures in sector (pending or active).", _pendingMen];
+        _lines pushBack format ["~%1 OPFOR positions still tied to buildings in sector (pending or active).", _pendingMen];
     };
 
     if (_enyDismounts > 0 && { count _lines < 3 }) then {
-        _lines pushBack format ["Dismounted OPFOR headcount in sector (live): ~%1.", _enyDismounts];
+        _lines pushBack format ["~%1 dismounted OPFOR in sector (live).", _enyDismounts];
     };
 
     private _gm = missionNamespace getVariable ["FADE_globalMission", []];
     private _gt = _gm param [0, ""];
     if (_gt == "Operation" && { count _lines < 3 && { random 1 < 0.7 } }) then {
-        _lines pushBack "Higher: OPFOR shifts quick-reaction traffic between contested zones when engaged.";
+        _lines pushBack "OPFOR may shift QRF between contested zones when engaged.";
     };
     if (_gt == "EscapeEvasion" && { count _lines < 3 && { random 1 < 0.55 } }) then {
-        _lines pushBack "Source: locals report enemy trucks staging after contact in the town belt.";
+        _lines pushBack "Locals report enemy trucks staging after contact in the town belt.";
     };
 
     if (count _lines == 0) then {
-        _lines pushBack "No indexed hostile contacts in this sector at read time  -  area may be clear or outside collection radius.";
+        _lines pushBack "No hostile contacts indexed in this sector at read time - clear or outside radius.";
     };
 
     private _maxL = (missionNamespace getVariable ["FADE_intelMaxLinesPerRead", 3]) max 1 min 5;

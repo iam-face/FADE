@@ -51,7 +51,7 @@ FADE_smeac_recoverObjectIntelLine = {
     params [["_objectName", ""], ["_color", "#C0C0C0"]];
     if (_objectName == "") then { _objectName = [] call FADE_getRecoverObjectDisplayName };
     format [
-        "<t align='left' color='%2'>Recover: %1 — most likely indoors inside a defended building.</t>",
+        "<t align='left' color='%2'>Recover: %1 - most likely indoors in a defended building.</t>",
         _objectName,
         _color
     ]

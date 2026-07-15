@@ -107,7 +107,7 @@ FADE_runMission_HVT = {
     private _markerOut = [_taskId, _markerName, _hvtObjectivePos, _patrolRadius, _markerEnemy, "objective", _operationName, -1, -1, [_hvtObjectivePos]] call FADE_mission_createObjectiveMarker;
 
     private _grid = mapGridPosition (getPosATL _targetBuilding);
-    private _brief = format ["HVT%1%1Search area (approx.): Grid %2%1Designation: %3  -  %4%1%1Locate and neutralise or capture the high-value target. Secure the area and move the target to extraction as ordered.", toString [10], _grid, _hvtCodename, _hvtTypeName] + _briefGuiTail;
+    private _brief = format ["HVT%1%1Search area (approx.): Grid %2%1Designation: %3  -  %4%1%1Find the HVT. Kill or capture. If captured, get them back near base.", toString [10], _grid, _hvtCodename, _hvtTypeName] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
     [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFFFFF'>HVT: %2 -- %3</t><br/><br/><t color='#FFFFFF'>Eliminate or capture and return to base.</t>", _grid, _hvtCodename, _hvtTypeName]] call _showAssignedHint;
     [_player, "HVT"] call FADE_notifyOthersMissionStarted;

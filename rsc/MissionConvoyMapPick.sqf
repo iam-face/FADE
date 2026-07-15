@@ -55,9 +55,9 @@ FAC_convoyMapPick_fnc_onEndClick = {
     };
     [_startPos, _endPos, player] spawn {
         params ["_startPos", "_endPos", "_pl"];
-        systemChat "INTERCEPT CONVOY: Route submitted — setting up mission, please wait...";
+        systemChat "INTERCEPT CONVOY: Route submitted - setting up mission...";
         ["InterceptConvoy", _pl, _startPos, "", "", "", _endPos] remoteExec ["FADE_startMission", 2];
-        hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
+        hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Orders will show in Tasks when ready.</t>";
     };
 };
 
