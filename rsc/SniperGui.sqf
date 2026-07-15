@@ -222,23 +222,23 @@ FAC_sniperGui_fnc = {
         if (isNull _ctrl) exitWith {};
         private _n = missionNamespace getVariable ["FADE_sniperPosCount", 0];
         private _lines = [
-            format ["Eden: %1 sniperRangeTarget_* logic objects (lanes).", _n],
+            format ["%1 target lanes placed in Eden (sniperRangeTarget_*).", _n],
             "",
-            "Pop-up targets face you with board reversed (−180°). Live units face toward you.",
+            "Pop-up targets face you with the board reversed. Live units face toward you.",
             "",
-            "Firing range  -  spawns exactly your selected target count (clamped to lane count). No time limit; end when finished.",
+            "Firing range  -  spawns your selected target count (capped by lane count). No timer; end when finished.",
             "",
-            "Max range limits eligible lanes to 100..1000m from shooter (horizontal distance).",
+            "Max range keeps lanes between 100 m and 1000 m from the shooter (horizontal).",
             "",
-            "Time trial  -  uses target count + max range (near→far lanes). Each stage picks a lane with clear line of sight from the required sniperPos (terrain + objects); if none, falls back with a chat note. Shuffled sniperPos_1..7: within 2.5m you get 'At position N, engage target!' then damage is enabled.",
+            "Time trial  -  uses target count + max range (near to far). Each stage picks a lane with clear LOS from the required sniperPos; if none, falls back and chats a note. Walk the shuffled sniperPos_1..7: within 2.5 m you get 'At position N, engage target!' then damage turns on.",
             "",
-            "Impact marker (~5 s, everyone sees): while within 100 m of the terminal, starter's machine tracks each projectile to its last ASL, then server spawns Config FADE_sniperImpactMarkerClass (hits, misses, terrain).",
+            "Impact marker (~5 s, everyone): while within 100 m of the terminal, your shots are tracked to last ASL and a marker appears (hits, misses, terrain).",
             "",
-            "Hit feedback on: structured hint (same fields as end-of-trial summary line) for firing range and time trial. Uses Hit + HitPart (layouts differ by target type).",
+            "Hit feedback on: structured hint with the same fields as the end-of-trial summary (firing range and time trial).",
             "",
-            "Projectile trace: BIS_fnc_traceBullets on all clients for the session shooter (all players should see the path). Trace and impact marker tracking auto-disable if you move >100 m from the terminal.",
+            "Projectile trace: all clients see the session shooter's path. Trace and impact tracking stop if you move more than 100 m from the terminal.",
             "",
-            "Sniper range and firing/AT range can run at the same time (separate shooters and targets)."
+            "Sniper range and firing / AT range can run at the same time (separate shooters and targets)."
         ];
         private _body = "";
         { _body = _body + format ["<t color='%1'>%2</t><br/>", FAC_theme_htmlBody, _x] } forEach _lines;

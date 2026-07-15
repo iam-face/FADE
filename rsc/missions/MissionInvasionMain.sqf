@@ -153,7 +153,7 @@ private _taskDescInv = if (_taskBuilderInv isEqualTo {} || { _situationInv isEqu
 private _hqBoardFnInv = missionNamespace getVariable ["FADE_hqMainBoard_setObjectiveBrief", {}];
 if (_hqBoardFnInv isEqualType {} && { !(_hqBoardFnInv isEqualTo {}) }) then { [_invasionCenter] call _hqBoardFnInv };
 
-private _briefGuiTail = toString [10] + toString [10] + "See your Tasks panel and map markers for objectives, routes, and completion criteria.";
+private _briefGuiTail = toString [10] + toString [10] + "See Tasks and map markers for grids, routes, and win/fail criteria.";
 private _brief = format [
     "INVASION%1%1OPFOR has landed at the beachhead and is pushing zone by zone. Heliborne reinforcements continue while they hold it; vehicles join from captured sectors.%1%1Retake the INVASION beachhead to win. Lose if OPFOR holds every zone.",
     toString [10]

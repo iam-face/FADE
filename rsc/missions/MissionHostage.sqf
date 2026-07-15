@@ -128,7 +128,7 @@ FADE_runMission_Hostage = {
     private _markerOut = [_taskId, _markerName, _hoAnchor, _searchRadius, "ColorCIV", "objective", _operationName, -1, -1, _hoBldPos] call FADE_mission_createObjectiveMarker;
 
     private _grid = mapGridPosition _missionCenter;
-    private _brief = format ["HOSTAGE%1%1Incident area (approx.): Grid %2%1%1Rescue civilians held by hostiles. Prioritise civilian safety and follow the task's ROE and handling procedures for recovered persons.", toString [10], _grid] + _briefGuiTail;
+    private _brief = format ["HOSTAGE%1%1Incident area (approx.): Grid %2%1%1Rescue civilians held by hostiles. Keep them alive, get them out, and bring survivors back near base.", toString [10], _grid] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
     [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFFFFF'>%2 hostage(s): %3</t><br/><br/><t color='#FFFFFF'>Hold interact to free each hostage, then return all alive to base (within 100 m).</t>", _grid, count _hostages, _hostageNamesLine]] call _showAssignedHint;
     [_player, "Hostage"] call FADE_notifyOthersMissionStarted;

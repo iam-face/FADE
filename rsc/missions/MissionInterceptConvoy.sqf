@@ -385,11 +385,11 @@ FADE_runMission_InterceptConvoy = {
     [_player, _taskId, "Stop the convoy: destroy or immobilise at least 60% of vehicles before they reach the end zone.", "Intercept Convoy", _endPos, "destroy"] call _fnc_createMissionTask;
     private _gridStart = mapGridPosition _startPos;
     private _gridEnd = mapGridPosition _endPos;
-    private _brief = format ["INTERCEPT CONVOY%1%1Corridor (approx.): Grid %2 to Grid %3. Enemy dots and route line mark the expected convoy path.%1%1Ambush or stop the convoy before it reaches the end grid. Disable or destroy the majority of vehicles as defined on the task to complete.", toString [10], _gridStart, _gridEnd] + _briefGuiTail;
+    private _brief = format ["INTERCEPT CONVOY%1%1Corridor (approx.): Grid %2 to Grid %3. Enemy dots and route line mark the expected path.%1%1Stop the convoy before the end grid. Disable or destroy enough vehicles to meet the task threshold.", toString [10], _gridStart, _gridEnd] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
     [format ["<t color='#FFFFFF'>Start: %1 -> End: %2</t><br/><br/><t color='#FFFFFF'>Route markers show the expected convoy path. Stop at least 60%% of vehicles destroyed or immobilised.</t>", _gridStart, _gridEnd]] call _showAssignedHint;
     if (!isNull _player) then {
-        [format ["INTERCEPT CONVOY: Mission ready — route %1 to %2. Check Tasks for orders.", _gridStart, _gridEnd]] remoteExec ["systemChat", _player];
+        [format ["INTERCEPT CONVOY: Ready - route %1 to %2. Check Tasks for orders.", _gridStart, _gridEnd]] remoteExec ["systemChat", _player];
     };
     [_player, "Intercept Convoy"] call FADE_notifyOthersMissionStarted;
     private _friendlyObserverClass = _friendlyUnits select 0;

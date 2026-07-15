@@ -6,25 +6,25 @@
 // [displayName, missionId, description, "Global"|"Single"] - stream is for logic; list shows [G]/[S]
 // Keep [0]/[1] in sync with rsc/FAC_MissionTypeLabels.sqf (server mission intro subtitle).
 private _missionListRaw = [
-    ["Area of Operations", "AreaOfOperations", "Shared fight across a wide sector with multiple objectives. Expect steady contact and space to manoeuvre. [G]", "Global"],
-    ["Asset Retrieval", "AssetRetrieval", "Recover priority equipment from enemy-held ground. Expect guarded routes, patrols and buildings; plan your extraction. [G]", "Global"],
-    ["CAS / Fire Support", "CAS", "Provide close air or indirect fires to support friendly forces under attack. Identify friendlies and deconflict before engaging. [G]", "Global"],
-    ["Cargo / Resupply", "Cargo", "Deliver supplies to a forward camp. Land to unload or practice sling loads. Follow PZ and LZ procedures. [S]", "Single"],
-    ["CASEVAC", "CASEVAC", "Evacuate wounded from the field to medical care. Fast, careful pickups; LZs may be tight or informal. [S]", "Single"],
-    ["Clear Area", "ClearArea", "Clear and secure an enemy-held town or camp. Expect close fighting and reinforced positions. [G]", "Global"],
-    ["CSAR", "CSAR", "Search and recover personnel from a crash site. Treat the area as dangerous until secured. [G]", "Global"],
-    ["Escape & Evasion", "EscapeEvasion", "Move separated personnel out of hostile territory while a rescue force coordinates recovery. Navigate with limited aids. [G]", "Global"],
-    ["Geo-Guesser", "GeoGuesser", "Navigation drill: participants are dropped at a random location and click the map where they think they are. Faster guesses score higher. [G]", "Global"],
-    ["Hostage", "Hostage", "Rescue civilians held by hostiles in dense terrain. Move fast, control the scene, and separate civilians from combatants. [G]", "Global"],
-    ["HVT", "HVT", "Locate and neutralise or capture a priority target in built-up areas. Secure the target and extract them to base. [G]", "Global"],
-    ["Intercept Convoy", "InterceptConvoy", "Ambush and stop a moving enemy column before it reaches its destination. Expect escorts and rapid reactions. [G]", "Global"],
-    ["Invasion", "Invasion", "Defend against an OPFOR beachhead push. Retake the INVASION zone to win. [G]", "Global"],
-    ["Mine Clearing", "MineClearing", "Clear a short road segment of mines or IEDs. Use deliberate recon and proven clearance procedures. [S]", "Single"],
-    ["Operation", "Operation", "Linked fights across several zones. Clear, hold, and prevent enemy movement between areas. [G]", "Global"],
-    ["Raid", "Raid", "Three objectives across the map — mixed task types linked to one enemy network. Approximate intel refines on recon. [G]", "Global"],
-    ["Search & Destroy", "SearchDestroy", "Search a marked zone for enemy ammo caches (burning barrels mark sites). Task states how many to find and what % must be destroyed. [G]", "Global"],
-    ["Troop Extract", "TroopExtract", "Pick up a ground team and return them to base. LZ discipline and calm loading are essential. [S]", "Single"],
-    ["Troop Insert", "TroopInsert", "Insert troops into a surveyed LZ from base. Aim for clear, safe landings and quick dismounts. [S]", "Single"]
+    ["Area of Operations", "AreaOfOperations", "Multi-objective fight across a wide sector. Plenty of room to manoeuvre; contact is steady once you commit. [G]", "Global"],
+    ["Asset Retrieval", "AssetRetrieval", "Recover priority equipment from enemy ground, then extract. Sites are usually guarded. [G]", "Global"],
+    ["CAS / Fire Support", "CAS", "On-call air or indirect fires for friendlies already in contact. ID friendlies and deconflict before you shoot. [G]", "Global"],
+    ["Cargo / Resupply", "Cargo", "Fly supplies to a forward camp. Land to unload or sling as briefed; keep PZ/LZ discipline. [S]", "Single"],
+    ["CASEVAC", "CASEVAC", "Lift wounded to medical care. Fast, careful pickups; LZs can be tight or informal. [S]", "Single"],
+    ["Clear Area", "ClearArea", "Assault and hold an enemy town or camp. Expect close fighting and reinforced buildings. [G]", "Global"],
+    ["CSAR", "CSAR", "Find and recover personnel at a crash site. Treat the area as hostile until you own it. [G]", "Global"],
+    ["Escape & Evasion", "EscapeEvasion", "Separated personnel evade out of hostile ground while a rescue force coordinates recovery. Limited navigation aids. [G]", "Global"],
+    ["Geo-Guesser", "GeoGuesser", "Navigation drill: drop at a random spot, click the map where you think you are. Faster guesses score higher. [G]", "Global"],
+    ["Hostage", "Hostage", "Pull civilians out of a defended built-up site. Move fast, control the scene, keep hostiles and civs apart. [G]", "Global"],
+    ["HVT", "HVT", "Find a priority target in built-up ground. Kill or capture, then get them (or confirmation) back to base. [G]", "Global"],
+    ["Intercept Convoy", "InterceptConvoy", "Stop a moving enemy column before it finishes its route. Escorts react quickly. [G]", "Global"],
+    ["Invasion", "Invasion", "OPFOR beachhead push inland. Retake the INVASION zone to win. [G]", "Global"],
+    ["Mine Clearing", "MineClearing", "Clear mines or IEDs on a short road segment. Slow recon and standard clearance drills. [S]", "Single"],
+    ["Operation", "Operation", "Linked fights across several zones. Clear outer sites, then take the OPFOR HQ hub. [G]", "Global"],
+    ["Raid", "Raid", "Three map-spread objectives (mixed task types) tied to one enemy network. Intel tightens as you recon. [G]", "Global"],
+    ["Search & Destroy", "SearchDestroy", "Find enemy ammo caches in a marked zone (burning barrels mark buildings). Task gives count and destroy %. [G]", "Global"],
+    ["Troop Extract", "TroopExtract", "Pick up a ground team and RTB. Hold LZ discipline and keep loading calm. [S]", "Single"],
+    ["Troop Insert", "TroopInsert", "Lift troops from base into a surveyed LZ. Clean landings, fast dismounts. [S]", "Single"]
 ];
 private _disabledTypes = missionNamespace getVariable ["FADE_disabledMissionTypes", []];
 _missionListRaw = _missionListRaw select { !((_x select 1) in _disabledTypes) };
@@ -33,7 +33,7 @@ if (isNil "_sorted" || { !(_sorted isEqualType []) }) then { _sorted = _missionL
 missionNamespace setVariable ["FAC_missionsGui_missionList", _sorted];
 
 // Default intro when no mission selected
-FAC_missionsGui_defaultDesc = "Select a mission to see the commander’s intent and expected tasks. After you start, check your Tasks panel and map markers for full orders, grids, and completion criteria.";
+FAC_missionsGui_defaultDesc = "Select a mission for a short rundown. After start, use Tasks and map markers for orders, grids, and win/fail criteria.";
 
 // Word-wrap one paragraph to fit listbox row width; returns array of lines.
 FAC_missionsGui_wrapParagraph = {
@@ -186,9 +186,9 @@ FAC_missionsGui_fnc = {
             if (!isNull _rulesCtrl) then {
                 private _nl = toString [10];
                 _rulesCtrl ctrlSetText (
-                    "Global missions [G] are large, shared scenarios for the whole mission. Only one may run at a time." + _nl +
-                    "Single missions [S] are smaller tasks in separate areas. Up to three may run at once, each started by a different player." + _nl +
-                    "You can only start one mission at a time yourself, [G] or [S] - type does not matter. Abort or finish before starting another."
+                    "Global [G]: one shared mission for the whole server. Only one at a time." + _nl +
+                    "Single [S]: smaller personal tasks. Up to three at once, each started by a different player." + _nl +
+                    "You may only run one mission yourself at a time ([G] or [S]). Abort or finish before starting another."
                 );
                 _rulesCtrl ctrlEnable false;
             };

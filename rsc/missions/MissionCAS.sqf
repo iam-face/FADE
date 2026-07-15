@@ -73,7 +73,7 @@ FADE_runMission_CAS = {
     _marker setMarkerText _operationName;
 
     private _grid = mapGridPosition _destPos;
-    private _brief = format ["CAS / FIRE SUPPORT%1%1Objective area (approx.): Grid %2%1%1Provide on-call fires to support friendly forces in contact. Confirm identification and deconflict before engaging; follow task orders for priority targets.", toString [10], _grid] + _briefGuiTail;
+    private _brief = format ["CAS / FIRE SUPPORT%1%1Objective area (approx.): Grid %2%1%1On-call fires for friendlies already in contact. ID friendlies, deconflict, then engage hostiles pressing them.", toString [10], _grid] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
     private _casSituationHtml = format [
         "<t align='left' color='#FFFFFF'>Supported friendly element: %1.</t><br/><t align='left' color='#FFFFFF'>Friendly strength at objective: %2 soldiers.</t><br/><t align='left' color='#FFFFFF'>%3</t>",
@@ -82,7 +82,7 @@ FADE_runMission_CAS = {
         _casMarkingLine
     ];
     private _casExecutionHtml = format [
-        "<t align='left' color='#C0C0C0'>Proceed to AO Grid %1 and support %2 in contact. Prioritise hostiles pressing friendly positions. Do not allow %2 to be overrun.</t>",
+        "<t align='left' color='#C0C0C0'>Move to AO Grid %1 and support %2 in contact. Kill hostiles pressing friendlies. Do not let %2 get overrun.</t>",
         _grid,
         _casCallsign
     ];

@@ -63,7 +63,7 @@ FAC_recruitGui_fillAssignList = {
 FAC_recruitGui_populatePresetList = {
     params ["_display"];
     if (!([] call FAC_loadoutGui_ensurePresetData)) exitWith {
-        systemChat "[Recruit] Presets failed to load — check RPT and PresetLoadouts.sqf.";
+        systemChat "[Recruit] Presets failed to load - check RPT and PresetLoadouts.sqf.";
         missionNamespace setVariable ["FAC_recruitGui_allUnits", []];
     };
     missionNamespace setVariable ["FAC_recruitGui_allUnits", [] call FAC_loadoutGui_buildPresetEntries];
@@ -361,7 +361,7 @@ FAC_recruitGui_fnc = {
             private _idx = lbCurSel _unitLb;
             if (_idx < 0) exitWith { systemChat "Select a unit to recruit."; };
             private _rowKey = _unitLb lbData _idx;
-            if (_rowKey == "") exitWith { systemChat "Recruit: no row data — re-open the dialog."; };
+            if (_rowKey == "") exitWith { systemChat "Recruit: no row data - re-open the dialog."; };
             private _assignLb = _display displayCtrl 60952;
             private _aIdx = lbCurSel _assignLb;
             if (_aIdx < 0) exitWith { systemChat "Select a player to assign the recruit to."; };

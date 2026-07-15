@@ -127,7 +127,7 @@ FADE_runMission_Cargo = {
 
     private _grid = mapGridPosition _destPos;
     private _cargoGrid = mapGridPosition _cargoPos;
-    private _brief = format ["CARGO / RESUPPLY%1%1Camp (approx.): Grid %2%1Optional sling box (approx.): Grid %3%1%1Deliver supplies to the camp. Land to unload or use sling operations as directed. Completion is confirmed by handover or mission rules.", toString [10], _grid, _cargoGrid] + _briefGuiTail;
+    private _brief = format ["CARGO / RESUPPLY%1%1Camp (approx.): Grid %2%1Optional sling box (approx.): Grid %3%1%1Deliver supplies to the camp. Land to unload or sling the load. Mission ends on handover at the camp.", toString [10], _grid, _cargoGrid] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
     [format ["<t color='#FFFFFF'>Camp Grid: %1</t><br/><t color='#FFFFFF'>Cargo Box: Grid %2 (optional sling load)</t><br/><br/><t color='#FFFFFF'>Fly to camp and land to complete. Delivering the box is optional.</t>", _grid, _cargoGrid]] call _showAssignedHint;
     [_player, "Cargo / Resupply"] call FADE_notifyOthersMissionStarted;

@@ -144,10 +144,10 @@ FADE_fieldIntel_addPoints = {
         _state set [11, _newLevel];
         missionNamespace setVariable [[_taskId] call FADE_fieldIntel_missionKey, _state];
         private _msg = switch (true) do {
-            case (_newLevel >= 100): { "Intel confirms objective location — search area refined to grid." };
-            case (_newLevel >= 75): { "Intel narrows the search area significantly." };
-            case (_newLevel >= 50): { "Intel refines the search area." };
-            default { "Partial intel received — search area slightly reduced." };
+            case (_newLevel >= 100): { "Intel confirms the objective. Search area refined to grid." };
+            case (_newLevel >= 75): { "Intel narrows the search area a lot." };
+            case (_newLevel >= 50): { "Intel tightens the search area." };
+            default { "Partial intel. Search area slightly reduced." };
         };
         [_msg] remoteExec ["FADE_showMissionHint", 0];
         if (_newLevel >= 100 && { !isNil "BIS_fnc_taskSetDestination" }) then {

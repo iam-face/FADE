@@ -39,7 +39,7 @@ FAC_missionMapPick_fnc_onValidClick = {
     [_mt, player, _clickPos] spawn {
         params ["_mt", "_pl", "_clickPos"];
         [_mt, _pl, _clickPos] remoteExec ["FADE_startMission", 2];
-        hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
+        hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Orders will show in Tasks when ready.</t>";
     };
 };
 
@@ -56,7 +56,7 @@ FAC_missionMapPick_fnc_start = {
         systemChat "MISSION: map pick aborted (no mission type).";
     };
     if (_missionType in ["TroopInsert", "TroopExtract"]) exitWith {
-        systemChat "TROOP INSERT / EXTRACT: random location only — map click is not supported.";
+        systemChat "TROOP INSERT / EXTRACT: random location only - map click is not supported.";
     };
     if (_missionType == "InterceptConvoy") exitWith {
         systemChat "INTERCEPT CONVOY: use Map click (choose start and end) from the location picker.";

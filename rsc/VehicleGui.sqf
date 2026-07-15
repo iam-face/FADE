@@ -704,7 +704,7 @@ FAC_vehicleGui_fnc = {
             _rounds = (_rounds max 0) min _max;
             private _ratio = _rounds / _max;
             private _nid = [_veh] call FAC_vehicleGui_vehicleRpcId;
-            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost - refresh the list and try again."; };
             [_nid, player, "rearm", _ratio, _mag, _pylonIdx] remoteExec ["FADE_serviceVehiclePart", 2];
             systemChat "Requesting ammo load update...";
             private _preserve = [] call FAC_vehicleGui_preserveManageSelectionForRefresh;
@@ -721,7 +721,7 @@ FAC_vehicleGui_fnc = {
             private _ratio = (sliderPosition _slider) / 100;
             _ratio = (_ratio max 0) min 1;
             private _nid = [_veh] call FAC_vehicleGui_vehicleRpcId;
-            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost - refresh the list and try again."; };
             [_nid, player, "refuel", _ratio] remoteExec ["FADE_serviceVehiclePart", 2];
             systemChat "Requesting fuel update...";
             private _preserve = [] call FAC_vehicleGui_preserveManageSelectionForRefresh;
@@ -738,7 +738,7 @@ FAC_vehicleGui_fnc = {
             private _health = (sliderPosition _slider) / 100;
             _health = (_health max 0) min 1;
             private _nid = [_veh] call FAC_vehicleGui_vehicleRpcId;
-            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost - refresh the list and try again."; };
             [_nid, player, "repair", _health] remoteExec ["FADE_serviceVehiclePart", 2];
             systemChat "Requesting health update...";
             private _preserve = [] call FAC_vehicleGui_preserveManageSelectionForRefresh;
@@ -1024,7 +1024,7 @@ FAC_vehicleGui_fnc = {
             private _obj = missionNamespace getVariable [_varName, objNull];
             if (isNull _obj) exitWith { systemChat "VEHICLE NO LONGER EXISTS." };
             private _nid = [_obj] call FAC_vehicleGui_vehicleRpcId;
-            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost - refresh the list and try again."; };
             [_nid, player] remoteExec ["FADE_despawnVehicle", 2];
             systemChat "Requesting despawn...";
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
@@ -1034,7 +1034,7 @@ FAC_vehicleGui_fnc = {
             private _veh = call FAC_vehicleGui_getManageSelectedVehicle;
             if (isNull _veh || {!alive _veh}) exitWith { systemChat "Select a vehicle to duplicate." };
             private _nid = [_veh] call FAC_vehicleGui_vehicleRpcId;
-            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost - refresh the list and try again."; };
             [_nid, player] remoteExec ["FADE_duplicateVehicleAtBase", 2];
             systemChat "Requesting duplicate spawn...";
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
@@ -1052,7 +1052,7 @@ FAC_vehicleGui_fnc = {
             private _obj = missionNamespace getVariable [_varName, objNull];
             if (isNull _obj) exitWith { systemChat "VEHICLE NO LONGER EXISTS." };
             private _nid = [_obj] call FAC_vehicleGui_vehicleRpcId;
-            if (_nid == "") exitWith { systemChat "Vehicle reference lost — refresh the list and try again."; };
+            if (_nid == "") exitWith { systemChat "Vehicle reference lost - refresh the list and try again."; };
             private _msg = switch (toLower _part) do {
                 case "repair": { "Requesting repair..." };
                 case "refuel": { "Requesting refuel..." };

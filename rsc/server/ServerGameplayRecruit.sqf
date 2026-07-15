@@ -207,7 +207,7 @@ FADE_recruit_requestRoster = {
                 private _role = _x getVariable ["FADE_recruitRoleLabel", typeOf _x];
                 private _grpLeader = leader group _x;
                 private _ownerName = if (isPlayer _grpLeader) then { name _grpLeader } else { "AI group" };
-                private _label = format ["%1 — %2 (%3)", _role, _ownerName, name _x];
+                private _label = format ["%1 - %2 (%3)", _role, _ownerName, name _x];
                 _rows pushBack [netId _x, _label];
             };
         };

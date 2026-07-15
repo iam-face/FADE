@@ -248,7 +248,7 @@ FADE_runMission_ClearArea = {
         [_taskId, _markerName, _center, _areaRadius, _markerEnemy, "mil_objective", _operationName, -1, -1, _caBldPos] call FADE_mission_createObjectiveMarker;
         private _grid = mapGridPosition _center;
         [_player, _taskId, "Destroy at least 80% of enemy forces in the area.", "Clear Area", _center, "attack"] call _fnc_createMissionTask;
-        private _brief = format ["CLEAR AREA%1%1Objective (approx.): Grid %2 (%3)%1%1Clear and secure the area. Reduce enemy presence to the task's completion threshold; see Tasks for specific objectives and rules.", toString [10], _grid, if (_useTown) then { "occupied town" } else { "enemy camp" }] + _briefGuiTail;
+        private _brief = format ["CLEAR AREA%1%1Objective (approx.): Grid %2 (%3)%1%1Clear and hold the site. Drop enemy numbers to the task threshold before timeout (see Tasks).", toString [10], _grid, if (_useTown) then { "occupied town" } else { "enemy camp" }] + _briefGuiTail;
         _player setVariable ["FADE_myMissionBrief", _brief, true];
         [format ["<t color='#FFFFFF'>Grid: %1 -- %2</t><br/><br/><t color='#FFFFFF'>Destroy 80%%+ of enemy forces.</t>", _grid, if (_useTown) then { "town" } else { "camp" }]] call _showAssignedHint;
         [_player, "Clear Area"] call FADE_notifyOthersMissionStarted;
