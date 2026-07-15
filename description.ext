@@ -16,7 +16,7 @@ class Params
     };
     class FAC_FastTravelToPlayer
     {
-        title = "ACCESS: Fast Travel — teleport to player";
+        title = "ACCESS: Fast Travel - teleport to player";
         values[] = {0, 1};
         texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
         default = 0;
@@ -564,7 +564,7 @@ class RscDisplayTeleport: RscDisplayEmpty {
         class TabPlayers: FACRscTabBtn { idc = 60619; text = "Players..."; x = 0.415; y = 0.036; w = 0.14; h = 0.046; action = "['setTab', ['players']] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
         class HeaderRefreshBtn: FACRscRefreshBtn { idc = 60607; action = "['headerRefresh', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]);"; };
         class HeaderCloseBtn: FACRscCloseBtn { idc = 60608; y = 0.036; };
-        class DestLabel: FACRscLabelMuted { idc = 60605; text = "Destinations — click twice to travel"; x = 0.04; y = 0.108; w = 0.92; h = 0.032; sizeEx = 0.026; };
+        class DestLabel: FACRscLabelMuted { idc = 60605; text = "Destinations - click twice to travel"; x = 0.04; y = 0.108; w = 0.92; h = 0.032; sizeEx = 0.026; };
         class PlayerListLabel: FACRscLabelMuted { idc = 60616; show = 0; text = "Active players"; x = 0.04; y = 0.108; w = 0.44; h = 0.028; sizeEx = 0.028; };
         class PlayerList: FACRscListDark {
             idc = 60611; show = 0;
@@ -693,7 +693,7 @@ class RscDisplayFires: RscDisplayEmpty {
             sizeEx = 0.021;
             colorText[] = {0.78, 0.82, 0.90, 1};
             colorBackground[] = {0.02, 0.03, 0.06, 0.55};
-            text = "Select the occupied range slot the drill runs on.\n\nMin / Max: random distance band (meters) from the pit for the drill point. The server picks dry land at least 500 m from the main base (FADE_basePos), up to 25 samples; widen the band or use random bearing if start fails.\n\nThe server spawns a locked civilian vehicle there, plus a vanilla burning metal barrel (smoke/flame) offset from the car.\n\nOptional: set FADE_firesDrillFireClass in Config for an extra marker object (e.g. campfire); leave empty for barrel only.\n\nBearing: along pit axis or random approach.\n\nDrill completes when the car takes damage (near impact) or is destroyed. End drill cancels and removes spawned props.";
+            text = "Pick the occupied range slot the drill uses.\n\nMin / Max: random distance band (m) from the pit for the drill point. The server finds dry land at least 500 m from base, trying up to 25 spots. Widen the band or use random bearing if start fails.\n\nSpawns a locked civilian car there, plus a burning metal barrel (smoke / flame) offset from the car.\n\nOptional: Config FADE_firesDrillFireClass for an extra marker object (e.g. campfire). Leave empty for barrel only.\n\nBearing: along the pit axis or a random approach.\n\nDrill ends when the car is damaged (near miss counts) or destroyed. End drill cancels and removes props.";
         };
         class SlotLabel: RscText { idc = 60744; text = "Slots (spawned / location)"; x = 0.04; y = 0.481; w = 0.395; h = 0.022; sizeEx = 0.024; colorText[] = FAC_COLOR_TEXT_MUTED; };
         class SlotList: RscListBox {
@@ -1054,6 +1054,6 @@ class CfgIdentities
 briefingName = "FADE";
 onLoadName = "FADE";
 author = "Face";
-overviewText = "Dynamic Sandbox for combined arms operations.";
+overviewText = "Multiplayer Altis sandbox for combined arms training. No Zeus required.";
 overviewPicture = "";
 loadScreen = "img\loadingb.jpg";

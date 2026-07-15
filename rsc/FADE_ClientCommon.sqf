@@ -95,7 +95,7 @@ FADE_intel_clientAppendIntelDiary = {
 
 FADE_client_appendMissionBackground = {
     params ["_operationName", "_whenStr", "_bodyRaw", ["_kind", "Background"]];
-    ["Intel — Background", _whenStr, _bodyRaw, _kind] call FADE_client_appendIntelDiary;
+    ["Intel - Background", _whenStr, _bodyRaw, _kind] call FADE_client_appendIntelDiary;
 };
 
 missionNamespace setVariable ["FADE_client_escapeForDiary", FADE_client_escapeForDiary];

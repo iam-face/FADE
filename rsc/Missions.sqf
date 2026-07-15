@@ -120,7 +120,7 @@ if (!isNull _player) then {
 private _operationNameUpper = toUpper _operationName;
 
 // Appended to FADE_myMissionBrief
-private _briefGuiTail = toString [10] + toString [10] + "See your Tasks panel and map markers for objectives, routes, and completion criteria.";
+private _briefGuiTail = toString [10] + toString [10] + "See Tasks and map markers for grids, routes, and win/fail criteria.";
 private _mkrJitter = missionNamespace getVariable ["FADE_jitterMarkerPos", { params [["_p", [0, 0, 0]]]; [_p] call FADE_normPos3 }];
 private _enemyFactionClass = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
 private _enemyFactionName = [_enemyFactionClass] call (missionNamespace getVariable ["FADE_getFactionDisplayName", { _this select 0 }]);

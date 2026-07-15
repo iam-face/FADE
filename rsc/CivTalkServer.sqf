@@ -375,7 +375,7 @@ FADE_civTalk_topic = {
         case "greeting": {
             _sess set [4, true];
             if (_positive) then {
-                _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkGreetingPositive", ["Hello. Can I help you?", "Good day. What do you need?"]]);
+                _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkGreetingPositive", ["Hello. Can I help you?", "What do you need?"]]);
             } else {
                 _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkGreetingNegative", ["What do you want?", "Leave me alone."]]);
             };
@@ -403,7 +403,7 @@ FADE_civTalk_topic = {
                             private _dn = getText (configFile >> "CfgVehicles" >> typeOf _u >> "displayName");
                             if (_dn == "") then { _dn = typeOf _u };
                             private _grid = mapGridPosition _u;
-                            _reply = format ["Yes, I saw a %1 at grid %2 just now!", _dn, _grid];
+                            _reply = format ["Yes - a %1 at grid %2, not long ago.", _dn, _grid];
                             _lineIntel = true;
                         };
                     };
@@ -420,7 +420,7 @@ FADE_civTalk_topic = {
                             private _dn = getText (configFile >> "CfgVehicles" >> typeOf _u >> "displayName");
                             if (_dn == "") then { _dn = typeOf _u };
                             private _grid = mapGridPosition _u;
-                            _reply = format ["Yes, I saw a %1 at grid %2 just now!", _dn, _grid];
+                            _reply = format ["Yes - a %1 at grid %2, not long ago.", _dn, _grid];
                             _lineIntel = true;
                         };
                     };
@@ -456,7 +456,7 @@ FADE_civTalk_topic = {
                     if (_vdn == "") then { _vdn = typeOf _best };
                     private _dist = round _bestD;
                     private _bear = [_civ getDir _best] call FADE_civTalk_bearingWord;
-                    _reply = format ["Yes, there is a %1 about %2 m away, bearing %3.", _vdn, _dist, _bear];
+                    _reply = format ["There is a %1 about %2 m away, bearing %3.", _vdn, _dist, _bear];
                     _lineIntel = true;
                 };
             };
@@ -469,7 +469,7 @@ FADE_civTalk_topic = {
                 private _qrfTypes = missionNamespace getVariable ["FADE_globalMissionTypesWithQrf", []];
                 private _qrfRumour = (_mt != "") && { _mt in _qrfTypes } && { random 1 < 0.52 };
                 if (_qrfRumour) then {
-                    _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkRumoursPositiveQrf", ["Word is, when it gets loud, their trucks come quick."]]);
+                    _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkRumoursPositiveQrf", ["When shooting starts, their trucks show up fast."]]);
                 } else {
                     _reply = selectRandom (missionNamespace getVariable ["FADE_civTalkRumoursPositive", ["They say the road is quiet."]]);
                 };
