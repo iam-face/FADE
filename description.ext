@@ -1054,6 +1054,6 @@ class CfgIdentities
 briefingName = "FADE";
 onLoadName = "FADE";
 author = "Face";
-overviewText = "Dynamic Sandbox for combined arms operations.";
+overviewText = "Multiplayer Altis sandbox for combined arms training. No Zeus required.";
 overviewPicture = "";
 loadScreen = "img\loadingb.jpg";

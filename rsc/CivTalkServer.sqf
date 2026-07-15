@@ -403,7 +403,7 @@ FADE_civTalk_topic = {
                             private _dn = getText (configFile >> "CfgVehicles" >> typeOf _u >> "displayName");
                             if (_dn == "") then { _dn = typeOf _u };
                             private _grid = mapGridPosition _u;
-                            _reply = format ["Yes, I saw a %1 at grid %2 just now!", _dn, _grid];
+                            _reply = format ["Yes - a %1 at grid %2, not long ago.", _dn, _grid];
                             _lineIntel = true;
                         };
                     };
@@ -420,7 +420,7 @@ FADE_civTalk_topic = {
                             private _dn = getText (configFile >> "CfgVehicles" >> typeOf _u >> "displayName");
                             if (_dn == "") then { _dn = typeOf _u };
                             private _grid = mapGridPosition _u;
-                            _reply = format ["Yes, I saw a %1 at grid %2 just now!", _dn, _grid];
+                            _reply = format ["Yes - a %1 at grid %2, not long ago.", _dn, _grid];
                             _lineIntel = true;
                         };
                     };
@@ -456,7 +456,7 @@ FADE_civTalk_topic = {
                     if (_vdn == "") then { _vdn = typeOf _best };
                     private _dist = round _bestD;
                     private _bear = [_civ getDir _best] call FADE_civTalk_bearingWord;
-                    _reply = format ["Yes, there is a %1 about %2 m away, bearing %3.", _vdn, _dist, _bear];
+                    _reply = format ["There is a %1 about %2 m away, bearing %3.", _vdn, _dist, _bear];
                     _lineIntel = true;
                 };
             };
