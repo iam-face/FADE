@@ -17,7 +17,7 @@ FAC_playthroughSuite__suiteBudgetSec = 600;
 FAC_playthroughSuite__missionTypes = [
     "AreaOfOperations", "Operation", "Raid", "Invasion", "TroopInsert", "TroopExtract", "Cargo", "MineClearing",
     "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "InterceptConvoy", "EscapeEvasion", "GeoGuesser",
-    "CAS", "HVT", "Hostage", "ClearArea"
+    "CAS", "HVT", "Hostage", "ClearArea", "PointDefense"
 ];
 
 FAC_playthroughSuite__counterAttackTypes = [
@@ -146,6 +146,9 @@ FAC_playthroughSuite__restorePlayerHome = {
 FAC_playthroughSuite__startMission = {
     params ["_missionType", "_player"];
     private _uid = getPlayerUID _player;
+    if (_missionType == "PointDefense") then {
+        missionNamespace setVariable ["FADE_pdRun_durationSec", 12];
+    };
     missionNamespace setVariable ["FADE_startMission_bypassDisabled", true];
     switch _missionType do {
         case "TroopInsert": {
@@ -159,6 +162,9 @@ FAC_playthroughSuite__startMission = {
         };
         case "GeoGuesser": {
             [[_uid], 30, "Normal", _player] call FADE_startGeoGuesser;
+        };
+        case "PointDefense": {
+            [_player, [], missionNamespace getVariable ["FADE_pdRun_durationSec", 12]] call FADE_startPointDefense;
         };
         default {
             [_missionType, _player] call FADE_startMission;
@@ -257,6 +263,7 @@ FAC_playthroughSuite__setAbortFlagsForTask = {
     if (_mType == "AssetRetrieval") then { missionNamespace setVariable ["FADE_assetAborted_" + _taskId, true] };
     if (_mType == "EscapeEvasion") then { missionNamespace setVariable ["FADE_eeAborted_" + _taskId, true] };
     if (_mType == "GeoGuesser") then { missionNamespace setVariable ["FADE_ggAborted_" + _taskId, true] };
+    if (_mType == "PointDefense") then { missionNamespace setVariable ["FADE_pdAborted_" + _taskId, true] };
     if (_mType in ["TroopInsert", "TroopExtract"]) then {
         private _abortKey = if (_mType == "TroopInsert") then {
             "FADE_troopInsertAborted_" + _taskId
@@ -416,7 +423,7 @@ FAC_playthroughSuite__checkInit = {
 
     private _needsEntities = _missionType in [
         "TroopExtract", "CAS", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations",
-        "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion"
+        "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion", "PointDefense"
     ];
     private _lightTypes = ["Cargo", "MineClearing", "TroopInsert", "GeoGuesser"];
 

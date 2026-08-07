@@ -1055,5 +1055,5 @@ briefingName = "FADE";
 onLoadName = "FADE";
 author = "Face";
 overviewText = "Dynamic Sandbox for combined arms operations.";
-overviewPicture = "";
+overviewPicture = "img\FADE_1.jpg";
 loadScreen = "img\loadingb.jpg";

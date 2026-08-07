@@ -359,8 +359,6 @@ FADE_runMission_EscapeEvasion = {
     private _eeSpawnSearchHeli = {
         params ["_tid", "_zc", "_crewUnits", "_applyLoc", "_sideEn"];
         private _zc2 = [_zc select 0, _zc select 1];
-        private _mapMinA = missionNamespace getVariable ["FADE_mapMin", 0];
-        private _mapMaxA = missionNamespace getVariable ["FADE_mapMax", worldSize];
         private _edgePad = 200;
         private _class = [] call _eePickSearchHeliClass;
         private _dirFrom = random 360;
@@ -369,8 +367,12 @@ FADE_runMission_EscapeEvasion = {
             (_zc2 select 0) + _dist * (sin _dirFrom),
             (_zc2 select 1) + _dist * (cos _dirFrom)
         ];
-        _spawn2 set [0, (_spawn2 select 0) max (_mapMinA + _edgePad) min (_mapMaxA - _edgePad)];
-        _spawn2 set [1, (_spawn2 select 1) max (_mapMinA + _edgePad) min (_mapMaxA - _edgePad)];
+        _spawn2 = [_spawn2, _edgePad] call (missionNamespace getVariable ["FADE_mapClampPos2D", {
+            params ["_xy", ["_p", 0]];
+            private _mn = missionNamespace getVariable ["FADE_mapMin", 0];
+            private _mx = missionNamespace getVariable ["FADE_mapMax", worldSize];
+            [(_xy select 0) max (_mn + _p) min (_mx - _p), (_xy select 1) max (_mn + _p) min (_mx - _p)]
+        }]);
         private _alt = (getTerrainHeightASL [_spawn2 select 0, _spawn2 select 1]) + 260 + random 200;
         private _spawnPos = [_spawn2 select 0, _spawn2 select 1, _alt];
         private _face = ((_zc2 select 1) - (_spawn2 select 1)) atan2 ((_zc2 select 0) - (_spawn2 select 0));

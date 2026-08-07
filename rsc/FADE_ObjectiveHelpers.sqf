@@ -549,26 +549,16 @@ FADE_objective_spawnPatrolsPerBuilding = {
     _out
 };
 
+// Server: tag object + JIP-queue client hold (addAction is local-only — dedicated clients never saw Pick up).
 FADE_objective_addRecoverHoldAction = {
     params ["_objCase", "_taskId"];
+    if (!isServer) exitWith {};
+    if (isNull _objCase || { _taskId == "" }) exitWith {};
     missionNamespace setVariable ["FADE_assetIntelTaken_" + _taskId, false];
     _objCase setVariable ["FADE_recoverTaskId", _taskId, true];
     private _displayName = [typeOf _objCase] call (missionNamespace getVariable ["FADE_getRecoverObjectDisplayName", { _this select 0 }]);
     _objCase setVariable ["FADE_recoverObjectDisplayName", _displayName, true];
-    _objCase addAction [
-        "Pick up",
-        {
-            private _cTaskId = (_this select 0) getVariable ["FADE_recoverTaskId", ""];
-            [_cTaskId, _this select 0, _this select 1] remoteExec ["FADE_assetIntelTakeServer", 2];
-        },
-        [],
-        1.5,
-        true,
-        true,
-        "",
-        "(_this distance _target) < 3 && { alive _this } && { alive _target }",
-        3
-    ];
+    [_objCase] remoteExec ["FADE_recover_clientRegisterHold", 0, true];
 };
 
 // Immediate OPFOR in a radius around objective building(s): spawned at mission start (no virtual garrison).

@@ -9,6 +9,8 @@ FADE_opforAir_hqSafeRadius = 1000;
 // Minimum AGL when OPFOR air assets spawn (terrain + these meters ASL).
 FADE_opforAir_spawnAglMin = 280;
 FADE_opforAir_spawnAglExtra = 220;
+// Troop-insert LZ search radius (m) around BLUFOR centroid; wider than default FADE_findSafeLZ (80).
+FADE_opforAir_insertLzSearchRadius = 450;
 
 FADE_opforAir_sideFromFactionCfg = {
     params ["_faction"];
@@ -108,13 +110,16 @@ FADE_opforAir_getTargetASL = {
     if (_n > 0) exitWith { _acc vectorMultiply (1 / _n) };
     private _base = missionNamespace getVariable ["BASE_1", objNull];
     if (!isNull _base) exitWith { getPosASL _base };
-    private _mapMin = missionNamespace getVariable ["FADE_mapMin", 0];
-    private _mapMax = missionNamespace getVariable ["FADE_mapMax", worldSize];
-    private _hs = (_mapMin + _mapMax) / 2;
-    [_hs, _hs, 100]
+    private _minX = missionNamespace getVariable ["FADE_mapMinX", missionNamespace getVariable ["FADE_mapMin", 0]];
+    private _maxX = missionNamespace getVariable ["FADE_mapMaxX", missionNamespace getVariable ["FADE_mapMax", worldSize]];
+    private _minY = missionNamespace getVariable ["FADE_mapMinY", missionNamespace getVariable ["FADE_mapMin", 0]];
+    private _maxY = missionNamespace getVariable ["FADE_mapMaxY", missionNamespace getVariable ["FADE_mapMax", worldSize]];
+    [(_minX + _maxX) / 2, (_minY + _maxY) / 2, 100]
 };
 
-// FADE_enemyVehicles excludes aircraft (land + ships only); air must be resolved from CfgVehicles like FADE_getFriendlyVehicleClasses.
+// FADE_enemyVehicles excludes aircraft (land + ships only); air is resolved from FADE_heliClasses
+// by scenario enemy faction only. Never scrape all side air (that pulls unrelated packs e.g. ION PMC).
+// Empty result → FADE_opforAir_pickVehicleClass uses FADE_opforAir_fallbackHeliClasses.
 FADE_getEnemyAirVehicleClasses = {
     private _cached = missionNamespace getVariable ["FADE_enemyAirVehicleClasses_cache", []];
     if (count _cached > 0) exitWith { +_cached };
@@ -132,35 +137,24 @@ FADE_getEnemyAirVehicleClasses = {
             _out pushBack _c;
         };
     } forEach FADE_heliClasses;
-    if (count _out > 0) exitWith {
+    if (count _out > 0) then {
         missionNamespace setVariable ["FADE_enemyAirVehicleClasses_cache", +_out];
-        _out
     };
-    {
-        private _c = _x;
-        private _cl = toLower _c;
-        if ((_cl find "uav" >= 0) || { _cl find "drone" >= 0 }) then { continue };
-        if (!(_c isKindOf "Helicopter") && { !(_c isKindOf "Plane") }) then { continue };
-        if (getNumber (configFile >> "CfgVehicles" >> _c >> "side") == _wantSide) then {
-            _out pushBack _c;
-        };
-    } forEach FADE_heliClasses;
-    missionNamespace setVariable ["FADE_enemyAirVehicleClasses_cache", +_out];
     _out
 };
 
 // Used only when FADE_getEnemyAirVehicleClasses is empty (no faction-matched air in loaded addons).
+// Keep generic RHS / 3CB / vanilla transports — not faction packs (ION etc.) unless that faction is selected.
 FADE_opforAir_fallbackHeliClasses = [
     "RHS_Mi8mt_vvs",
     "rhsgref_ins_Mi8amt",
     "UK3CB_TKC_O_Mi8AMT",
     "UK3CB_ADA_O_UH1H_M240",
-    "UK3CB_ION_O_Urban_UH1H_M240",
     "UK3CB_MEC_O_UH1H",
     "UK3CB_ADC_I_Mi8AMT",
-    "UK3CB_ION_I_Desert_Orca",
-    "UK3CB_ION_I_Urban_Merlin",
     "UK3CB_MEC_I_Bell412",
+    "O_Heli_Light_02_dynamicLoadout_F",
+    "O_Heli_Transport_04_covered_F",
     "I_Heli_light_03_unarmed_F",
     "I_Heli_EC_01A_military_RF",
     "I_C_Heli_Light_01_civil_F",
@@ -184,6 +178,45 @@ FADE_opforAir_adjustTargetAwayFromBase = {
     private _dir = _bp getDir _target2;
     private _p = _bp getPos [_minDist + 150, _dir];
     [_p select 0, _p select 1]
+};
+
+// Pure gunships / attack frames: CAS (SAD) only — do not TR UNLOAD even if they expose cargo seats
+// (e.g. vanilla Kajman transportSoldier=8). Assault transports like Mi-24 stay eligible for insert.
+FADE_opforAir_isGunship = {
+    params ["_class"];
+    if (_class isEqualTo "" || { !(_class isKindOf "Helicopter") }) exitWith { false };
+    if (_class isKindOf "Heli_Attack_01_base_F" || { _class isKindOf "Heli_Attack_02_base_F" }) exitWith { true };
+    private _cl = toLower _class;
+    if ((_cl find "heli_attack" >= 0) || { _cl find "attack_heli" >= 0 }) exitWith { true };
+    if ((_cl find "ka52" >= 0) || { _cl find "ka_52" >= 0 } || { _cl find "mi28" >= 0 } || { _cl find "mi_28" >= 0 }) exitWith { true };
+    if ((_cl find "ah64" >= 0) || { _cl find "ah_64" >= 0 } || { _cl find "apache" >= 0 }) exitWith { true };
+    if ((_cl find "ah1z" >= 0) || { _cl find "ah_1" >= 0 } || { _cl find "cobra" >= 0 } || { _cl find "viper" >= 0 }) exitWith { true };
+    if ((_cl find "blackfoot" >= 0) || { _cl find "kajman" >= 0 } || { _cl find "tiger_" >= 0 }) exitWith { true };
+    false
+};
+
+// Troop insert only for non-gunship helis with real cargo capacity.
+FADE_opforAir_heliShouldInsert = {
+    params ["_veh", ["_cargoCap", -1]];
+    if (isNull _veh || { !(_veh isKindOf "Helicopter") }) exitWith { false };
+    private _class = typeOf _veh;
+    if ([_class] call FADE_opforAir_isGunship) exitWith { false };
+    if (_cargoCap < 0) then { _cargoCap = _veh emptyPositions "cargo" };
+    if (_cargoCap < 2) exitWith { false };
+    private _ts = getNumber (configFile >> "CfgVehicles" >> _class >> "transportSoldier");
+    // Prefer config troop capacity; fall back to live emptyPositions when config is 0/missing.
+    (_ts >= 4) || { _ts <= 0 && { _cargoCap >= 4 } }
+};
+
+// LZ for OPFOR insert: wider than default FADE_findSafeLZ (80 m). Never fall back to player centroid
+// (urban suicide landings). Empty array = caller should skip unload and fly SAD only.
+FADE_opforAir_findInsertLz = {
+    params ["_target2"];
+    if (count _target2 < 2) exitWith { [] };
+    private _r = missionNamespace getVariable ["FADE_opforAir_insertLzSearchRadius", 450];
+    private _lz = [_target2, _r] call FADE_findSafeLZ;
+    if (count _lz >= 2) exitWith { [_lz select 0, _lz select 1] };
+    []
 };
 
 FADE_opforAir_pickVehicleClass = {
@@ -237,11 +270,13 @@ FADE_opforAir_doSpawn = {
         (_target2 select 0) + _dist * (sin _dirFrom),
         (_target2 select 1) + _dist * (cos _dirFrom)
     ];
-    private _mapMinA = missionNamespace getVariable ["FADE_mapMin", 0];
-    private _mapMaxA = missionNamespace getVariable ["FADE_mapMax", worldSize];
     private _edgePad = 200;
-    _spawn2 set [0, (_spawn2 select 0) max (_mapMinA + _edgePad) min (_mapMaxA - _edgePad)];
-    _spawn2 set [1, (_spawn2 select 1) max (_mapMinA + _edgePad) min (_mapMaxA - _edgePad)];
+    _spawn2 = [_spawn2, _edgePad] call (missionNamespace getVariable ["FADE_mapClampPos2D", {
+        params ["_xy", ["_p", 0]];
+        private _mn = missionNamespace getVariable ["FADE_mapMin", 0];
+        private _mx = missionNamespace getVariable ["FADE_mapMax", worldSize];
+        [(_xy select 0) max (_mn + _p) min (_mx - _p), (_xy select 1) max (_mn + _p) min (_mx - _p)]
+    }]);
     private _aglMin = missionNamespace getVariable ["FADE_opforAir_spawnAglMin", 280];
     private _aglExtra = missionNamespace getVariable ["FADE_opforAir_spawnAglExtra", 220];
     private _alt = (getTerrainHeightASL [_spawn2 select 0, _spawn2 select 1]) + _aglMin + random _aglExtra;
@@ -292,6 +327,7 @@ FADE_opforAir_doSpawn = {
     private _isPlane = _veh isKindOf "Plane";
     private _isHeli = _veh isKindOf "Helicopter";
     private _cargoCap = _cargoCap0;
+    private _doInsert = _isHeli && { [_veh, _cargoCap] call FADE_opforAir_heliShouldInsert };
 
     if (_isPlane) then {
         private _wp = _grp addWaypoint [_sadTgt + [0], 0];
@@ -301,36 +337,58 @@ FADE_opforAir_doSpawn = {
     } else {
         if (_isHeli) then {
             private _grpInf = grpNull;
-            if (_cargoCap >= 2) then {
-                _grpInf = createGroup _sideE;
-                private _maxFill = _cargoCap min 12;
-                private _k = 0;
-                while { _veh emptyPositions "cargo" > 0 && _k < _maxFill } do {
-                    _k = _k + 1;
-                    private _u = _grpInf createUnit [selectRandom _crewUnits, _crewSpawnASL, [], 0, "NONE"];
-                    if (isNull _u) exitWith {};
-                    _u moveInCargo _veh;
-                };
-                if (count units _grpInf == 0) then {
-                    deleteGroup _grpInf;
-                    _grpInf = grpNull;
+            if (_doInsert) then {
+                private _lz2 = [_target2] call FADE_opforAir_findInsertLz;
+                if (_lz2 isEqualTo []) then {
+                    // No clear LZ near players (common in towns) — fly CAS only, leave cargo empty.
+                    private _wpSadNoLz = _grp addWaypoint [_sadTgt + [0], 0];
+                    _wpSadNoLz setWaypointType "SAD";
+                    _wpSadNoLz setWaypointBehaviour "COMBAT";
+                    _wpSadNoLz setWaypointCombatMode "RED";
                 } else {
-                    if (!(_facApply isEqualTo {})) then { [_grpInf] call _facApply };
-                    _grpInf setGroupIdGlobal [format ["OPF-AIR-INF-%1", floor random 999]];
-                    _grpInf setBehaviour "COMBAT";
-                    _grpInf setCombatMode "RED";
-                    private _wpMove = _grpInf addWaypoint [_target2 + [0], 0];
-                    _wpMove setWaypointType "MOVE";
-                    _wpMove setWaypointBehaviour "COMBAT";
-                    _wpMove setWaypointCombatMode "RED";
-                    private _wpInfSad = _grpInf addWaypoint [_target2 + [0], 0];
-                    _wpInfSad setWaypointType "SAD";
-                    _wpInfSad setWaypointBehaviour "COMBAT";
-                    _wpInfSad setWaypointCombatMode "RED";
-                    _veh setVariable ["FADE_opforAirCargoGrp", _grpInf];
+                    _grpInf = createGroup _sideE;
+                    private _maxFill = _cargoCap min 12;
+                    private _k = 0;
+                    while { _veh emptyPositions "cargo" > 0 && _k < _maxFill } do {
+                        _k = _k + 1;
+                        private _u = _grpInf createUnit [selectRandom _crewUnits, _crewSpawnASL, [], 0, "NONE"];
+                        if (isNull _u) exitWith {};
+                        _u moveInCargo _veh;
+                    };
+                    if (count units _grpInf == 0) then {
+                        deleteGroup _grpInf;
+                        _grpInf = grpNull;
+                        private _wpSadEmpty = _grp addWaypoint [_sadTgt + [0], 0];
+                        _wpSadEmpty setWaypointType "SAD";
+                        _wpSadEmpty setWaypointBehaviour "COMBAT";
+                        _wpSadEmpty setWaypointCombatMode "RED";
+                    } else {
+                        if (!(_facApply isEqualTo {})) then { [_grpInf] call _facApply };
+                        _grpInf setGroupIdGlobal [format ["OPF-AIR-INF-%1", floor random 999]];
+                        _grpInf setBehaviour "COMBAT";
+                        _grpInf setCombatMode "RED";
+                        private _wpMove = _grpInf addWaypoint [_target2 + [0], 0];
+                        _wpMove setWaypointType "MOVE";
+                        _wpMove setWaypointBehaviour "COMBAT";
+                        _wpMove setWaypointCombatMode "RED";
+                        private _wpInfSad = _grpInf addWaypoint [_target2 + [0], 0];
+                        _wpInfSad setWaypointType "SAD";
+                        _wpInfSad setWaypointBehaviour "COMBAT";
+                        _wpInfSad setWaypointCombatMode "RED";
+                        _veh setVariable ["FADE_opforAirCargoGrp", _grpInf];
+                        private _wpUnload = _grp addWaypoint [_lz2 + [0], 0];
+                        _wpUnload setWaypointType "TR UNLOAD";
+                        _wpUnload setWaypointBehaviour "AWARE";
+                        _wpUnload setWaypointCombatMode "YELLOW";
+                        private _wpHeliSad = _grp addWaypoint [_sadTgt + [0], 0];
+                        _wpHeliSad setWaypointType "SAD";
+                        _wpHeliSad setWaypointBehaviour "COMBAT";
+                        _wpHeliSad setWaypointCombatMode "RED";
+                    };
                 };
             } else {
-                if (_cargoCap > 0) then {
+                // Gunship / low-cargo: optional riders stay aboard; heli flies SAD (no land/unload).
+                if (_cargoCap > 0 && { !([typeOf _veh] call FADE_opforAir_isGunship) }) then {
                     _grpInf = createGroup _sideE;
                     private _k = 0;
                     while { _veh emptyPositions "cargo" > 0 && _k < _cargoCap } do {
@@ -352,19 +410,6 @@ FADE_opforAir_doSpawn = {
                 _wpSad setWaypointCombatMode "RED";
             };
 
-            if (_cargoCap >= 2 && { !isNull (_veh getVariable ["FADE_opforAirCargoGrp", grpNull]) }) then {
-                private _lz = [_target2] call FADE_findSafeLZ;
-                if (_lz isEqualTo []) then { _lz = +_target2 };
-                private _lz2 = [_lz select 0, _lz select 1];
-                private _wpUnload = _grp addWaypoint [_lz2 + [0], 0];
-                _wpUnload setWaypointType "TR UNLOAD";
-                _wpUnload setWaypointBehaviour "COMBAT";
-                _wpUnload setWaypointCombatMode "RED";
-                private _wpHeliSad = _grp addWaypoint [_sadTgt + [0], 0];
-                _wpHeliSad setWaypointType "SAD";
-                _wpHeliSad setWaypointBehaviour "COMBAT";
-                _wpHeliSad setWaypointCombatMode "RED";
-            };
             if (count waypoints _grp == 0) then {
                 private _wpSadOnly = _grp addWaypoint [_sadTgt + [0], 0];
                 _wpSadOnly setWaypointType "SAD";
@@ -416,7 +461,7 @@ FADE_opforAir_doSpawn = {
 FADE_opforAir_trySpawn = {
     if (!isServer) exitWith {};
     private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
-    if ([missionNamespace getVariable ["FADE_opforAir_hqSafeRadius", 1000]] call FADE_opforAir_allFriendliesAtHq) then {
+    if ([missionNamespace getVariable ["FADE_opforAir_hqSafeRadius", 1000]] call FADE_opforAir_allFriendliesAtHq) exitWith {
         private _arrH = missionNamespace getVariable ["FADE_opforAir_active", []];
         _arrH = _arrH select { !isNull _x && { alive _x } };
         missionNamespace setVariable ["FADE_opforAir_active", _arrH];
@@ -425,7 +470,6 @@ FADE_opforAir_trySpawn = {
         // #region agent log
         diag_log "[FAC DbgBrowser 62d308] H17 opforAir suppressed (all friendlies at HQ)";
         // #endregion
-        exitWith {};
     };
     private _setting = [missionNamespace getVariable ["FADE_opforAirSetting", "Off"]] call FADE_normalizeOpforThreatSetting;
     if (_setting == "Off") exitWith {};

@@ -266,6 +266,10 @@ FADE_applyScenarioSettings = {
 FADE_sendScenarioConfigToClient = {
     params ["_player"];
     if (isNull _player) exitWith {};
+    // JIP / late board-actions: side + faction pack together (Eden slots stay WEST until joinSilent).
+    if (!isNil "FADE_syncPlayerToScenarioFriendlySide") then {
+        [_player] call FADE_syncPlayerToScenarioFriendlySide;
+    };
     private _pack = missionNamespace getVariable ["FADE_scenarioClientSync", []];
     if (count _pack > 0) then {
         [_pack] remoteExec ["FADE_applyScenarioClientSync", _player];
@@ -290,6 +294,7 @@ publicVariable "FADE_scenarioFactionsDescribeIssue";
 publicVariable "FADE_isScenarioFriendlyUnit";
 publicVariable "FADE_getPlayableFactions";
 publicVariable "FADE_getEnemyFactionsForFriendlyFaction";
+publicVariable "FADE_requestScenarioFriendlySideSync";
 publicVariable "FADE_despawnScenarioWorldUnits";
 
 // Initial build: scenario unit/vehicle lists on missionNamespace (server). Scenario GUI Apply overwrites these; all mission spawns read from here.

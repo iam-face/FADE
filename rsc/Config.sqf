@@ -8,6 +8,21 @@
 call compile preprocessFileLineNumbers "rsc\ConfigClient.sqf";
 call compile preprocessFileLineNumbers "rsc\ConfigDefaults.sqf";
 
+// RAID / shared QRF tuning (overrides ConfigDefaults): AI detection + foot standoff + truck staging helpers read these.
+FADE_raidQrfSkipDetectionWait = false;
+FADE_raidQrfDetectionRadiusM = 350;
+FADE_counterAttackFootSpawnDistMin = 280;
+FADE_counterAttackFootSpawnDistMax = 450;
+FADE_counterAttackFootBuildingChance = 0.4;
+FADE_counterAttackFootMinDistFromPlayers = 150;
+FADE_counterAttackKnowsAboutThreshold = 1.2;
+// Ensure QRF tuning is visible even if ServerBootstrap has not been updated for new keys.
+missionNamespace setVariable ["FADE_counterAttackFootSpawnDistMin", FADE_counterAttackFootSpawnDistMin];
+missionNamespace setVariable ["FADE_counterAttackFootSpawnDistMax", FADE_counterAttackFootSpawnDistMax];
+missionNamespace setVariable ["FADE_counterAttackFootBuildingChance", FADE_counterAttackFootBuildingChance];
+missionNamespace setVariable ["FADE_counterAttackFootMinDistFromPlayers", FADE_counterAttackFootMinDistFromPlayers];
+missionNamespace setVariable ["FADE_counterAttackKnowsAboutThreshold", FADE_counterAttackKnowsAboutThreshold];
+
 FADE_normalizeOpforLauncherSetting = {
     params ["_setting"];
     switch (toLower (_setting + "")) do {
@@ -39,7 +54,7 @@ FADE_resolveOpforPatrolTownChance = {
     };
 };
 FADE_opforAirSetting = "Off";               // Off | Low | Normal | High  -  OPFOR air after AI spots BLUFOR (FADE_opforThreatIntensity)
-FADE_opforDroneSetting = "Off";             // Off | Low | Normal | High  -  OPFOR UAV patrol + QRF vectoring (FADE_OpforDrones.sqf)
+FADE_opforDroneSetting = "Off";             // Off | Low | Normal | High  -  OPFOR UAV patrol + QRF vectoring (ServerBootstrapOpforDrones.sqf)
 
 // Shared Off/Low/Normal/High intensity helpers (legacy "Medium" maps to Normal).
 FADE_normalizeOpforThreatSetting = {

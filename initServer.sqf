@@ -17,7 +17,7 @@ private _facProf0 = if (missionNamespace getVariable ["FADE_profileMissionLoad",
 call compile preprocessFileLineNumbers "rsc\server\ServerBootstrap.sqf";
 call compile preprocessFileLineNumbers "rsc\FAC_DebugLobbyServerApply.sqf";
 call compile preprocessFileLineNumbers "rsc\server\ServerWorld.sqf";
-call compile preprocessFileLineNumbers "rsc\FADE_OpforDrones.sqf";
+call compile preprocessFileLineNumbers "rsc\server\ServerBootstrapOpforDrones.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_MOTDBoard.sqf";
 [] call FADE_motdBoard_start;
 call compile preprocessFileLineNumbers "rsc\FAC_DebugCivTownMarkers.sqf";

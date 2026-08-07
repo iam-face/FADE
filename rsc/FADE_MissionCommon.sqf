@@ -124,7 +124,7 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
     } else {
         format ["Enemy UAVs may patrol the battlespace and vector ground QRF onto detected foot mobile (%1).", toLower _droneSet]
     };
-    private _commsLine = if (_missionType in ["HVT", "Hostage", "ClearArea", "SearchDestroy", "CASEVAC", "CSAR", "Operation", "AreaOfOperations", "AssetRetrieval", "AssetRetrievalVeh", "InterceptConvoy", "EscapeEvasion", "Raid"]) then {
+    private _commsLine = if (_missionType in ["HVT", "Hostage", "ClearArea", "SearchDestroy", "CASEVAC", "CSAR", "Operation", "AreaOfOperations", "AssetRetrieval", "AssetRetrievalVeh", "InterceptConvoy", "EscapeEvasion", "Raid", "Invasion", "PointDefense"]) then {
         "Enemy may request reinforcements after sustained or reported contact."
     } else {
         "Reinforcement is unlikely; expect local contacts only."
@@ -149,6 +149,7 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
         case "Operation": { "Zone garrisons will hold built-up areas; enemy may move vehicles between sectors." };
         case "Raid": { "Each objective appears independently defended; assault on one site may draw enemy attention elsewhere." };
         case "Invasion": { "OPFOR pushes zone-by-zone from the beachhead; heliborne waves continue while they hold it. Retake INVASION to win." };
+        case "PointDefense": { "Enemy will probe then assault the marked point with infantry and vehicle-borne waves from nearby ground; they will try to seize it while friendlies are absent." };
         case "EscapeEvasion": { "Dismounted patrols sweep the area; enemy may follow up after confirmed contact." };
         default { "Expect defenders to hold key ground on contact, adjust on flanks, or break contact once cohesion is lost." };
     };
@@ -272,6 +273,7 @@ FADE_missionComputeBriefingDefaults = {
         case "Operation": { 36 };
         case "Raid": { 28 };
         case "Invasion": { 40 };
+        case "PointDefense": { 24 };
         case "EscapeEvasion": { 22 };
         default { 10 };
     };

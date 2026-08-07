@@ -6,7 +6,7 @@
 // -----------------------------------------------------------------------------
 // Mission streams: Global (1 at a time, heavy) vs Single (up to 3, lighter). All locations >= 2 km apart.
 // -----------------------------------------------------------------------------
-FADE_globalMissionTypes = ["AreaOfOperations", "Hostage", "HVT", "ClearArea", "CAS", "InterceptConvoy", "SearchDestroy", "Operation", "Raid", "Invasion", "AssetRetrieval", "CSAR", "EscapeEvasion", "GeoGuesser"];
+FADE_globalMissionTypes = ["AreaOfOperations", "Hostage", "HVT", "ClearArea", "CAS", "InterceptConvoy", "SearchDestroy", "Operation", "Raid", "Invasion", "AssetRetrieval", "CSAR", "EscapeEvasion", "GeoGuesser", "PointDefense"];
 FADE_singleMissionTypes = ["TroopInsert", "TroopExtract", "Cargo", "MineClearing", "CASEVAC"];
 // FADE_minDistBetweenMissions — ConfigClient.sqf (publicVariable for JIP)
 missionNamespace setVariable ["FADE_globalMission", []];
@@ -212,6 +212,23 @@ FADE_startGeoGuesser = {
         [] call FADE_runMission;
     };
 };
+
+// -----------------------------------------------------------------------------
+// Point Defense (server): duration handoff then standard FADE_startMission path.
+// -----------------------------------------------------------------------------
+FADE_startPointDefense = {
+    params ["_player", ["_anchorPos", []], ["_durationSec", -1]];
+    if (!isServer) exitWith {};
+    if (isNull _player) exitWith {};
+    private _minS = missionNamespace getVariable ["FADE_pointDefenseDurationMinSec", 300];
+    private _maxS = missionNamespace getVariable ["FADE_pointDefenseDurationMaxSec", 2400];
+    private _defS = missionNamespace getVariable ["FADE_pointDefenseDurationSec", 1200];
+    if (!(_durationSec isEqualType 0) || { _durationSec < 0 }) then { _durationSec = _defS };
+    _durationSec = (round _durationSec max _minS) min _maxS;
+    missionNamespace setVariable ["FADE_pdRun_durationSec", _durationSec];
+    ["PointDefense", _player, _anchorPos] call FADE_startMission;
+};
+publicVariable "FADE_startPointDefense";
 
 // -----------------------------------------------------------------------------
 // Troop Insert / Extract (server): participating UIDs + wave count 1-10.

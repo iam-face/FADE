@@ -36,9 +36,17 @@ FAC_missionMapPick_fnc_onValidClick = {
     private _mt = missionNamespace getVariable ["FAC_missionMapPick_type", ""];
     if (_mt == "") exitWith {};
     missionNamespace setVariable ["FAC_missionMapPick_type", nil];
+    // #region agent log
+    diag_log format ["#DBGc2f21e {""sessionId"":""c2f21e"",""hypothesisId"":""C"",""location"":""MissionMapPick.sqf:onValidClick"",""message"":""client map click"",""data"":{""missionType"":""%1"",""clickPos"":%2},""timestamp"":%3}", _mt, _clickPos, diag_tickTime];
+    // #endregion
     [_mt, player, _clickPos] spawn {
         params ["_mt", "_pl", "_clickPos"];
-        [_mt, _pl, _clickPos] remoteExec ["FADE_startMission", 2];
+        if (_mt == "PointDefense") then {
+            private _dur = missionNamespace getVariable ["FAC_pdPick_durationSec", uinamespace getVariable ["FAC_pdPick_durationSec", missionNamespace getVariable ["FADE_pointDefenseDurationSec", 1200]]];
+            [_pl, _clickPos, _dur] remoteExec ["FADE_startPointDefense", 2];
+        } else {
+            [_mt, _pl, _clickPos] remoteExec ["FADE_startMission", 2];
+        };
         hint parseText "<t size='1.1' color='#A0D0A0'>Loading mission...</t><br/><t color='#808080'>Details will be provided shortly.</t>";
     };
 };

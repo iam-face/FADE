@@ -10,7 +10,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/tools/sqfvm/Invoke-FadeSqfLint.ps1"
+        "${workspaceFolder}/../tools/sqfvm/Invoke-FadeSqfLint.ps1"
       ],
       "group": {
         "kind": "test",
@@ -27,7 +27,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/tools/sqfvm/Install-SqfVmRuntime.ps1"
+        "${workspaceFolder}/../tools/sqfvm/Install-SqfVmRuntime.ps1"
       ],
       "problemMatcher": []
     }

@@ -49,7 +49,7 @@ FADE_startMission = {
     if (_factionIssue != "") exitWith {
         [_player, "SCENARIO ERROR", "Friendly and enemy factions are incompatible. Open Manage Scenario → Factions and Apply."] call FADE_missionErrorHint;
     };
-    private _spawnsEnemies = _missionType in ["TroopExtract", "CAS", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion"];
+    private _spawnsEnemies = _missionType in ["TroopExtract", "CAS", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion", "PointDefense"];
     if (_spawnsEnemies && { count ([] call FADE_resolveScenarioEnemyUnits) == 0 }) exitWith {
         [_player, "MISSION ERROR", "No enemy units configured for the chosen enemy faction."] call FADE_missionErrorHint;
     };
@@ -72,7 +72,7 @@ FADE_startMission = {
         [_player, "slotsFull"] call FADE_missionSlotGateHint;
     };
     private _needsLZ = _missionType in ["TroopInsert", "TroopExtract", "Cargo", "CASEVAC", "CSAR"];
-    private _spawnsEnemies = _missionType in ["TroopExtract", "CAS", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion"];
+    private _spawnsEnemies = _missionType in ["TroopExtract", "CAS", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion", "PointDefense"];
     private _minDistForPos = if (_spawnsEnemies) then { 1000 } else { FADE_minDistFromBase };
     if (_missionType in ["TroopInsert", "TroopExtract"]) then {
         _minDistForPos = _minDistForPos max FADE_troopInsertExtractMinDistFromBase;
@@ -142,6 +142,13 @@ FADE_startMission = {
             _destPos = _picked;
             _mapPickRadius = _usedR;
             _snappedZone = _snapped;
+            // #region agent log
+            if (_missionType == "AssetRetrieval") then {
+                private _snapDist = if (count _snapped >= 2) then { round (_snapped distance2D _anchorPos) } else { -1 };
+                private _destDist = if (count _picked >= 2) then { round (_picked distance2D _anchorPos) } else { -1 };
+                diag_log format ["#DBGc2f21e {""sessionId"":""c2f21e"",""hypothesisId"":""C"",""location"":""ServerGameplayMissionsCore.sqf:mapPick"",""message"":""AssetRetrieval map pick resolved"",""data"":{""click"":%1,""dest"":%2,""snapped"":%3,""usedR"":%4,""snapDistM"":%5,""destDistM"":%6},""timestamp"":%7}", _anchorPos, _picked, _snapped, _usedR, _snapDist, _destDist, diag_tickTime];
+            };
+            // #endregion
         } else {
             while { _attempt < _maxAttempts } do {
                 _attempt = _attempt + 1;

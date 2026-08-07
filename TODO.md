@@ -668,24 +668,9 @@ Mirror OPFOR air wiring:
 
 ---
 
-## 8. Point defense mission
+## 8. Point defense mission — SHIPPED
 
-**Goal:** Global **[G]** **defensive** mission — BLUFOR holds a fixed point (FOB, relay, LZ, or map-click anchor) against escalating OPFOR waves until time expires or attackers are defeated.
-
-### Expected approach
-
-- **Fork reference:** **Invasion** (defensive pressure) + **Operation** zone markers; invert win condition to “hold” not “capture”.
-- **Zone:** map-click or random snap near **CIV_T_*** / **BASE_1** perimeter; ellipse capture radius ~250 m (reuse Operation constants).
-- **Waves:** timed OPFOR infantry + vehicle spawns from bearings outside the zone; intensity scales with wave number; optional QRF on contested state.
-- **Win:** survive **`FADE_pointDefenseDurationSec`** (default 20–30 min) with zone never fully OPFOR-held.
-- **Lose:** OPFOR uncontested in zone for N consecutive poll ticks, or >50% defenders dead (if friendly AI spawned).
-- **Registration:** same checklist as §2 Raid — **MissionPointDefense.sqf**, **FADE_MissionCompile**, **ServerGameplayMissions**, **MissionsGui**, **Config**, lore hook.
-
-### Open questions
-
-- [ ] Player-chosen defend site vs random only?
-- [ ] Auto-spawn friendly AI defenders or player-only?
-- [ ] Single zone vs secondary fallback position?
+**Shipped:** Global **[G]** hold a 250 m zone for initiator-chosen duration (default 20 min). Random → civ zone; map-click → no snap. Timer on first player entry; hybrid INF / VEH+INF waves; immediate fail if enemies present with no players; flavour wreck or friendly convoy.
 
 ---
 
@@ -834,12 +819,12 @@ Helper: `FADE_getOpposedSideNums` + `FADE_getFactionsForOpposedSides` (server + 
 
 ### Player-side sync (required for non-WEST friendly)
 
-Pick one approach before shipping:
+**Shipped (approach A):** On scenario Apply, `joinSilent` all players onto `FADE_sideFriendly` + `setFriend` matrix. Also:
 
-- **A (preferred for coop):** On scenario Apply, `joinSilent` players into a group on `FADE_sideFriendly` (or respawn prompt) so `side player` matches scenario.
-- **B (lighter):** `FADE_isScenarioFriendlyUnit` treats all `isPlayer` as friendly for counts/tasks; `setFriend` matrix on Apply so AI hostility matches scenario regardless of player slot side (more edge cases in MP).
+- **Respawn:** server `EntityRespawned` EH + client `onPlayerRespawn` → `FADE_requestScenarioFriendlySideSync`
+- **JIP:** `initPlayerLocal` early request + `FADE_sendScenarioConfigToClient` (board actions) syncs side with the faction pack
 
-Also update **LoadoutGui** (currently uses `side player`, not scenario faction) and **Briefing** BLUFOR/OPFOR prose.
+**Residual:** some mission checks still use `side == FADE_sideFriendly` (fine once sync holds); optional follow-up — route those through `FADE_isScenarioFriendlyUnit`. Briefing prose still says BLUFOR/OPFOR in places.
 
 ### Files to touch
 

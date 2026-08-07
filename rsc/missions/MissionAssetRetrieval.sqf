@@ -22,7 +22,11 @@ FADE_runMission_AssetRetrieval = {
     _enemyUnitsAsset = [_enemyUnitsAsset] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsAsset == 0) then { _enemyUnitsAsset = +_enemyUnits };
     private _baseEnemyClass = _enemyUnitsAsset select 0;
-    private _assetBranch = if (random 1 < 0.66) then { 1 } else { 2 };
+    // #region agent log
+    // Force vehicle branch while debugging map-click offset (session c2f21e). Revert after verify.
+    private _assetBranch = 2;
+    diag_log format ["#DBGc2f21e {""sessionId"":""c2f21e"",""hypothesisId"":""C"",""location"":""MissionAssetRetrieval.sqf:entry"",""message"":""asset retrieval start"",""data"":{""fromMapClick"":%1,""destPos"":%2,""mapAnchor"":%3,""rawClick"":%4,""resolvedR"":%5,""forcedVehBranch"":true},""timestamp"":%6}", _fromMapClick, _destPos, _mapAnchor, _mapPickRawAnchor, _mapPickResolvedR, diag_tickTime];
+    // #endregion
     private _areaRadius = missionNamespace getVariable ["FADE_missionApproxZoneRadiusM", 55];
     private _center = +_destPos;
     private _assetVehicle = objNull;
@@ -108,7 +112,10 @@ FADE_runMission_AssetRetrieval = {
 
             private _zones = +(missionNamespace getVariable ["FADE_civTriggerNames", []]);
             private _zonesEligible = [_zones, _mapAnchor, 1500, _mapPickResolvedR] call FADE_fnc_assetZonesNearMapClick;
-            if (count _zonesEligible < 1) then {
+            private _zonesFellBackWholeMap = false;
+            // Map-click: never expand to whole-map zones (that caused +5km offsets). Random may fall back.
+            if (count _zonesEligible < 1 && { !_fromMapClick }) then {
+                _zonesFellBackWholeMap = true;
                 _zonesEligible = [_zones, [], 1500, -1] call FADE_fnc_assetZonesNearMapClick;
             };
 
@@ -123,13 +130,37 @@ FADE_runMission_AssetRetrieval = {
                     _searchCenters pushBack _zc;
                 };
             } forEach _zonesEligible;
-            if (count _searchCenters > 16) then { _searchCenters = (_searchCenters call BIS_fnc_arrayShuffle) select [0, 16] };
+            private _centersBeforeCap = count _searchCenters;
+            private _didShuffleCap = false;
+            private _refForDist = if (count _mapAnchor >= 2) then { _mapAnchor } else { _destPos };
+            private _preShuffleDists = [];
+            if (count _refForDist >= 2) then {
+                { _preShuffleDists pushBack (round (_x distance2D _refForDist)) } forEach (_searchCenters select [0, (count _searchCenters) min 5]);
+            };
+            if (count _searchCenters > 16) then {
+                if (_fromMapClick) then {
+                    // Keep nearest-first order (dest/anchor already first); do not shuffle away from click.
+                    _searchCenters = _searchCenters select [0, 16];
+                } else {
+                    _didShuffleCap = true;
+                    _searchCenters = (_searchCenters call BIS_fnc_arrayShuffle) select [0, 16];
+                };
+            };
+            private _postCapDists = [];
+            if (count _refForDist >= 2) then {
+                { _postCapDists pushBack (round (_x distance2D _refForDist)) } forEach (_searchCenters select [0, (count _searchCenters) min 5]);
+            };
+            // #region agent log
+            diag_log format ["#DBGc2f21e {""sessionId"":""c2f21e"",""hypothesisId"":""A"",""location"":""MissionAssetRetrieval.sqf:vehCenters"",""message"":""vehicle search centers built"",""data"":{""zonesEligible"":%1,""zonesTotal"":%2,""centersBeforeCap"":%3,""didShuffleCap"":%4,""zonesFellBackWholeMap"":%5,""resolvedR"":%6,""preDists"":%7,""postDists"":%8},""timestamp"":%9}", count _zonesEligible, count _zones, _centersBeforeCap, _didShuffleCap, _zonesFellBackWholeMap, _mapPickResolvedR, _preShuffleDists, _postCapDists, diag_tickTime];
+            // #endregion
 
             private _attemptN = 0;
+            private _failNearCount = 0;
             {
                 if (!isNull _assetVehicle) exitWith {};
                 _attemptN = _attemptN + 1;
                 if (_attemptN mod 3 == 0) then { sleep 0 };
+                private _centerDist = if (count _refForDist >= 2) then { round (_x distance2D _refForDist) } else { -1 };
                 private _spawnRes = [_x, _vehicleClass] call _spawnRoadVehicleAtCenter;
                 private _vehTry = _spawnRes param [0, objNull];
                 private _posTry = _spawnRes param [1, []];
@@ -137,6 +168,17 @@ FADE_runMission_AssetRetrieval = {
                     _assetVehicle = _vehTry;
                     [_taskId, _assetVehicle] call FADE_missionEnt_registerVehicle;
                     _center = _posTry;
+                    private _finalDist = if (count _refForDist >= 2) then { round (_posTry distance2D _refForDist) } else { -1 };
+                    // #region agent log
+                    diag_log format ["#DBGc2f21e {""sessionId"":""c2f21e"",""hypothesisId"":""D"",""location"":""MissionAssetRetrieval.sqf:vehSpawnOk"",""message"":""vehicle spawn succeeded"",""data"":{""attemptN"":%1,""centerDistM"":%2,""finalDistM"":%3,""failNearCount"":%4,""posTry"":%5},""timestamp"":%6}", _attemptN, _centerDist, _finalDist, _failNearCount, _posTry, diag_tickTime];
+                    // #endregion
+                } else {
+                    if (_centerDist >= 0 && { _centerDist <= 2000 }) then { _failNearCount = _failNearCount + 1 };
+                    // #region agent log
+                    if (_attemptN <= 3 || { _centerDist > 5000 }) then {
+                        diag_log format ["#DBGc2f21e {""sessionId"":""c2f21e"",""hypothesisId"":""D"",""location"":""MissionAssetRetrieval.sqf:vehSpawnFail"",""message"":""vehicle spawn failed at center"",""data"":{""attemptN"":%1,""centerDistM"":%2},""timestamp"":%3}", _attemptN, _centerDist, diag_tickTime];
+                    };
+                    // #endregion
                 };
             } forEach _searchCenters;
 

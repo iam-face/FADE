@@ -128,18 +128,20 @@ missionNamespace setVariable ["FADE_qrfFriendlyCentroidATL", FADE_qrfFriendlyCen
 
 // -----------------------------------------------------------------------------
 // Counter-attack / QRF (HVT, Hostage, Clear Area, Search & Destroy, Troop Extract, CASEVAC, CSAR, Asset Retrieval, CAS) - reusable server spawn loop.
-// Stages truck-mounted infantry from the second-nearest civ zone (by distance
-// to the objective); falls back to offset from nearest zone if only one trigger exists.
+// Stages truck-mounted infantry from offsets near secondary civ zones (town centres fail strict road clear);
+// falls back to looser terrainClear / nearRoads soft spawn if needed.
 // Params: [_taskId, _objectivePos, _basePos, _enemyUnits, _allGroups, _detectionRadius, _skipDetectionWait]
 //   _allGroups - reference array; new enemy groups are pushBack'd for mission cleanup.
 //   _detectionRadius - optional; <= 0 uses missionNamespace FADE_counterAttackDetectionRadius (default 450).
-//   _skipDetectionWait - optional; if true, skip polling for player-in-zone and start first-wave delay immediately (CAS: when friendlies mark).
-// Timing defaults (optional missionNamespace): FADE_counterAttackFirstDelayMin/Max (120â€“360s),
-//   FADE_counterAttackBetweenMin/Max (540â€“660s), FADE_counterAttackTruckCount (3).
+//   _skipDetectionWait - optional; if true, skip detection poll and start first-wave delay immediately (CAS: when friendlies mark).
+// Detection (when not skipped): non-civ AI in radius knowsAbout a player (BLUFOR/OPFOR), OR player proximity fallback.
+// Timing defaults (optional missionNamespace): FADE_counterAttackFirstDelayMin/Max (120-360s),
+//   FADE_counterAttackBetweenMin/Max (540-660s), FADE_counterAttackTruckCount (3).
 // Vehicle filter: FADE_counterAttackMinCargoSeats (default 4). Fallback trucks if faction has none:
 //   FADE_counterAttackRhsFallbacks (RHS GAZ/ZIL/Kamaz/Ural-style), then FADE_counterAttackVanillaFallbacks.
 // Poll interval: FADE_counterAttackPollInterval (default 10s) for zone/task checks (not per-frame).
-// Wave cap: 1â€“3 waves per mission instance (chosen at random when the counter-attack thread starts).
+// Wave cap: 1-3 waves per mission instance (chosen at random when the counter-attack thread starts).
+// Truck staging: offsets from civ zones + loose terrainClear retry + nearRoads soft fallback (town centres fail strict clear).
 // If no player remains inside the objective detection radius when a wave spawns, trucks hunt a friendly
 // player centroid; driver MOVE+SAD waypoints refresh every FADE_qrfHuntWaypointIntervalS (default 60).
 // Not registered with FADE_registerEnemyRetreat (QRF keeps pressure); cleaned with mission groups.
@@ -153,6 +155,32 @@ FADE_counterAttack_missionEnded = {
     false
 };
 
+// True when any non-civilian AI within _radius of _center has knowsAbout >= threshold on an alive player.
+// Includes BLUFOR and OPFOR (and resistance): RAID QRF reacts to contact / spotting in the AO, not only player proximity.
+FADE_counterAttack_aiDetectsPlayersInArea = {
+    params ["_center", ["_radius", 350], ["_knowsThr", -1]];
+    if (count _center < 2) exitWith { false };
+    if (_knowsThr < 0) then {
+        _knowsThr = missionNamespace getVariable ["FADE_counterAttackKnowsAboutThreshold", 1.2];
+    };
+    private _players = allPlayers select { alive _x && { isPlayer _x } };
+    if (_players isEqualTo []) exitWith { false };
+    private _aiNear = (_center nearEntities ["CAManBase", _radius]) select {
+        alive _x && { !isPlayer _x } && { side _x != civilian }
+    };
+    if (_aiNear isEqualTo []) exitWith { false };
+    private _found = false;
+    {
+        private _ai = _x;
+        {
+            if ((_ai knowsAbout _x) >= _knowsThr) exitWith { _found = true };
+        } forEach _players;
+        if (_found) exitWith {};
+    } forEach _aiNear;
+    _found
+};
+missionNamespace setVariable ["FADE_counterAttack_aiDetectsPlayersInArea", FADE_counterAttack_aiDetectsPlayersInArea];
+
 FADE_counterAttack_spawnFootWave = {
     params ["_taskId", "_objectivePos", "_enemyUnits", "_allGroups", "_applyGrp"];
     if ([_taskId] call FADE_counterAttack_missionEnded) exitWith {
@@ -164,14 +192,24 @@ FADE_counterAttack_spawnFootWave = {
     private _sideEnemy = missionNamespace getVariable ["FADE_sideEnemy", east];
     private _sqMin = (missionNamespace getVariable ["FADE_counterAttackFootSquadsMin", 2]) max 1;
     private _sqMax = (missionNamespace getVariable ["FADE_counterAttackFootSquadsMax", 3]) max _sqMin;
-    private _distMin = (missionNamespace getVariable ["FADE_counterAttackFootSpawnDistMin", 80]) max 30;
-    private _distMax = (missionNamespace getVariable ["FADE_counterAttackFootSpawnDistMax", 220]) max _distMin;
+    // Floor keeps standoff even if older ConfigDefaults (80–220) is still published to missionNamespace.
+    private _distMin = (missionNamespace getVariable ["FADE_counterAttackFootSpawnDistMin", 280]) max 250;
+    private _distMax = (missionNamespace getVariable ["FADE_counterAttackFootSpawnDistMax", 450]) max (_distMin + 80);
     private _sizeMin = (missionNamespace getVariable ["FADE_counterAttackFootSquadSizeMin", 4]) max 2;
     private _sizeMax = (missionNamespace getVariable ["FADE_counterAttackFootSquadSizeMax", 6]) max _sizeMin;
-    private _bldChance = missionNamespace getVariable ["FADE_counterAttackFootBuildingChance", 0.65];
+    private _bldChance = (missionNamespace getVariable ["FADE_counterAttackFootBuildingChance", 0.4]) min 0.45;
+    private _minFromPlayers = (missionNamespace getVariable ["FADE_counterAttackFootMinDistFromPlayers", 150]) max 80;
     private _numSquads = _sqMin + floor random (1 + _sqMax - _sqMin);
     private _obj3 = if (count _objectivePos >= 3) then { +_objectivePos } else { [(_objectivePos select 0), (_objectivePos select 1), 0] };
-    ["footWave start task=%1 squads=%2 obj=%3 dist=%4-%5", _taskId, _numSquads, _obj3, _distMin, _distMax] call FADE_qrfDbgLog;
+    private _fnc_nearPlayers = {
+        params ["_pos"];
+        private _close = false;
+        {
+            if (isPlayer _x && { alive _x } && { (_x distance2D _pos) < _minFromPlayers }) exitWith { _close = true };
+        } forEach allPlayers;
+        _close
+    };
+    ["footWave start task=%1 squads=%2 obj=%3 dist=%4-%5 minFromPl=%6", _taskId, _numSquads, _obj3, _distMin, _distMax, _minFromPlayers] call FADE_qrfDbgLog;
     private _bearings = [];
     private _squadsSpawned = 0;
     for "_i" from 1 to _numSquads do {
@@ -189,8 +227,11 @@ FADE_counterAttack_spawnFootWave = {
         private _unitPositions = [];
         private _usedBuilding = false;
         if (random 1 < _bldChance) then {
+            // Require full distMin from objective (was distMin*0.5 — spawned in buildings next to players).
             private _bldCandidates = (nearestObjects [_obj3, ["House", "Building"], _distMax]) select {
-                (getPosATL _x) distance2D _obj3 >= (_distMin * 0.5) &&
+                private _bp = getPosATL _x;
+                (_bp distance2D _obj3) >= _distMin &&
+                { !([_bp] call _fnc_nearPlayers) } &&
                 { count (_x buildingPos -1) >= 1 }
             };
             if (count _bldCandidates > 0) then {
@@ -200,18 +241,27 @@ FADE_counterAttack_spawnFootWave = {
                 for "_bi" from 0 to (_want - 1) do {
                     private _p = _bps select _bi;
                     if (count _p < 3) then { _p = [(_p select 0), (_p select 1), (_p param [2, 0])] };
-                    _unitPositions pushBack _p;
+                    if !([_p] call _fnc_nearPlayers) then { _unitPositions pushBack _p };
                 };
-                if (count _unitPositions > 0) then { _usedBuilding = true };
+                if (count _unitPositions > 0) then { _usedBuilding = true } else { _unitPositions = [] };
             };
         };
         if (!_usedBuilding) then {
-            private _raw = _obj3 getPos [_dist, _bearing];
-            private _spawnPos = [[_raw, 0, 35, 4, 1, 0.4, 0, [], _obj3], _raw] call FADE_findSafePosArray;
-            if (surfaceIsWater _spawnPos) then {
-                _spawnPos = [[_obj3, _distMin + random ((_distMax - _distMin) * 0.5), 40, 4, 1, 0.4, 0, [], _obj3], _spawnPos] call FADE_findSafePosArray;
+            private _spawnPos = [];
+            for "_try" from 0 to 7 do {
+                private _tryBearing = if (_try == 0) then { _bearing } else { random 360 };
+                private _tryDist = _distMin + random (_distMax - _distMin);
+                private _raw = _obj3 getPos [_tryDist, _tryBearing];
+                private _cand = [[_raw, 0, 40, 4, 1, 0.4, 0, [], _raw], _raw] call FADE_findSafePosArray;
+                if (surfaceIsWater _cand) then { continue };
+                if ((_cand distance2D _obj3) < (_distMin * 0.85)) then { continue };
+                if ([_cand] call _fnc_nearPlayers) then { continue };
+                _spawnPos = _cand;
+                _bearing = _tryBearing;
+                _dist = _tryDist;
+                break;
             };
-            if (surfaceIsWater _spawnPos) then { continue };
+            if (_spawnPos isEqualTo []) then { continue };
             for "_u" from 1 to _sz do {
                 private _off = if (_u == 1) then { [0, 0] } else { [3 + random 6, random 360] };
                 private _p = if (_off isEqualTo [0, 0]) then { +_spawnPos } else { _spawnPos getPos [_off select 0, _off select 1] };
@@ -302,19 +352,24 @@ FADE_counterAttackStart = {
             } forEach allPlayers;
             _ok
         };
+        // Primary: AI in AO knowsAbout player (BLUFOR/OPFOR). Fallback: player proximity so QRF cannot stall.
+        private _qrfTriggered = {
+            if (call _playersInZone) exitWith { true };
+            [_objectivePos, _detectionRadius] call FADE_counterAttack_aiDetectsPlayersInArea
+        };
         private _detectionLogged = false;
         if (!_skipDetectionWait) then {
-            ["waitingDetection task=%1 radius=%2 obj=%3", _taskId, _detectionRadius, _objectivePos] call FADE_qrfDbgLog;
-            // Wait for first contact in zone or mission end (slow poll - not per-frame)
+            ["waitingDetection task=%1 radius=%2 obj=%3 (aiKnowsAbout|playerProximity)", _taskId, _detectionRadius, _objectivePos] call FADE_qrfDbgLog;
             waitUntil {
                 sleep _pollInterval;
                 if (call _taskDone) exitWith { true };
-                private _in = call _playersInZone;
-                if (_in && { !_detectionLogged }) then {
+                private _trig = call _qrfTriggered;
+                if (_trig && { !_detectionLogged }) then {
                     _detectionLogged = true;
-                    ["playerDetected task=%1 obj=%2 radius=%3", _taskId, _objectivePos, _detectionRadius] call FADE_qrfDbgLog;
+                    private _viaProx = call _playersInZone;
+                    ["playerDetected task=%1 obj=%2 radius=%3 via=%4", _taskId, _objectivePos, _detectionRadius, if (_viaProx) then { "proximity" } else { "aiKnowsAbout" }] call FADE_qrfDbgLog;
                 };
-                _in
+                _trig
             };
             if (call _taskDone) exitWith {
                 ["endedBeforeQrf task=%1 (during detection wait)", _taskId] call FADE_qrfDbgLog;
@@ -358,40 +413,90 @@ FADE_counterAttackStart = {
             _pairs = [_pairs, [], { _x select 0 }, "ASCEND"] call BIS_fnc_sortBy;
             private _minBase = missionNamespace getVariable ["FADE_counterAttackMinDistFromBase", 1000];
             private _baseQ = FADE_basePos;
+            // Assign with select (not params) — params inside if/while shadows outer _roadPos (SQF scope).
             private _roadPos = [];
+            private _roadDir = 0;
             private _staging = [];
             private _stagingResolved = false;
-            private _stCandidates = [];
-            if (count _pairs >= 2) then { _stCandidates pushBack [1, (_pairs select 1) select 1] };
-            if (count _pairs >= 3) then { _stCandidates pushBack [2, (_pairs select 2) select 1] };
-            _stCandidates pushBack [0, (_pairs select 0) select 1];
-            if (count _pairs >= 4) then { _stCandidates pushBack [3, (_pairs select 3) select 1] };
             private _nearOnly = (_pairs select 0) select 1;
-            _stCandidates pushBack [-1, _nearOnly getPos [600 min ((_nearOnly distance2D _objectivePos) + 400), (_nearOnly getDir _objectivePos) + 180]];
+            // Town-centre anchors fail FADE_findOpforGroundVehicleRoadSpawn (10 m TREE/HOUSE clear).
+            // Prefer offsets from secondary civ zones (same idea as EscapeEvasion staging away from cores).
+            private _stCandidates = [];
+            private _zoneIdxList = [];
+            if (count _pairs >= 2) then { _zoneIdxList pushBack 1 };
+            if (count _pairs >= 3) then { _zoneIdxList pushBack 2 };
+            _zoneIdxList pushBack 0;
+            if (count _pairs >= 4) then { _zoneIdxList pushBack 3 };
+            {
+                private _zc = (_pairs select _x) select 1;
+                private _away = _objectivePos getDir _zc;
+                if (_zc distance2D _objectivePos < 50) then { _away = _baseQ getDir _objectivePos };
+                _stCandidates pushBack (_zc getPos [700 + random 500, _away]);
+                _stCandidates pushBack (_zc getPos [1100 + random 700, _away + 40 + random 80]);
+                _stCandidates pushBack (_zc getPos [900 + random 600, _away + 180]);
+                _stCandidates pushBack _zc;
+            } forEach _zoneIdxList;
+            _stCandidates pushBack (_nearOnly getPos [600 min ((_nearOnly distance2D _objectivePos) + 400), (_nearOnly getDir _objectivePos) + 180]);
+            _stCandidates pushBack (_objectivePos getPos [1200 + random 800, random 360]);
+            private _dirFromBase = _baseQ getDir _objectivePos;
+            _stCandidates pushBack (_baseQ getPos [(_minBase + 80 + random 200), _dirFromBase]);
+
+            private _tryRoad = {
+                params ["_anchor", "_searchM", "_terrClear"];
+                if (count _anchor < 2) exitWith { [] };
+                private _a = if (count _anchor < 3) then { [(_anchor select 0), (_anchor select 1), 0] } else { +_anchor };
+                [_a, _searchM, [], _minBase, _baseQ, _objectivePos, 12, 8, _terrClear] call FADE_findOpforGroundVehicleRoadSpawn
+            };
+
             private _si = 0;
+            private _hit = [];
             while { _si < count _stCandidates && { !_stagingResolved } } do {
-                private _st = (_stCandidates select _si) select 1;
-                _staging = _st;
-                if (count _staging < 3) then { _staging = [(_staging select 0), (_staging select 1), 0] };
-                private _roadHit = [_staging, 450, [], _minBase, _baseQ, _objectivePos] call FADE_findOpforGroundVehicleRoadSpawn;
-                if !(_roadHit isEqualTo []) then {
-                    _roadHit params ["_roadPos", "_dir"];
+                _staging = _stCandidates select _si;
+                _hit = [_staging, 700, 10] call _tryRoad;
+                if (_hit isEqualTo []) then { _hit = [_staging, 900, 4] call _tryRoad };
+                if (_hit isEqualTo []) then { _hit = [_staging, 1200, 2] call _tryRoad };
+                if !(_hit isEqualTo []) then {
+                    _roadPos = +(_hit select 0);
+                    _roadDir = _hit select 1;
                     _stagingResolved = true;
                 };
                 _si = _si + 1;
             };
+            // Soft fallback: nearRoads + findSafePos (skip TREE/HOUSE filter that rejects urban/scrub roads).
             if (!_stagingResolved) then {
-                private _dirFromBase = _baseQ getDir _objectivePos;
-                private _fallbackPos = _baseQ getPos [(_minBase + 50), _dirFromBase];
-                private _roadHit2 = [_fallbackPos, 250, [], _minBase, _baseQ, _objectivePos] call FADE_findOpforGroundVehicleRoadSpawn;
-                if !(_roadHit2 isEqualTo []) then {
-                    _roadHit2 params ["_roadPos", "_dir"];
-                    _staging = _fallbackPos;
-                    _stagingResolved = true;
-                };
+                private _fbAnchors = [
+                    _objectivePos getPos [1400 + random 600, random 360],
+                    _nearOnly getPos [1000 + random 500, random 360],
+                    _baseQ getPos [(_minBase + 100), _dirFromBase]
+                ];
+                {
+                    private _anc = _x;
+                    if (count _anc < 3) then { _anc = [(_anc select 0), (_anc select 1), 0] };
+                    private _roads = _anc nearRoads 1500;
+                    if (count _roads > 24) then {
+                        _roads = _roads call BIS_fnc_arrayShuffle;
+                        _roads = _roads select [0, 24];
+                    };
+                    {
+                        private _rp = getPosATL _x;
+                        if (count _rp < 3) then { _rp = [(_rp select 0), (_rp select 1), 0] };
+                        if (surfaceIsWater _rp) then { continue };
+                        if (_rp distance2D _baseQ <= _minBase) then { continue };
+                        private _probe = [[_rp, 0, 12, 6, 0, 0.4, 0, [], _rp], _rp] call FADE_findSafePosArray;
+                        if (!(_probe isEqualType []) || { count _probe < 2 } || { surfaceIsWater _probe }) then { continue };
+                        if (count _probe < 3) then { _probe = [(_probe select 0), (_probe select 1), 0] };
+                        if (_probe distance2D _baseQ <= _minBase) then { continue };
+                        _roadPos = _probe;
+                        _roadDir = [_probe, _objectivePos] call BIS_fnc_dirTo;
+                        _staging = _anc;
+                        _stagingResolved = true;
+                        break;
+                    } forEach _roads;
+                    if (_stagingResolved) then { break };
+                } forEach _fbAnchors;
             };
             if (!_stagingResolved) exitWith {
-                ["vehicleWave aborted noRoadSpawn task=%1 obj=%2 nearestZone=%3", _taskId, _objectivePos, _nearOnly] call FADE_qrfDbgLog;
+                ["vehicleWave aborted noRoadSpawn task=%1 obj=%2 nearestZone=%3 candidates=%4", _taskId, _objectivePos, _nearOnly, count _stCandidates] call FADE_qrfDbgLog;
             };
             ["vehicleWave staging task=%1 road=%2 zoneCandidates=%3", _taskId, _roadPos, count _pairs] call FADE_qrfDbgLog;
             if ((_roadPos isEqualType []) && { count _roadPos >= 2 } && { count _roadPos < 3 }) then {
@@ -504,21 +609,64 @@ FADE_counterAttackStart = {
             private _wpM = objNull;
             private _wpS = objNull;
             private _prev = objNull;
+            // Do not declare private inside for+continue (SQF re-entry bug).
+            private _fbRoads = [];
+            private _fbHit = [];
+            private _rp = [0, 0, 0];
+            private _gapOk = true;
+            // Staging already resolved a clear road with relaxed terrainClear; reuse it for truck 0.
+            // Re-running FADE_findOpforGroundVehicleRoadSpawn with default terrClear=10 often returns []
+            // on the same scrub/town roads that staging accepted (RPT: skipTruck noRoadNear).
             for "_vi" from 0 to (_numTrucks - 1) do {
                 if (_vi > 0) then { sleep 8 };
                 _vClass = selectRandom _vehPick;
-                _anchor = if (_vi == 0) then {
-                    _roadPos
+                if (_vi == 0) then {
+                    _spawnPos = +_roadPos;
+                    _spawnDir = _roadDir;
+                    _anchor = _spawnPos;
                 } else {
-                    _prev = _spawnedVehs select ((count _spawnedVehs) - 1);
-                    if (isNull _prev) then { _roadPos } else { (getPosATL _prev) getPos [14, _dir + 180] }
+                    if (count _spawnedVehs > 0) then {
+                        _prev = _spawnedVehs select ((count _spawnedVehs) - 1);
+                        _anchor = if (isNull _prev) then { +_roadPos } else { (getPosATL _prev) getPos [14, _dir + 180] };
+                    } else {
+                        _anchor = _roadPos getPos [14 * _vi, _dir + 180];
+                    };
+                    if (count _anchor < 3) then { _anchor = [(_anchor select 0), (_anchor select 1), 0] };
+                    // Match staging: relaxed clear + wider search, then soft nearRoads fallback.
+                    _roadHit = [_anchor, 700, _spawnedVehs, _minBase, _baseQ, _tgtMove, 12, 8, 4] call FADE_findOpforGroundVehicleRoadSpawn;
+                    if (_roadHit isEqualTo []) then {
+                        _roadHit = [_anchor, 900, _spawnedVehs, _minBase, _baseQ, _tgtMove, 12, 8, 2] call FADE_findOpforGroundVehicleRoadSpawn;
+                    };
+                    if (_roadHit isEqualTo []) then {
+                        _fbRoads = _anchor nearRoads 600;
+                        if (count _fbRoads > 16) then {
+                            _fbRoads = _fbRoads call BIS_fnc_arrayShuffle;
+                            _fbRoads = _fbRoads select [0, 16];
+                        };
+                        _fbHit = [];
+                        {
+                            _rp = getPosATL _x;
+                            if (count _rp < 3) then { _rp = [(_rp select 0), (_rp select 1), 0] };
+                            if (surfaceIsWater _rp) then { continue };
+                            if (_rp distance2D _baseQ <= _minBase) then { continue };
+                            _gapOk = true;
+                            {
+                                if (!isNull _x && { alive _x } && { (_x distance2D _rp) < 12 }) then { _gapOk = false };
+                            } forEach _spawnedVehs;
+                            if (!_gapOk) then { continue };
+                            _fbHit = [_rp, [_rp, _tgtMove] call BIS_fnc_dirTo];
+                            break;
+                        } forEach _fbRoads;
+                        _roadHit = _fbHit;
+                    };
+                    if (_roadHit isEqualTo []) then {
+                        ["vehicleWave skipTruck task=%1 idx=%2 noRoadNear anchor=%3", _taskId, _vi, _anchor] call FADE_qrfDbgLog;
+                        continue
+                    };
+                    _spawnPos = +(_roadHit select 0);
+                    _spawnDir = _roadHit select 1;
+                    if (count _spawnPos < 3) then { _spawnPos = [(_spawnPos select 0), (_spawnPos select 1), 0] };
                 };
-                _roadHit = [_anchor, 450, _spawnedVehs, _minBase, _baseQ, _tgtMove] call FADE_findOpforGroundVehicleRoadSpawn;
-                if (_roadHit isEqualTo []) then {
-                    ["vehicleWave skipTruck task=%1 idx=%2 noRoadNear anchor=%3", _taskId, _vi, _anchor] call FADE_qrfDbgLog;
-                    continue
-                };
-                _roadHit params ["_spawnPos", "_spawnDir"];
                 if (_spawnPos distance2D _baseQ <= _minBase) then {
                     ["vehicleWave skipTruck task=%1 idx=%2 tooNearBase dist=%3 min=%4", _taskId, _vi, _spawnPos distance2D _baseQ, _minBase] call FADE_qrfDbgLog;
                     continue
@@ -636,15 +784,15 @@ FADE_counterAttackStart = {
                 ["allWavesDone task=%1 waves=%2", _taskId, _waveNum] call FADE_qrfDbgLog;
             };
             private _bw = _betMin + random (_betMax - _betMin);
-            ["betweenWaves task=%1 sleeping %2s waitingForPlayersInZone", _taskId, round _bw] call FADE_qrfDbgLog;
+            ["betweenWaves task=%1 sleeping %2s waitingForQrfTrigger", _taskId, round _bw] call FADE_qrfDbgLog;
             sleep _bw;
             if (call _taskDone) exitWith {};
             waitUntil {
                 sleep _pollInterval;
-                call _taskDone || { call _playersInZone }
+                call _taskDone || { call _qrfTriggered }
             };
             if (call _taskDone) exitWith {};
-            ["betweenWaves ready task=%1 wave=%2 playersInZone=true", _taskId, _waveNum + 1] call FADE_qrfDbgLog;
+            ["betweenWaves ready task=%1 wave=%2 qrfTriggered=true", _taskId, _waveNum + 1] call FADE_qrfDbgLog;
         };
     };
 };

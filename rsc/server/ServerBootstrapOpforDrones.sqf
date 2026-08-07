@@ -1,4 +1,4 @@
-// FADE_OpforDrones.sqf — ambient OPFOR UAV patrol / ISR + QRF vectoring (server)
+// ServerBootstrapOpforDrones.sqf — ambient OPFOR UAV patrol / ISR + QRF vectoring (server)
 // Setting: FADE_opforDroneSetting Off | Low | Normal | High (see FADE_opforDroneIntensity in Config.sqf)
 
 if (!isServer) exitWith {};
@@ -19,6 +19,8 @@ FADE_opforDrone_fallbackClasses = [
     "B_UAV_06_F"
 ];
 
+// Faction-matched UAV only (FADE_heliClasses + CfgVehicles). No side-wide scrape — that
+// pulls unrelated mod packs. Empty → FADE_opforDrone_pickClass uses FADE_opforDrone_fallbackClasses.
 FADE_getEnemyDroneVehicleClasses = {
     private _cached = missionNamespace getVariable ["FADE_enemyDroneVehicleClasses_cache", []];
     if (count _cached > 0) exitWith { +_cached };
@@ -55,18 +57,10 @@ FADE_getEnemyDroneVehicleClasses = {
         } forEach ("true" configClasses (configFile >> "CfgVehicles"));
     };
 
-    if (count _out == 0) then {
-        {
-            private _c = _x;
-            if !([_c] call _isDroneClass) then { continue };
-            if (getNumber (configFile >> "CfgVehicles" >> _c >> "side") == _wantSide) then {
-                _out pushBack _c;
-            };
-        } forEach (missionNamespace getVariable ["FADE_heliClasses", []]);
-    };
-
     _out = _out arrayIntersect _out;
-    missionNamespace setVariable ["FADE_enemyDroneVehicleClasses_cache", +_out];
+    if (count _out > 0) then {
+        missionNamespace setVariable ["FADE_enemyDroneVehicleClasses_cache", +_out];
+    };
     _out
 };
 
@@ -132,18 +126,23 @@ FADE_opforDrone_assignPatrol = {
     if (isNull _grp) then { _grp = group _uav };
     if (isNull _grp) exitWith {};
     while { count waypoints _grp > 0 } do { deleteWaypoint [_grp, 0] };
-    private _r = 1400 + random 900;
+    // Ingress to player AO first (NORMAL), then tight search orbit — small UAVs are slow.
+    private _in = _grp addWaypoint [_center2, 80];
+    _in setWaypointType "MOVE";
+    _in setWaypointSpeed "NORMAL";
+    _in setWaypointBehaviour "AWARE";
+    private _r = 450 + random 350;
     for "_i" from 0 to 3 do {
         private _ang = _i * 90 + random 50;
         private _p = [(_center2 select 0) + _r * sin _ang, (_center2 select 1) + _r * cos _ang, 0];
         private _wp = _grp addWaypoint [_p, 0];
         _wp setWaypointType "MOVE";
-        _wp setWaypointSpeed "LIMITED";
-        _wp setWaypointBehaviour "SAFE";
+        _wp setWaypointSpeed "NORMAL";
+        _wp setWaypointBehaviour "AWARE";
     };
     private _cyc = _grp addWaypoint [_center2, 0];
     _cyc setWaypointType "CYCLE";
-    _grp setBehaviour "SAFE";
+    _grp setBehaviour "AWARE";
     _grp setCombatMode "RED";
 };
 
@@ -164,17 +163,20 @@ FADE_opforDrone_doSpawn = {
     private _center = call FADE_opforDrone_patrolCenter;
     private _center2 = [_center select 0, _center select 1];
     private _dirFrom = random 360;
-    private _dist = 2200 + random 1200;
+    // ~700–1100 m: close enough for slow ISR quads to reach the AO quickly, still off the player stack.
+    private _dist = 700 + random 400;
     private _spawn2 = [
         (_center2 select 0) + _dist * sin _dirFrom,
         (_center2 select 1) + _dist * cos _dirFrom
     ];
-    private _mapMinA = missionNamespace getVariable ["FADE_mapMin", 0];
-    private _mapMaxA = missionNamespace getVariable ["FADE_mapMax", worldSize];
     private _edgePad = 250;
-    _spawn2 set [0, (_spawn2 select 0) max (_mapMinA + _edgePad) min (_mapMaxA - _edgePad)];
-    _spawn2 set [1, (_spawn2 select 1) max (_mapMinA + _edgePad) min (_mapMaxA - _edgePad)];
-    private _alt = (getTerrainHeightASL [_spawn2 select 0, _spawn2 select 1]) + 160 + random 90;
+    _spawn2 = [_spawn2, _edgePad] call (missionNamespace getVariable ["FADE_mapClampPos2D", {
+        params ["_xy", ["_p", 0]];
+        private _mn = missionNamespace getVariable ["FADE_mapMin", 0];
+        private _mx = missionNamespace getVariable ["FADE_mapMax", worldSize];
+        [(_xy select 0) max (_mn + _p) min (_mx - _p), (_xy select 1) max (_mn + _p) min (_mx - _p)]
+    }]);
+    private _alt = (getTerrainHeightASL [_spawn2 select 0, _spawn2 select 1]) + 120 + random 60;
     private _spawnPos = [_spawn2 select 0, _spawn2 select 1, _alt];
     private _class = call FADE_opforDrone_pickClass;
     private _uav = createVehicle [_class, _spawnPos, [], 0, "FLY"];
@@ -194,9 +196,10 @@ FADE_opforDrone_doSpawn = {
             // #region agent log
             diag_log format ["[FAC DbgBrowser 62d308] H17 opforDrone spawn failed no crew class=%1", _class];
             // #endregion
-            exitWith {};
         };
     };
+    // Bare exitWith inside then {} fails SQF parse ("Missing ;"); abort doSpawn here instead.
+    if (isNull _uav || { isNull driver _uav }) exitWith {};
     private _grp = group (driver _uav);
     if (!isNull _grp) then {
         private _apply = missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}];

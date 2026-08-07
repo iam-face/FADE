@@ -23,7 +23,11 @@ missionNamespace setVariable ["FADE_lore_pool_bluforRole_byType", createHashMapF
     ["CASEVAC", ["medical evacuation flight", "aeromedical evacuation team", "DUSTOFF element"]],
     ["CSAR", ["search and rescue element", "recovery flight", "CSAR detachment"]],
     ["MineClearing", ["route clearance team", "engineer support detachment", "EOD advisory team"]],
-    ["GeoGuesser", ["reconnaissance training element", "map reconnaissance team", "observer detachment"]]
+    ["GeoGuesser", ["reconnaissance training element", "map reconnaissance team", "observer detachment"]],
+    ["PointDefense", ["point defence detachment", "holding force", "quick-reaction force", "security element"]],
+    ["Invasion", ["defensive holding force", "counter-attack element", "combined arms task force"]],
+    ["ClearArea", ["assault element", "clearance force", "combined arms task force"]],
+    ["Raid", ["raid force", "direct-action element", "strike detachment"]]
 ]];
 
 missionNamespace setVariable ["FADE_lore_pool_opforRole", [
@@ -83,6 +87,11 @@ missionNamespace setVariable ["FADE_lore_bundles", createHashMapFromArray [
         ["is pushing inland from a lodgement", "defend key population centres", "before enemy forces link up"],
         ["has established an initial foothold", "repel the assault and restore the line", "before armour is ashore"]
     ]],
+    ["PointDefense", [
+        ["is massing to seize a contested point", "hold the marked ground against assault waves", "until the defend window closes"],
+        ["is probing a downed aircraft site", "deny the enemy the crash site", "before recovery assets arrive"],
+        ["is pressing a halted friendly column", "protect the stranded convoy", "until the hold timer expires"]
+    ]],
     ["_logistics", [
         ["the route passes near reported hostile activity", "complete the mission without unnecessary delay", "within the assigned flight window"],
         ["limited LZ availability has been forecast", "deliver the package on the first suitable approach", "before the receiving unit displaces"],
@@ -113,6 +122,7 @@ missionNamespace setVariable ["FADE_lore_bundleCategory", createHashMapFromArray
     ["CSAR", "CSAR"],
     ["CASEVAC", "CASEVAC"],
     ["Invasion", "Invasion"],
+    ["PointDefense", "PointDefense"],
     ["Cargo", "Cargo"],
     ["MineClearing", "MineClearing"],
     ["GeoGuesser", "GeoGuesser"],
@@ -161,6 +171,17 @@ missionNamespace setVariable ["FADE_lore_templates", createHashMapFromArray [
         ["{opNameUpper}: contain enemy push — {region}.",
          "{articleOpforRoleCap} is executing an assault from the {region} sector (grid {grid}).",
          "{factionFriendly} {bluforRole} is ordered to {stakes} {timeHook} during {timePhase}."]
+    ]],
+    ["PointDefense", [
+        ["{opNameUpper} — hold point near {region}.",
+         "{articleOpforRoleCap} {instigator} near {region} (grid {grid}). Assault waves assessed at {echelon}. {civSituation}",
+         "{factionFriendly} {bluforRole} must {stakes} {timeHook}. {weatherPhrase}."],
+        ["{opNameUpper}: point defence — {region}.",
+         "Friendly forces must occupy and hold a marked point near {region}. {articleOpforRoleCap} is expected to contest the ground with infantry and vehicle-borne assaults.",
+         "{factionFriendly} {bluforRole} will {stakes} {timeHook} during {timePhase}."],
+        ["{opNameUpper}: defend the site — {region}.",
+         "A critical site near {region} (grid {grid}) requires a timed defence against {articleOpforRole}. Area is {distancePhrase}.",
+         "{factionFriendly} {bluforRole} is ordered to {stakes} {timeHook}."]
     ]],
     ["AreaOfOperations", [
         ["{opNameUpper} — AO near {region}.",
@@ -390,6 +411,7 @@ FADE_lore_opforBaseline = {
         case "Operation": { 36 };
         case "Raid": { 28 };
         case "Invasion": { 40 };
+        case "PointDefense": { 24 };
         case "EscapeEvasion": { 22 };
         case "GeoGuesser": { 0 };
         default { 10 };

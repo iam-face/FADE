@@ -352,11 +352,13 @@ private _vehReinforceMin = missionNamespace getVariable ["FADE_invasionVehicleRe
             (_drop2 select 0) + _heliApproach * (sin _approachDir),
             (_drop2 select 1) + _heliApproach * (cos _approachDir)
         ];
-        private _mapMinA = missionNamespace getVariable ["FADE_mapMin", 0];
-        private _mapMaxA = missionNamespace getVariable ["FADE_mapMax", worldSize];
         private _pad = 200;
-        _spawn2 set [0, (_spawn2 select 0) max (_mapMinA + _pad) min (_mapMaxA - _pad)];
-        _spawn2 set [1, (_spawn2 select 1) max (_mapMinA + _pad) min (_mapMaxA - _pad)];
+        _spawn2 = [_spawn2, _pad] call (missionNamespace getVariable ["FADE_mapClampPos2D", {
+            params ["_xy", ["_p", 0]];
+            private _mn = missionNamespace getVariable ["FADE_mapMin", 0];
+            private _mx = missionNamespace getVariable ["FADE_mapMax", worldSize];
+            [(_xy select 0) max (_mn + _p) min (_mx - _p), (_xy select 1) max (_mn + _p) min (_mx - _p)]
+        }]);
         private _alt = (getTerrainHeightASL [_spawn2 select 0, _spawn2 select 1]) + 120 + random 80;
         private _spawnPos = [_spawn2 select 0, _spawn2 select 1, _alt];
 
