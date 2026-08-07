@@ -107,56 +107,56 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
     };
     private _launcherSet = missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"];
     private _atLine = switch (_launcherSet) do {
-        case "None": { "Anti-armour threat is light; dedicated AT teams unlikely." };
+        case "None": { "Anti-armour is light; dedicated AT teams unlikely." };
         case "Minimal": { "Limited anti-armour; occasional RPG-class weapons possible." };
         case "Reduced": { "Anti-armour present but below full table of equipment." };
-        default { "Expect RPG / light AT teams in the infantry mix." };
+        default { "Expect RPG / light AT teams mixed into the infantry." };
     };
     private _airSet = [missionNamespace getVariable ["FADE_opforAirSetting", "Off"]] call FADE_normalizeOpforThreatSetting;
     private _airLine = if (_airSet isEqualTo "Off") then {
         "Hostile air is unlikely."
     } else {
-        format ["Hostile rotary-wing may be committed if the enemy gains situational awareness (%1).", toLower _airSet]
+        format ["Hostile helicopters may launch if they have a clear picture (%1).", toLower _airSet]
     };
     private _droneSet = [missionNamespace getVariable ["FADE_opforDroneSetting", "Off"]] call FADE_normalizeOpforThreatSetting;
     private _droneLine = if (_droneSet isEqualTo "Off") then {
         "Enemy UAV patrols are unlikely."
     } else {
-        format ["Enemy UAVs may patrol the battlespace and vector ground QRF onto detected foot mobile (%1).", toLower _droneSet]
+        format ["Enemy UAVs may patrol and call truck QRF onto spotted foot mobile (%1).", toLower _droneSet]
     };
     private _commsLine = if (_missionType in ["HVT", "Hostage", "ClearArea", "SearchDestroy", "CASEVAC", "CSAR", "Operation", "AreaOfOperations", "AssetRetrieval", "AssetRetrievalVeh", "InterceptConvoy", "EscapeEvasion", "Raid", "Invasion", "PointDefense"]) then {
-        "Enemy may request reinforcements after sustained or reported contact."
+        "Enemy may call reinforcements after sustained or reported contact."
     } else {
         "Reinforcement is unlikely; expect local contacts only."
     };
     private _specBlock = [_atLine, _airLine, _droneLine, _commsLine] joinString "<br/>";
     private _mlcoa = switch (_missionType) do {
-        case "TroopInsert": { "Local security may react to aircraft noise; expect minor harassing fire en route to the LZ." };
+        case "TroopInsert": { "Local security may react to aircraft noise; light harassing fire en route to the LZ is possible." };
         case "TroopExtract": { "Enemy may probe the pickup zone and try to delay embarkation." };
-        case "CASEVAC": { "Enemy near the casualty site may maintain pressure during loading." };
-        case "CSAR": { "Search teams may sweep toward the survivor; defend the site until extraction." };
-        case "Cargo": { "Non-combat resupply; expect friendly receiving party and local camp security only." };
-        case "CAS": { "Enemy may continue pressure on friendly positions and seek cover when engaged from the air." };
-        case "HVT": { "Bodyguards will protect the HVT; outer patrols may try to canalise approach routes." };
-        case "Hostage": { "Captors may barricade structures and use hostages as cover while returning fire." };
-        case "ClearArea": { "Garrison may fight for the town and withdraw in fragments once cohesion breaks." };
-        case "SearchDestroy": { "Garrisoned buildings may hold caches; outer guards may move toward gunfire." };
-        case "InterceptConvoy": { "Escorts may suppress flanks and attempt to push through; expect vehicles to button up." };
-        case "MineClearing": { "Minimal enemy manoeuvre expected; treat the area as contaminated until cleared." };
+        case "CASEVAC": { "Enemy near the casualty site may keep pressure on during loading." };
+        case "CSAR": { "Search teams may sweep toward the survivor; hold the site until extraction." };
+        case "Cargo": { "Logistics only; expect a friendly receiving party and local camp security." };
+        case "CAS": { "Enemy may keep pressure on friendlies and go to cover when engaged from the air." };
+        case "HVT": { "Bodyguards will cover the HVT; outer patrols may funnel approaches." };
+        case "Hostage": { "Captors may barricade buildings and use hostages as cover while shooting back." };
+        case "ClearArea": { "Garrison may fight for the town, then break into fragments once cohesion goes." };
+        case "SearchDestroy": { "Cache buildings may be garrisoned; outer guards may move toward gunfire." };
+        case "InterceptConvoy": { "Escorts may suppress flanks and try to punch through; vehicles may button up." };
+        case "MineClearing": { "Little enemy manoeuvre expected; treat the area as contaminated until cleared." };
         case "AssetRetrieval": { "House team may hold the objective; patrols may counter-attack toward the building." };
-        case "AssetRetrievalVeh": { "Dismounted security may hold the road site; patrols may screen approaches." };
-        case "AreaOfOperations": { "Objective garrisons will defend in place; enemy may shift forces between objectives under pressure." };
-        case "Operation": { "Zone garrisons will hold built-up areas; enemy may move vehicles between sectors." };
-        case "Raid": { "Each objective appears independently defended; assault on one site may draw enemy attention elsewhere." };
-        case "Invasion": { "OPFOR pushes zone-by-zone from the beachhead; heliborne waves continue while they hold it. Retake INVASION to win." };
+        case "AssetRetrievalVeh": { "Dismounts may hold the road site; patrols may screen approaches." };
+        case "AreaOfOperations": { "Objective garrisons defend in place; enemy may shift between objectives under pressure." };
+        case "Operation": { "Zone garrisons hold built-up areas; enemy may move vehicles between sectors." };
+        case "Raid": { "Each site looks independently defended; hitting one may draw attention elsewhere." };
+        case "Invasion": { "OPFOR pushes zone-by-zone from the beachhead; heli waves keep coming while they hold it. Retake INVASION to win." };
         case "PointDefense": { "Enemy will probe then assault the marked point with infantry and vehicle-borne waves from nearby ground; they will try to seize it while friendlies are absent." };
         case "EscapeEvasion": { "Dismounted patrols sweep the area; enemy may follow up after confirmed contact." };
-        default { "Expect defenders to hold key ground on contact, adjust on flanks, or break contact once cohesion is lost." };
+        default { "Defenders hold key ground on contact, adjust on flanks, or break contact when cohesion fails." };
     };
-    private _mdcoa = "Enemy reserves may commit additional troops or vehicles if local forces become decisively engaged.";
+    private _mdcoa = "Reserves may push more troops or vehicles if local forces get decisively engaged.";
     private _civOn = missionNamespace getVariable ["FADE_civiliansEnabled", true];
     private _civLine = if (_civOn) then {
-        "Civilians may be present; unknown individuals may observe or report activity."
+        "Civilians may be present; locals may watch or report activity."
     } else {
         "Civilian presence is not expected in the area."
     };
@@ -171,7 +171,7 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
         private _friendlyPart = format [
             "<br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/>" +
             _bodyTag + "Forward camp with receiving party and local security patrols." + _bodyEnd + "<br/>" +
-            _bodyTag + "%1 — task-organized from base." + _bodyEnd,
+            _bodyTag + "%1 - task-organized from base." + _bodyEnd,
             _friendlyFactionDisplay
         ];
         _enemyPart + _friendlyPart +
@@ -196,7 +196,7 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
         ];
         private _friendlyPart = format [
             "<br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/>" +
-            _tag + "%1 — task-organized from base." + _end,
+            _tag + "%1 - task-organized from base." + _end,
             _friendlyFactionDisplay
         ];
         _enemyPart + _friendlyPart +
@@ -220,7 +220,7 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
     ];
     private _friendlyPart = format [
         "<br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/>" +
-        _bodyTag + "%1 — task-organized from base." + _bodyEnd,
+        _bodyTag + "%1 - task-organized from base." + _bodyEnd,
         _friendlyFactionDisplay
     ];
     _enemyPart + _friendlyPart +
@@ -330,7 +330,7 @@ FADE_missionComputeBriefingDefaults = {
             "#FFFFFF"
         ] call _intelFormatter
     };
-    private _defaultExecutionHtml = "<t align='left' color='#C0C0C0'>Follow map markers and task updates. Report phase changes on radio.</t>";
+    private _defaultExecutionHtml = "<t align='left' color='#C0C0C0'>Follow map markers and task updates. Call phase changes on radio.</t>";
     private _defaultAdminHtml = format ["<t align='left' color='#FFFFFF'>Mission lead: Zero Alpha (%1)</t>", _zeroAlphaDisplayName];
     private _defaultCommandHtml = format ["<t align='left' color='#FFFFFF'>Radio: %1</t>", _acreChannelSummary];
     createHashMapFromArray [
@@ -346,7 +346,7 @@ FADE_missionComputeBriefingDefaults = {
         ["defaultAdminHtml", _defaultAdminHtml],
         ["defaultCommandHtml", _defaultCommandHtml],
         ["defaultSituationTaskText", _defaultSituationHtml],
-        ["defaultExecutionTaskText", "<t align='left' color='#C0C0C0'>Follow map markers and task updates. Report phase changes on radio.</t>"],
+        ["defaultExecutionTaskText", "<t align='left' color='#C0C0C0'>Follow map markers and task updates. Call phase changes on radio.</t>"],
         ["defaultAdminTaskText", format ["<t align='left' color='#FFFFFF'>Mission lead: Zero Alpha (%1).</t>", _zeroAlphaDisplayName]],
         ["defaultCommandTaskText", format ["<t align='left' color='#FFFFFF'>Radio: %1.</t>", _acreChannelSummary]]
     ]
@@ -406,8 +406,8 @@ FADE_smeac_formatBackgroundFallback = {
     format [
         "<t align='left' color='#FFD166'>BACKGROUND</t><br/>" +
         "<t align='left' color='#8BA4BE'>- %1 operating in the objective area.</t><br/>" +
-        "<t align='left' color='#B0B0B0'>- Threat assessment: Local posture uncertain; treat all contacts as hostile until identified.</t><br/>" +
-        "<t align='left' color='#B0B0B0'>- Commander's intent: Execute assigned objectives IAW task execution.</t>",
+        "<t align='left' color='#B0B0B0'>- Threat assessment: Local picture is thin; treat unknown contacts as hostile until identified.</t><br/>" +
+        "<t align='left' color='#B0B0B0'>- Commander's intent: Complete the assigned objectives per the task.</t>",
         _enemyFactionName
     ]
 };
@@ -454,9 +454,9 @@ missionNamespace setVariable ["FADE_buildMissionTaskSmeacText", {
         _areaName = _topoData param [1, _areaName];
     };
     private _gridLine = if (_withholdGrid) then {
-        format ["<t align='left' color='%1'>Grid withheld — map-reconnaissance drill</t>", _bodyCol]
+        format ["<t align='left' color='%1'>Grid withheld - map-reconnaissance drill</t>", _bodyCol]
     } else {
-        format ["<t align='left' color='%1'>Grid %2 — %3</t>", _bodyCol, _grid, _areaName]
+        format ["<t align='left' color='%1'>Grid %2 - %3</t>", _bodyCol, _grid, _areaName]
     };
     private _missionHtml = [_missionText] call FADE_smeac_wrapMissionHtml;
     format [

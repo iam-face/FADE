@@ -48,7 +48,7 @@ FADE_runMission_CASEVAC = {
 
     private _grid = mapGridPosition _destPos;
     private _living = { alive _x } count units _group;
-    private _brief = format ["CASEVAC%1%1Pickup (approx.): Grid %2%1%1MedEvac: wounded require immediate lift. Load casualties carefully and RTB according to task instructions.", toString [10], _grid] + _briefGuiTail;
+    private _brief = format ["CASEVAC%1%1Pickup (approx.): Grid %2%1%1MedEvac: wounded need lift now. Load carefully and RTB (see Tasks).", toString [10], _grid] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
     [format ["<t color='#FFFFFF'>RZ Grid: %1</t><br/><t color='#FFFFFF'>PAX: %2 (wounded)</t><br/><br/><t color='#FFFFFF'>Extract and RTB.</t>", _grid, _living]] call _showAssignedHint;
     [_player, "CASEVAC"] call FADE_notifyOthersMissionStarted;
@@ -244,7 +244,7 @@ FADE_runMission_CSAR = {
     private _aircraftName = if (isClass _aircraftCfg) then { getText (_aircraftCfg >> "displayName") } else { _csarAircraftClass };
     if (_aircraftName == "") then { _aircraftName = _csarAircraftClass };
     private _brief = format [
-        "CSAR%1%1Aircraft: %2%1Crash / survivor area (approx.): Grid %3%1%1Search for and recover isolated personnel from the crash site. Survivors may have fled toward nearby towns seeking assistance  -  widen your search beyond the wreck. When you are close, survivors may mark their position with smoke.%1%1Extract survivors as directed; follow Tasks for approach and RTB procedures.",
+        "CSAR%1%1Aircraft: %2%1Crash / survivor area (approx.): Grid %3%1%1Recover isolated personnel from the crash. Survivors may have fled toward nearby towns  -  search wider than the wreck. Close in and they may mark with smoke.%1%1Extract and RTB (approach and return distances on Tasks).",
         toString [10],
         _aircraftName,
         _grid

@@ -87,6 +87,7 @@ Feature backlog: **[TODO.md](TODO.md)**.
 - **Commander mode / RCT-C** — embedded-map UI for AI support tasking
 - **OPFOR roadblocks revisit** — use `FADE_aoSurvey` road buckets to place blocks on routes players actually use
 - **Portable FADE** — ship FADE as a mod + thin mission glue; Eden **FADE Player Base** module sets base location; auto-discover vehicle/AI spawns, civ zones, configs for non-Altis maps (see TODO §13)
+- **Player-facing copy (Humanizer)** — skill at `.cursor/skills/fade-player-copy/` (uses vendored Humanizer). Pass complete for narrative surfaces: lore, Missions GUI, SMEAC, Briefing/Intel, welcome, lobby overview, civ talk, per-mission briefs, setup chatter, FIRES/Sniper Info, and player-facing em-dash tidy.
 
 Previously shipped: **Point Defense**, **Raid**, **Invasion**, procedural **lore**, **AAA** engagement fix, and **OPFOR drones** (ambient UAV patrol + QRF vectoring).
 
@@ -102,7 +103,7 @@ Core mission runs on vanilla-friendly setup. **ACE** and **KAT** are expected fo
 
 ## For contributors
 
-Entry points: `initServer.sqf` (loads `rsc/server/`) and `initPlayerLocal.sqf`. Mission logic is split into `rsc/missions/` (one script per type); `rsc/Missions.sqf` dispatches. Shared helpers live in `rsc/FADE_*` and `rsc/FAC_*`. Local AI/editor notes may exist in `.cursor/agent-docs/` (gitignored).
+Entry points: `initServer.sqf` (loads `rsc/server/`) and `initPlayerLocal.sqf`. Mission logic is split into `rsc/missions/` (one script per type); `rsc/Missions.sqf` dispatches. Shared helpers live in `rsc/FADE_*` and `rsc/FAC_*`. Local AI/editor notes may exist in `.cursor/agent-docs/` (gitignored). Shared Cursor skills live under `.cursor/skills/` — **humanizer** (AI-tell scrub) and **fade-player-copy** (when/how to scrub player-visible FADE text).
 
 **Regression tests:** `[] call FAC_missionTestSuite_execAll` (debug-tools lobby param adds a scroll-wheel action). RPT filter: `[FAC TestSuite]`. Covers compile, RPCs, mission placement, SMEAC/intel per type, zone pickers, and client GUI scripts — not full mission playthroughs.
 

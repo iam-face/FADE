@@ -193,7 +193,7 @@ FAC_medicalTrainingGui_fnc = {
         private _hdr = _display displayCtrl 60880;
         private _i = lbCurSel _lb;
         private _line = if (_i < 0 || { lbSize _lb < 1 }) then {
-            "Target: (none — select a dummy)"
+            "Target: (none - select a dummy)"
         } else {
             format ["Target: %1", _lb lbText _i]
         };
@@ -209,7 +209,7 @@ FAC_medicalTrainingGui_fnc = {
             if (_i < 0) then {
                 _hdr ctrlSetText "Training dummies";
             } else {
-                _hdr ctrlSetText format ["Training dummies — %1", _lb lbText _i];
+                _hdr ctrlSetText format ["Training dummies - %1", _lb lbText _i];
             };
         };
     };

@@ -522,17 +522,15 @@ private _playerName = name player;
 private _welcomeText = format [
     "<t size='1.25' color='#FFD700'>[FADE] FACE'S DYNAMIC ENVIRONMENT</t><br/><br/>" +
     "<t align='left'>" +
-    "<t color='#FFFFFF'>Welcome, </t><t color='#FFCC00'>%1</t><t color='#FFFFFF'>!</t><br/><br/>" +
-    "<t color='#FF0000'>Base Headquarters</t><t color='#FFFFFF'> has vehicles, missions, scenario, gear, music, teleportation.</t><br/>" +
-    "<t color='#FFFFFF'>Visit </t><t color='#FFCC00'>Rhodesy's office</t><t color='#FFFFFF'> to manage scenario, mission and admin settings.</t><br/>" +
-    "<t color='#FFFFFF'>Visit </t><t color='#FFCC00'>MB's gear room</t><t color='#FFFFFF'> for loadouts and kit.</t><br/><br/>" +
-    "<t color='#FFCC00'>Other key locations include</t><t color='#FFFFFF'> Bean's Medical area, Joon's FIRES range, Sultan's CQB facility, Sniper, Rifle and AT ranges, SDE's pub, Juko's locker room, C3 Quiet Area, and other training spots around base.</t><br/>" +
-    "<t color='#FFCC00'>Quick-reference Doctrine callouts</t><t color='#FFFFFF'> are located in your notes.</t><br/>" +
-    "<t color='#FFCC00'>SMEACs</t><t color='#FFFFFF'> are generated when started pre-defined mission types (from Rhodesy's office or via mission hotkey).</t><br/>" +
-    "<t color='#FFCC00'>Ctrl + ;</t><t color='#FFFFFF'> opens the Mission GUI from anywhere.</t><br/>" +
-    "<t color='#FFCC00'>Ctrl + Shift + 'apostrophe'</t><t color='#FFFFFF'> (quotation mark) opens Fast Travel from anywhere.</t><br/>" +
-    "" +
-    "<t color='#FFFFFF'>Remember: Do not take SDE's STANAGS.</t>" +
+    "<t color='#FFFFFF'>Welcome, </t><t color='#FFCC00'>%1</t><t color='#FFFFFF'>.</t><br/><br/>" +
+    "<t color='#FFCC00'>Rhodesy's office</t><t color='#FFFFFF'> - Manage Scenario, Missions and Admin.</t><br/>" +
+    "<t color='#FFCC00'>MB's gear room</t><t color='#FFFFFF'> - loadouts and kit.</t><br/>" +
+    "<t color='#FF0000'>Base HQ</t><t color='#FFFFFF'> boards also cover vehicles, music and teleport.</t><br/><br/>" +
+    "<t color='#FFFFFF'>Training: Bean's Medical, Joon's FIRES, Sultan's CQB, sniper / rifle / AT ranges.</t><br/>" +
+    "<t color='#FFFFFF'>Social: SDE's pub, Juko's locker, C3 Quiet Area.</t><br/><br/>" +
+    "<t color='#FFFFFF'>Map -> </t><t color='#FFCC00'>FADE Notes</t><t color='#FFFFFF'> for doctrine. SMEAC builds when you start a mission.</t><br/>" +
+    "<t color='#FFCC00'>Ctrl+;</t><t color='#FFFFFF'> Missions / </t><t color='#FFCC00'>Ctrl+Shift+'</t><t color='#FFFFFF'> Fast Travel</t><br/><br/>" +
+    "<t color='#FFFFFF'>Remember: Do not take SDE's STANAGs.</t>" +
     "</t>",
     _playerName
 ];

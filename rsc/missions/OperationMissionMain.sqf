@@ -531,7 +531,7 @@ missionNamespace setVariable ["FADE_operationAborted_" + _taskId, false];
     };
 } forEach _allVehs;
 
-private _briefGuiTail = toString [10] + toString [10] + "See your Tasks panel and map markers for objectives, routes, and completion criteria.";
+private _briefGuiTail = toString [10] + toString [10] + "See Tasks and map markers for grids, routes, and win/fail criteria.";
 private _brief = format [
     "OPERATION%1%1Hub-and-spoke fight: clear outer zones first, then the OPFOR HQ. Reinforcements spawn from the hub.%1%1Capture rules and evaluation are on task.",
     toString [10]

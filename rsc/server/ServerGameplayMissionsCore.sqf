@@ -211,10 +211,10 @@ FADE_startMission = {
     [_missionType, _destPos, _player, _useMapAnchor, _rawAnchor, _snappedZone, _mapPickRadius, _rawConvoyEnd, _convoyEndResolved, _raidZoneClicks] spawn {
         params ["_missionType", "_destPos", "_player", "_useMapAnchor", "_rawAnchor", "_snappedZone", "_resolvedRadius", "_rawConvoyEnd", "_convoyEndResolved", "_raidZoneClicks"];
         if (_missionType == "InterceptConvoy" && { !isNull _player }) then {
-            ["INTERCEPT CONVOY: Setting up mission — spawning convoy, please wait..."] remoteExec ["systemChat", _player];
+            ["INTERCEPT CONVOY: Setting up mission - spawning convoy..."] remoteExec ["systemChat", _player];
         };
         if (_missionType == "AssetRetrieval" && { !isNull _player }) then {
-            ["ASSET RETRIEVAL: Setting up mission — please wait..."] remoteExec ["systemChat", _player];
+            ["ASSET RETRIEVAL: Setting up mission..."] remoteExec ["systemChat", _player];
         };
         private _anchor = [];
         if (_useMapAnchor) then {

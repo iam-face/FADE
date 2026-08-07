@@ -1,0 +1,21 @@
+---
+description: Read .cursor/ for FADE project context before starting work
+alwaysApply: true
+---
+
+# .cursor context (FADE)
+
+Orient token-consciously at task start. List `.cursor/` if unsure; open only what the task needs.
+
+| Path | When |
+|------|------|
+| `agent-docs/AGENTS.md` | Always first — architecture hub |
+| `agent-docs/SCRIPT_INDEX.md` | Any `.sqf` / networking change (update on script edits) |
+| `agent-docs/AGENTS_EDEN.md` | Eden object names, boards, textures |
+| `agent-docs/AGENTS_PATTERNS.md` | GUIs, hints, MP, spawning |
+| `agent-docs/AGENTS_REFERENCE.md` | Mission types, scenario GUI, BIS/RPT |
+| `rules/` | When adding or editing Cursor rules |
+| `skills/*/SKILL.md` | When user task matches skill description |
+| `../tools/` (mpmissions sibling) | Only when task or user points at a helper |
+
+Most of `.cursor/` is gitignored; **`rules/`** stays tracked and shareable.

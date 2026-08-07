@@ -998,8 +998,8 @@ randomSeed=7991977;
 class ScenarioData
 {
 	author="Face";
-	overviewText="[BETA 7] A dynamic environment for combined arms gameplay with no Zeus required. Explore the base (visit SDEs pub), participate in training facilities (firing range, sniper range, CQB killhouse), define world attributes (weather, time), set your factions (BLUFOR, OPFOR, CIVs), spawn vehicles (ground, air), set up missions (over 16 missions supported out of the box).";
-	overviewTextLocked="[BETA 6] A dynamic environment for combined arms gameplay with no Zeus required. Explore the base (visit SDEs pub), participate in training facilities (firing range, sniper range, CQB killhouse), define world attributes (weather, time), set your factions (BLUFOR, OPFOR, CIVs), spawn vehicles (ground, air), set up missions (over 16 missions supported out of the box).";
+	overviewText="[BETA 7] Multiplayer Altis sandbox for rotary, joint fires and ground training. No Zeus required. Set the theatre and start missions from Rhodesy's office.";
+	overviewTextLocked="[BETA 6] Multiplayer Altis sandbox for rotary, joint fires and ground training. No Zeus required. Set the theatre and start missions from Rhodesy's office.";
 	overViewPicture="img\FADE_1.jpg";
 	overViewPictureLocked="img\FADE_1.jpg";
 	disabledAI=1;
@@ -1125,8 +1125,8 @@ class Mission
 {
 	class Intel
 	{
-		briefingName="FADE (FAces Dynamic Environment) BETA v7";
-		overviewText="BETA 7: See parameters. Choose any role, Zeus/attributes/customisation etc is actioned in-scenario.";
+		briefingName="FADE (Face's Dynamic Environment) BETA v7";
+		overviewText="BETA 7: Lobby parameters set defaults. Pick any role; Zeus and scenario controls are in-mission.";
 		resistanceWest=0;
 		resistanceEast=1;
 		timeOfChanges=1800.0002;
