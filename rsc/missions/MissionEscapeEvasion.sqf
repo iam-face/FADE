@@ -315,11 +315,11 @@ FADE_runMission_EscapeEvasion = {
     [_player, _taskId, _eeMissionTxt, "Escape & Evasion", _zoneCenter, "run", "", _eeExecTxt, true] call _fnc_createMissionTask;
 
     private _eeGrid = if (count _zoneCenter >= 2) then { mapGridPosition _zoneCenter } else { "N/A" };
-    private _briefEe = format ["ESCAPE & EVASION%1%1Denied area (approx.): Grid %2%1%1Separated personnel must evade and reach extraction. No GPS — use radio and navigation. Extraction coordination and ROE are on task.", toString [10], _eeGrid] + _briefGuiTail;
+    private _briefEe = format ["ESCAPE & EVASION%1%1Denied area (approx.): Grid %2%1%1Separated personnel must evade and reach extraction. No GPS - use radio and navigation. Extraction coordination and ROE are on task.", toString [10], _eeGrid] + _briefGuiTail;
     if (!isNull _player) then {
         _player setVariable ["FADE_myMissionBrief", _briefEe, true];
     };
-    [format ["<t color='#FFFFFF'>Evadees dispersed in the denied area. No grid given — navigate by terrain and comms. RTB within 1000 m; all must survive.</t>"]] call _showAssignedHint;
+    [format ["<t color='#FFFFFF'>Evadees dispersed in the denied area. No grid given - navigate by terrain and comms. RTB within 1000 m; all must survive.</t>"]] call _showAssignedHint;
     [_player, "Escape & Evasion"] call FADE_notifyOthersMissionStarted;
 
     // OPFOR search helicopter: faction heli (or FADE_opforAir fallback list), orbit waypoints on zone geometry only  -  never player positions.

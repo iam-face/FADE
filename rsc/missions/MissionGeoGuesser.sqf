@@ -46,7 +46,7 @@ FADE_geoGuesser_teleportPlayerToBase = {
     private _resolved = [_ringIdx] call FADE_geoGuesser_resolveTeleportBasePos;
     _resolved params [["_tp", []], ["_faceDir", -1]];
     if (count _tp < 2) exitWith {
-        [format ["GEO-GUESSER: could not RTB %1 — Eden object teleportBase not found.", name _pl]] remoteExec ["systemChat", 0];
+        [format ["GEO-GUESSER: could not RTB %1 - Eden object teleportBase not found.", name _pl]] remoteExec ["systemChat", 0];
     };
     [_tp, _faceDir] remoteExec ["FADE_clientTeleportPos", _pl];
 };

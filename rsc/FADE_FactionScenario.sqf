@@ -163,27 +163,27 @@ FADE_scenarioFactionsIssueHint = {
     {
         switch _x do {
             case "same_faction": {
-                _lines pushBack "Enemy faction cannot match friendly — enemy adjusted.";
+                _lines pushBack "Enemy faction cannot match friendly - enemy adjusted.";
             };
             case "same_side": {
-                _lines pushBack "Enemy faction must be on an opposed side — enemy adjusted.";
+                _lines pushBack "Enemy faction must be on an opposed side - enemy adjusted.";
             };
             case "wrong_side": {
                 _lines pushBack format [
-                    "Enemy must oppose %1 — set to %2.",
+                    "Enemy must oppose %1 - set to %2.",
                     [_friendlyFaction] call _getDn,
                     [_enemyFaction] call _getDn
                 ];
             };
             case "friendly_not_playable";
             case "civ_friendly": {
-                _lines pushBack "Civilian factions cannot be the player faction — friendly reset.";
+                _lines pushBack "Civilian factions cannot be the player faction - friendly reset.";
             };
             case "mission_active_factions_locked": {
-                _lines pushBack "Faction changes blocked while a mission is active — abort missions first.";
+                _lines pushBack "Faction changes blocked while a mission is active - abort missions first.";
             };
             case "units_despawned": {
-                _lines pushBack "Old faction patrols despawning in background — new spawns use updated factions.";
+                _lines pushBack "Old faction patrols despawning in background - new spawns use updated factions.";
             };
             default {
                 _lines pushBack "Faction pairing corrected for scenario.";

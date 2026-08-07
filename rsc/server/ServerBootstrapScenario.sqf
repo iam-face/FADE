@@ -35,7 +35,7 @@ FADE_applyScenarioSettings = {
         _factionsChanged = false;
         _scenarioFactionsChanged = false;
         if (!isNull _player) then {
-            ["Faction changes blocked while a mission is active — abort missions first."] remoteExec ["systemChat", _player];
+            ["Faction changes blocked while a mission is active - abort missions first."] remoteExec ["systemChat", _player];
         };
     };
     _hour = (_hour max 0) min 23;

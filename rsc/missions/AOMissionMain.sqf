@@ -429,7 +429,7 @@ private _timeout = 60 * 60;
 
 // Brief and hint
 private _grid = mapGridPosition _destPos;
-private _briefGuiTail = toString [10] + toString [10] + "See your Tasks panel and map markers for objectives, routes, and completion criteria.";
+private _briefGuiTail = toString [10] + toString [10] + "See Tasks and map markers for grids, routes, and win/fail criteria.";
 private _brief = format ["AREA OF OPERATIONS%1%1Battlespace anchor (approx.): Grid %2%1%1Large-sector fight with successive objectives  -  assault order and OPFOR layout on task.", toString [10], _grid] + _briefGuiTail;
 _player setVariable ["FADE_myMissionBrief", _brief, true];
 private _starterName = if (isNull _player) then { "Unknown" } else { name _player };

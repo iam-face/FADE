@@ -125,7 +125,7 @@ FADE_limitToPresetLoadouts = false;          // When true, Loadout GUI allows pr
 FADE_teleportToPlayerMode = 0;            // 0 = all players can teleport-to-player, 1 = SL/admin/Zeus only
 // Civilian talk (ambient foot civs): Scenario GUI can require FADE_civInterpreter for meaningful dialogue; non-interpreters still get the GUI with a barrier label and ??? replies only.
 FADE_civTalkInterpretersOnly = false;
-FADE_civTalkLangBarrierText = "You do not understand the language this person is speaking.";
+FADE_civTalkLangBarrierText = "You do not understand what they are saying.";
 FADE_civTalkNoLangReplies = ["???", "????", "? ? ?", "...?"];
 FADE_civTalkMaxDistM = 6;
 FADE_civTalkOpforRadiusM = 1000;
@@ -136,20 +136,20 @@ FADE_civTalkBtnOpforDefault = "Seen any OPFOR?";
 FADE_civTalkOpforFollowupButtonText = "Are you sure...?";
 FADE_civTalkCooldownS = 45;
 FADE_civTalkPositiveChance = 0.5;
-FADE_civTalkGreetingPositive = ["Hello. Can I help you?", "Good day. What do you need?", "Yes? Make it quick.", "I do not want trouble - what is it?"];
+FADE_civTalkGreetingPositive = ["Hello. Can I help you?", "What do you need?", "Yes? Make it quick.", "I do not want trouble - what is it?"];
 FADE_civTalkGreetingNegative = ["What do you want?", "Leave me alone.", "I am busy.", "Do not point that thing at me."];
-FADE_civTalkRumoursPositive = ["They say the road north is quiet.", "People talk, but I pay no attention.", "Only that strangers have been asking questions.", "I heard engines on the main road earlier.", "Folk are keeping their heads down."];
+FADE_civTalkRumoursPositive = ["They say the road north is quiet.", "People talk. I ignore most of it.", "Strangers have been asking questions.", "I heard engines on the main road earlier.", "Folk are keeping their heads down."];
 // Heard rumours  -  extra lines when a global mission type with QRF is active (see FADE_globalMissionTypesWithQrf; server picks ~half the time when cooperative).
 FADE_civTalkRumoursPositiveQrf = [
-    "Word is, when it gets loud out there, their trucks do not take long to show up.",
-    "Folk say the army moves fast once someone starts shooting - best not to stick around.",
-    "I heard they like to pile on quick if things go hot - just what people say.",
-    "Rumour is their quick-response runs on a hair trigger lately.",
-    "If you hear a firefight, expect company soon - that is what everyone whispers."
+    "When shooting starts, their trucks show up fast.",
+    "They move quick once someone opens fire - that is what people say.",
+    "If it gets loud, do not hang around. They pile on.",
+    "Their reaction crews jump at the first shots lately.",
+    "Hear a firefight? Expect more soon."
 ];
 // Global mission types that use truck/zone QRF (excludes e.g. Intercept Convoy). Used for rumour hints only.
 FADE_globalMissionTypesWithQrf = ["AreaOfOperations", "Hostage", "HVT", "ClearArea", "CAS", "SearchDestroy", "Operation", "Raid", "AssetRetrieval", "CSAR", "EscapeEvasion"];
-FADE_civTalkRumoursNegative = ["I do not listen to gossip.", "I have nothing to tell you.", "Why are you asking me this?", "You should not be here asking questions.", "I keep to myself."];
+FADE_civTalkRumoursNegative = ["I do not listen to gossip.", "I have nothing to tell you.", "Why ask me?", "You should not be here asking questions.", "I keep to myself."];
 FADE_civTalkGestureAway = ["Fine, I am leaving.", "All right, all right.", "Okay, okay."];
 FADE_civTalkGestureStay = ["I will stay.", "Okay, I will not move.", "Understood."];
 FADE_civTalkGestureDown = ["I am getting down!", "Down, down!", "Do not shoot!"];
@@ -157,17 +157,17 @@ FADE_civTalkGestureNoUnderstandFmt = "%1 does not understand you.";
 FADE_civTalkArrestUncooperativeRadiusM = 500;
 FADE_civTalkArrestComply = ["I am not resisting.", "Okay, I will come quietly.", "Please, do not hurt me."];
 FADE_civTalkArrestRefuse = ["You have no authority!", "I am not going anywhere with you.", "Leave me alone!"];
-FADE_civTalkRefuseOpfor = ["I'm not telling you anything.", "I have nothing to say to you.", "Ask someone else.", "I did not see anything - understand?"];
+FADE_civTalkRefuseOpfor = ["I am not telling you anything.", "I have nothing to say to you.", "Ask someone else.", "I did not see anything - understand?"];
 FADE_civTalkRefuseCar = ["Go away.", "Find your own ride.", "I do not have keys for you.", "That is not how this works."];
 FADE_civTalkOpforNone = ["I have not seen any soldiers.", "No, nothing like that around here."];
-FADE_civTalkOpforUnsure = ["I am not sure.", "Maybe, I did not get a good look."];
-FADE_civTalkCarNone = ["I do not know of any free car nearby.", "Sorry, no empty vehicle around here.", "Nothing parked that I can think of.", "If there is one, it is not mine to offer."];
+FADE_civTalkOpforUnsure = ["I am not sure.", "Maybe. I did not get a good look."];
+FADE_civTalkCarNone = ["I do not know of any free car nearby.", "No empty vehicle around here.", "Nothing parked that I can think of.", "If there is one, it is not mine."];
 // Optional second line in replies: time-of-day + nearest settlement name (server: FADE_civTalk_contextLines).
 FADE_civTalkContextAppendChance = 0.35;
-FADE_civTalkCtxNight = ["It is hard to see at night.", "The dark makes everyone nervous.", "You should not be out here after dark."];
-FADE_civTalkCtxMorning = ["The morning is quiet.", "Barely anyone is about yet.", "Early light - easy to miss details."];
+FADE_civTalkCtxNight = ["Hard to see at night.", "Dark makes everyone nervous.", "You should not be out here after dark."];
+FADE_civTalkCtxMorning = ["Morning is quiet.", "Barely anyone is about yet.", "Early light - easy to miss details."];
 FADE_civTalkCtxAfternoon = ["Heat shimmers on the road.", "The day drags.", "Sun is high; hard to be sure of anything."];
-FADE_civTalkCtxNearFmt = ["Not far from %1.", "Toward %1...", "People still talk about %1.", "We are in the shadow of %1."];
+FADE_civTalkCtxNearFmt = ["Not far from %1.", "Up toward %1...", "People still talk about %1.", "This side of %1."];
 // When true, actionable civilian intel (OPFOR sighting / vehicle tip) appends an entry to map → Intel (see Briefing.sqf / FADE_civTalk_clientAppendIntelDiary).
 FADE_civTalkIntelDiary = true;
 // When true, building intel (hold-to-read props) and Asset Retrieval package pickup append to map → Intel (FADE_intel_clientAppendIntelDiary).

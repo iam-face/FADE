@@ -75,7 +75,7 @@ if (hasInterface) then {
                 _help ctrlSetPosition [0.05, 0.152, 0.90, 0.064];
                 _help ctrlSetBackgroundColor [0, 0, 0, 0];
                 _help ctrlSetStructuredText parseText (
-                    "<t size='0.78' color='#B8B8B8'>Pilots/drivers only — one distinct vehicle per participant.</t><br/>" +
+                    "<t size='0.78' color='#B8B8B8'>Pilots/drivers only - one distinct vehicle per participant.</t><br/>" +
                     format ["<t size='0.78' color='#C8D8E8'>%1</t>", _modeBlurb]
                 );
                 _help ctrlCommit 0;

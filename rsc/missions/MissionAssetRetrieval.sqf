@@ -203,7 +203,7 @@ FADE_runMission_AssetRetrieval = {
         private _topoVeh = [_center] call (missionNamespace getVariable ["FADE_getTopographySummary", { ["UNKNOWN", "Unknown area"] }]);
         private _vehSituationTaskText = if (_intelFormatter isEqualTo {}) then {
             format [
-                "<t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='#FFFFFF'>%1 dismounts securing a recovery vehicle on roads; patrols in the area.</t><br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/><t align='left' color='#FFFFFF'>CTB — task-organized from base.</t>",
+                "<t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='#FFFFFF'>%1 dismounts securing a recovery vehicle on roads; patrols in the area.</t><br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/><t align='left' color='#FFFFFF'>CTB - task-organized from base.</t>",
                 _enemyFactionName
             ]
         } else {
@@ -225,11 +225,11 @@ FADE_runMission_AssetRetrieval = {
         private _loreAppendFn = missionNamespace getVariable ["FADE_lore_appendSituationHtml", { params ["_s"]; _this select 0 }];
         _vehSituationTaskText = [_vehSituationTaskText] call _loreAppendFn;
         private _vehExecutionTaskText = format [
-            "<t align='left' color='#C0C0C0'>Move to the objective marker (road/vehicle site). Clear local OPFOR, then recover the OPFOR %1 (drive, tow, or sling as available). Exfil by feasible route; vehicle must arrive operational within 1000 m of base. Vehicle must remain recoverable for exfil.</t>",
+            "<t align='left' color='#C0C0C0'>Move to the road / vehicle site. Clear local OPFOR, then recover the OPFOR %1 (drive, tow or sling). Get it operational within 1000 m of base.</t>",
             _vehicleName
         ];
         private _vehMissionDesc = format [
-            "Branch: VEHICLE RECOVERY — Grid %1 (%2). Recover the OPFOR %3 and return it within 1000 m of base. Vehicle must remain operational.",
+            "Branch: VEHICLE RECOVERY - Grid %1 (%2). Recover the OPFOR %3 and return it within 1000 m of base. Vehicle must stay operational.",
             _topoVeh select 0,
             _topoVeh select 1,
             _vehicleName
@@ -242,7 +242,7 @@ FADE_runMission_AssetRetrieval = {
         [_taskId, "AssetRetrieval", _center, _markerOut, [], "ColorOrange"] call FADE_fieldIntel_startForMission;
 
         private _grid = mapGridPosition _center;
-        private _brief = format ["ASSET RETRIEVAL  -  VEHICLE%1%1Objective area (approx.): Grid %2%1%1Recover the enemy vehicle %3 and return it to base per task limits. Secure the site, clear threats, and move the asset by the best available method.", toString [10], _grid, _vehicleName] + _briefGuiTail;
+        private _brief = format ["ASSET RETRIEVAL  -  VEHICLE%1%1Objective area (approx.): Grid %2%1%1Recover the enemy vehicle %3 and return it within 1000 m of base. Clear the site, then drive, tow or sling it back. Vehicle must stay recoverable.", toString [10], _grid, _vehicleName] + _briefGuiTail;
         _player setVariable ["FADE_myMissionBrief", _brief, true];
         [format ["<t color='#B0B0B0'>Grid: %1</t><br/><t color='#FFCC00'>Branch: Vehicle recovery</t><br/><t color='#C0C0C0'>Asset vehicle: %2</t><br/><t color='#C0C0C0'>Return it to base (within 1000 m).</t>", _grid, _vehicleName]] call _showAssignedHint;
         [_player, "Asset Retrieval"] call FADE_notifyOthersMissionStarted;
@@ -484,7 +484,7 @@ FADE_runMission_AssetRetrieval = {
     private _topoObj = [_center] call (missionNamespace getVariable ["FADE_getTopographySummary", { ["UNKNOWN", "Unknown area"] }]);
     private _objSituationTaskText = if (_intelFormatter isEqualTo {}) then {
         format [
-            "<t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='#FFFFFF'>%1 dismounts securing an objective house; patrols in the area.</t><br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/><t align='left' color='#FFFFFF'>CTB — task-organized from base.</t>",
+            "<t align='left' color='#FFD166'>ENEMY</t><br/><t align='left' color='#FFFFFF'>%1 dismounts securing an objective house; patrols in the area.</t><br/><br/><t align='left' color='#FFD166'>FRIENDLY</t><br/><t align='left' color='#FFFFFF'>CTB - task-organized from base.</t>",
             _enemyFactionName
         ]
     } else {
@@ -507,11 +507,11 @@ FADE_runMission_AssetRetrieval = {
     private _recoverIntelLine = [_assetName, "#FFFFFF"] call (missionNamespace getVariable ["FADE_smeac_recoverObjectIntelLine", { "" }]);
     if (_recoverIntelLine != "") then { _objSituationTaskText = _objSituationTaskText + "<br/>" + _recoverIntelLine };
     private _objExecutionTaskText = format [
-        "<t align='left' color='#C0C0C0'>Move to the marked objective house. Target: %1 — most likely indoors inside a defended building. Clear local OPFOR and use scroll action Pick up on the package. Mission completes when the object is recovered.</t>",
+        "<t align='left' color='#C0C0C0'>Move to the marked objective house. Target: %1 - most likely indoors in a defended building. Clear local OPFOR, then Pick up the package to finish.</t>",
         _assetName
     ];
     private _objMissionDesc = format [
-        "Branch: OBJECT RECOVERY — Grid %1 (%2). Recover %3 (most likely indoors inside a defended building).",
+        "Branch: OBJECT RECOVERY - Grid %1 (%2). Recover %3 (most likely indoors in a defended building).",
         _topoObj select 0,
         _topoObj select 1,
         _assetName
@@ -524,9 +524,9 @@ FADE_runMission_AssetRetrieval = {
     [_taskId, "AssetRetrieval", _center, _markerOut, [], "ColorOrange"] call FADE_fieldIntel_startForMission;
 
     private _grid = mapGridPosition _center;
-    private _brief = format ["ASSET RETRIEVAL  -  OBJECT%1%1Objective area (approx.): Grid %2%1%1Recover %3 (most likely indoors inside a defended building). Clear the site and use Pick up on the package to complete.", toString [10], _grid, _assetName] + _briefGuiTail;
+    private _brief = format ["ASSET RETRIEVAL  -  OBJECT%1%1Objective area (approx.): Grid %2%1%1Recover %3 (most likely indoors in a defended building). Clear the site, then Pick up the package.", toString [10], _grid, _assetName] + _briefGuiTail;
     _player setVariable ["FADE_myMissionBrief", _brief, true];
-    [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFCC00'>Branch: Object recovery</t><br/><t color='#FFFFFF'>Target: %2</t><br/><t color='#FFFFFF'>Most likely indoors inside a defended building. Use Pick up when you reach the package.</t>", _grid, _assetName]] call _showAssignedHint;
+    [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFCC00'>Branch: Object recovery</t><br/><t color='#FFFFFF'>Target: %2</t><br/><t color='#FFFFFF'>Most likely indoors in a defended building. Use Pick up when you reach the package.</t>", _grid, _assetName]] call _showAssignedHint;
     [_player, "Asset Retrieval"] call FADE_notifyOthersMissionStarted;
 
     private _arQrfPos = +_center;
