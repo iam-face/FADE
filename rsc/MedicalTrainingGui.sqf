@@ -69,9 +69,37 @@ FAC_medicalTrainingGui_applyLayout = {
         "Airway / chest (Zeus parity)", "Obstruction", "Occluded", "Hemopneumothorax", "Tension PTX",
         "PTX deteriorate", "Deep penetrating", "Cardiac rhythm", "Bleeding wound / part", "Body part", "Wound type", "Depth"
     ];
+    private _legacyHidden = 0;
     {
-        if ((ctrlIDC _x) == -1 && { (ctrlText _x) in _legacyLabels }) then { _x ctrlShow false };
+        if ((ctrlIDC _x) == -1 && { (ctrlText _x) in _legacyLabels }) then {
+            _x ctrlShow false;
+            // #region agent log
+            _legacyHidden = _legacyHidden + 1;
+            // #endregion
+        };
     } forEach (allControls _d);
+    // #region agent log
+    private _labelIdcs = [60894, 60895, 60896, 60897, 60898, 60899, 60900, 60901, 60902, 60903, 60904, 60905];
+    private _missing = [];
+    private _presentShown = [];
+    private _presentHidden = [];
+    {
+        private _c = _d displayCtrl _x;
+        if (isNull _c) then {
+            _missing pushBack _x;
+        } else {
+            if (ctrlShown _c) then { _presentShown pushBack [_x, ctrlText _c] } else { _presentHidden pushBack [_x, ctrlText _c] };
+        };
+    } forEach _labelIdcs;
+    private _comboIdcs = [60860, 60861, 60862, 60863, 60869, 60803, 60804, 60807];
+    private _combosOk = [];
+    { private _c = _d displayCtrl _x; _combosOk pushBack [_x, !isNull _c, if (isNull _c) then { false } else { ctrlShown _c }] } forEach _comboIdcs;
+    diag_log format ["FAC_DEBUG_ca734f {""sessionId"":""ca734f"",""hypothesisId"":""A"",""location"":""MedicalTrainingGui.sqf:applyLayout"",""message"":""missing_label_idcs"",""data"":{""missing"":%1,""presentShown"":%2,""presentHidden"":%3},""timestamp"":%4}", _missing, _presentShown, _presentHidden, floor (time * 1000)];
+    diag_log format ["FAC_DEBUG_ca734f {""sessionId"":""ca734f"",""hypothesisId"":""B"",""location"":""MedicalTrainingGui.sqf:applyLayout"",""message"":""legacy_labels_hidden"",""data"":{""legacyHiddenCount"":%1},""timestamp"":%2}", _legacyHidden, floor (time * 1000)];
+    diag_log format ["FAC_DEBUG_ca734f {""sessionId"":""ca734f"",""hypothesisId"":""C"",""location"":""MedicalTrainingGui.sqf:applyLayout"",""message"":""combo_visibility"",""data"":{""combos"":%1},""timestamp"":%2}", _combosOk, floor (time * 1000)];
+    missionNamespace setVariable ["FAC_DEBUG_medTrainLabels", [_missing, _legacyHidden, _presentShown, _presentHidden]];
+    systemChat format ["FAC_DEBUG med labels missing=%1 legacyHidden=%2", count _missing, _legacyHidden];
+    // #endregion
 };
 
 FAC_medicalTrainingGui_fnc = {

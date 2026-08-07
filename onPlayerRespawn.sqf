@@ -15,6 +15,11 @@ call FAC_ensureJukeboxGui;
 // Keep mission ownership/UI variables across respawn so abort and mission details remain available.
 params [["_newUnit", objNull], ["_oldUnit", objNull]];
 if (isNull _newUnit) then { _newUnit = player };
+
+// Eden respawn unit is slot-side (usually WEST); server joinSilent onto FADE_sideFriendly if needed.
+if (!isNull _newUnit && { isPlayer _newUnit }) then {
+    [_newUnit] remoteExec ["FADE_requestScenarioFriendlySideSync", 2];
+};
 if (!isNull _oldUnit) then {
     {
         private _val = _oldUnit getVariable [_x, nil];

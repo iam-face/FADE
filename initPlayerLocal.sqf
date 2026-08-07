@@ -24,6 +24,7 @@ call compile preprocessFileLineNumbers "rsc\FADE_MissionSlots.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_IntelClient.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_FieldIntelClient.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_HostageClient.sqf";
+call compile preprocessFileLineNumbers "rsc\FADE_RecoverObjectClient.sqf";
 
 // Debug: optional BIS campaign function stubs - default off in Config (see rsc\DebugBIScpStub.sqf)
 call compile preprocessFileLineNumbers "rsc\DebugBIScpStub.sqf";
@@ -411,6 +412,14 @@ if (count _initPack > 0) then { [_initPack] call FADE_applyScenarioClientSync };
 "FADE_scenarioClientSync" addPublicVariableEventHandler {
     params ["_varName", "_val"];
     if (_val isEqualType []) then { [_val] call FADE_applyScenarioClientSync };
+};
+
+// JIP / first join: request server side sync early (board actions also call FADE_sendScenarioConfigToClient).
+[] spawn {
+    waitUntil { !isNull player };
+    sleep 0.5;
+    if (!hasInterface || { isNull player }) exitWith {};
+    [player] remoteExec ["FADE_requestScenarioFriendlySideSync", 2];
 };
 private _initSlots = missionNamespace getVariable ["FADE_missionSlotsSync", []];
 if (count _initSlots > 0) then { [_initSlots] call FADE_applyMissionSlotsClientSync };

@@ -221,6 +221,7 @@ publicVariable "FADE_removeCopilot";
 publicVariable "FADE_startMission";
 publicVariable "FADE_startEscapeEvasion";
 publicVariable "FADE_startGeoGuesser";
+publicVariable "FADE_startPointDefense";
 publicVariable "FADE_geoGuesser_submitGuess";
 publicVariable "FADE_abortMission";
 publicVariable "FADE_getCargoSeats";
@@ -366,6 +367,7 @@ FADE_cleanupMissionEntities = {
         if (_missionType == "AssetRetrieval") then { missionNamespace setVariable ["FADE_assetAborted_" + _taskId, true] };
         if (_missionType == "Raid") then { missionNamespace setVariable ["FADE_raidAborted_" + _taskId, true] };
         if (_missionType == "Invasion") then { missionNamespace setVariable ["FADE_invasionAborted_" + _taskId, true] };
+        if (_missionType == "PointDefense") then { missionNamespace setVariable ["FADE_pdAborted_" + _taskId, true] };
         if (_missionType in ["TroopInsert", "TroopExtract"]) then {
             private _abortKey = if (_missionType == "TroopInsert") then {
                 "FADE_troopInsertAborted_" + _taskId

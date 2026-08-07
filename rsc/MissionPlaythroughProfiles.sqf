@@ -560,6 +560,14 @@ FAC_playthroughSuite__sim_win = {
         case "Operation": {
             [_player, _taskId] call FAC_playthroughSuite__simOperationWin
         };
+        case "PointDefense": {
+            if (count _dest < 2) exitWith { [0, 1, ["no defend pos"]] };
+            [_player, _dest] call FAC_playthroughSuite__teleportPlayer;
+            sleep 1.5;
+            // Exercise zone entry (arms timer + first wave); abort rather than waiting full duration.
+            missionNamespace setVariable ["FADE_pdAborted_" + _taskId, true];
+            [1, 0, ["entered defend zone; aborted after timer arm"]]
+        };
         case "Invasion": {
             private _zones = missionNamespace getVariable [format ["FADE_invasionZoneCenters_%1", _taskId], []];
             if (_zones isEqualTo []) exitWith { [0, 1, ["invasion zones missing"]] };

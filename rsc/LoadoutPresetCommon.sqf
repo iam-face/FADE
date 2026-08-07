@@ -125,9 +125,28 @@ FAC_loadoutGui_getPresetLoadoutByKey = {
 };
 
 FAC_loadoutGui_ensurePresetData = {
-    if (!((missionNamespace getVariable ["FAC_presetLoadouts", []]) isEqualTo [])) exitWith { true };
-    call compile preprocessFileLineNumbers "rsc\PresetLoadouts.sqf";
-    !((missionNamespace getVariable ["FAC_presetLoadouts", []]) isEqualTo [])
+    if (!((missionNamespace getVariable ["FAC_presetLoadouts", []]) isEqualTo [])) exitWith {
+        // #region agent log
+        diag_log format ["[FAC DBG 6df0b3] H-A ensurePresetData alreadyLoaded eras=%1", count (missionNamespace getVariable ["FAC_presetLoadouts", []])];
+        // #endregion
+        true
+    };
+    // #region agent log
+    diag_log "[FAC DBG 6df0b3] H-A ensurePresetData compiling PresetLoadouts.sqf";
+    // #endregion
+    private _pre = preprocessFileLineNumbers "rsc\PresetLoadouts.sqf";
+    // #region agent log
+    diag_log format ["[FAC DBG 6df0b3] H-B ensurePresetData preprocess len=%1 empty=%2", count _pre, (_pre isEqualTo "")];
+    // #endregion
+    call compile _pre;
+    private _eras = missionNamespace getVariable ["FAC_presetLoadouts", []];
+    private _ok = !(_eras isEqualTo []);
+    // #region agent log
+    private _eraKeys = [];
+    { if (_x isEqualType [] && { count _x > 0 }) then { _eraKeys pushBack (_x select 0) }; } forEach _eras;
+    diag_log format ["[FAC DBG 6df0b3] H-A/C ensurePresetData done ok=%1 eras=%2 keys=%3", _ok, count _eras, _eraKeys];
+    // #endregion
+    _ok
 };
 
 FAC_loadoutGui_getLoadoutFromClass = {

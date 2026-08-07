@@ -411,10 +411,10 @@ private _loadoutMapTex = "img\whiteboardLoadouts.jpg";
 // Music board next to base radios (non-interactable)
 [missionNamespace getVariable ["musicBoard", objNull], "img\sigsound.jpg"] call _applyBoardTexture;
 // Base radio props (jukebox interaction via FAC_ClientBoardActions on Radio_1..4)
-[missionNamespace getVariable ["Radio_1", objNull], "img\sigsound.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["Radio_2", objNull], "img\sigsound.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["Radio_3", objNull], "img\sigsound.jpg"] call _applyBoardTexture;
-[missionNamespace getVariable ["Radio_4", objNull], "img\sigsound.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["Radio_1", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["Radio_2", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["Radio_3", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
+[missionNamespace getVariable ["Radio_4", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
 // Firing range sign (non-interactable)
 [missionNamespace getVariable ["firingRangeBoard", objNull], "img\signLiveFire.jpg"] call _applyBoardTexture;
 [missionNamespace getVariable ["signFire_1", objNull], "img\signLiveFire.jpg"] call _applyBoardTexture;

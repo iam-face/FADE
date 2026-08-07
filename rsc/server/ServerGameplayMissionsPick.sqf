@@ -124,13 +124,9 @@ FADE_fnc_urbanPosNearZoneCenter = {
     params ["_zoneCenter", "_minDist", ["_innerMin", 50], ["_innerMax", 400]];
     if (count _zoneCenter < 2) exitWith { [] };
     private _base = FADE_basePos;
-    private _minXY = FADE_mapMin;
-    private _maxXY = FADE_mapMax;
     private _candidate = [[_zoneCenter, _innerMin, _innerMax, 5, 1, 0.5, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray;
     if (count _candidate < 2 || { surfaceIsWater _candidate } || { (_candidate distance _base) < _minDist }) exitWith { [] };
-    private _sx = _candidate select 0;
-    private _sy = _candidate select 1;
-    if (_sx < _minXY || { _sx > _maxXY } || { _sy < _minXY } || { _sy > _maxXY }) exitWith { [] };
+    if !([_candidate] call FADE_mapPosInBounds) exitWith { [] };
     _candidate
 };
 
@@ -380,6 +376,17 @@ FADE_startMission_pickDestPosAtRadius = {
     if (_missionType == "SearchDestroy") exitWith {
         if (!_useAnchor) exitWith { [_minDistForPos] call FADE_findMissionPosUrbanNearCenter };
         [_anchorPos, _minDistForPos, _radiusM] call FADE_fnc_trySearchDestroySiteAtRadius
+    };
+    // Point Defense: random → civ zone; map-click → near-anchor search (no civ snap)
+    if (_missionType == "PointDefense") exitWith {
+        if (!_useAnchor) exitWith { [_minDistForPos] call FADE_findMissionPosUrbanNearCenter };
+        private _wholeR = missionNamespace getVariable ["FADE_missionPlayerAnchorRadiusM", 5000];
+        private _candidate = if (_radiusM < 0) then {
+            [_anchorPos, _minDistForPos, _wholeR] call FADE_findMissionPosNearAnchor
+        } else {
+            [_anchorPos, _minDistForPos, _radiusM] call FADE_findMissionPosNearAnchor
+        };
+        if (count _candidate >= 2) then { _candidate } else { [] }
     };
     if (_missionType == "Operation") exitWith {
         if (_useAnchor) then { +_anchorPos } else { +FADE_basePos }

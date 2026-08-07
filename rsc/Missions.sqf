@@ -35,7 +35,7 @@ if (!([_mapAnchor] call FADE_fnc_isValidMapClickPos)) then {
 if (!isServer) exitWith {};
 
 // Validate mission type (Global + Single types)
-private _validTypes = ["TroopInsert", "TroopExtract", "CAS", "Cargo", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "MineClearing", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion", "GeoGuesser"];
+private _validTypes = ["TroopInsert", "TroopExtract", "CAS", "Cargo", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "MineClearing", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion", "GeoGuesser", "PointDefense"];
 if !(_missionType in _validTypes) exitWith {
     if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
     [_player, "MISSION ERROR", "Unknown mission type."] call FADE_missionErrorHint;
@@ -75,7 +75,7 @@ if (_factionIssueRun != "") exitWith {
     if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
     [_player, "SCENARIO ERROR", "Friendly and enemy factions are incompatible. Update Manage Scenario → Factions."] call FADE_missionErrorHint;
 };
-private _needsEnemyUnits = _missionType in ["TroopExtract", "CAS", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion"];
+private _needsEnemyUnits = _missionType in ["TroopExtract", "CAS", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion", "PointDefense"];
 if (_needsEnemyUnits && { count _enemyUnits == 0 }) exitWith {
     if (!isNull _player) then { _player setVariable ["FADE_myMission", "", true] };
     [_player, "MISSION ERROR", "No enemy units configured for the chosen enemy faction."] call FADE_missionErrorHint;
@@ -144,7 +144,7 @@ private _basePos = FADE_basePos;
 
 // Refine position: LZ missions use small refinement; HVT/ClearArea/InterceptConvoy handle position themselves
 private _needsLZ = _missionType in ["TroopInsert", "TroopExtract", "Cargo", "CASEVAC", "CSAR"];
-if (_missionType != "HVT" && { _missionType != "Hostage" } && { _missionType != "ClearArea" } && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" } && { _missionType != "SearchDestroy" } && { _missionType != "Operation" } && { _missionType != "Raid" } && { _missionType != "Invasion" } && { _missionType != "AssetRetrieval" } && { _missionType != "MineClearing" } && { _missionType != "EscapeEvasion" } && { _missionType != "GeoGuesser" }) then {
+if (_missionType != "HVT" && { _missionType != "Hostage" } && { _missionType != "ClearArea" } && { _missionType != "InterceptConvoy" } && { _missionType != "AreaOfOperations" } && { _missionType != "SearchDestroy" } && { _missionType != "Operation" } && { _missionType != "Raid" } && { _missionType != "Invasion" } && { _missionType != "AssetRetrieval" } && { _missionType != "MineClearing" } && { _missionType != "EscapeEvasion" } && { _missionType != "GeoGuesser" } && { _missionType != "PointDefense" }) then {
     private _refineMax = if (_needsLZ) then { 10 } else { 50 };
     private _refineObj = if (_needsLZ) then { 15 } else { 5 };
     _destPos = [[_destPos, 0, _refineMax, _refineObj, 1, 0.5, 0, [], _destPos], _destPos] call FADE_findSafePosArray;

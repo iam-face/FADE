@@ -112,6 +112,10 @@ publicVariable "FADE_basePos";
 publicVariable "FADE_bSpPoints";
 publicVariable "FADE_mapMin";
 publicVariable "FADE_mapMax";
+publicVariable "FADE_mapMinX";
+publicVariable "FADE_mapMaxX";
+publicVariable "FADE_mapMinY";
+publicVariable "FADE_mapMaxY";
 
 // -----------------------------------------------------------------------------
 // Update helipad markers and padIndicator_* signs (aircraft only, not ground vehicles).

@@ -21,6 +21,7 @@ private _missionListRaw = [
     ["Invasion", "Invasion", "Defend against an OPFOR beachhead push. Retake the INVASION zone to win. [G]", "Global"],
     ["Mine Clearing", "MineClearing", "Clear a short road segment of mines or IEDs. Use deliberate recon and proven clearance procedures. [S]", "Single"],
     ["Operation", "Operation", "Linked fights across several zones. Clear, hold, and prevent enemy movement between areas. [G]", "Global"],
+    ["Point Defense", "PointDefense", "Occupy and hold a marked point against assault waves for a set duration. Timer starts when players enter the zone. [G]", "Global"],
     ["Raid", "Raid", "Three objectives across the map — mixed task types linked to one enemy network. Approximate intel refines on recon. [G]", "Global"],
     ["Search & Destroy", "SearchDestroy", "Search a marked zone for enemy ammo caches (burning barrels mark sites). Task states how many to find and what % must be destroyed. [G]", "Global"],
     ["Troop Extract", "TroopExtract", "Pick up a ground team and return them to base. LZ discipline and calm loading are essential. [S]", "Single"],
@@ -278,6 +279,10 @@ FAC_missionsGui_fnc = {
                 uinamespace setVariable ["FAC_troopInsert_lzAnchor", nil];
                 ["open", [_missionType]] call FAC_troopInsertPickGui_fnc;
             };
+            if (_missionType == "PointDefense") exitWith {
+                if (isNil "FAC_pointDefensePickGui_fnc") exitWith { systemChat "POINT DEFENSE UI not loaded."; };
+                ["open", []] call FAC_pointDefensePickGui_fnc;
+            };
             if (isNil "FAC_missionLocationPickGui_fnc") exitWith { systemChat "MISSION: location picker not loaded."; };
             ["open", [_missionType]] call FAC_missionLocationPickGui_fnc;
         };
@@ -311,6 +316,7 @@ FAC_missionsGui_fnc = {
                 private _pos = _entry param [2, []];
                 if (_mType == "InterceptConvoy") exitWith { "Route: start/end markers, corridor dots, and a route line show the expected convoy path." };
                 if (_mType == "Operation") exitWith { "AO: multiple zones  -  capture rules in Tasks." };
+                if (_mType == "PointDefense") exitWith { "Hold: 250 m defend zone — timer starts when players enter." };
                 if (_pos isEqualType [] && { count _pos >= 2 } && { !(_pos isEqualTo [0, 0, 0]) }) exitWith {
                     "Grid " + (mapGridPosition _pos)
                 };

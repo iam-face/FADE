@@ -50,6 +50,7 @@ Descriptions in-game (**Manage Missions**) are the source of truth for objective
 | HVT | Find, kill, or capture a priority target. |
 | Intercept Convoy | Stop a moving column before it finishes its route. *(temporarily disabled in Missions GUI — route/spawn rework in progress)* |
 | Invasion | OPFOR beachhead push through nearest civil zones; retake INVASION to win. |
+| Point Defense | Hold a 250 m zone against assault waves for a set duration (timer starts on player entry). |
 | Operation | Clear outer zones, then capture the OPFOR HQ hub. |
 | Raid | Three linked objectives (mixed task types) across the map; each target building marked on the map. |
 | Search & Destroy | Find and destroy enemy ammo caches in a marked zone. |
@@ -71,9 +72,9 @@ Descriptions in-game (**Manage Missions**) are the source of truth for objective
 Feature backlog: **[TODO.md](TODO.md)**.
 
 **Recently shipped (faction flexibility):**
-- **Any-side player faction** — Scenario GUI friendly list: all EAST/WEST/GUER `CfgFactionClasses` entries; enemy list filtered to opposed sides (GUER hostile to both majors); auto-correct + hint on Apply; mission-start validation; player side sync on Apply.
+- **Any-side player faction** — Scenario GUI friendly list: all EAST/WEST/GUER `CfgFactionClasses` entries; enemy list filtered to opposed sides (GUER hostile to both majors); auto-correct + hint on Apply; mission-start validation; player side sync on Apply, JIP (`FADE_sendScenarioConfigToClient` / client request), and respawn (`EntityRespawned` + `onPlayerRespawn`).
 
-**Upcoming mission types:** Point defense, SEAD/DEAD (destroy enemy air defences). **Operation v2** (intel-gated multi-objective grid) replaces the standalone Hunt concept — see TODO §11.
+**Upcoming mission types:** SEAD/DEAD (destroy enemy air defences). **Operation v2** (intel-gated multi-objective grid) replaces the standalone Hunt concept — see TODO §11.
 
 **Recently shipped (DRO/DCO-inspired pass):**
 - **100 m grid search zones** on HVT, Hostage, S&D, Asset Retrieval, and Raid — standardised **`mil_*`** map markers mission-wide
@@ -87,7 +88,7 @@ Feature backlog: **[TODO.md](TODO.md)**.
 - **OPFOR roadblocks revisit** — use `FADE_aoSurvey` road buckets to place blocks on routes players actually use
 - **Portable FADE** — ship FADE as a mod + thin mission glue; Eden **FADE Player Base** module sets base location; auto-discover vehicle/AI spawns, civ zones, configs for non-Altis maps (see TODO §13)
 
-Previously shipped: **Raid**, **Invasion**, procedural **lore**, **AAA** engagement fix, and **OPFOR drones** (ambient UAV patrol + QRF vectoring).
+Previously shipped: **Point Defense**, **Raid**, **Invasion**, procedural **lore**, **AAA** engagement fix, and **OPFOR drones** (ambient UAV patrol + QRF vectoring).
 
 - **Intercept Convoy** — temporarily disabled (`FADE_disabledMissionTypes`); fix subdivided route waypoints, road spawn helper, and RPT errors before re-enabling.
 
@@ -105,8 +106,8 @@ Entry points: `initServer.sqf` (loads `rsc/server/`) and `initPlayerLocal.sqf`. 
 
 **Regression tests:** `[] call FAC_missionTestSuite_execAll` (debug-tools lobby param adds a scroll-wheel action). RPT filter: `[FAC TestSuite]`. Covers compile, RPCs, mission placement, SMEAC/intel per type, zone pickers, and client GUI scripts — not full mission playthroughs.
 
-**Offline SQF lint (no Arma):** Install the recommended **[SQF-VM Language Server](https://marketplace.visualstudio.com/items?itemName=SQF-VM.sqf-vm-language-server)** extension in Cursor/VS Code — syntax and preprocessor diagnostics as you edit. CLI batch check: `powershell -ExecutionPolicy Bypass -File tools\sqfvm\Invoke-FadeSqfLint.ps1 -InstallIfMissing` (downloads SQF-VM runtime to `tools/sqfvm/bin/`). Task: **SQF: Lint mission scripts (SQF-VM CLI)**. Suppress a line: `#pragma sls disable line CODE` (see extension docs). SQF-VM is static analysis only; it does not run `compile preprocessFileLineNumbers` chains or prove mission behaviour.
+**Offline SQF lint (no Arma):** Install the recommended **[SQF-VM Language Server](https://marketplace.visualstudio.com/items?itemName=SQF-VM.sqf-vm-language-server)** extension in Cursor/VS Code — syntax and preprocessor diagnostics as you edit. CLI batch check (from mission folder): `powershell -ExecutionPolicy Bypass -File ..\tools\sqfvm\Invoke-FadeSqfLint.ps1 -InstallIfMissing` (downloads SQF-VM runtime to `mpmissions\tools\sqfvm\bin\`). Task: **SQF: Lint mission scripts (SQF-VM CLI)**. Suppress a line: `#pragma sls disable line CODE` (see extension docs). SQF-VM is static analysis only; it does not run `compile preprocessFileLineNumbers` chains or prove mission behaviour.
 
-**Headless dedicated-server tests (optional, slow with full modset):** `powershell -ExecutionPolicy Bypass -File tools\headless\Run-FadeHeadlessTest.ps1` — boots `C:\Arma3Server` via `Face\local_server`, runs **MissionTestSuite** server checks, parses RPT, exits non-zero on failure. Modes: `-Mode boot`, `-Mode compile` (default), `-Mode playthrough`, `-Mode all`. Config: `tools\headless\headless.local.json`. Cursor agent workflow: `.cursor/skills/fade-headless-test/SKILL.md`.
+**Headless dedicated-server tests (optional, slow with full modset):** `powershell -ExecutionPolicy Bypass -File ..\tools\headless\Run-FadeHeadlessTest.ps1` — boots `C:\Arma3Server` via `Face\local_server`, runs **MissionTestSuite** server checks, parses RPT, exits non-zero on failure. Modes: `-Mode boot`, `-Mode compile` (default), `-Mode playthrough`, `-Mode all`. Config: `..\tools\headless\headless.local.json`. Cursor agent workflow: `.cursor/skills/fade-headless-test/SKILL.md`.
 
 **Mission playthrough tests:** `[] call FAC_playthroughSuite_execAll` (second dev scroll-wheel action). RPT filter: `[FAC Playthrough]`. Runs all 19 mission types in **≤10 minutes** with **no player input** after exec (server teleports + win cheats). Phases: (1) init checks, (2) per-type win simulation, (4) short task-state assertions. Abort: `[] call FAC_playthroughSuite_abort`. Tune `FAC_playthroughSuite__suiteBudgetSec` and phase toggles in `rsc/MissionPlaythroughProfiles.sqf`.

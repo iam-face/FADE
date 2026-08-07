@@ -21,6 +21,7 @@ missionNamespace setVariable ["FAC_missionTypeLabels", [
     ["Invasion", "Invasion"],
     ["Mine Clearing", "MineClearing"],
     ["Operation", "Operation"],
+    ["Point Defense", "PointDefense"],
     ["Raid", "Raid"],
     ["Search & Destroy", "SearchDestroy"],
     ["Troop Extract", "TroopExtract"],

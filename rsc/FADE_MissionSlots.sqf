@@ -61,6 +61,8 @@ FADE_hqMainBoard_missionTypeDisplayName = {
 
             ["Operation", "Operation"],
 
+            ["PointDefense", "Point Defense"],
+
             ["Raid", "Raid"],
 
             ["Invasion", "Invasion"],
@@ -100,6 +102,8 @@ FADE_hqMainBoard_typeParenLabel = {
         case "TroopInsert": { "Troop Insert" };
 
         case "TroopExtract": { "Troop Extract" };
+
+        case "PointDefense": { "Point Defense" };
 
         default { _missionType };
 
@@ -144,6 +148,8 @@ FADE_hqMainBoard_missionTaskLine = {
         case "Raid": { "Clear all marked objectives linked to the enemy network." };
 
         case "Invasion": { "Retake the INVASION beachhead to win; stop OPFOR capturing every zone." };
+
+        case "PointDefense": { "Occupy and hold the marked point until the defend timer expires." };
 
         case "EscapeEvasion": { "Move separated personnel to friendly lines while rescue coordinates recovery." };
 

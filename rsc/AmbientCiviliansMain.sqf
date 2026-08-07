@@ -197,12 +197,16 @@ if (_zoneCount == 0) then {
 
         private _aircraftClass = selectRandom _civAir;
         private _side = random 360;
-        private _mapMin = missionNamespace getVariable ["FADE_mapMin", 0];
-        private _mapMax = missionNamespace getVariable ["FADE_mapMax", worldSize];
-        private _halfMap = (_mapMin + _mapMax) / 2;
-        private _halfSpan = (_mapMax - _mapMin) / 2;
-        private _startEdge = [_halfMap + _halfSpan * (sin _side) * 0.95, _halfMap + _halfSpan * (cos _side) * 0.95, 180 + random 250];
-        private _endEdge   = [_halfMap - _halfSpan * (sin _side) * 0.95, _halfMap - _halfSpan * (cos _side) * 0.95, _startEdge select 2];
+        private _minX = missionNamespace getVariable ["FADE_mapMinX", missionNamespace getVariable ["FADE_mapMin", 0]];
+        private _maxX = missionNamespace getVariable ["FADE_mapMaxX", missionNamespace getVariable ["FADE_mapMax", worldSize]];
+        private _minY = missionNamespace getVariable ["FADE_mapMinY", missionNamespace getVariable ["FADE_mapMin", 0]];
+        private _maxY = missionNamespace getVariable ["FADE_mapMaxY", missionNamespace getVariable ["FADE_mapMax", worldSize]];
+        private _cx = (_minX + _maxX) / 2;
+        private _cy = (_minY + _maxY) / 2;
+        private _hx = (_maxX - _minX) / 2;
+        private _hy = (_maxY - _minY) / 2;
+        private _startEdge = [_cx + _hx * (sin _side) * 0.95, _cy + _hy * (cos _side) * 0.95, 180 + random 250];
+        private _endEdge   = [_cx - _hx * (sin _side) * 0.95, _cy - _hy * (cos _side) * 0.95, _startEdge select 2];
 
         private _aircraft = createVehicle [_aircraftClass, _startEdge, [], 0, "FLY"];
         if (!isNull _aircraft) then {

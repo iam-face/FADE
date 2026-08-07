@@ -5,8 +5,10 @@ FADE_findMissionPosUrban = {
     params [["_minDistOverride", -1]];
     private _base = FADE_basePos;
     private _minDist = if (_minDistOverride > 0) then { _minDistOverride } else { FADE_minDistFromBase };
-    private _minXY = FADE_mapMin;
-    private _maxXY = FADE_mapMax;
+    private _minX = FADE_mapMinX;
+    private _maxX = FADE_mapMaxX;
+    private _minY = FADE_mapMinY;
+    private _maxY = FADE_mapMaxY;
     private _civZoneRadius = 2500;
     private _civZones = missionNamespace getVariable ["FADE_civTriggerNames", []];
     if (count _civZones == 0) exitWith { [] };
@@ -22,7 +24,7 @@ FADE_findMissionPosUrban = {
             if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
                 private _sx = _candidate select 0;
                 private _sy = _candidate select 1;
-                if (_sx >= _minXY && { _sx <= _maxXY } && { _sy >= _minXY } && { _sy <= _maxXY }) then {
+                if (_sx >= _minX && { _sx <= _maxX } && { _sy >= _minY } && { _sy <= _maxY }) then {
                     _result = _candidate;
                 };
             };
@@ -37,8 +39,10 @@ FADE_findMissionPosUrbanNearCenter = {
     params [["_minDistOverride", -1]];
     private _base = FADE_basePos;
     private _minDist = if (_minDistOverride > 0) then { _minDistOverride } else { FADE_minDistFromBase };
-    private _minXY = FADE_mapMin;
-    private _maxXY = FADE_mapMax;
+    private _minX = FADE_mapMinX;
+    private _maxX = FADE_mapMaxX;
+    private _minY = FADE_mapMinY;
+    private _maxY = FADE_mapMaxY;
     private _civZones = missionNamespace getVariable ["FADE_civTriggerNames", []];
     if (count _civZones == 0) exitWith { [] };
     private _result = [];
@@ -53,7 +57,7 @@ FADE_findMissionPosUrbanNearCenter = {
             if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
                 private _sx = _candidate select 0;
                 private _sy = _candidate select 1;
-                if (_sx >= _minXY && { _sx <= _maxXY } && { _sy >= _minXY } && { _sy <= _maxXY }) then {
+                if (_sx >= _minX && { _sx <= _maxX } && { _sy >= _minY } && { _sy <= _maxY }) then {
                     _result = _candidate;
                 };
             };
@@ -95,8 +99,10 @@ FADE_findMissionPosAssetRetrieval = {
     params [["_minDistOverride", -1], ["_radiusFromZone", 500]];
     private _base = FADE_basePos;
     private _minDist = if (_minDistOverride > 0) then { _minDistOverride } else { FADE_minDistFromBase };
-    private _minXY = FADE_mapMin;
-    private _maxXY = FADE_mapMax;
+    private _minX = FADE_mapMinX;
+    private _maxX = FADE_mapMaxX;
+    private _minY = FADE_mapMinY;
+    private _maxY = FADE_mapMaxY;
     private _civZones = missionNamespace getVariable ["FADE_civTriggerNames", []];
     if (count _civZones == 0) exitWith { [] };
     private _result = [];
@@ -111,7 +117,7 @@ FADE_findMissionPosAssetRetrieval = {
             if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
                 private _sx = _candidate select 0;
                 private _sy = _candidate select 1;
-                if (_sx >= _minXY && { _sx <= _maxXY } && { _sy >= _minXY } && { _sy <= _maxXY }) then {
+                if (_sx >= _minX && { _sx <= _maxX } && { _sy >= _minY } && { _sy <= _maxY }) then {
                     _result = _candidate;
                 };
             };
@@ -128,8 +134,10 @@ FADE_findMissionPos = {
     params [["_minDistOverride", -1]];
     private _base = FADE_basePos;
     private _minDist = if (_minDistOverride > 0) then { _minDistOverride } else { FADE_minDistFromBase };
-    private _minXY = FADE_mapMin;
-    private _maxXY = FADE_mapMax;
+    private _minX = FADE_mapMinX;
+    private _maxX = FADE_mapMaxX;
+    private _minY = FADE_mapMinY;
+    private _maxY = FADE_mapMaxY;
     private _civZoneRadius = 2500;
     private _result = [];
     private _attempt = 0;
@@ -147,15 +155,15 @@ FADE_findMissionPos = {
             };
         };
         if (count _candidate < 2) then {
-            private _x = _minXY + random (_maxXY - _minXY);
-            private _y = _minXY + random (_maxXY - _minXY);
+            private _x = _minX + random (_maxX - _minX);
+            private _y = _minY + random (_maxY - _minY);
             _candidate = [_x, _y, 0];
             _candidate = [[_candidate, 0, 80, 5, 1, 0.5, 0, [], _candidate], _candidate] call FADE_findSafePosArray;
         };
         if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
             private _sx = _candidate select 0;
             private _sy = _candidate select 1;
-            if (_sx >= _minXY && { _sx <= _maxXY } && { _sy >= _minXY } && { _sy <= _maxXY }) then {
+            if (_sx >= _minX && { _sx <= _maxX } && { _sy >= _minY } && { _sy <= _maxY }) then {
                 _result = _candidate;
             };
         };
@@ -170,8 +178,10 @@ FADE_findMissionPosNearAnchor = {
     if (_radiusM < 0) then { _radiusM = missionNamespace getVariable ["FADE_missionPlayerAnchorRadiusM", 2500] };
     private _base = FADE_basePos;
     private _minDist = if (_minDistOverride > 0) then { _minDistOverride } else { FADE_minDistFromBase };
-    private _minXY = FADE_mapMin;
-    private _maxXY = FADE_mapMax;
+    private _minX = FADE_mapMinX;
+    private _maxX = FADE_mapMaxX;
+    private _minY = FADE_mapMinY;
+    private _maxY = FADE_mapMaxY;
     private _result = [];
     private _attempt = 0;
     while { _attempt < 25 && { count _result == 0 } } do {
@@ -181,7 +191,7 @@ FADE_findMissionPosNearAnchor = {
             if ((_candidate distance2D _anchor) <= _radiusM) then {
                 private _sx = _candidate select 0;
                 private _sy = _candidate select 1;
-                if (_sx >= _minXY && { _sx <= _maxXY } && { _sy >= _minXY } && { _sy <= _maxXY }) then {
+                if (_sx >= _minX && { _sx <= _maxX } && { _sy >= _minY } && { _sy <= _maxY }) then {
                     _result = _candidate;
                 };
             };
@@ -197,8 +207,10 @@ FADE_findMissionPosUrbanNearCenterNearAnchor = {
     if (_radiusM < 0) exitWith { [_minDistOverride] call FADE_findMissionPosUrbanNearCenter };
     private _base = FADE_basePos;
     private _minDist = if (_minDistOverride > 0) then { _minDistOverride } else { FADE_minDistFromBase };
-    private _minXY = FADE_mapMin;
-    private _maxXY = FADE_mapMax;
+    private _minX = FADE_mapMinX;
+    private _maxX = FADE_mapMaxX;
+    private _minY = FADE_mapMinY;
+    private _maxY = FADE_mapMaxY;
     private _result = [];
     private _attempt = 0;
     private _zoneNames = [];
@@ -223,7 +235,7 @@ FADE_findMissionPosUrbanNearCenterNearAnchor = {
                 if ((_candidate distance2D _anchor) <= _radiusM) then {
                     private _sx = _candidate select 0;
                     private _sy = _candidate select 1;
-                    if (_sx >= _minXY && { _sx <= _maxXY } && { _sy >= _minXY } && { _sy <= _maxXY }) then {
+                    if (_sx >= _minX && { _sx <= _maxX } && { _sy >= _minY } && { _sy <= _maxY }) then {
                         _result = _candidate;
                     };
                 };
@@ -239,8 +251,10 @@ FADE_findMissionPosUrbanNearAnchor = {
     if (_radiusM < 0) exitWith { [_minDistOverride] call FADE_findMissionPosUrban };
     private _base = FADE_basePos;
     private _minDist = if (_minDistOverride > 0) then { _minDistOverride } else { FADE_minDistFromBase };
-    private _minXY = FADE_mapMin;
-    private _maxXY = FADE_mapMax;
+    private _minX = FADE_mapMinX;
+    private _maxX = FADE_mapMaxX;
+    private _minY = FADE_mapMinY;
+    private _maxY = FADE_mapMaxY;
     private _result = [];
     private _attempt = 0;
     private _zoneNames = [];
@@ -272,7 +286,7 @@ FADE_findMissionPosUrbanNearAnchor = {
             if ((_candidate distance2D _anchor) <= _radiusM) then {
                 private _sx = _candidate select 0;
                 private _sy = _candidate select 1;
-                if (_sx >= _minXY && { _sx <= _maxXY } && { _sy >= _minXY } && { _sy <= _maxXY }) then {
+                if (_sx >= _minX && { _sx <= _maxX } && { _sy >= _minY } && { _sy <= _maxY }) then {
                     _result = _candidate;
                 };
             };
@@ -284,6 +298,12 @@ FADE_findMissionPosUrbanNearAnchor = {
 FADE_findMissionPosAssetRetrievalNearAnchor = {
     params ["_anchor", ["_minDistOverride", -1], ["_radiusFromZone", 500], ["_radiusM", -1]];
     if (count _anchor < 2) exitWith { [] };
+    private _base = FADE_basePos;
+    private _minDist = if (_minDistOverride > 0) then { _minDistOverride } else { FADE_minDistFromBase };
+    private _minX = FADE_mapMinX;
+    private _maxX = FADE_mapMaxX;
+    private _minY = FADE_mapMinY;
+    private _maxY = FADE_mapMaxY;
     if (_radiusM < 0) exitWith {
         private _zoneNames = [];
         {
@@ -313,7 +333,7 @@ FADE_findMissionPosAssetRetrievalNearAnchor = {
                 if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
                     private _sx = _candidate select 0;
                     private _sy = _candidate select 1;
-                    if (_sx >= _minXY && { _sx <= _maxXY } && { _sy >= _minXY } && { _sy <= _maxXY }) then {
+                    if (_sx >= _minX && { _sx <= _maxX } && { _sy >= _minY } && { _sy <= _maxY }) then {
                         _fallback = _candidate;
                     };
                 };
@@ -321,10 +341,6 @@ FADE_findMissionPosAssetRetrievalNearAnchor = {
         };
         _fallback
     };
-    private _base = FADE_basePos;
-    private _minDist = if (_minDistOverride > 0) then { _minDistOverride } else { FADE_minDistFromBase };
-    private _minXY = FADE_mapMin;
-    private _maxXY = FADE_mapMax;
     private _zoneNames = [];
     {
         private _trig = missionNamespace getVariable [_x, objNull];
@@ -354,7 +370,7 @@ FADE_findMissionPosAssetRetrievalNearAnchor = {
                 if ((_candidate distance2D _anchor) <= _radiusM) then {
                     private _sx = _candidate select 0;
                     private _sy = _candidate select 1;
-                    if (_sx >= _minXY && { _sx <= _maxXY } && { _sy >= _minXY } && { _sy <= _maxXY }) then {
+                    if (_sx >= _minX && { _sx <= _maxX } && { _sy >= _minY } && { _sy <= _maxY }) then {
                         _result = _candidate;
                     };
                 };

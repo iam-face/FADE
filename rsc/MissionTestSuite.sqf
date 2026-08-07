@@ -18,7 +18,7 @@
 FAC_missionTestSuite__missionRunnerTypes = [
     "AreaOfOperations", "Operation", "Raid", "Invasion", "TroopInsert", "TroopExtract", "Cargo", "MineClearing",
     "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "InterceptConvoy", "EscapeEvasion", "GeoGuesser",
-    "CAS", "HVT", "Hostage", "ClearArea"
+    "CAS", "HVT", "Hostage", "ClearArea", "PointDefense"
 ];
 
 // Returns true when a global variable holds CODE (a function is installed).
@@ -58,7 +58,7 @@ FAC_missionTestSuite__placementMinDist = {
     params ["_missionType"];
     private _spawnsEnemies = _missionType in [
         "TroopExtract", "CAS", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations",
-        "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion"
+        "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion", "PointDefense"
     ];
     private _minDist = if (_spawnsEnemies) then { 1000 } else { missionNamespace getVariable ["FADE_minDistFromBase", 500] };
     if (_missionType in ["TroopInsert", "TroopExtract"]) then {
@@ -169,10 +169,20 @@ FAC_missionTestSuite_runServer = {
     _ok = _eu isEqualType [] && { count _eu > 0 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_enemyUnits (%1)", count _eu]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_enemyUnits"; };
 
+    private _mapMinX = missionNamespace getVariable ["FADE_mapMinX", -1];
+    private _mapMaxX = missionNamespace getVariable ["FADE_mapMaxX", -1];
+    private _mapMinY = missionNamespace getVariable ["FADE_mapMinY", -1];
+    private _mapMaxY = missionNamespace getVariable ["FADE_mapMaxY", -1];
     private _mapMin = missionNamespace getVariable ["FADE_mapMin", -1];
     private _mapMax = missionNamespace getVariable ["FADE_mapMax", -1];
-    _ok = _mapMax > _mapMin && { _mapMin >= 0 };
-    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_mapMin/Max %1..%2", _mapMin, _mapMax]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_mapMin/Max"; };
+    _ok = _mapMaxX > _mapMinX && { _mapMaxY > _mapMinY } && { _mapMinX > -1 } && { _mapMinY > -1 };
+    if (_ok) then {
+        _pass = _pass + 1;
+        diag_log format ["[FAC TestSuite] PASS (server): FADE_map bounds X %1..%2 Y %3..%4 (envelope %5..%6)", _mapMinX, _mapMaxX, _mapMinY, _mapMaxY, _mapMin, _mapMax];
+    } else {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): FADE_mapMinX/MaxX/MinY/MaxY";
+    };
 
     private _civT = missionNamespace getVariable ["FADE_civTriggerNames", []];
     _ok = _civT isEqualType [];
@@ -190,6 +200,8 @@ FAC_missionTestSuite_runServer = {
     if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_globalMissionTypes contains EscapeEvasion"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_globalMissionTypes / EscapeEvasion"; };
     _ok = _gmt isEqualType [] && { "GeoGuesser" in _gmt };
     if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_globalMissionTypes contains GeoGuesser"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_globalMissionTypes / GeoGuesser"; };
+    _ok = _gmt isEqualType [] && { "PointDefense" in _gmt };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_globalMissionTypes contains PointDefense"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_globalMissionTypes / PointDefense"; };
     _ok = _smt isEqualType [] && { count _smt > 0 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_singleMissionTypes (%1)", count _smt]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_singleMissionTypes"; };
 
@@ -456,6 +468,7 @@ FAC_missionTestSuite_runServer = {
         "FADE_startMission",
         "FADE_startEscapeEvasion",
         "FADE_startGeoGuesser",
+        "FADE_startPointDefense",
         "FADE_geoGuesser_submitGuess",
         "FADE_startTroopInsert",
         "FADE_startTroopExtract",
@@ -558,6 +571,8 @@ FAC_missionTestSuite_runServer = {
         "rsc\GeoGuesserPickGui.sqf",
         "rsc\GeoGuesserClient.sqf",
         "rsc\EscapeEvasionPickGui.sqf",
+        "rsc\PointDefensePickGui.sqf",
+        "rsc\missions\MissionPointDefense.sqf",
         "rsc\ConfigDefaults.sqf",
         "rsc\EnemyAAA.sqf",
         "rsc\RoadblockCommon.sqf",
@@ -574,7 +589,7 @@ FAC_missionTestSuite_runServer = {
         "rsc\FADE_IntelClient.sqf",
         "rsc\FADE_MissionCompile.sqf",
         "rsc\FAC_MissionTypeLabels.sqf",
-        "rsc\FADE_OpforDrones.sqf",
+        "rsc\server\ServerBootstrapOpforDrones.sqf",
         "rsc\FADE_VirtualGarrison.sqf",
         "rsc\AmbientCivilians.sqf",
         "rsc\BaseNpcTalk.sqf",
@@ -633,7 +648,7 @@ FAC_missionTestSuite_runServer = {
         "FADE_installMissionModules", "FADE_aoMissionMain", "FADE_operationMissionMain", "FADE_invasionMissionMain", "FADE_lore_generate", "FADE_troopInsertMissionMain", "FADE_troopExtractMissionMain",
         "FADE_cqbStartDrill", "FADE_cqbEndDrill", "FADE_rangeStartSession", "FADE_rangeEndSession",
         "FADE_sniperStartSession", "FADE_sniperEndSession", "FADE_startTroopInsert", "FADE_startTroopExtract",
-        "FADE_startEscapeEvasion", "FADE_startGeoGuesser", "FADE_geoGuesser_submitGuess", "FADE_geoGuesser_computeScore",
+        "FADE_startEscapeEvasion", "FADE_startGeoGuesser", "FADE_startPointDefense", "FADE_geoGuesser_submitGuess", "FADE_geoGuesser_computeScore",
         "FADE_startTroopTransport_clampWaves", "FADE_fnc_eligibleCivZoneCenters", "FADE_fnc_pickTroopHeliSiteAtCivZone"
     ];
     {
@@ -695,6 +710,10 @@ FAC_missionTestSuite_runServer = {
         private _loreCargo = ["Cargo", FADE_basePos, "Supply Run"] call FADE_lore_generate;
         _ok = (_loreCargo select 1) find "eliminate the threat" < 0;
         if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_lore_generate Cargo tone"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_lore_generate Cargo tone"; };
+        private _lorePd = ["PointDefense", FADE_basePos, "Operation Test"] call FADE_lore_generate;
+        private _pdJoined = toLower ((_lorePd select 0) + " " + (_lorePd select 1) + " " + (_lorePd select 2));
+        _ok = (_pdJoined find "hold" >= 0) || { _pdJoined find "defend" >= 0 } || { _pdJoined find "point" >= 0 };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_lore_generate PointDefense tone"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_lore_generate PointDefense tone"; };
     };
 
     private _smeacBuilder = missionNamespace getVariable ["FADE_buildMissionTaskSmeacText", {}];
@@ -770,6 +789,7 @@ FAC_missionTestSuite_runServer = {
         "FADE_mission_findPickupSpawnPos", "FADE_mission_spawnFriendlyPickupGroup", "FADE_mission_spawnCasualtyHeliWreck", "FADE_mission_groundAtlPos",
         "FADE_mission_applyPickupGroupPosture", "FADE_mission_casevacCasualtyPrep", "FADE_mission_csarPilotWoundPrep",
         "FADE_zone_createCaptureMarkerPair", "FADE_zone_tickOperationCapture", "FADE_zone_tickInvasionHold",
+        "FADE_runMission_PointDefense", "FADE_pd_findAdjacentCivZonePos", "FADE_pd_pickInfSpawnPos", "FADE_pd_spawnInfWave", "FADE_pd_spawnVehWave",
         "FADE_troopMission_liveParticipants", "FADE_troopMission_runTransportWave", "FADE_troopMission_clearParticipantMissionVars",
         "FADE_pickHvtCodename", "FADE_getIdentityDisplayName", "FADE_objective_findBuildingForMission",
         "FADE_marker_getType", "FADE_map_gridCellsForSearchZone", "FADE_map_gridCellOrigin",
@@ -1017,6 +1037,9 @@ FAC_missionTestSuite_runServer = {
         _fail = _fail + 1;
         diag_log "[FAC TestSuite] FAIL (server): FADE_normalizeScenarioFactions missing";
     };
+
+    _ok = !isNil "FADE_syncPlayerToScenarioFriendlySide" && { !isNil "FADE_requestScenarioFriendlySideSync" };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_syncPlayerToScenarioFriendlySide / request RPC"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): player side sync helpers missing"; };
 
     _ok = (missionNamespace getVariable ["FADE_minDistBetweenMissions", -1]) == 2000 && { !isNil "FADE_missionMapClickRadiusTiers" };
     if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): ConfigClientDefaults loaded"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): ConfigClientDefaults"; };
@@ -1278,19 +1301,28 @@ FAC_missionTestSuite_runServer = {
         if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_normPos3 %1", _np]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_normPos3"; };
     };
 
+    // Faction-matched UAV list may be empty (e.g. 3CB ADA); pickClass then uses FADE_opforDrone_fallbackClasses.
     if (!isNil "FADE_getEnemyDroneVehicleClasses") then {
         private _drones = [] call FADE_getEnemyDroneVehicleClasses;
-        _ok = _drones isEqualType [] && { count _drones > 0 };
+        _ok = _drones isEqualType [];
         if (_ok) then {
             _pass = _pass + 1;
-            diag_log format ["[FAC TestSuite] PASS (server): FADE_getEnemyDroneVehicleClasses (%1)", count _drones];
-            private _badDrone = _drones findIf { !isClass (configFile >> "CfgVehicles" >> _x) };
-            _ok = _badDrone < 0;
-            if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): drone classes valid in CfgVehicles"; }
-            else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): invalid drone class %1", _drones select _badDrone]; };
+            diag_log format ["[FAC TestSuite] PASS (server): FADE_getEnemyDroneVehicleClasses (%1 faction-matched)", count _drones];
+            if (count _drones > 0) then {
+                private _badDrone = _drones findIf { !isClass (configFile >> "CfgVehicles" >> _x) };
+                _ok = _badDrone < 0;
+                if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): drone classes valid in CfgVehicles"; }
+                else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): invalid drone class %1", _drones select _badDrone]; };
+            };
         } else {
             _fail = _fail + 1;
-            diag_log "[FAC TestSuite] FAIL (server): FADE_getEnemyDroneVehicleClasses empty";
+            diag_log "[FAC TestSuite] FAIL (server): FADE_getEnemyDroneVehicleClasses not an array";
+        };
+        if (!isNil "FADE_opforDrone_pickClass") then {
+            private _picked = [] call FADE_opforDrone_pickClass;
+            _ok = (_picked isEqualType "") && { _picked != "" } && { isClass (configFile >> "CfgVehicles" >> _picked) };
+            if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_opforDrone_pickClass %1", _picked]; }
+            else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_opforDrone_pickClass %1", _picked]; };
         };
     };
 
@@ -1377,6 +1409,7 @@ FAC_missionTestSuite_runClient = {
         "FADE_getPlayableFactions",
         "FADE_getOpposedSideNums",
         "FADE_isScenarioFriendlyUnit",
+        "FADE_requestScenarioFriendlySideSync",
         "FADE_applyMissionSlotsClientSync",
         "FADE_aiSideChat_exec",
         "FAC_playerCanUseMissionsGui",
@@ -1399,6 +1432,7 @@ FAC_missionTestSuite_runClient = {
         "FAC_troopInsertPickGui_fnc",
         "FAC_escapeEvasionPickGui_fnc",
         "FAC_geoGuesserPickGui_fnc",
+        "FAC_pointDefensePickGui_fnc",
         "FADE_ggClient_beginRound",
         "FADE_ggClient_closeMissionGui",
         "FADE_ggClient_forceStop",
@@ -1460,6 +1494,7 @@ FAC_missionTestSuite_runClient = {
         "FADE_civTalk_debugResetScene",
         "FADE_civTalk_debugStopCamera",
         "FADE_intel_clientRegister",
+        "FADE_recover_clientRegisterHold",
         "FADE_intel_clientAppendIntelDiary",
         "FADE_showMissionAssignedIntro",
         "FAC_ensureLoadoutGui",
@@ -1516,11 +1551,13 @@ FAC_missionTestSuite_runClient = {
         "rsc\MissionConvoyMapPick.sqf",
         "rsc\MissionConvoyMapPick_exec.sqf",
         "rsc\TroopInsertPickGui.sqf",
+        "rsc\PointDefensePickGui.sqf",
         "rsc\EscapeEvasionPickGui.sqf",
         "rsc\GeoGuesserPickGui.sqf",
         "rsc\GeoGuesserClient.sqf",
         "rsc\MissionPickOverlay.sqf",
         "rsc\FAC_ClientBoardActions.sqf",
+        "rsc\FADE_RecoverObjectClient.sqf",
         "rsc\FAC_Theme.sqf",
         "rsc\CutsceneClient.sqf",
         "rsc\ConfigClient.sqf"

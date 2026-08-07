@@ -609,6 +609,88 @@ missionNamespace setVariable [
                     [[["SPE_M3_GreaseGun","","","",["SPE_30Rnd_M3_GreaseGun_45ACP",30],[],""],[],[],["U_SPE_US_Tank_Coverall",[["kat_IFAK",1],["SPE_30Rnd_M3_GreaseGun_45ACP",2,30]]],[],[],"H_SPE_US_Helmet_Tank_NG","",["SPE_Binocular_US","","","",[],[],""],["ItemMap","","ItemRadio","SPE_US_ItemCompass","SPE_US_ItemWatch",""]],[["aceax_textureOptions",[]]]]
                 ]
             ]
+        ],
+        [
+            "ctbRhoOpSouthern",
+            "Southern Reach (RHO)",
+            [
+                [
+                    "Platoon Leader",
+                    [[["arifle_rho_ef88_C_cam2_F","","rho_rar_peq16b_wml_ir","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],[],""],[],["ACWP_HP_ba","","","",["ACWP_13Rnd_9x21_Mag_HP_blk",13],[],""],["Rho_RAR_Combat_shirt_Tucked_MC_Gloves",[["kat_IFAK",1]]],["rho_rar_vest_pl",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["ACRE_PRC152",1],["ItemAndroid",1],["rhs_mag_an_m8hc",2,1],["rho_rar_handgrenade_f1",2,1],["ACWP_13Rnd_9x21_Mag_HP_blk",2,13],["rho_rar_ef88_30Rnd_556x45_B_AUG",10,30]]],[],"rho_rar_tw_exfil2025_comtac_ir_bat_scrim1","G_tweed_tacticool_weiss",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Platoon Medic",
+                    [[["arifle_rho_ef88_cam4_F","","rho_rar_peq16b_wml_ir","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],[],""],[],[],["Rho_RAR_Combat_shirt_Tucked_Rolled",[["kat_IFAK",1]]],["rho_rar_vest_pl_medic",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["rhs_mag_an_m8hc",6,1],["rho_rar_handgrenade_f1",2,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",10,30]]],["ranger_pack_5",[["ACE_personalAidKit",1],["kat_MFAK",1],["ACE_salineIV_500",4],["ACE_salineIV",2],["ACE_salineIV_250",6],["rhs_mag_an_m8hc",2,1]]],"rho_rar_tw_exfil2025_comtac_ir_bat_scrim3","rho_reconwrap_07_glasses",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Platoon Sergeant",
+                    [[["arifle_rho_ef88_C_cam5_F","","rho_rar_peq16b_wml_ir","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],[],""],[],[],["Rho_RAR_Combat_shirt_Tucked_Rolled",[["kat_IFAK",1]]],["rho_rar_vest_section2ic",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["ACRE_PRC152",1],["ItemAndroid",1],["rhs_mag_an_m8hc",1,1],["rho_rar_handgrenade_f1",4,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",9,30]]],[],"rho_rar_tw_exfil2025_bat","",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "FO",
+                    [[["arifle_rho_ef88_cam10_F","","rho_rar_peq16b_wml_ir_camo","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],[],""],[],[],["Rho_RAR_Combat_shirt_Tucked_Rolled_Coy_Gloves",[["kat_IFAK",1]]],["rho_rar_vest_fo",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["rhs_mag_an_m8hc",1,1],["rho_rar_handgrenade_f1",2,1],["SmokeShellRed",2,1],["SmokeShellPurple",2,1],["SmokeShellBlue",2,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",10,30]]],["UK3CB_ION_I_B_RadioBag_OLI",[["ACRE_PRC117F",1]]],"rho_rar_tw_exfil2025_comtac_ir_bat_scrim3","",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Section Leader",
+                    [[["arifle_rho_ef88_C_cam3_F","","rho_rar_l3srf_wml_ir_camo","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],[],""],[],["ACWP_HP_ba","","","",["ACWP_13Rnd_9x21_Mag_HP",13],[],""],["Rho_RAR_Combat_shirt_Tucked",[["ACE_fieldDressing",10],["ACE_elasticBandage",2],["ACE_packingBandage",2],["ACE_quikclot",2],["ACE_morphine",2],["ACE_tourniquet",2],["kat_IFAK",1]]],["rho_rar_vest_secco",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["ACRE_PRC152",1],["ItemAndroid",1],["rhs_mag_an_m8hc",2,1],["rho_rar_handgrenade_f1",2,1],["ACWP_13Rnd_9x21_Mag_HP_blk",2,13],["rho_rar_ef88_30Rnd_556x45_B_AUG",10,30]]],["TFB_275_AVS_Backpack",[["rho_rar_ef88_camo_30Rnd_556x45_B_AUG",4,30],["rhs_mag_an_m8hc",4,1],["rho_rar_handgrenade_f1",4,1],["SmokeShellRed",4,1],["SmokeShellGreen",4,1],["SmokeShellBlue",4,1]]],"rho_rar_tw_exfil2025_comtac_ir_bat_scrim2","rho_reconwrap_03_glasses_blacklens",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Rifleman - CFA",
+                    [[["arifle_rho_ef88_cam6_F","","rho_rar_peq16b_wml_ir","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],[],""],[],[],["Rho_RAR_Combat_shirt_Tucked_Rolled",[["kat_IFAK",1]]],["rho_rar_vest_medic",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["ACE_personalAidKit",1],["ACE_bloodIV_500",1],["rhs_mag_an_m8hc",2,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",9,30]]],["ranger_pack_4",[["kat_AFAK",1]]],"rho_rar_tw_exfil2025_comtac_ir_bat_mul","G_tweed_tacticool_blauw",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Section 2IC (M72)",
+                    [[["arifle_rho_ef88_cam9_F","","rho_rar_peq16b_wml_ir","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],[],""],["rhs_weap_m72a7","","","",[],[],""],[],["Rho_RAR_Combat_shirt_Tucked",[["kat_IFAK",1]]],["rho_rar_vest_section2ic",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["ACRE_PRC152",1],["ItemAndroid",1],["rhs_mag_an_m8hc",2,1],["rho_rar_handgrenade_f1",4,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",10,30]]],[],"rho_rar_tw_exfil2025_comtac_ir_bat_shaggy3","G_tweed_tacticool_weiss",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Autorifleman",
+                    [[["rhs_weap_minimi_para_railed","","PEQ_R_black","rhsusf_acc_su230",["CUP_200Rnd_TE4_Red_Tracer_556x45_M249_Pouch",200],[],""],[],[],["Rho_RAR_Combat_shirt_Tucked_Rolled_MC_Gloves",[["kat_IFAK",1]]],["rho_rar_vest_lmg",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["rhs_mag_an_m8hc",1,1],["CUP_200Rnd_TE4_Red_Tracer_556x45_M249_Pouch",3,200],["rho_rar_handgrenade_f1",4,1]]],[],"rho_rar_tw_exfil2025_ir_bat_scrim3","rho_reconwrap_08_glasses",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Grenadier",
+                    [[["arifle_rho_ef88_GL_cam10_F","","rho_rar_peq16b_top_ir_camo","rhsusf_acc_su230",["rho_rar_ef88_camo_30Rnd_556x45_B_AUG",30],["rhs_mag_M433_HEDP",1],""],[],[],["Rho_RAR_Combat_shirt_Tucked_Rolled_Coy_Gloves",[["kat_IFAK",1]]],["rho_rar_vest_grenadier",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["rho_rar_handgrenade_f1",1,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",10,30],["rhs_mag_M433_HEDP",5,1],["rhs_mag_M397_HET",8,1]]],["B_Kitbag_rgr",[["rhsusf_200Rnd_556x45_mixed_soft_pouch_coyote",3,200],["rho_rar_ef88_camo_30Rnd_556x45_B_AUG",6,30],["rhs_mag_M433_HEDP",14,1]]],"rho_rar_tw_exfil2025_comtac_ir_bat","rho_reconwrap_06_glasses_blacklens",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Combat Engineer",
+                    [[["arifle_rho_ef88_cam5_F","","rho_rar_peq16b_wml_ir","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],[],""],[],["ACE_VMH3","","","",[],[],""],["Rho_RAR_Combat_shirt_Tucked",[["kat_IFAK",1]]],["rho_rar_vest_engi",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["ACE_DefusalKit",1],["ACE_Clacker",1],["rhs_mag_an_m8hc",1,1],["DemoCharge_Remote_Mag",2,1],["rho_rar_handgrenade_f1",3,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",9,30]]],["B_Kitbag_rgr",[["ACE_DefusalKit",1],["ACE_Clacker",1],["ACE_wirecutter",1],["SmokeShell",6,1],["CTB_OBS_Personal_Mag",1,1]]],"rho_rar_tw_exfil2025_comtac_ir_bat_scrim3","G_tweed_tacticool_blauw",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Section 2IC - 58 Ammo",
+                    [[["arifle_rho_ef88_cam7_F","","rho_rar_peq16b_wml_ir","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],[],""],["rhs_weap_m72a7","","","",[],[],""],[],["Rho_RAR_Combat_shirt_Tucked",[["kat_IFAK",1]]],["rho_rar_vest_section2ic",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["ACRE_PRC152",1],["rhs_mag_an_m8hc",2,1],["Tier1_100Rnd_762x51_Belt_M80A1_EPR",1,100],["rho_rar_handgrenade_f1",2,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",10,30]]],["ranger_pack_4",[["ACE_Canteen",2],["ACE_SpareBarrel",1,1],["Tier1_250Rnd_762x51_Belt_M80A1_EPR",4,250]]],"rho_rar_tw_exfil2025_ir_bat_scrim2","G_tweed_tacticool_comba",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Machine Gunner",
+                    [[["75th_Ranger_m240L","","75th_Ranger_sideM240L_2_LASER","75th_Eotech_EXPS3",["Tier1_250Rnd_762x51_Belt_M80A1_EPR",250],[],""],[],["ACWP_HP_ba","","","",["ACWP_13Rnd_9x21_Mag_HP_blk",13],[],""],["Rho_RAR_Combat_shirt_Tucked_Rolled",[["kat_IFAK",1]]],["rho_rar_vest_mg",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["rhs_mag_an_m8hc",1,1],["rho_rar_handgrenade_f1",2,1],["ACWP_13Rnd_9x21_Mag_HP_blk",2,13],["Tier1_250Rnd_762x51_Belt_M80",2,250]]],["rho_rar_sap_empty",[["ACE_Canteen",1],["ACE_SpareBarrel",1,1]]],"rho_rar_tw_exfil2025_comtac_ir_bat_scrim3","rho_reconwrap_mc_06",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Ammo Bearer",
+                    [[["arifle_rho_ef88_C_cam2_F","","rho_rar_peq16b_wml_ir_camo","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],[],""],[],[],["Rho_RAR_Combat_shirt_Tucked_Rolled",[["kat_IFAK",1]]],["rho_rar_vest_rifle2",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["rhs_mag_an_m8hc",2,1],["Tier1_100Rnd_762x51_Belt_M80A1_EPR",2,100],["rho_rar_handgrenade_f1",2,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",8,30]]],["ranger_pack_5",[["ACE_Canteen",2],["ACE_SpareBarrel",1,1],["Tier1_250Rnd_762x51_Belt_M80A1_EPR",4,250],["rho_rar_ef88_30Rnd_556x45_B_AUG",2,30]]],"rho_rar_tw_exfil2025_comtac_ir_bat","",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "60mm Gunner TL",
+                    [[["arifle_rho_ef88_cam9_F","","rho_rar_peq16b_wml_ir","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],[],""],["ISA_ELBITSYSTEMS_M224_BAG","","","",[],[],""],[],["Rho_RAR_Combat_shirt_Tucked",[["kat_IFAK",1]]],["rho_rar_vest_section2ic",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["ACRE_PRC152",1],["rhs_mag_an_m8hc",1,1],["rho_rar_handgrenade_f1",2,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",10,30]]],["ranger_pack_5",[["ISA_MAGAZINE_SHELL_HE_CH0",20,1],["ISA_MAGAZINE_SHELL_SMOKE_CH0",10,1]]],"rho_rar_tw_exfil2025_comtac_ir_bat","rho_reconwrap_06_glasses_blacklens",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Assist 60mm",
+                    [[["arifle_rho_ef88_GL_cam10_F","","rho_rar_peq16b_top_ir","rhsusf_acc_su230",["rho_rar_ef88_30Rnd_556x45_B_AUG",30],["rhs_mag_M433_HEDP",1],""],[],[],["Rho_RAR_Combat_shirt_Tucked_Rolled",[["kat_IFAK",1]]],["rho_rar_vest_grenadier",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["rho_rar_handgrenade_f1",1,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",10,30],["rhs_mag_M433_HEDP",5,1],["rhs_mag_M397_HET",8,1]]],["ranger_pack_4",[["ISA_MAGAZINE_SHELL_HE_CH0",20,1],["ISA_MAGAZINE_SHELL_SMOKE_CH0",10,1]]],"rho_rar_tw_exfil2025_comtac_ir_bat_shaggy3","rho_reconwrap_03_glasses",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Sniper A TL",
+                    [[["Tier1_SR25_EC_tan","121_NIGHTOWL_PAINT","Tier1_SR25_LA5_Side","121_USASOC_RVPS",["Tier1_20Rnd_762x51_M80A1_EPR_SR25_Mag",20],[],""],["rhs_weap_m72a7","","rhsusf_acc_anpeq15side","",[],[],""],["acwp_glock19_hlmnd","","","",["ACWP_19Rnd_9x21_Mag_glock",19],[],""],["Rho_RAR_Combat_shirt_Tucked_Bloused_Hood",[["grad_paceCountBeads_functions_paceCountBeads",1],["kat_IFAK",1],["ACE_RangeCard",1],["ACE_microDAGR",1],["ACE_ATragMX",1],["ACE_Kestrel4500",1],["ACE_MapTools",1],["VS17_Small_Panel_Item",1]]],["rho_rar_vest_grenadier",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["ItemAndroid",1],["ACRE_PRC152",1],["rho_rar_handgrenade_f1",1,1],["Tier1_20Rnd_762x51_M80A1_EPR_SR25_Mag",9,20],["ACWP_19Rnd_9x21_Mag_glock",3,19]]],["ctb_recon_pack",[["rhs_mag_maaws_HEDP",1,1],["Tier1_20Rnd_762x51_M80A1_EPR_SR25_Mag",2,20]]],"rho_rar_boonie_04","rho_reconwrap_05_glasses_tan",["ACE_Vector","","","",[],[],""],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Sniper B",
+                    [[["Tier1_SR25_EC_tan","121_NIGHTOWL_PAINT","Tier1_SR25_LA5_Side","121_USASOC_RVPS",["Tier1_20Rnd_762x51_M80A1_EPR_SR25_Mag",20],[],""],["rhs_weap_m72a7","","rhsusf_acc_anpeq15side","",[],[],""],["acwp_glock19_hlmnd","","","",["ACWP_19Rnd_9x21_Mag_glock",19],[],""],["Rho_RAR_Combat_shirt_Tucked_Bloused_Hood",[["grad_paceCountBeads_functions_paceCountBeads",1],["kat_IFAK",1],["ACE_RangeCard",1],["ACE_microDAGR",1],["ACE_ATragMX",1],["ACE_Kestrel4500",1],["ACE_MapTools",1],["VS17_Small_Panel_Item",1]]],["rho_rar_vest_section2ic",[["ACE_IR_Strobe_Item",1],["ACRE_PRC343",1],["ItemAndroid",1],["ACRE_PRC152",1],["rho_rar_handgrenade_f1",1,1],["Tier1_20Rnd_762x51_M80A1_EPR_SR25_Mag",9,20],["ACWP_19Rnd_9x21_Mag_glock",2,19]]],["ctb_recon_pack",[["121_tripod_item",1],["rhs_mag_maaws_HEDP",1,1],["Tier1_20Rnd_762x51_M80A1_EPR_SR25_Mag",1,20]]],"rho_rar_boonie_03","rho_reconwrap_05_glasses_tan",["121_spotting_scope_handheld","","","",[],[],""],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "MAAWS Gunner TL",
+                    [[["arifle_rho_ef88_cam9_F","","rho_rar_peq16b_wml_ir_camo","rhsusf_acc_su230",["rho_rar_ef88_camo_30Rnd_556x45_B_AUG",30],[],""],["rhs_weap_maaws","","","rhs_optic_maaws",["rhs_mag_maaws_HEAT",1],[],""],[],["Rho_RAR_Combat_shirt_Tucked_Bloused_Hood",[["kat_IFAK",1]]],["rho_rar_vest_section2ic",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["ACRE_PRC152",1],["rhs_mag_an_m8hc",1,1],["ACE_M84",2,1],["rho_rar_handgrenade_f1",2,1],["rho_rar_ef88_camo_30Rnd_556x45_B_AUG",13,30]]],["rho_rar_sap_maaws",[["BB_RHS_MAAWS_HE_AB",2,1],["MAA_MAAWS_HEDP502",1,1]]],"rho_rar_tw_exfil2025_ir_bat","rho_reconwrap_03_glasses",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ],
+                [
+                    "Assist MAAWS",
+                    [[["arifle_rho_ef88_GL_cam10_F","","rho_rar_peq16b_top_ir_camo","rhsusf_acc_su230",["rho_rar_ef88_camo_30Rnd_556x45_B_AUG",30],["rhs_mag_M433_HEDP",1],""],[],[],["Rho_RAR_Combat_shirt_Tucked_Bloused_Hood",[["kat_IFAK",1]]],["rho_rar_vest_grenadier",[["ACE_IR_Strobe_Item",1],["ACE_CableTie",2],["ACRE_PRC343",1],["rho_rar_handgrenade_f1",1,1],["rho_rar_ef88_30Rnd_556x45_B_AUG",10,30],["rhs_mag_M433_HEDP",5,1],["rhs_mag_M397_HET",8,1]]],["ctb_recon_pack",[["rhs_mag_maaws_HEDP",1,1]]],"rho_rar_tw_exfil2025_bat","rho_reconwrap_05_glasses",[],["ItemMap","B_UavTerminal","","ItemCompass","ItemWatch",""]],[["aceax_textureOptions",[]]]]
+                ]
+            ]
         ]
     ]
 ];

@@ -34,6 +34,7 @@ FADE_missionModuleList = [
     "rsc\missions\MissionHostage.sqf",
     "rsc\missions\MissionClearArea.sqf",
     "rsc\missions\MissionMineClearing.sqf",
+    "rsc\missions\MissionPointDefense.sqf",
     "rsc\TroopTransport.sqf"
 ];
 

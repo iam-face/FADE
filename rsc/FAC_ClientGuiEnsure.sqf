@@ -74,6 +74,11 @@ FAC_ensureMissionsGui_mapPicks = {
     if (isNil "FAC_raidMapPick_fnc_start") then {
         call compile preprocessFileLineNumbers "rsc\MissionRaidMapPick.sqf";
     };
+    if (isNil "FAC_pointDefensePickGui_fnc") then {
+        call compile preprocessFileLineNumbers "rsc\PointDefensePickGui.sqf";
+    };
+    // Keep map-pick click path current (PointDefense duration handoff).
+    call compile preprocessFileLineNumbers "rsc\MissionMapPick.sqf";
 };
 
 // Re-compile overlay helpers when missing (prior syntax error can leave the whole file unloaded).
@@ -112,6 +117,7 @@ FAC_ensureMissionsGui = {
     call compile preprocessFileLineNumbers "rsc\FADE_MapClickPick.sqf";
     call compile preprocessFileLineNumbers "rsc\GeoGuesserClient.sqf";
     call compile preprocessFileLineNumbers "rsc\TroopInsertPickGui.sqf";
+    call compile preprocessFileLineNumbers "rsc\PointDefensePickGui.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionLocationPickGui.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionMapPick.sqf";
     call compile preprocessFileLineNumbers "rsc\MissionConvoyMapPick.sqf";

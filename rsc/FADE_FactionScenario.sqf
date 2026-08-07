@@ -238,19 +238,50 @@ if (isServer) then {
         } forEach _combatSides;
     };
 
-    FADE_syncPlayersToScenarioFriendlySide = {
+    // Join one player onto FADE_sideFriendly when Eden/respawn left them on the slot side (usually WEST).
+    FADE_syncPlayerToScenarioFriendlySide = {
+        params [["_unit", objNull]];
+        if (!isServer) exitWith { false };
+        if (isNull _unit || { !isPlayer _unit } || { !alive _unit }) exitWith { false };
         private _sf = missionNamespace getVariable ["FADE_sideFriendly", west];
-        {
-            if (!isPlayer _x || { !alive _x }) then { continue };
-            if (side _x == _sf) then { continue };
-            private _grp = createGroup [_sf, true];
-            [_x] joinSilent _grp;
-        } forEach allPlayers;
+        if (side _unit == _sf) exitWith { true };
+        private _oldGrp = group _unit;
+        private _grp = createGroup [_sf, true];
+        [_unit] joinSilent _grp;
+        if (!isNull _oldGrp && { count units _oldGrp == 0 }) then { deleteGroup _oldGrp };
+        true
+    };
+
+    FADE_syncPlayersToScenarioFriendlySide = {
+        { [_x] call FADE_syncPlayerToScenarioFriendlySide } forEach allPlayers;
+    };
+
+    // Client → server (JIP / respawn): ensure this player matches scenario friendly side.
+    FADE_requestScenarioFriendlySideSync = {
+        params [["_player", objNull]];
+        if (!isServer) exitWith {};
+        [_player] call FADE_syncPlayerToScenarioFriendlySide;
     };
 
     FADE_applyScenarioFactionSideSync = {
         call FADE_syncScenarioSideFriendship;
         call FADE_syncPlayersToScenarioFriendlySide;
+    };
+
+    // Respawn recreates Eden slot side (WEST); re-apply scenario friendly side after the unit exists.
+    if (isNil { missionNamespace getVariable "FADE_scenarioFriendlySide_respawnEhId" }) then {
+        private _ehId = addMissionEventHandler ["EntityRespawned", {
+            params ["_newEntity", "_oldEntity"];
+            if (!isPlayer _newEntity) exitWith {};
+            [_newEntity] spawn {
+                params ["_u"];
+                sleep 0.25;
+                if (!isNull _u && { alive _u } && { isPlayer _u }) then {
+                    [_u] call FADE_syncPlayerToScenarioFriendlySide;
+                };
+            };
+        }];
+        missionNamespace setVariable ["FADE_scenarioFriendlySide_respawnEhId", _ehId];
     };
 
     // HashMap keys must be string/number — not Object/Group handles (getOrDefault errors at runtime).
@@ -448,5 +479,9 @@ missionNamespace setVariable ["FADE_scenarioFactionsIssueHint", FADE_scenarioFac
 missionNamespace setVariable ["FADE_isScenarioFriendlyUnit", FADE_isScenarioFriendlyUnit];
 missionNamespace setVariable ["FADE_isScenarioEnemyUnit", FADE_isScenarioEnemyUnit];
 if (isServer) then {
+    missionNamespace setVariable ["FADE_syncPlayerToScenarioFriendlySide", FADE_syncPlayerToScenarioFriendlySide];
+    missionNamespace setVariable ["FADE_syncPlayersToScenarioFriendlySide", FADE_syncPlayersToScenarioFriendlySide];
+    missionNamespace setVariable ["FADE_requestScenarioFriendlySideSync", FADE_requestScenarioFriendlySideSync];
+    missionNamespace setVariable ["FADE_applyScenarioFactionSideSync", FADE_applyScenarioFactionSideSync];
     missionNamespace setVariable ["FADE_despawnScenarioWorldUnits", FADE_despawnScenarioWorldUnits];
 };
