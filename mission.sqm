@@ -16,18 +16,18 @@ class EditorData
 	};
 	class LayerIndexProvider
 	{
-		nextID=2287;
+		nextID=2363;
 	};
 	class Camera
 	{
-		pos[]={14747.595,24.505493,16665.932};
-		dir[]={-0.63492399,-0.38205069,-0.67153293};
-		up[]={-0.26251578,0.92411715,-0.27765214};
-		aside[]={-0.72665244,-6.1001629e-08,0.68703759};
+		pos[]={14748.15,24.790632,16673.689};
+		dir[]={-0.119248,-0.31363326,-0.94203097};
+		up[]={-0.039387651,0.94954455,-0.31115279};
+		aside[]={-0.99208844,-4.9738446e-08,0.12558478};
 	};
 };
 binarizationWanted=0;
-sourceName="CTB_FAC_FADE";
+sourceName="ctb_fac_fade";
 addons[]=
 {
 	"A3_Ui_F",
@@ -19516,7 +19516,7 @@ class Mission
 				angles[]={0,1.4911419,0};
 			};
 			side="Empty";
-			flags=5;
+			flags=1;
 			class Attributes
 			{
 				createAsSimpleObject=1;
@@ -19525,6 +19525,7 @@ class Mission
 			};
 			id=9306;
 			type="Land_BottlePlastic_V2_F";
+			atlOffset=0.75429344;
 			class CustomAttributes
 			{
 				class Attribute0
