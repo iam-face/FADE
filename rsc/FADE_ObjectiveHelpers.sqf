@@ -201,7 +201,7 @@ FADE_objective_garrisonBuilding = {
         if (!isNull _u) then {
             _u setPosATL _p;
             _u setUnitPos "MIDDLE";
-            [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+            [_u] call FADE_tryAmbientCombatAnim;
         };
     };
     [_grp] call FAC_applyEnemyScenarioToGroup;
@@ -457,7 +457,7 @@ FADE_objective_garrisonBuildingSlots = {
         private _cls = _enemyUnits select (_forEachIndex mod count _enemyUnits);
         private _u = _grp createUnit [_cls, _p, [], 0, "NONE"];
         _u setUnitPos "MIDDLE";
-        [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+        [_u] call FADE_tryAmbientCombatAnim;
     } forEach _slotIndices;
     if (count units _grp > 0) then {
         [_grp] call FAC_applyEnemyScenarioToGroup;
@@ -623,7 +623,7 @@ FADE_objective_spawnImmediateAreaGarrison = {
                 if (!isNull _u) then {
                     _u setPosATL _x;
                     _u setUnitPos "MIDDLE";
-                    [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                    [_u] call FADE_tryAmbientCombatAnim;
                 };
             } forEach _slots;
             if (count units _grp > 0) then {
@@ -774,11 +774,6 @@ FADE_objective_spawnKillHVT = {
     [true, _zoneGroups, [], getPosATL _bld, [_hvt], _bld]
 };
 
-FADE_objective_spawnCaptureHVT = {
-    params ["_zoneCenter", "_buildRadius", "_hvtMinSlots", "_sideEnemy", "_enemyUnits", "_diffMul", ["_patrolRadius", 200], ["_hvtCodename", ""]];
-    [_zoneCenter, _buildRadius, _hvtMinSlots, _sideEnemy, _enemyUnits, _diffMul, _patrolRadius, _hvtCodename] call FADE_objective_spawnKillHVT
-};
-
 FADE_objective_spawnRecoverHostage = {
     params ["_zoneCenter", "_buildRadius", "_hostageMinSlots", "_sideEnemy", "_enemyUnits", "_diffMul", ["_patrolRadius", 200], ["_hostageIdentity", ""]];
     private _bld = [_zoneCenter, _buildRadius, _hostageMinSlots] call FADE_objective_findBuildingRelaxed;
@@ -801,7 +796,6 @@ FADE_objective_spawnRecoverHostage = {
 };
 
 missionNamespace setVariable ["FADE_objective_spawnImmediateAreaGarrison", FADE_objective_spawnImmediateAreaGarrison];
-missionNamespace setVariable ["FADE_raid_spawnImmediateAreaGarrison", FADE_objective_spawnImmediateAreaGarrison];
 missionNamespace setVariable ["FADE_objective_applyProtectiveGear", FADE_objective_applyProtectiveGear];
 missionNamespace setVariable ["FADE_pickHvtCodename", FADE_pickHvtCodename];
 missionNamespace setVariable ["FADE_pickHostageIdentity", FADE_pickHostageIdentity];
@@ -828,7 +822,6 @@ missionNamespace setVariable ["FADE_objective_addRecoverHoldAction", FADE_object
 missionNamespace setVariable ["FADE_objective_registerNearbyGarrisons", FADE_objective_registerNearbyGarrisons];
 missionNamespace setVariable ["FADE_objective_spawnRecoverObject", FADE_objective_spawnRecoverObject];
 missionNamespace setVariable ["FADE_objective_spawnKillHVT", FADE_objective_spawnKillHVT];
-missionNamespace setVariable ["FADE_objective_spawnCaptureHVT", FADE_objective_spawnCaptureHVT];
 missionNamespace setVariable ["FADE_objective_spawnRecoverHostage", FADE_objective_spawnRecoverHostage];
 missionNamespace setVariable ["FADE_objective_releaseHostage", FADE_objective_releaseHostage];
 missionNamespace setVariable ["FADE_objective_registerHostageFreeHold", FADE_objective_registerHostageFreeHold];

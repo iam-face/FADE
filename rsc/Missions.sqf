@@ -137,7 +137,7 @@ private _showAssignedHint = {
     };
     if (_loreLong != "") then {
         private _whenStr = format ["Mission start +%1 min", floor (time / 60) max 0];
-        [_operationName, _whenStr, _loreLong, "Background"] remoteExec ["FADE_client_appendMissionBackground", _hintTarget];
+        ["Intel - Background", _whenStr, _loreLong, "Background"] remoteExec ["FADE_client_appendIntelDiary", _hintTarget];
     };
 };
 private _basePos = FADE_basePos;

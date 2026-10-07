@@ -58,6 +58,83 @@ FADE_missionPosClear = {
     true;
 };
 
+// Friendly players for a UID list. Returns [players, missing].
+// _rejectBlankUid: empty or non-string UID counts as missing before the lookup (Escape / Geo).
+// _dedupe: drop later copies of the same UID (Escape / Geo). Troop transport keeps both off.
+FADE_mission_playersFromUids = {
+    params ["_uids", ["_rejectBlankUid", true], ["_dedupe", true]];
+    private _sideFriendly = missionNamespace getVariable ["FADE_sideFriendly", west];
+    private _players = [];
+    private _missing = false;
+    {
+        private _uid = _x;
+        if (_rejectBlankUid && { !(_uid isEqualType "") || { _uid == "" } }) then { _missing = true };
+        private _p = objNull;
+        { if (getPlayerUID _x == _uid) exitWith { _p = _x } } forEach allPlayers;
+        if (isNull _p || { !alive _p } || { !isPlayer _p } || { side group _p != _sideFriendly }) then {
+            _missing = true;
+        } else {
+            _players pushBack _p;
+        };
+    } forEach _uids;
+    if (_dedupe) then {
+        private _seen = [];
+        _players = _players select {
+            private _u = getPlayerUID _x;
+            if (_u in _seen) then { false } else { _seen pushBack _u; true };
+        };
+    };
+    [_players, _missing]
+};
+
+// True when this start must stop. Hint text matches Escape, Geo, and troop transport.
+// FADE_startMission uses FADE_missionSlotGateHint (different copy) and does not call this.
+FADE_mission_rejectIfBusy = {
+    params ["_player", ["_checkSingleSlots", false]];
+    private _global = missionNamespace getVariable ["FADE_globalMission", []];
+    private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
+    if ((count _global >= 1 && { [_global, _player] call FADE_isMissionEntryOwnedByPlayer }) || { { [_x, _player] call FADE_isMissionEntryOwnedByPlayer } count _singleList > 0 }) exitWith {
+        ["<t size='1.2' color='#FFAA00'>MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>You already have a mission. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        true
+    };
+    if (count _global >= 1) exitWith {
+        ["<t size='1.2' color='#FFAA00'>GLOBAL MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>A global mission is in progress. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        true
+    };
+    if (_checkSingleSlots && { count _singleList >= 3 }) exitWith {
+        ["<t size='1.2' color='#FFAA00'>SINGLE SLOTS FULL</t><br/><br/><t color='#E0E0E0'>Three single missions are active. Wait for one to finish.</t>"] remoteExec ["FADE_showMissionHint", _player];
+        true
+    };
+    false
+};
+
+FADE_mission_assignGlobal = {
+    params ["_missionType", "_player", "_pos", "_playerUid"];
+    private _operationName = [] call FADE_generateOperationName;
+    missionNamespace setVariable ["FADE_globalMission", [_missionType, _player, _pos, _playerUid, _operationName]];
+    missionNamespace setVariable ["FADE_currentMissionType", _missionType];
+    missionNamespace setVariable ["FADE_currentMissionPlayer", _player];
+    [] call FADE_missionSlots_publish;
+};
+
+// _existingList: pass the array already read by the caller (FADE_startMission). Otherwise read the live list.
+FADE_mission_assignSingle = {
+    params ["_missionType", "_player", "_pos", "_playerUid", ["_setCurrent", false], ["_existingList", ""]];
+    private _operationName = [] call FADE_generateOperationName;
+    private _singleList = if (_existingList isEqualType []) then {
+        _existingList
+    } else {
+        missionNamespace getVariable ["FADE_singleMissions", []]
+    };
+    _singleList pushBack [_missionType, _player, _pos, _playerUid, _operationName];
+    missionNamespace setVariable ["FADE_singleMissions", _singleList];
+    if (_setCurrent) then {
+        missionNamespace setVariable ["FADE_currentMissionType", _missionType];
+        missionNamespace setVariable ["FADE_currentMissionPlayer", _player];
+    };
+    [] call FADE_missionSlots_publish;
+};
+
 // -----------------------------------------------------------------------------
 // Escape & Evasion (server): _evadeeUids must include _player's UID. Picks civ zone >= 4 km from base; Missions.sqf handles spawn/QRF.
 // -----------------------------------------------------------------------------
@@ -68,42 +145,15 @@ FADE_startEscapeEvasion = {
     if (!(_evadeeUids isEqualType [])) exitWith {
         [_player, "MISSION ERROR", "Invalid evadee list."] call FADE_missionErrorHint;
     };
-    if (!([_player] call FADE_playerCanUseMissionsGui)) exitWith {
-        ["<t size='1.2' color='#FF6666'>ACCESS DENIED</t><br/><br/><t color='#E0E0E0'>Missions GUI is restricted to group leaders by lobby settings.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
+    if !([_player] call FADE_mission_requireGuiAccess) exitWith {};
     private _playerUid = getPlayerUID _player;
     if !(_playerUid in _evadeeUids) exitWith {
         ["<t size='1.2' color='#FF6666'>ESCAPE &amp; EVASION</t><br/><br/><t color='#E0E0E0'>You must include yourself in the evadee list.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
-    private _global = missionNamespace getVariable ["FADE_globalMission", []];
-    private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
-    if ((count _global >= 1 && { [_global, _player] call FADE_isMissionEntryOwnedByPlayer }) || { { [_x, _player] call FADE_isMissionEntryOwnedByPlayer } count _singleList > 0 }) exitWith {
-        ["<t size='1.2' color='#FFAA00'>MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>You already have a mission. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
-    if (count _global >= 1) exitWith {
-        ["<t size='1.2' color='#FFAA00'>GLOBAL MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>A global mission is in progress. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
-    private _sideFriendly = missionNamespace getVariable ["FADE_sideFriendly", west];
-    private _evadees = [];
-    private _missing = false;
-    {
-        private _uid = _x;
-        if (!(_uid isEqualType "") || { _uid == "" }) then { _missing = true };
-        private _p = objNull;
-        { if (getPlayerUID _x == _uid) exitWith { _p = _x } } forEach allPlayers;
-        if (isNull _p || { !alive _p } || { !isPlayer _p } || { side group _p != _sideFriendly }) then {
-            _missing = true;
-        } else {
-            _evadees pushBack _p;
-        };
-    } forEach _evadeeUids;
+    if ([_player, false] call FADE_mission_rejectIfBusy) exitWith {};
+    ([_evadeeUids, true, true] call FADE_mission_playersFromUids) params ["_evadees", "_missing"];
     if (_missing || { count _evadees == 0 }) exitWith {
         ["<t size='1.2' color='#FF6666'>ESCAPE &amp; EVASION</t><br/><br/><t color='#E0E0E0'>One or more selected players are unavailable (disconnect, dead, or wrong side).</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
-    private _seen = [];
-    _evadees = _evadees select {
-        private _u = getPlayerUID _x;
-        if (_u in _seen) then { false } else { _seen pushBack _u; true };
     };
     private _baseQ = FADE_basePos;
     if (_baseQ isEqualType objNull) then { _baseQ = getPosATL _baseQ };
@@ -129,11 +179,7 @@ FADE_startEscapeEvasion = {
     // Enemy patrols must be on (ambient patrols + dynamic roadblocks). Mirror Scenario GUI Apply.
     missionNamespace setVariable ["FADE_scenarioPatrols", true, true];
     missionNamespace setVariable ["FAC_scenarioGui_patrols", true, true];
-    private _operationName = [] call FADE_generateOperationName;
-    missionNamespace setVariable ["FADE_globalMission", ["EscapeEvasion", _player, _zoneCenter, _playerUid, _operationName]];
-    missionNamespace setVariable ["FADE_currentMissionType", "EscapeEvasion"];
-    missionNamespace setVariable ["FADE_currentMissionPlayer", _player];
-    [] call FADE_missionSlots_publish;
+    ["EscapeEvasion", _player, _zoneCenter, _playerUid] call FADE_mission_assignGlobal;
     ["EscapeEvasion", _zoneCenter, _player, _evadees] spawn {
         params ["_missionType", "_destPos", "_player", "_evadees"];
         FADE_missionParams = [_missionType, _destPos, _player, _evadees];
@@ -153,55 +199,24 @@ FADE_startGeoGuesser = {
     if (!(_participantUids isEqualType [])) exitWith {
         [_player, "MISSION ERROR", "Invalid participant list."] call FADE_missionErrorHint;
     };
-    if (!([_player] call FADE_playerCanUseMissionsGui)) exitWith {
-        ["<t size='1.2' color='#FF6666'>ACCESS DENIED</t><br/><br/><t color='#E0E0E0'>Missions GUI is restricted to group leaders by lobby settings.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
+    if !([_player] call FADE_mission_requireGuiAccess) exitWith {};
     private _playerUid = getPlayerUID _player;
     if !(_playerUid in _participantUids) exitWith {
         ["<t size='1.2' color='#FF6666'>GEO-GUESSER</t><br/><br/><t color='#E0E0E0'>You must include yourself in the participant list.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
-    private _global = missionNamespace getVariable ["FADE_globalMission", []];
-    private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
-    if ((count _global >= 1 && { [_global, _player] call FADE_isMissionEntryOwnedByPlayer }) || { { [_x, _player] call FADE_isMissionEntryOwnedByPlayer } count _singleList > 0 }) exitWith {
-        ["<t size='1.2' color='#FFAA00'>MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>You already have a mission. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
-    if (count _global >= 1) exitWith {
-        ["<t size='1.2' color='#FFAA00'>GLOBAL MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>A global mission is in progress. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
+    if ([_player, false] call FADE_mission_rejectIfBusy) exitWith {};
     _timeSec = if (_timeSec isEqualType 0) then { round _timeSec max 30 min 600 } else { 60 };
     if !(_difficulty in ["Normal", "Hard", "Impossible"]) then { _difficulty = "Normal" };
-    private _sideFriendly = missionNamespace getVariable ["FADE_sideFriendly", west];
-    private _participants = [];
-    private _missing = false;
-    {
-        private _uid = _x;
-        if (!(_uid isEqualType "") || { _uid == "" }) then { _missing = true };
-        private _p = objNull;
-        { if (getPlayerUID _x == _uid) exitWith { _p = _x } } forEach allPlayers;
-        if (isNull _p || { !alive _p } || { !isPlayer _p } || { side group _p != _sideFriendly }) then {
-            _missing = true;
-        } else {
-            _participants pushBack _p;
-        };
-    } forEach _participantUids;
+    ([_participantUids, true, true] call FADE_mission_playersFromUids) params ["_participants", "_missing"];
     if (_missing || { count _participants == 0 }) exitWith {
         ["<t size='1.2' color='#FF6666'>GEO-GUESSER</t><br/><br/><t color='#E0E0E0'>One or more selected players are unavailable (disconnect, dead, or wrong side).</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
-    private _seen = [];
-    _participants = _participants select {
-        private _u = getPlayerUID _x;
-        if (_u in _seen) then { false } else { _seen pushBack _u; true };
     };
     if (isNil "FADE_geoGuesser_pickDropPos") then { [] call FADE_installMissionModules };
     private _dropPos = [_difficulty] call FADE_geoGuesser_pickDropPos;
     if (count _dropPos < 2) exitWith {
         ["<t size='1.2' color='#FF6666'>GEO-GUESSER</t><br/><br/><t color='#E0E0E0'>Could not find a valid drop location. Try again.</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
-    private _operationName = [] call FADE_generateOperationName;
-    missionNamespace setVariable ["FADE_globalMission", ["GeoGuesser", _player, _dropPos, _playerUid, _operationName]];
-    missionNamespace setVariable ["FADE_currentMissionType", "GeoGuesser"];
-    missionNamespace setVariable ["FADE_currentMissionPlayer", _player];
-    [] call FADE_missionSlots_publish;
+    ["GeoGuesser", _player, _dropPos, _playerUid] call FADE_mission_assignGlobal;
     missionNamespace setVariable ["FADE_ggRun_timeSec", _timeSec];
     missionNamespace setVariable ["FADE_ggRun_difficulty", _difficulty];
     ["GeoGuesser", _dropPos, _player, _participants] spawn {
@@ -236,19 +251,7 @@ publicVariable "FADE_startPointDefense";
 // -----------------------------------------------------------------------------
 FADE_startTroopTransport_resolveParticipants = {
     params ["_participantUids", "_player", "_missionLabel"];
-    private _sideFriendly = missionNamespace getVariable ["FADE_sideFriendly", west];
-    private _participants = [];
-    private _missing = false;
-    {
-        private _uid = _x;
-        private _p = objNull;
-        { if (getPlayerUID _x == _uid) exitWith { _p = _x } } forEach allPlayers;
-        if (isNull _p || { !alive _p } || { !isPlayer _p } || { side group _p != _sideFriendly }) then {
-            _missing = true;
-        } else {
-            _participants pushBack _p;
-        };
-    } forEach _participantUids;
+    ([_participantUids, false, false] call FADE_mission_playersFromUids) params ["_participants", "_missing"];
     if (_missing || { count _participants == 0 }) exitWith {
         [format ["<t size='1.2' color='#FF6666'>%1</t><br/><br/><t color='#E0E0E0'>One or more selected players are unavailable.</t>", _missionLabel]] remoteExec ["FADE_showMissionHint", _player];
         []
@@ -275,21 +278,7 @@ FADE_startTroopTransport_resolveParticipants = {
 
 FADE_startTroopTransport_gateSlots = {
     params ["_player"];
-    private _global = missionNamespace getVariable ["FADE_globalMission", []];
-    private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
-    if ((count _global >= 1 && { [_global, _player] call FADE_isMissionEntryOwnedByPlayer }) || { { [_x, _player] call FADE_isMissionEntryOwnedByPlayer } count _singleList > 0 }) exitWith {
-        ["<t size='1.2' color='#FFAA00'>MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>You already have a mission. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
-        false
-    };
-    if (count _global >= 1) exitWith {
-        ["<t size='1.2' color='#FFAA00'>GLOBAL MISSION ACTIVE</t><br/><br/><t color='#E0E0E0'>A global mission is in progress. Abort it first to start another.</t>"] remoteExec ["FADE_showMissionHint", _player];
-        false
-    };
-    if (count _singleList >= 3) exitWith {
-        ["<t size='1.2' color='#FFAA00'>SINGLE SLOTS FULL</t><br/><br/><t color='#E0E0E0'>Three single missions are active. Wait for one to finish.</t>"] remoteExec ["FADE_showMissionHint", _player];
-        false
-    };
-    true
+    !([_player, true] call FADE_mission_rejectIfBusy)
 };
 
 FADE_startTroopTransport_clampWaves = {
@@ -298,25 +287,39 @@ FADE_startTroopTransport_clampWaves = {
     (_waveCount max 1) min 10
 };
 
+// Shared Insert/Extract preamble. [] on reject, else [playerUid, waveCount, participants].
+FADE_startTroopTransport_open = {
+    params ["_participantUids", "_waveCount", "_player", "_missionLabel", "_selfMissingHtml"];
+    if (!(_participantUids isEqualType [])) exitWith {
+        [_player, "MISSION ERROR", "Invalid participant list."] call FADE_missionErrorHint;
+        []
+    };
+    if !([_player] call FADE_mission_requireGuiAccess) exitWith { [] };
+    private _playerUid = getPlayerUID _player;
+    if !(_playerUid in _participantUids) exitWith {
+        [_selfMissingHtml] remoteExec ["FADE_showMissionHint", _player];
+        []
+    };
+    _waveCount = [_waveCount] call FADE_startTroopTransport_clampWaves;
+    if !([_player] call FADE_startTroopTransport_gateSlots) exitWith { [] };
+    private _participants = [_participantUids, _player, _missionLabel] call FADE_startTroopTransport_resolveParticipants;
+    if (_participants isEqualTo []) exitWith { [] };
+    [_playerUid, _waveCount, _participants]
+};
+
 FADE_startTroopInsert = {
     params ["_participantUids", "_waveCount", "_player", ["_mapAnchor", []]];
     if (!isServer) exitWith {};
     if (isNull _player) exitWith {};
-    private _missionLabel = "TROOP INSERT";
-    if (!(_participantUids isEqualType [])) exitWith {
-        [_player, "MISSION ERROR", "Invalid participant list."] call FADE_missionErrorHint;
-    };
-    if (!([_player] call FADE_playerCanUseMissionsGui)) exitWith {
-        ["<t size='1.2' color='#FF6666'>ACCESS DENIED</t><br/><br/><t color='#E0E0E0'>Missions GUI is restricted to group leaders by lobby settings.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
-    private _playerUid = getPlayerUID _player;
-    if !(_playerUid in _participantUids) exitWith {
-        ["<t size='1.2' color='#FF6666'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>You must include yourself in the participating list.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
-    _waveCount = [_waveCount] call FADE_startTroopTransport_clampWaves;
-    if !([_player] call FADE_startTroopTransport_gateSlots) exitWith {};
-    private _participants = [_participantUids, _player, _missionLabel] call FADE_startTroopTransport_resolveParticipants;
-    if (_participants isEqualTo []) exitWith {};
+    private _opened = [
+        _participantUids,
+        _waveCount,
+        _player,
+        "TROOP INSERT",
+        "<t size='1.2' color='#FF6666'>TROOP INSERT</t><br/><br/><t color='#E0E0E0'>You must include yourself in the participating list.</t>"
+    ] call FADE_startTroopTransport_open;
+    if (_opened isEqualTo []) exitWith {};
+    _opened params ["_playerUid", "_waveCount", "_participants"];
     private _minDistForPos = FADE_troopInsertExtractMinDistFromBase max FADE_minDistFromBase;
     private _lzMinFromPickup = FADE_troopInsertLzMinDistFromPickup;
     private _pickupRef = +FADE_basePos;
@@ -341,13 +344,7 @@ FADE_startTroopInsert = {
     if (_useMapAnchor && { count _destPos >= 2 }) then {
         [_player, _destPos, _mapAnchor, _snappedZone, -2] call FADE_fnc_mapPickResultHint;
     };
-    private _operationName = [] call FADE_generateOperationName;
-    private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
-    _singleList pushBack ["TroopInsert", _player, _destPos, _playerUid, _operationName];
-    missionNamespace setVariable ["FADE_singleMissions", _singleList];
-    missionNamespace setVariable ["FADE_currentMissionType", "TroopInsert"];
-    missionNamespace setVariable ["FADE_currentMissionPlayer", _player];
-    [] call FADE_missionSlots_publish;
+    ["TroopInsert", _player, _destPos, _playerUid, true] call FADE_mission_assignSingle;
     ["TroopInsert", _destPos, _player, _participants, _waveCount] spawn {
         params ["_missionType", "_destPos", "_player", "_participants", "_waveCount"];
         if (isNil "FADE_troopInsertMissionMain") then { [] call FADE_installMissionModules };
@@ -361,21 +358,15 @@ FADE_startTroopExtract = {
     params ["_participantUids", "_waveCount", "_player", ["_mapAnchor", []]];
     if (!isServer) exitWith {};
     if (isNull _player) exitWith {};
-    private _missionLabel = "TROOP EXTRACT";
-    if (!(_participantUids isEqualType [])) exitWith {
-        [_player, "MISSION ERROR", "Invalid participant list."] call FADE_missionErrorHint;
-    };
-    if (!([_player] call FADE_playerCanUseMissionsGui)) exitWith {
-        ["<t size='1.2' color='#FF6666'>ACCESS DENIED</t><br/><br/><t color='#E0E0E0'>Missions GUI is restricted to group leaders by lobby settings.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
-    private _playerUid = getPlayerUID _player;
-    if !(_playerUid in _participantUids) exitWith {
-        ["<t size='1.2' color='#FF6666'>TROOP EXTRACT</t><br/><br/><t color='#E0E0E0'>You must include yourself in the participating list.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
-    _waveCount = [_waveCount] call FADE_startTroopTransport_clampWaves;
-    if !([_player] call FADE_startTroopTransport_gateSlots) exitWith {};
-    private _participants = [_participantUids, _player, _missionLabel] call FADE_startTroopTransport_resolveParticipants;
-    if (_participants isEqualTo []) exitWith {};
+    private _opened = [
+        _participantUids,
+        _waveCount,
+        _player,
+        "TROOP EXTRACT",
+        "<t size='1.2' color='#FF6666'>TROOP EXTRACT</t><br/><br/><t color='#E0E0E0'>You must include yourself in the participating list.</t>"
+    ] call FADE_startTroopTransport_open;
+    if (_opened isEqualTo []) exitWith {};
+    _opened params ["_playerUid", "_waveCount", "_participants"];
     private _minDistForPos = FADE_troopInsertExtractMinDistFromBase max 1000;
     private _useMapAnchor = [_mapAnchor] call FADE_fnc_isValidMapClickPos;
     private _preferredZone = [];
@@ -394,13 +385,7 @@ FADE_startTroopExtract = {
     if (_useMapAnchor && { count _destPos >= 2 }) then {
         [_player, _destPos, _mapAnchor, _snappedZone, -2] call FADE_fnc_mapPickResultHint;
     };
-    private _operationName = [] call FADE_generateOperationName;
-    private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
-    _singleList pushBack ["TroopExtract", _player, _destPos, _playerUid, _operationName];
-    missionNamespace setVariable ["FADE_singleMissions", _singleList];
-    missionNamespace setVariable ["FADE_currentMissionType", "TroopExtract"];
-    missionNamespace setVariable ["FADE_currentMissionPlayer", _player];
-    [] call FADE_missionSlots_publish;
+    ["TroopExtract", _player, _destPos, _playerUid, true] call FADE_mission_assignSingle;
     ["TroopExtract", _destPos, _player, _participants, _waveCount] spawn {
         params ["_missionType", "_destPos", "_player", "_participants", "_waveCount"];
         if (isNil "FADE_troopExtractMissionMain") then { [] call FADE_installMissionModules };

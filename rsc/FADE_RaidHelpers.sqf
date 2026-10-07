@@ -226,7 +226,8 @@ FADE_raid_trySpawnVariant = {
             [_zoneCenter, _buildRadiusHvt, _hvtMinSlots, _sideEnemy, _enemyUnits, _diffMul, _patrolRadius, _hvtCodename] call FADE_objective_spawnKillHVT
         };
         case "CaptureHVT": {
-            [_zoneCenter, _buildRadiusHvt, _hvtMinSlots, _sideEnemy, _enemyUnits, _diffMul, _patrolRadius, _hvtCodename] call FADE_objective_spawnCaptureHVT
+            // Same building garrison as KillHVT.
+            [_zoneCenter, _buildRadiusHvt, _hvtMinSlots, _sideEnemy, _enemyUnits, _diffMul, _patrolRadius, _hvtCodename] call FADE_objective_spawnKillHVT
         };
         default {
             [_zoneCenter, _buildRadiusHostage, _hostageMinSlots, _sideEnemy, _enemyUnits, _diffMul, _patrolRadius, _hostageIdentity] call FADE_objective_spawnRecoverHostage

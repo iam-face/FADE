@@ -16,14 +16,14 @@ class EditorData
 	};
 	class LayerIndexProvider
 	{
-		nextID=2363;
+		nextID=2382;
 	};
 	class Camera
 	{
-		pos[]={14748.15,24.790632,16673.689};
-		dir[]={-0.119248,-0.31363326,-0.94203097};
-		up[]={-0.039387651,0.94954455,-0.31115279};
-		aside[]={-0.99208844,-4.9738446e-08,0.12558478};
+		pos[]={14711.067,33.968277,16689.656};
+		dir[]={0.17700912,-0.27761653,-0.94424409};
+		up[]={0.051151313,0.96069193,-0.27286348};
+		aside[]={-0.9828791,0,-0.18425168};
 	};
 };
 binarizationWanted=0;
@@ -19516,7 +19516,7 @@ class Mission
 				angles[]={0,1.4911419,0};
 			};
 			side="Empty";
-			flags=1;
+			flags=5;
 			class Attributes
 			{
 				createAsSimpleObject=1;
@@ -19525,7 +19525,6 @@ class Mission
 			};
 			id=9306;
 			type="Land_BottlePlastic_V2_F";
-			atlOffset=0.75429344;
 			class CustomAttributes
 			{
 				class Attribute0
@@ -26639,7 +26638,7 @@ class Mission
 			dataType="Object";
 			class PositionInfo
 			{
-				position[]={24139.746,1.7804505,17797.484};
+				position[]={24139.746,1.7804507,17797.484};
 				angles[]={0,4.4410915,0};
 			};
 			side="Empty";
@@ -26651,7 +26650,7 @@ class Mission
 			};
 			id=11848;
 			type="Land_DirtPatch_03_F";
-			atlOffset=-0.31882203;
+			atlOffset=-0.31882179;
 			class CustomAttributes
 			{
 				class Attribute0
@@ -31405,7 +31404,7 @@ class Mission
 			};
 			id=11408;
 			type="B_Slingload_01_Repair_F";
-			atlOffset=-0.11633003;
+			atlOffset=-0.11632991;
 			class CustomAttributes
 			{
 				class Attribute0
@@ -56942,8 +56941,8 @@ class Mission
 			dataType="Object";
 			class PositionInfo
 			{
-				position[]={14740.886,21.617815,16670.998};
-				angles[]={0,2.3193259,0};
+				position[]={14740.886,21.617674,16670.998};
+				angles[]={0,2.3193331,0};
 			};
 			side="Empty";
 			class Attributes
@@ -56953,7 +56952,7 @@ class Mission
 			};
 			id=14616;
 			type="Land_WallSign_01_F";
-			atlOffset=3.2481403;
+			atlOffset=3.2479992;
 			class CustomAttributes
 			{
 				class Attribute0
@@ -56991,7 +56990,7 @@ class Mission
 						class data
 						{
 							singleType="STRING";
-							value="#(rgb,512,512,1)text(0,1,""TahomaB"",0.05,""#000000"",""#FFFFFF"",""\n\n\n\nX-RAY 1-1\n\nCOMBAT TEAM BRAVO"")";
+							value="#(rgb,512,512,1)text(0,1,""TahomaB"",0.05,""#000000"",""#FFFFFF"","" \n\n\n\nX-RAY 1-1\n\nCOMBAT TEAM BRAVO"")";
 						};
 					};
 				};

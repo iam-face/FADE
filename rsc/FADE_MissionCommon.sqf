@@ -483,17 +483,11 @@ missionNamespace setVariable ["FADE_buildMissionTaskSmeacText", {
 
 // Alive human players (server loops — build once per tick, reuse in sub-calls).
 FADE_getAlivePlayers = {
-    private _out = [];
-    { if (alive _x && { isPlayer _x }) then { _out pushBack _x } } forEach allPlayers;
-    _out
+    allPlayers select { alive _x && { isPlayer _x } }
 };
 
 FADE_getAlivePlayerPositions = {
-    private _out = [];
-    {
-        if (alive _x && { isPlayer _x }) then { _out pushBack (getPosATL _x) };
-    } forEach allPlayers;
-    _out
+    (call FADE_getAlivePlayers) apply { getPosATL _x }
 };
 
 // Standard mission runner context (set by FADE_runMission in Missions.sqf before dispatch).
@@ -557,8 +551,8 @@ FADE_missionRun_getContext = {
 // Post-monitor cleanup tail (marker delete + clear active + scheduled entity cleanup).
 FADE_mission_completeCleanup = {
     params ["_taskId", "_markerName", "_player", ["_delay", 60], ["_extraMarkers", []]];
-    if (_markerName != "") then { [_markerName] call FADE_deleteMarkerSafe };
     if (_markerName != "") then {
+        [_markerName] call FADE_deleteMarkerSafe;
         private _gridPrefix = _markerName + "_grid";
         if (getMarkerColor (_markerName + "_zone") != "") then { [_markerName + "_zone"] call FADE_deleteMarkerSafe };
         [_gridPrefix] call FADE_mission_deleteGridZoneMarkers;

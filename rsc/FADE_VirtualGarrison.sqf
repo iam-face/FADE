@@ -303,7 +303,7 @@ FADE_vg_spawnOne = {
             };
             if (_hasFace) then { _u setDir ([_p, _faceToward] call BIS_fnc_dirTo) };
             if (_st getOrDefault ["ambientCombat", true]) then {
-                [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                [_u] call FADE_tryAmbientCombatAnim;
             };
         };
     } forEach _positions;

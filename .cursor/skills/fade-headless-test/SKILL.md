@@ -84,6 +84,8 @@ Exit `4294967295` = process killed externally (cancel), not a test failure.
 
 ## Fix loop workflow
 
+A bug that is not already a failing headless run: follow [fade-debug](../fade-debug/SKILL.md) (reproduce, localize, fix the cause, add a suite guard). Then use this loop to prove it.
+
 Copy and track:
 
 ```

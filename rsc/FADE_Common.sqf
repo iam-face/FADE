@@ -118,16 +118,6 @@ FADE_jitterMarkerPos = {
     [(_j select 0), (_j select 1), (_p select 2)]
 };
 
-FADE_missionErrorHint = {
-    params ["_player", "_title", "_body"];
-    if (isNull _player) exitWith {};
-    [format [
-        "<t size='1.2' color='#FF6666'>%1</t><br/><br/><t color='#E0E0E0'>%2</t>",
-        _title,
-        _body
-    ]] remoteExec ["FADE_showMissionHint", _player];
-};
-
 FADE_missionOutcomeHint = {
     params ["_player", "_title", "_body", ["_color", "#FF6666"]];
     if (isNull _player) exitWith {};
@@ -137,6 +127,19 @@ FADE_missionOutcomeHint = {
         _body,
         _color
     ]] remoteExec ["FADE_showMissionHint", _player];
+};
+
+FADE_missionErrorHint = {
+    params ["_player", "_title", "_body"];
+    [_player, _title, _body, "#FF6666"] call FADE_missionOutcomeHint;
+};
+
+// Server gate for mission starts. True when the player may open the missions GUI.
+FADE_mission_requireGuiAccess = {
+    params ["_player"];
+    if ([_player] call FADE_playerCanUseMissionsGui) exitWith { true };
+    ["<t size='1.2' color='#FF6666'>ACCESS DENIED</t><br/><br/><t color='#E0E0E0'>Missions GUI is restricted to group leaders by lobby settings.</t>"] remoteExec ["FADE_showMissionHint", _player];
+    false
 };
 
 FADE_missionFailHint = {
@@ -285,13 +288,7 @@ FADE_findOpforGroundVehicleRoadSpawn = {
                     _blPos = getPosATL _x;
                     _blacklist pushBack [(_blPos select 0), (_blPos select 1), _minVehGap];
                 };
-            } forEach _nearVeh;
-            {
-                if (!isNull _x && { alive _x }) then {
-                    _blPos = getPosATL _x;
-                    _blacklist pushBack [(_blPos select 0), (_blPos select 1), _minVehGap];
-                };
-            } forEach _existingVehs;
+            } forEach (_nearVeh + _existingVehs);
 
             _probe = [[_roadPos, 0, 6, _objClear, 0, 0.35, 0, _blacklist, _roadPos], _roadPos] call FADE_findSafePosArray;
             if (!(_probe isEqualType []) || { count _probe < 2 } || { !([_probe] call _dryFn) }) then { continue };
@@ -433,6 +430,7 @@ missionNamespace setVariable ["FADE_posOnOrNearRoad", FADE_posOnOrNearRoad];
 missionNamespace setVariable ["FADE_findOutdoorHintPos", FADE_findOutdoorHintPos];
 missionNamespace setVariable ["FADE_jitterMarkerPos", FADE_jitterMarkerPos];
 missionNamespace setVariable ["FADE_missionErrorHint", FADE_missionErrorHint];
+missionNamespace setVariable ["FADE_mission_requireGuiAccess", FADE_mission_requireGuiAccess];
 missionNamespace setVariable ["FADE_missionOutcomeHint", FADE_missionOutcomeHint];
 missionNamespace setVariable ["FADE_missionFailHint", FADE_missionFailHint];
 missionNamespace setVariable ["FADE_missionSuccessHint", FADE_missionSuccessHint];

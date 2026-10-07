@@ -19,7 +19,7 @@ FADE_runMission_InterceptConvoy = {
         _convoyVehicles = +(missionNamespace getVariable ["FADE_enemyVehicles", []]);
     };
     private _enemyUnitsConv = +_enemyUnits;
-    _enemyUnitsConv = [_enemyUnitsConv] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
+    _enemyUnitsConv = [_enemyUnitsConv] call (missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsConv == 0) exitWith {
         [_player] call FADE_clearActiveMission;
         [_player, "MISSION ERROR", "No enemy units configured for convoy crew."] call FADE_missionErrorHint;

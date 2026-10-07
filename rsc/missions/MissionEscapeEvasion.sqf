@@ -14,7 +14,7 @@ FADE_runMission_EscapeEvasion = {
         "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     private _enemyUnitsEe = +_enemyUnits;
-    _enemyUnitsEe = [_enemyUnitsEe] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
+    _enemyUnitsEe = [_enemyUnitsEe] call (missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsEe == 0) exitWith {
         [_player] call FADE_clearActiveMission;
         [_player, "MISSION ERROR", "No enemy units configured."] call FADE_missionErrorHint;
@@ -80,7 +80,7 @@ FADE_runMission_EscapeEvasion = {
                     if (!isNull _u) then {
                         _u setPosATL _pos;
                         _u setUnitPos "MIDDLE";
-                        [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                        [_u] call FADE_tryAmbientCombatAnim;
                     };
                 } forEach _slotEe;
                 [_bldGrp] call _applyGrpEe;
@@ -108,7 +108,7 @@ FADE_runMission_EscapeEvasion = {
                 [_gg] call _applyGrpEe;
                 _ug setPosATL _gp;
                 _ug setUnitPos "MIDDLE";
-                [_ug, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                [_ug] call FADE_tryAmbientCombatAnim;
                 _allGroupsEe pushBack _gg;
                 _gd = _gd + 1;
             } else {

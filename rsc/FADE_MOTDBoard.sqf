@@ -29,13 +29,6 @@ FADE_motdBoard_messages = [
     "Pretty soon the tanks will roll out and meet them in a gruesome battle for defiance"
 ];
 
-FADE_motdBoard_sanitizeTextureText = FADE_textureText_sanitize;
-
-FADE_motdBoard_wrapText = {
-    params [["_text", ""], ["_maxChars", FADE_motdBoard_wrapChars]];
-    [_text, _maxChars] call FADE_textureText_wrap
-};
-
 FADE_motdBoard_replaceToken = {
     params ["_text", "_token", "_replacement"];
     if (_token == "") exitWith { _text };
@@ -61,7 +54,7 @@ FADE_motdBoard_resolveMessage = {
     if (count _players > 0) then {
         _name = name (selectRandom _players);
     };
-    [_msg, "<name>", [_name] call FADE_motdBoard_sanitizeTextureText] call FADE_motdBoard_replaceToken
+    [_msg, "<name>", [_name] call FADE_textureText_sanitize] call FADE_motdBoard_replaceToken
 };
 
 FADE_motdBoard_pickTemplate = {
@@ -78,7 +71,7 @@ FADE_motdBoard_pickMessage = {
 
 FADE_motdBoard_buildTexture = {
     params [["_message", ""]];
-    private _body = [[_message] call FADE_motdBoard_sanitizeTextureText] call FADE_motdBoard_wrapText;
+    private _body = [[_message] call FADE_textureText_sanitize, FADE_motdBoard_wrapChars] call FADE_textureText_wrap;
     format [
         "#(rgb,512,512,1)text(1,1,""Caveat"",0.07,""#FFFFFF"",""#000000"",""%1"")",
         _body

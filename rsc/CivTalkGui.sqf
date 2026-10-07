@@ -13,7 +13,7 @@ if (hasInterface) then {
         if (isNull _ctrl) exitWith {};
         if !(_raw isEqualType "") then { _raw = str _raw };
         // CT_STRUCTURED_TEXT (13): word-wrap; CT_STATIC (0): ST_MULTI in hpp + plain text.
-        private _escaped = [_raw] call FADE_civTalk_escapeForStructuredText;
+        private _escaped = [_raw] call FADE_client_escapeForDiary;
         if ((ctrlType _ctrl) == 13) then {
             private _size = missionNamespace getVariable ["FADE_civTalkReplyTextSize", 1.1];
             private _align = missionNamespace getVariable ["FADE_civTalkReplyTextAlign", "center"];

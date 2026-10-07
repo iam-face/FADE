@@ -18,4 +18,4 @@ Orient token-consciously at task start. List `.cursor/` if unsure; open only wha
 | `skills/*/SKILL.md` | When user task matches skill description |
 | `../tools/` (mpmissions sibling) | Only when task or user points at a helper |
 
-Most of `.cursor/` is gitignored; **`rules/`** stays tracked and shareable.
+Most of `.cursor/` is gitignored. **`rules/`** and **`skills/`** stay tracked and shareable.

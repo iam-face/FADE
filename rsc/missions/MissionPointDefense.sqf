@@ -210,7 +210,7 @@ FADE_runMission_PointDefense = {
     ];
 
     private _enemyUnitsPD = +_enemyUnits;
-    _enemyUnitsPD = [_enemyUnitsPD] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
+    _enemyUnitsPD = [_enemyUnitsPD] call (missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsPD == 0) exitWith {
         [_player] call FADE_clearActiveMission;
         [_player, "MISSION ERROR", "No enemy units configured."] call FADE_missionErrorHint;

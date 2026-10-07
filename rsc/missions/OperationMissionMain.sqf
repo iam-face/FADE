@@ -303,7 +303,7 @@ private _fnc_opMakeVeh = {
                         if (!(_facApply isEqualTo {})) then { [_grpG] call _facApply };
                         _u setPos _pos;
                         _u setUnitPos "MIDDLE";
-                        [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                        [_u] call FADE_tryAmbientCombatAnim;
                     };
                 } forEach _slotATL;
                 if (count units _grpG > 0) then {

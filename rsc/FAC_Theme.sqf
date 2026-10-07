@@ -34,10 +34,6 @@ FAC_theme_btnDanger    = [0.55, 0.12, 0.12, 1];
 FAC_theme_btnWarn      = [0.42, 0.22, 0.20, 1];
 FAC_theme_btnStart     = [0.36, 0.36, 0.40, 1];
 
-// Legacy aliases (Scenario / Vehicle scripts)
-FAC_scenarioGui_act   = FAC_theme_tabActive;
-FAC_scenarioGui_inact = FAC_theme_tabIdle;
-
 FAC_theme_applyTab = {
     params ["_ctrl", "_active"];
     if (isNull _ctrl) exitWith {};

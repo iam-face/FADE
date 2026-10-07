@@ -19,7 +19,7 @@ FADE_runMission_AssetRetrieval = {
     };
 
     private _enemyUnitsAsset = +_enemyUnits;
-    _enemyUnitsAsset = [_enemyUnitsAsset] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
+    _enemyUnitsAsset = [_enemyUnitsAsset] call (missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsAsset == 0) then { _enemyUnitsAsset = +_enemyUnits };
     private _baseEnemyClass = _enemyUnitsAsset select 0;
     // #region agent log
@@ -282,7 +282,7 @@ FADE_runMission_AssetRetrieval = {
                         [_guardGrp] call FAC_applyEnemyScenarioToGroup;
                         _u setPosATL _guardPos;
                         _u setUnitPos "MIDDLE";
-                        [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                        [_u] call FADE_tryAmbientCombatAnim;
                         _allGroups pushBack _guardGrp;
                         _guardCountSpawned = _guardCountSpawned + 1;
                     } else {
@@ -564,7 +564,7 @@ FADE_runMission_AssetRetrieval = {
                     [_grp] call FAC_applyEnemyScenarioToGroup;
                     _u setPosATL _pos;
                     _u setUnitPos "MIDDLE";
-                    [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                    [_u] call FADE_tryAmbientCombatAnim;
                     _allGroups pushBack _grp;
                     _garrisonCount = _garrisonCount + 1;
                 } else {
@@ -583,7 +583,7 @@ FADE_runMission_AssetRetrieval = {
                 [_grp] call FAC_applyEnemyScenarioToGroup;
                 _u setPosATL _fallbackPos;
                 _u setUnitPos "MIDDLE";
-                [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                [_u] call FADE_tryAmbientCombatAnim;
                 _allGroups pushBack _grp;
                 _garrisonCount = 1;
             } else {
@@ -641,7 +641,7 @@ FADE_runMission_AssetRetrieval = {
                         if (!isNull _u) then {
                             _u setPosATL _pos;
                             _u setUnitPos "MIDDLE";
-                            [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                            [_u] call FADE_tryAmbientCombatAnim;
                         };
                     } forEach _slotATL;
                     [_bldGrp] call FAC_applyEnemyScenarioToGroup;
@@ -668,7 +668,7 @@ FADE_runMission_AssetRetrieval = {
                     [_guardGrp] call FAC_applyEnemyScenarioToGroup;
                     _u setPosATL _guardPos;
                     _u setUnitPos "MIDDLE";
-                    [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                    [_u] call FADE_tryAmbientCombatAnim;
                     _allGroups pushBack _guardGrp;
                     _guardCountSpawned = _guardCountSpawned + 1;
                 } else {

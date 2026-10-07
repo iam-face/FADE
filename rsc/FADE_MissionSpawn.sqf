@@ -241,7 +241,7 @@ FADE_missionSpawnGuards = {
                 [_guardGrp] call FAC_applyEnemyScenarioToGroup;
                 _u setPosATL _guardPos;
                 _u setUnitPos "MIDDLE";
-                [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                [_u] call FADE_tryAmbientCombatAnim;
                 _groups pushBack _guardGrp;
                 if (_taskId != "") then { [_taskId, _guardGrp] call FADE_missionEnt_registerGroup };
                 _spawned = _spawned + 1;

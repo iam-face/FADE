@@ -130,39 +130,29 @@ FADE_fnc_urbanPosNearZoneCenter = {
     _candidate
 };
 
+// Civ-zone centre position, or [] when fewer than _minBuildings have _minSlots buildingPos entries.
+FADE_fnc_siteIfEnoughBuildingSlots = {
+    params ["_zoneCenter", "_minDist", "_attempt", "_searchR", "_minSlots", "_minBuildings"];
+    private _site = [_zoneCenter, _minDist, 40, _attempt] call FADE_fnc_posAtCivZoneCenter;
+    private _buildings = nearestObjects [_zoneCenter, ["House", "Building"], _searchR];
+    if (({ count (_x buildingPos -1) >= _minSlots } count _buildings) < _minBuildings) exitWith { [] };
+    _site
+};
+
 FADE_fnc_tryHostageDestAtZoneCenter = {
     params ["_zoneCenter", "_minDist", ["_attempt", 1]];
-    private _site = [_zoneCenter, _minDist, 40, _attempt] call FADE_fnc_posAtCivZoneCenter;
-    private _buildings = nearestObjects [_zoneCenter, ["House", "Building"], 450];
-    if (({ count (_x buildingPos -1) >= 5 } count _buildings) < 2) exitWith { [] };
-    _site
+    [_zoneCenter, _minDist, _attempt, 450, 5, 2] call FADE_fnc_siteIfEnoughBuildingSlots
 };
 
 FADE_fnc_tryHvtDestAtZoneCenter = {
     params ["_zoneCenter", "_minDist", ["_attempt", 1]];
-    private _site = [_zoneCenter, _minDist, 40, _attempt] call FADE_fnc_posAtCivZoneCenter;
     private _buildRadius = if (_attempt <= 1) then { 450 } else { 550 };
-    private _buildings = nearestObjects [_zoneCenter, ["House", "Building"], _buildRadius];
-    if (({ count (_x buildingPos -1) >= 10 } count _buildings) < 1) exitWith { [] };
-    _site
+    [_zoneCenter, _minDist, _attempt, _buildRadius, 10, 1] call FADE_fnc_siteIfEnoughBuildingSlots
 };
 
 FADE_fnc_trySearchDestroySiteAtZoneCenter = {
     params ["_zoneCenter", "_minDist", ["_attempt", 1]];
-    private _site = [_zoneCenter, _minDist, 40, _attempt] call FADE_fnc_posAtCivZoneCenter;
-    private _buildings = nearestObjects [_zoneCenter, ["House", "Building"], 250];
-    private _pickedTrial = [];
-    {
-        if (count _pickedTrial >= 3) exitWith {};
-        if (count (_x buildingPos -1) >= 2) then { _pickedTrial pushBack _x };
-    } forEach (_buildings call BIS_fnc_arrayShuffle);
-    if (count _pickedTrial < 3) exitWith { [] };
-    _site
-};
-
-FADE_fnc_assetPosAtZoneCenter = {
-    params ["_zoneCenter", "_minDist", ["_maxOffset", 80], ["_attempt", 1]];
-    [_zoneCenter, _minDist, _maxOffset, _attempt] call FADE_fnc_posAtCivZoneCenter
+    [_zoneCenter, _minDist, _attempt, 250, 2, 3] call FADE_fnc_siteIfEnoughBuildingSlots
 };
 
 // Dry land at civ zone centre (tight offset for map-click snap).
@@ -183,7 +173,7 @@ FADE_fnc_pickDestAtCivZoneCenter = {
     if (_missionType == "HVT") exitWith { [_zoneCenter, _minDistForPos, _attempt] call FADE_fnc_tryHvtDestAtZoneCenter };
     if (_missionType == "SearchDestroy") exitWith { [_zoneCenter, _minDistForPos, _attempt] call FADE_fnc_trySearchDestroySiteAtZoneCenter };
     if (_missionType in ["AssetRetrieval", "MineClearing", "TroopExtract"]) exitWith {
-        [_zoneCenter, _minDistForPos, 80, _attempt] call FADE_fnc_assetPosAtZoneCenter
+        [_zoneCenter, _minDistForPos, 80, _attempt] call FADE_fnc_posAtCivZoneCenter
     };
     if (_missionType in ["ClearArea", "AreaOfOperations"]) exitWith {
         [_zoneCenter, _minDistForPos, 40, _attempt] call FADE_fnc_posAtCivZoneCenter
@@ -201,89 +191,89 @@ FADE_fnc_pickDestAtCivZoneCenter = {
     }
 };
 
-FADE_fnc_tryHostageDestAtRadius = {
-    params ["_anchor", "_minDist", "_radiusM"];
-    private _buildRadius = 450;
-    private _minSlots = 5;
-    private _minBld = 2;
+// Up to 20 urban tries. _acceptFn: [_destPos, _anchor, _radiusM, _extra] -> position or [].
+FADE_fnc_tryUrbanPosAttempts = {
+    params ["_anchor", "_minDist", "_radiusM", "_randomFn", "_nearFn", "_acceptFn", ["_extra", []]];
     private _attempt = 0;
     private _result = [];
     while { _attempt < 20 && { count _result == 0 } } do {
         _attempt = _attempt + 1;
         private _destPos = if (_radiusM < 0) then {
-            [_minDist] call FADE_findMissionPosUrbanNearCenter
+            [_minDist] call _randomFn
         } else {
-            [_anchor, _minDist, _radiusM] call FADE_findMissionPosUrbanNearCenterNearAnchor
+            [_anchor, _minDist, _radiusM] call _nearFn
         };
         if (count _destPos >= 2) then {
-            private _buildings = nearestObjects [_destPos, ["House", "Building"], _buildRadius];
-            private _candidates = _buildings select { count (_x buildingPos -1) >= _minSlots };
-            if (count _candidates >= _minBld) then {
-                private _center = getPosATL (_candidates select 0);
-                if (_radiusM < 0 || { (_center distance2D _anchor) <= _radiusM }) then {
-                    _result = _destPos;
-                };
-            };
+            private _accepted = [_destPos, _anchor, _radiusM, _extra] call _acceptFn;
+            if (_accepted isEqualType [] && { count _accepted >= 2 }) then { _result = _accepted };
         };
     };
     _result
 };
 
+FADE_fnc_tryHostageDestAtRadius = {
+    params ["_anchor", "_minDist", "_radiusM"];
+    [
+        _anchor,
+        _minDist,
+        _radiusM,
+        FADE_findMissionPosUrbanNearCenter,
+        FADE_findMissionPosUrbanNearCenterNearAnchor,
+        {
+            params ["_destPos", "_anchor", "_radiusM"];
+            private _buildings = nearestObjects [_destPos, ["House", "Building"], 450];
+            private _candidates = _buildings select { count (_x buildingPos -1) >= 5 };
+            if (count _candidates < 2) exitWith { [] };
+            private _center = getPosATL (_candidates select 0);
+            if (_radiusM < 0 || { (_center distance2D _anchor) <= _radiusM }) then { _destPos } else { [] }
+        },
+        []
+    ] call FADE_fnc_tryUrbanPosAttempts
+};
+
 FADE_fnc_tryHvtDestAtRadius = {
     params ["_anchor", "_minDist", "_radiusM", "_minSlots", "_buildRadius"];
-    private _attempt = 0;
-    private _result = [];
-    while { _attempt < 20 && { count _result == 0 } } do {
-        _attempt = _attempt + 1;
-        private _destPos = if (_radiusM < 0) then {
-            [_minDist] call FADE_findMissionPosUrban
-        } else {
-            [_anchor, _minDist, _radiusM] call FADE_findMissionPosUrbanNearAnchor
-        };
-        if (count _destPos >= 2) then {
+    [
+        _anchor,
+        _minDist,
+        _radiusM,
+        FADE_findMissionPosUrban,
+        FADE_findMissionPosUrbanNearAnchor,
+        {
+            params ["_destPos", "_anchor", "_radiusM", "_extra"];
+            _extra params ["_minSlots", "_buildRadius"];
             private _buildings = nearestObjects [_destPos, ["House", "Building"], _buildRadius];
             private _found = _buildings findIf { count (_x buildingPos -1) >= _minSlots };
-            if (_found >= 0) then {
-                private _center = getPosATL (_buildings select _found);
-                if (_radiusM < 0 || { (_center distance2D _anchor) <= _radiusM }) then {
-                    _result = [(_destPos select 0), (_destPos select 1), (_destPos param [2, 0])];
-                };
-            };
-        };
-    };
-    _result
+            if (_found < 0) exitWith { [] };
+            private _center = getPosATL (_buildings select _found);
+            if (_radiusM < 0 || { (_center distance2D _anchor) <= _radiusM }) then {
+                [(_destPos select 0), (_destPos select 1), (_destPos param [2, 0])]
+            } else { [] }
+        },
+        [_minSlots, _buildRadius]
+    ] call FADE_fnc_tryUrbanPosAttempts
 };
 
 FADE_fnc_trySearchDestroySiteAtRadius = {
     params ["_anchor", "_minDist", "_radiusM"];
     private _areaRadius = missionNamespace getVariable ["FADE_missionApproxZoneRadiusM", 55];
-    private _attempt = 0;
-    private _result = [];
-    while { _attempt < 20 && { count _result == 0 } } do {
-        _attempt = _attempt + 1;
-        private _tryPos = if (_radiusM < 0) then {
-            [_minDist] call FADE_findMissionPosUrbanNearCenter
-        } else {
-            [_anchor, _minDist, _radiusM] call FADE_findMissionPosUrbanNearCenterNearAnchor
-        };
-        if (count _tryPos >= 2) then {
+    [
+        _anchor,
+        _minDist,
+        _radiusM,
+        FADE_findMissionPosUrbanNearCenter,
+        FADE_findMissionPosUrbanNearCenterNearAnchor,
+        {
+            params ["_tryPos", "_anchor", "_radiusM", "_extra"];
+            _extra params ["_areaRadius"];
             private _c = +_tryPos;
             if (count _c < 3) then { _c = [(_c select 0), (_c select 1), 0] };
             private _buildings = nearestObjects [_c, ["House", "Building"], _areaRadius];
-            private _cands = _buildings call BIS_fnc_arrayShuffle;
-            private _pickedTrial = [];
-            {
-                if (count _pickedTrial >= 3) exitWith {};
-                if (count (_x buildingPos -1) >= 2) then { _pickedTrial pushBack _x };
-            } forEach _cands;
-            if (count _pickedTrial >= 3) then {
-                if (_radiusM < 0 || { (_c distance2D _anchor) <= _radiusM }) then {
-                    _result = _c;
-                };
-            };
-        };
-    };
-    _result
+            if (({ count (_x buildingPos -1) >= 2 } count _buildings) < 3) exitWith { [] };
+            if (_radiusM < 0 || { (_c distance2D _anchor) <= _radiusM }) then { _c } else { [] }
+        },
+        [_areaRadius]
+    ] call FADE_fnc_tryUrbanPosAttempts
 };
 
 // Asset Retrieval: building with >=6 buildingPos slots within 500 m of a civ zone (dry land, min dist from base).
@@ -356,6 +346,18 @@ FADE_fnc_tryAssetRetrievalDestAtRadius = {
 };
 missionNamespace setVariable ["FADE_fnc_tryAssetRetrievalDestAtRadius", FADE_fnc_tryAssetRetrievalDestAtRadius];
 
+// Map-click uses near-anchor search (whole map when _radiusM < 0). Otherwise one call to _fallback.
+FADE_fnc_candidateNearAnchor = {
+    params ["_useAnchor", "_anchorPos", "_minDistForPos", "_radiusM", "_fallback"];
+    if (_useAnchor) then {
+        private _wholeR = missionNamespace getVariable ["FADE_missionPlayerAnchorRadiusM", 5000];
+        private _r = if (_radiusM < 0) then { _wholeR } else { _radiusM };
+        [_anchorPos, _minDistForPos, _r] call FADE_findMissionPosNearAnchor
+    } else {
+        [_minDistForPos] call _fallback
+    }
+};
+
 // One candidate at a fixed search radius from map click (server).
 FADE_startMission_pickDestPosAtRadius = {
     params ["_missionType", "_minDistForPos", "_needsLZ", "_anchorPos", "_radiusM"];
@@ -377,24 +379,15 @@ FADE_startMission_pickDestPosAtRadius = {
         if (!_useAnchor) exitWith { [_minDistForPos] call FADE_findMissionPosUrbanNearCenter };
         [_anchorPos, _minDistForPos, _radiusM] call FADE_fnc_trySearchDestroySiteAtRadius
     };
-    // Point Defense: random → civ zone; map-click → near-anchor search (no civ snap)
+    // Point Defense: random uses a civ zone; map-click searches near the anchor (no civ snap).
     if (_missionType == "PointDefense") exitWith {
-        if (!_useAnchor) exitWith { [_minDistForPos] call FADE_findMissionPosUrbanNearCenter };
-        private _wholeR = missionNamespace getVariable ["FADE_missionPlayerAnchorRadiusM", 5000];
-        private _candidate = if (_radiusM < 0) then {
-            [_anchorPos, _minDistForPos, _wholeR] call FADE_findMissionPosNearAnchor
-        } else {
-            [_anchorPos, _minDistForPos, _radiusM] call FADE_findMissionPosNearAnchor
-        };
+        private _candidate = [_useAnchor, _anchorPos, _minDistForPos, _radiusM, FADE_findMissionPosUrbanNearCenter] call FADE_fnc_candidateNearAnchor;
         if (count _candidate >= 2) then { _candidate } else { [] }
     };
-    if (_missionType == "Operation") exitWith {
+    if (_missionType in ["Operation", "Raid", "Invasion"]) exitWith {
         if (_useAnchor) then { +_anchorPos } else { +FADE_basePos }
     };
-    if (_missionType in ["Raid", "Invasion"]) exitWith {
-        if (_useAnchor) then { +_anchorPos } else { +FADE_basePos }
-    };
-    if (_missionType == "TroopExtract") exitWith {
+    if (_missionType in ["TroopExtract", "MineClearing"]) exitWith {
         if (_useAnchor) then {
             [_anchorPos, _minDistForPos, 500, _radiusM] call FADE_findMissionPosAssetRetrievalNearAnchor
         } else {
@@ -402,16 +395,7 @@ FADE_startMission_pickDestPosAtRadius = {
         }
     };
     if (_missionType == "ClearArea" || { _missionType == "AreaOfOperations" }) exitWith {
-        private _wholeR = missionNamespace getVariable ["FADE_missionPlayerAnchorRadiusM", 5000];
-        private _candidate = if (_useAnchor) then {
-            if (_radiusM < 0) then {
-                [_anchorPos, _minDistForPos, _wholeR] call FADE_findMissionPosNearAnchor
-            } else {
-                [_anchorPos, _minDistForPos, _radiusM] call FADE_findMissionPosNearAnchor
-            }
-        } else {
-            [_minDistForPos] call FADE_findMissionPos
-        };
+        private _candidate = [_useAnchor, _anchorPos, _minDistForPos, _radiusM, FADE_findMissionPos] call FADE_fnc_candidateNearAnchor;
         if (count _candidate >= 2) then { _candidate } else { [] }
     };
     if (_missionType == "AssetRetrieval") exitWith {
@@ -421,37 +405,22 @@ FADE_startMission_pickDestPosAtRadius = {
             [[], _minDistForPos, -1] call FADE_fnc_tryAssetRetrievalDestAtRadius
         }
     };
-    if (_missionType == "MineClearing") exitWith {
-        if (_useAnchor) then {
-            [_anchorPos, _minDistForPos, 500, _radiusM] call FADE_findMissionPosAssetRetrievalNearAnchor
-        } else {
-            [_minDistForPos, 500] call FADE_findMissionPosAssetRetrieval
-        }
-    };
-    private _wholeR = missionNamespace getVariable ["FADE_missionPlayerAnchorRadiusM", 5000];
-    private _candidate = if (_useAnchor) then {
-        if (_radiusM < 0) then {
-            [_anchorPos, _minDistForPos, _wholeR] call FADE_findMissionPosNearAnchor
-        } else {
-            [_anchorPos, _minDistForPos, _radiusM] call FADE_findMissionPosNearAnchor
-        }
-    } else {
-        [_minDistForPos] call FADE_findMissionPos
-    };
+    private _candidate = [_useAnchor, _anchorPos, _minDistForPos, _radiusM, FADE_findMissionPos] call FADE_fnc_candidateNearAnchor;
     if (count _candidate < 2) exitWith { [] };
     private _dryFn = missionNamespace getVariable ["FADE_surfaceIsDry", {}];
-    if (_missionType in ["CASEVAC", "CSAR", "CAS"] && { !(_dryFn isEqualTo {}) } && { !([_candidate] call _dryFn) }) exitWith { [] };
+    private _needsDry = _missionType in ["CASEVAC", "CSAR", "CAS"] && { !(_dryFn isEqualTo {}) };
+    if (_needsDry && { !([_candidate] call _dryFn) }) exitWith { [] };
     if (_needsLZ) then {
         private _lz = [_candidate] call FADE_findSafeLZ;
         if (count _lz < 2) exitWith { [] };
         if (_useAnchor) then {
+            private _wholeR = missionNamespace getVariable ["FADE_missionPlayerAnchorRadiusM", 5000];
             private _lzR = if (_radiusM < 0) then { _wholeR } else { _radiusM };
             if (!([_lz, _anchorPos, _lzR] call FADE_fnc_anchorWithinRadius)) exitWith { [] };
         };
-        if (_missionType in ["CASEVAC", "CSAR", "CAS"] && { !(_dryFn isEqualTo {}) } && { !([_lz] call _dryFn) }) exitWith { [] };
+        if (_needsDry && { !([_lz] call _dryFn) }) exitWith { [] };
         _lz
     } else {
-        if (_missionType in ["CASEVAC", "CSAR", "CAS"] && { !(_dryFn isEqualTo {}) } && { !([_candidate] call _dryFn) }) exitWith { [] };
         _candidate
     }
 };

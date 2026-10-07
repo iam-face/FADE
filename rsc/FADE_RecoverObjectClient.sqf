@@ -23,14 +23,11 @@ FADE_recover_clientRegisterHold = {
         _objCase,
         _title,
         "\a3\ui_f\data\IGUI\Cfg\holdactions\holdAction_search_ca.paa",
-        "\a3\ui_f\data\IGUI\Cfg\holdactions\holdAction_search_ca.paa",
         format [
             "alive player && {!isNull _target} && {player distance _target < %1} && {!((_target getVariable ['FADE_recoverTaskId', '']) isEqualTo '')}",
             _dist + 0.5
         ],
         format ["alive player && {!isNull _target} && {player distance _target < %1}", _dist + 0.5],
-        {},
-        {},
         {
             private _target = _this select 0;
             private _caller = _this select 1;
@@ -39,11 +36,6 @@ FADE_recover_clientRegisterHold = {
             if (_cTaskId == "") exitWith {};
             [_cTaskId, _target, _caller] remoteExec ["FADE_assetIntelTakeServer", 2];
         },
-        {},
-        [],
-        _dur,
-        0,
-        false,
-        false
-    ] call BIS_fnc_holdActionAdd;
+        _dur
+    ] call FADE_client_addHoldAction;
 };
