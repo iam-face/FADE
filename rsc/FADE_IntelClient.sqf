@@ -18,27 +18,19 @@ FADE_intel_clientRegister = {
         _obj,
         "Read intel",
         "\a3\ui_f\data\IGUI\Cfg\holdactions\holdAction_search_ca.paa",
-        "\a3\ui_f\data\IGUI\Cfg\holdactions\holdAction_search_ca.paa",
         format [
             "alive player && {!isNull _target} && {player distance _target < %1} && {!(_target getVariable ['FADE_intelConsumed', false])}",
             _dist + 0.25
         ],
         format ["alive player && {!isNull _target} && {player distance _target < %1}", _dist + 0.25],
-        {},
-        {},
         {
             private _target = _this select 0;
             private _caller = _this select 1;
             if (!(_caller isEqualTo player)) exitWith {};
             [_target, _caller] remoteExec ["FADE_intel_serverTryRead", 2];
         },
-        {},
-        [],
-        _dur,
-        0,
-        false,
-        false
-    ] call BIS_fnc_holdActionAdd;
+        _dur
+    ] call FADE_client_addHoldAction;
 };
 
 FADE_intel_clientEnsureSelfDeliverAction = {

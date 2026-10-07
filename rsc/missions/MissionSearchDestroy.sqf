@@ -14,7 +14,7 @@ FADE_runMission_SearchDestroy = {
         "_loreShort", "_loreLong", "_loreSmeacHtml"
     ];
     private _enemyUnitsSd = +_enemyUnits;
-    _enemyUnitsSd = [_enemyUnitsSd] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
+    _enemyUnitsSd = [_enemyUnitsSd] call (missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsSd == 0) exitWith {
         [_player] call FADE_clearActiveMission;
         [_player, "MISSION ERROR", "No enemy units configured."] call FADE_missionErrorHint;
@@ -140,7 +140,7 @@ FADE_runMission_SearchDestroy = {
                         [_grp] call FAC_applyEnemyScenarioToGroup;
                         _u setPos _pos;
                         _u setUnitPos "MIDDLE";
-                        [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                        [_u] call FADE_tryAmbientCombatAnim;
                         _allGroups pushBack _grp;
                         _spawnedUnits = _spawnedUnits + 1;
                     } else { deleteGroup _grp };
@@ -220,7 +220,7 @@ FADE_runMission_SearchDestroy = {
                     if (!isNull _u) then {
                         _u setPosATL _pos;
                         _u setUnitPos "MIDDLE";
-                        [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                        [_u] call FADE_tryAmbientCombatAnim;
                     };
                 } forEach _slotATL;
                 [_bldGrp] call FAC_applyEnemyScenarioToGroup;
@@ -243,7 +243,7 @@ FADE_runMission_SearchDestroy = {
                 [_guardGrp] call FAC_applyEnemyScenarioToGroup;
                 _u setPosATL _guardPos;
                 _u setUnitPos "MIDDLE";
-                [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                [_u] call FADE_tryAmbientCombatAnim;
                 _allGroups pushBack _guardGrp;
                 _guardCountSpawned = _guardCountSpawned + 1;
             } else {

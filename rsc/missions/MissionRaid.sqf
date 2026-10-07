@@ -34,7 +34,7 @@ FADE_runMission_Raid = {
     [] call FADE_ensureBisTaskSetParent;
 
     private _enemyUnitsRaid = +_enemyUnits;
-    _enemyUnitsRaid = [_enemyUnitsRaid] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
+    _enemyUnitsRaid = [_enemyUnitsRaid] call (missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsRaid == 0) then { _enemyUnitsRaid = +_enemyUnits };
     if (count _enemyUnitsRaid == 0) exitWith {
         [_player] call FADE_clearActiveMission;
@@ -520,8 +520,7 @@ FADE_runMission_Raid = {
     [_operationNameUpper, _starterName] remoteExec ["FADE_showMissionAssignedIntro", 0];
     if (_loreLong != "") then {
         private _whenStr = format ["Mission start +%1 min", floor (time / 60) max 0];
-        private _opName = missionNamespace getVariable ["FADE_missionRun_operationName", ""];
-        [_opName, _whenStr, _loreLong, "Background"] remoteExec ["FADE_client_appendMissionBackground", 0];
+        ["Intel - Background", _whenStr, _loreLong, "Background"] remoteExec ["FADE_client_appendIntelDiary", 0];
     };
     [_player, "Raid"] call FADE_notifyOthersMissionStarted;
 

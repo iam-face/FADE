@@ -3,7 +3,7 @@
 // =============================================================================
 
 FAC_scenarioGui_IDD = 60003;
-// Tab/toggle colors: FAC_theme_tabActive / FAC_theme_tabIdle (FAC_Theme.sqf)
+// Tab/toggle colors: FAC_theme_applyTab (FAC_Theme.sqf)
 
 // Preset id -> [overcast, rain, fogD, fogDecay, fogBase, windStr, windDir, gusts, waves] (matches server FADE_getWeatherParamsForPresetName)
 FAC_scenarioGui_getWeatherParamsForPresetId = {
@@ -139,10 +139,10 @@ FAC_scenarioGui_syncHeaderTabs = {
     private _bF = _d displayCtrl 60811;
     private _bA = _d displayCtrl 60812;
     if (isNull _bS || { isNull _bW } || { isNull _bF } || { isNull _bA }) exitWith {};
-    _bS ctrlSetBackgroundColor (if (_tab == "scenario") then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-    _bW ctrlSetBackgroundColor (if (_tab == "weather") then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-    _bF ctrlSetBackgroundColor (if (_tab == "factions") then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-    _bA ctrlSetBackgroundColor (if (_tab == "admin") then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+    [_bS, _tab == "scenario"] call FAC_theme_applyTab;
+    [_bW, _tab == "weather"] call FAC_theme_applyTab;
+    [_bF, _tab == "factions"] call FAC_theme_applyTab;
+    [_bA, _tab == "admin"] call FAC_theme_applyTab;
 };
 
 FAC_scenarioGui_setTabVisibility = {
@@ -388,8 +388,8 @@ FAC_scenarioGui_syncLimitGearBtns = {
     private _b0 = _d displayCtrl 60850;
     private _b1 = _d displayCtrl 60851;
     if (!isNull _b0 && { !isNull _b1 }) then {
-        _b0 ctrlSetBackgroundColor (if (!_on) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-        _b1 ctrlSetBackgroundColor (if (_on) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        [_b0, !_on] call FAC_theme_applyTab;
+        [_b1, _on] call FAC_theme_applyTab;
     };
 };
 
@@ -400,8 +400,8 @@ FAC_scenarioGui_syncCivBtns = {
     private _b0 = _d displayCtrl 60852;
     private _b1 = _d displayCtrl 60853;
     if (!isNull _b0 && { !isNull _b1 }) then {
-        _b0 ctrlSetBackgroundColor (if (!_on) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-        _b1 ctrlSetBackgroundColor (if (_on) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        [_b0, !_on] call FAC_theme_applyTab;
+        [_b1, _on] call FAC_theme_applyTab;
     };
 };
 
@@ -412,8 +412,8 @@ FAC_scenarioGui_syncPresetBtns = {
     private _b0 = _d displayCtrl 60854;
     private _b1 = _d displayCtrl 60855;
     if (!isNull _b0 && { !isNull _b1 }) then {
-        _b0 ctrlSetBackgroundColor (if (!_on) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-        _b1 ctrlSetBackgroundColor (if (_on) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        [_b0, !_on] call FAC_theme_applyTab;
+        [_b1, _on] call FAC_theme_applyTab;
     };
 };
 
@@ -425,9 +425,9 @@ FAC_scenarioGui_syncTimeScaleBtns = {
     private _b5 = _d displayCtrl 60857;
     private _b25 = _d displayCtrl 60858;
     if (!isNull _b1 && { !isNull _b5 } && { !isNull _b25 }) then {
-        _b1 ctrlSetBackgroundColor (if (_s == 1) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-        _b5 ctrlSetBackgroundColor (if (_s == 5) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-        _b25 ctrlSetBackgroundColor (if (_s == 25) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        [_b1, _s == 1] call FAC_theme_applyTab;
+        [_b5, _s == 5] call FAC_theme_applyTab;
+        [_b25, _s == 25] call FAC_theme_applyTab;
     };
 };
 
@@ -438,8 +438,8 @@ FAC_scenarioGui_syncTeleportBtns = {
     private _b0 = _d displayCtrl 60859;
     private _b1 = _d displayCtrl 60860;
     if (!isNull _b0 && { !isNull _b1 }) then {
-        _b0 ctrlSetBackgroundColor (if (_m == 0) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-        _b1 ctrlSetBackgroundColor (if (_m > 0) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        [_b0, _m == 0] call FAC_theme_applyTab;
+        [_b1, _m > 0] call FAC_theme_applyTab;
     };
 };
 
@@ -450,8 +450,8 @@ FAC_scenarioGui_syncCivTalkBtns = {
     private _b0 = _d displayCtrl 60341;
     private _b1 = _d displayCtrl 60342;
     if (!isNull _b0 && { !isNull _b1 }) then {
-        _b0 ctrlSetBackgroundColor (if (!_interpOnly) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-        _b1 ctrlSetBackgroundColor (if (_interpOnly) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        [_b0, !_interpOnly] call FAC_theme_applyTab;
+        [_b1, _interpOnly] call FAC_theme_applyTab;
     };
 };
 
@@ -462,8 +462,8 @@ FAC_scenarioGui_syncIntelReadBtns = {
     private _b0 = _d displayCtrl 60344;
     private _b1 = _d displayCtrl 60345;
     if (!isNull _b0 && { !isNull _b1 }) then {
-        _b0 ctrlSetBackgroundColor (if (!_specOnly) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-        _b1 ctrlSetBackgroundColor (if (_specOnly) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        [_b0, !_specOnly] call FAC_theme_applyTab;
+        [_b1, _specOnly] call FAC_theme_applyTab;
     };
 };
 
@@ -474,8 +474,8 @@ FAC_scenarioGui_syncPatrolBtns = {
     private _b0 = _d displayCtrl 60870;
     private _b1 = _d displayCtrl 60871;
     if (!isNull _b0 && { !isNull _b1 }) then {
-        _b0 ctrlSetBackgroundColor (if (!_on) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-        _b1 ctrlSetBackgroundColor (if (_on) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        [_b0, !_on] call FAC_theme_applyTab;
+        [_b1, _on] call FAC_theme_applyTab;
     };
 };
 
@@ -486,8 +486,8 @@ FAC_scenarioGui_syncRoutingBtns = {
     private _b0 = _d displayCtrl 60874;
     private _b1 = _d displayCtrl 60875;
     if (!isNull _b0 && { !isNull _b1 }) then {
-        _b0 ctrlSetBackgroundColor (if (!_on) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
-        _b1 ctrlSetBackgroundColor (if (_on) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+        [_b0, !_on] call FAC_theme_applyTab;
+        [_b1, _on] call FAC_theme_applyTab;
     };
 };
 
@@ -500,7 +500,7 @@ FAC_scenarioGui_syncAAABtns = {
         _x params ["_name", "_idc"];
         private _c = _d displayCtrl _idc;
         if (!isNull _c) then {
-            _c ctrlSetBackgroundColor (if (_name == _lvl) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+            [_c, _name == _lvl] call FAC_theme_applyTab;
         };
     } forEach _map;
 };
@@ -514,7 +514,7 @@ FAC_scenarioGui_syncLauncherBtns = {
         _x params ["_name", "_idc"];
         private _c = _d displayCtrl _idc;
         if (!isNull _c) then {
-            _c ctrlSetBackgroundColor (if (_name == _v) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+            [_c, _name == _v] call FAC_theme_applyTab;
         };
     } forEach _map;
 };
@@ -528,7 +528,7 @@ FAC_scenarioGui_syncOpforPopBtns = {
         _x params ["_name", "_idc"];
         private _c = _d displayCtrl _idc;
         if (!isNull _c) then {
-            _c ctrlSetBackgroundColor (if (_name == _v) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+            [_c, _name == _v] call FAC_theme_applyTab;
         };
     } forEach _map;
 };
@@ -542,7 +542,7 @@ FAC_scenarioGui_syncPatrolTownChanceBtns = {
         _x params ["_name", "_idc"];
         private _c = _d displayCtrl _idc;
         if (!isNull _c) then {
-            _c ctrlSetBackgroundColor (if (_name == _v) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+            [_c, _name == _v] call FAC_theme_applyTab;
         };
     } forEach _map;
 };
@@ -556,7 +556,7 @@ FAC_scenarioGui_syncOpforAirBtns = {
         _x params ["_name", "_idc"];
         private _c = _d displayCtrl _idc;
         if (!isNull _c) then {
-            _c ctrlSetBackgroundColor (if (_name == _v) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+            [_c, _name == _v] call FAC_theme_applyTab;
         };
     } forEach _map;
 };
@@ -570,7 +570,7 @@ FAC_scenarioGui_syncOpforDroneBtns = {
         _x params ["_name", "_idc"];
         private _c = _d displayCtrl _idc;
         if (!isNull _c) then {
-            _c ctrlSetBackgroundColor (if (_name == _v) then { FAC_scenarioGui_act } else { FAC_scenarioGui_inact });
+            [_c, _name == _v] call FAC_theme_applyTab;
         };
     } forEach _map;
 };

@@ -531,7 +531,7 @@ FADE_enemyPatrol_spawnForZone = {
                     private _p = +_x;
                     private _cls = selectRandom _groundUnits;
                     private _u = _garrisonGrp createUnit [_cls, _p, [], 0, "NONE"];
-                    if (!isNull _u) then { _u setUnitPos "MIDDLE"; [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat };
+                    if (!isNull _u) then { _u setUnitPos "MIDDLE"; [_u] call FADE_tryAmbientCombatAnim };
                 } forEach _slotATL;
                 if (count units _garrisonGrp > 0) then {
                     _garrisonGroups pushBack _garrisonGrp;

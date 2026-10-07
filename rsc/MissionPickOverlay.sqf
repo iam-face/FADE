@@ -149,6 +149,36 @@ FAC_missionPick_createParticipantFooter = {
     _controls
 };
 
+// Available / selected player listboxes. Selected names get " (you)" for the local player.
+FAC_missionPick_fillParticipantLists = {
+    params ["_lbAvailable", "_lbSelected", "_selectedUids"];
+    if (isNull _lbAvailable || { isNull _lbSelected }) exitWith {};
+    private _sideFriendly = missionNamespace getVariable ["FADE_sideFriendly", west];
+    private _selected = +_selectedUids;
+    lbClear _lbAvailable;
+    lbClear _lbSelected;
+    private _callerUid = getPlayerUID player;
+    {
+        if (!isNull _x && { alive _x } && { isPlayer _x } && { side group _x == _sideFriendly }) then {
+            private _uid = getPlayerUID _x;
+            if !(_uid in _selected) then {
+                private _idx = _lbAvailable lbAdd (name _x);
+                _lbAvailable lbSetData [_idx, _uid];
+            };
+        };
+    } forEach allPlayers;
+    {
+        private _uid = _x;
+        private _p = objNull;
+        { if (getPlayerUID _x == _uid) exitWith { _p = _x } } forEach allPlayers;
+        if (!isNull _p) then {
+            private _tag = if (_uid == _callerUid) then { " (you)" } else { "" };
+            private _idx = _lbSelected lbAdd ((name _p) + _tag);
+            _lbSelected lbSetData [_idx, _uid];
+        };
+    } forEach _selected;
+};
+
 missionNamespace setVariable ["FAC_missionPickOverlay_restoreMissionsBase", FAC_missionPickOverlay_restoreMissionsBase];
 missionNamespace setVariable ["FAC_missionPickOverlay_setBaseVisible", FAC_missionPickOverlay_setBaseVisible];
 missionNamespace setVariable ["FAC_missionPickOverlay_destroy", FAC_missionPickOverlay_destroy];
@@ -159,3 +189,4 @@ missionNamespace setVariable ["FAC_missionPick_styleNeutral", FAC_missionPick_st
 missionNamespace setVariable ["FAC_missionPick_styleDanger", FAC_missionPick_styleDanger];
 missionNamespace setVariable ["FAC_missionPick_styleStart", FAC_missionPick_styleStart];
 missionNamespace setVariable ["FAC_missionPick_createParticipantFooter", FAC_missionPick_createParticipantFooter];
+missionNamespace setVariable ["FAC_missionPick_fillParticipantLists", FAC_missionPick_fillParticipantLists];

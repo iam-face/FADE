@@ -12,15 +12,6 @@ FADE_hqMainBoard_wrapChars = 48;
 
 
 
-FADE_hqMainBoard_sanitizeTextureText = FADE_textureText_sanitize;
-
-FADE_hqMainBoard_wrapText = {
-    params [["_text", ""], ["_maxChars", FADE_hqMainBoard_wrapChars]];
-    [_text, _maxChars] call FADE_textureText_wrap
-};
-
-
-
 FADE_hqMainBoard_missionTypeDisplayName = {
 
     params [["_missionType", ""]];
@@ -253,7 +244,7 @@ FADE_hqMainBoard_buildTexture = {
 
         private _missionType = _globalMission param [0, ""];
 
-        private _operationName = [_globalMission param [4, ""]] call FADE_hqMainBoard_sanitizeTextureText;
+        private _operationName = [_globalMission param [4, ""]] call FADE_textureText_sanitize;
 
         private _typeLabel = [_missionType] call FADE_hqMainBoard_typeParenLabel;
 
@@ -269,13 +260,13 @@ FADE_hqMainBoard_buildTexture = {
 
         if (count _brief >= 4) then {
 
-            _intent = [_brief param [0, ""]] call FADE_hqMainBoard_sanitizeTextureText;
+            _intent = [_brief param [0, ""]] call FADE_textureText_sanitize;
 
-            _missionLine = [_brief param [1, ""]] call FADE_hqMainBoard_sanitizeTextureText;
+            _missionLine = [_brief param [1, ""]] call FADE_textureText_sanitize;
 
-            _area = [_brief param [2, ""]] call FADE_hqMainBoard_sanitizeTextureText;
+            _area = [_brief param [2, ""]] call FADE_textureText_sanitize;
 
-            _grid = [_brief param [3, ""]] call FADE_hqMainBoard_sanitizeTextureText;
+            _grid = [_brief param [3, ""]] call FADE_textureText_sanitize;
 
         };
 
@@ -289,7 +280,7 @@ FADE_hqMainBoard_buildTexture = {
 
         };
 
-        _intentMission = [_intentMission] call FADE_hqMainBoard_wrapText;
+        _intentMission = [_intentMission, FADE_hqMainBoard_wrapChars] call FADE_textureText_wrap;
 
         private _locLine = if (_area != "" && { _grid != "" }) then {
 
@@ -309,7 +300,7 @@ FADE_hqMainBoard_buildTexture = {
 
             toUpper _operationName,
 
-            [_typeLabel] call FADE_hqMainBoard_sanitizeTextureText,
+            [_typeLabel] call FADE_textureText_sanitize,
 
             _locLine,
 

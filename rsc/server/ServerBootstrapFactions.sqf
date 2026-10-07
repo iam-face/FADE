@@ -146,14 +146,9 @@ FADE_filterUnitsArmed = {
     } forEach _classes;
     if (_out isEqualTo []) then { [_classes] call FADE_filterInfantryManClasses } else { _out };
 };
-// Backward-compatible alias used by existing mission scripts.
-FADE_filterEnemyUnitsArmed = FADE_filterUnitsArmed;
-FADE_filterFriendlyUnitsArmed = FADE_filterUnitsArmed;
 missionNamespace setVariable ["FADE_isInfantryManClass", FADE_isInfantryManClass];
 missionNamespace setVariable ["FADE_filterInfantryManClasses", FADE_filterInfantryManClasses];
 missionNamespace setVariable ["FADE_filterUnitsArmed", FADE_filterUnitsArmed];
-missionNamespace setVariable ["FADE_filterEnemyUnitsArmed", FADE_filterEnemyUnitsArmed];
-missionNamespace setVariable ["FADE_filterFriendlyUnitsArmed", FADE_filterFriendlyUnitsArmed];
 
 // Drop unit classes that do not match scenario faction side + CfgFactionClasses (addon fallback for mod units with empty faction).
 FADE_filterUnitsForScenarioFaction = {
@@ -422,7 +417,7 @@ FADE_resolveScenarioEnemyUnits = {
     if (_units isEqualTo [] && { _ef isEqualTo "OPF_F" }) then {
         _units = +(missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"]]);
     };
-    private _filter = missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }];
+    private _filter = missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }];
     _units = [_units] call _filter;
     private _launcherFilter = missionNamespace getVariable ["FADE_filterEnemyUnitsByLauncherPolicy", { _this select 0 }];
     _units = [_units] call _launcherFilter;

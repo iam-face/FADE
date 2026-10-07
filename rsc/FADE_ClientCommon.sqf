@@ -79,10 +79,6 @@ FADE_client_appendIntelDiary = {
     player createDiaryRecord ["FAC_Intel", [_title, _html]];
 };
 
-// Legacy aliases (CivTalk / Intel modules).
-FADE_civTalk_escapeForStructuredText = FADE_client_escapeForDiary;
-FADE_intel_escapeForDiary = FADE_client_escapeForDiary;
-
 FADE_civTalk_clientAppendIntelDiary = {
     params [["_civName", "Civilian"], ["_whenStr", ""], ["_bodyRaw", ""], ["_kind", "HUMINT"]];
     [_civName, _whenStr, _bodyRaw, _kind] call FADE_client_appendIntelDiary;
@@ -93,15 +89,30 @@ FADE_intel_clientAppendIntelDiary = {
     [_headerName, _whenStr, _bodyRaw, _kind] call FADE_client_appendIntelDiary;
 };
 
-FADE_client_appendMissionBackground = {
-    params ["_operationName", "_whenStr", "_bodyRaw", ["_kind", "Background"]];
-    ["Intel - Background", _whenStr, _bodyRaw, _kind] call FADE_client_appendIntelDiary;
+// Shared BIS_fnc_holdActionAdd tail: duplicate icon, empty start/progress/interrupt, priority 0.
+FADE_client_addHoldAction = {
+    params ["_obj", "_title", "_icon", "_condShow", "_condProgress", "_onComplete", "_duration"];
+    [
+        _obj,
+        _title,
+        _icon,
+        _icon,
+        _condShow,
+        _condProgress,
+        {},
+        {},
+        _onComplete,
+        {},
+        [],
+        _duration,
+        0,
+        false,
+        false
+    ] call BIS_fnc_holdActionAdd
 };
 
 missionNamespace setVariable ["FADE_client_escapeForDiary", FADE_client_escapeForDiary];
 missionNamespace setVariable ["FADE_client_appendIntelDiary", FADE_client_appendIntelDiary];
-missionNamespace setVariable ["FADE_civTalk_escapeForStructuredText", FADE_civTalk_escapeForStructuredText];
-missionNamespace setVariable ["FADE_intel_escapeForDiary", FADE_intel_escapeForDiary];
 missionNamespace setVariable ["FADE_civTalk_clientAppendIntelDiary", FADE_civTalk_clientAppendIntelDiary];
 missionNamespace setVariable ["FADE_intel_clientAppendIntelDiary", FADE_intel_clientAppendIntelDiary];
-missionNamespace setVariable ["FADE_client_appendMissionBackground", FADE_client_appendMissionBackground];
+missionNamespace setVariable ["FADE_client_addHoldAction", FADE_client_addHoldAction];

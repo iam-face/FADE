@@ -16,7 +16,7 @@ FADE_runMission_ClearArea = {
     ];
     // Use same resolved list as rest of Missions.sqf (FADE_resolveScenarioEnemyUnits  -  scenario faction first)
     private _enemyUnitsCA = +_enemyUnits;
-    _enemyUnitsCA = [_enemyUnitsCA] call (missionNamespace getVariable ["FADE_filterEnemyUnitsArmed", { _this select 0 }]);
+    _enemyUnitsCA = [_enemyUnitsCA] call (missionNamespace getVariable ["FADE_filterUnitsArmed", { _this select 0 }]);
     if (count _enemyUnitsCA == 0) exitWith {
         [_player] call FADE_clearActiveMission;
         [_player, "MISSION ERROR", "No enemy units configured."] call FADE_missionErrorHint;
@@ -148,7 +148,7 @@ FADE_runMission_ClearArea = {
                     if (!isNull _u) then {
                         _u setPos _pos;
                         _u setUnitPos "MIDDLE";
-                        [_u, "STAND", "FULL", { behaviour _this == "COMBAT" || { !alive _this } }, "COMBAT"] call BIS_fnc_ambientAnimCombat;
+                        [_u] call FADE_tryAmbientCombatAnim;
                     };
                 } forEach _slotATL;
                 if (count units _grp > 0) then {

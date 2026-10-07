@@ -65,33 +65,11 @@ if (hasInterface) then {
                 disableSerialization;
                 _display = findDisplay 60002;
                 if (isNull _display) exitWith {};
-                private _lbA = _display displayCtrl 60283;
-                private _lbS = _display displayCtrl 60284;
-                if (isNull _lbA || { isNull _lbS }) exitWith {};
-                private _sideFriendly = missionNamespace getVariable ["FADE_sideFriendly", west];
-                private _selected = +(uinamespace getVariable ["FAC_eePick_selectedUids", []]);
-                lbClear _lbA;
-                lbClear _lbS;
-                private _callerUid = getPlayerUID player;
-                {
-                    if (!isNull _x && { alive _x } && { isPlayer _x } && { side group _x == _sideFriendly }) then {
-                        private _uid = getPlayerUID _x;
-                        if !(_uid in _selected) then {
-                            private _idx = _lbA lbAdd (name _x);
-                            _lbA lbSetData [_idx, _uid];
-                        };
-                    };
-                } forEach allPlayers;
-                {
-                    private _uid = _x;
-                    private _p = objNull;
-                    { if (getPlayerUID _x == _uid) exitWith { _p = _x } } forEach allPlayers;
-                    if (!isNull _p) then {
-                        private _tag = if (_uid == _callerUid) then { " (you)" } else { "" };
-                        private _idx = _lbS lbAdd ((name _p) + _tag);
-                        _lbS lbSetData [_idx, _uid];
-                    };
-                } forEach _selected;
+                [
+                    _display displayCtrl 60283,
+                    _display displayCtrl 60284,
+                    +(uinamespace getVariable ["FAC_eePick_selectedUids", []])
+                ] call FAC_missionPick_fillParticipantLists;
             };
             case "add": {
                 disableSerialization;

@@ -40,9 +40,7 @@ FADE_startMission = {
     if (_missionType == "GeoGuesser") exitWith {
         ["<t size='1.2' color='#FFAA00'>GEO-GUESSER</t><br/><br/><t color='#E0E0E0'>Use START to open the participant list, timer, and difficulty (include yourself).</t>"] remoteExec ["FADE_showMissionHint", _player];
     };
-    if (!([_player] call FADE_playerCanUseMissionsGui)) exitWith {
-        ["<t size='1.2' color='#FF6666'>ACCESS DENIED</t><br/><br/><t color='#E0E0E0'>Missions GUI is restricted to group leaders by lobby settings.</t>"] remoteExec ["FADE_showMissionHint", _player];
-    };
+    if !([_player] call FADE_mission_requireGuiAccess) exitWith {};
     private _ff = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", "BLU_F"];
     private _ef = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
     private _factionIssue = [_ff, _ef] call FADE_scenarioFactionsDescribeIssue;
@@ -72,7 +70,6 @@ FADE_startMission = {
         [_player, "slotsFull"] call FADE_missionSlotGateHint;
     };
     private _needsLZ = _missionType in ["TroopInsert", "TroopExtract", "Cargo", "CASEVAC", "CSAR"];
-    private _spawnsEnemies = _missionType in ["TroopExtract", "CAS", "HVT", "Hostage", "ClearArea", "InterceptConvoy", "AreaOfOperations", "CASEVAC", "CSAR", "AssetRetrieval", "SearchDestroy", "Operation", "Raid", "Invasion", "EscapeEvasion", "PointDefense"];
     private _minDistForPos = if (_spawnsEnemies) then { 1000 } else { FADE_minDistFromBase };
     if (_missionType in ["TroopInsert", "TroopExtract"]) then {
         _minDistForPos = _minDistForPos max FADE_troopInsertExtractMinDistFromBase;
@@ -195,16 +192,9 @@ FADE_startMission = {
     };
 
     if (_isGlobal) then {
-        private _operationName = [] call FADE_generateOperationName;
-        missionNamespace setVariable ["FADE_globalMission", [_missionType, _player, _destPos, _playerUid, _operationName]];
-        missionNamespace setVariable ["FADE_currentMissionType", _missionType];
-        missionNamespace setVariable ["FADE_currentMissionPlayer", _player];
-        [] call FADE_missionSlots_publish;
+        [_missionType, _player, _destPos, _playerUid] call FADE_mission_assignGlobal;
     } else {
-        private _operationName = [] call FADE_generateOperationName;
-        _singleList pushBack [_missionType, _player, _destPos, _playerUid, _operationName];
-        missionNamespace setVariable ["FADE_singleMissions", _singleList];
-        [] call FADE_missionSlots_publish;
+        [_missionType, _player, _destPos, _playerUid, false, _singleList] call FADE_mission_assignSingle;
     };
     // Spawn + compile (not execVM): avoids FADE_missionParams being overwritten by another
     // player's FADE_startMission before this Missions.sqf run reads line 1.
