@@ -32,6 +32,10 @@ FADE_normalizeOpforLauncherSetting = {
         default { "Normal" };
     };
 };
+FADE_normalizeOpforGrenadeSetting = {
+    params ["_setting"];
+    [_setting] call FADE_normalizeOpforLauncherSetting
+};
 FADE_normalizeOpforPatrolTownChanceSetting = {
     params [["_setting", "Low"]];
     switch (toLower (_setting + "")) do {

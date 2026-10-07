@@ -384,7 +384,7 @@ FADE_enemyPatrol_spawnForZone = {
 
     // Infantry patrol groups (1-2 groups; 3-6 units each)
     private _dryFn = missionNamespace getVariable ["FADE_surfaceIsDry", { params ["_p"]; count _p >= 2 && { !surfaceIsWater [_p select 0, _p select 1] } }];
-    private _numGroups = 1 + floor random 2;
+    private _numGroups = [1 + floor random 2, 1] call FADE_scaleOpforCount;
     for "_g" from 0 to (_numGroups - 1) do {
         private _sp = [];
         for "_trySp" from 1 to 22 do {
@@ -398,7 +398,7 @@ FADE_enemyPatrol_spawnForZone = {
             _sp = [];
         };
         if (count _sp < 2) then { continue };
-        private _size = 3 + floor random 4;
+        private _size = [3 + floor random 4, 1] call FADE_scaleOpforCount;
         private _shuffled = _groundUnits call BIS_fnc_arrayShuffle;
         private _units = _shuffled select [0, _size min count _shuffled];
         if (_units isEqualTo []) exitWith {};
@@ -421,7 +421,7 @@ FADE_enemyPatrol_spawnForZone = {
     { if ((_x isEqualType "") && { isClass (configFile >> "CfgVehicles" >> _x) }) then { if (_x isKindOf "Car") then { _carClasses pushBack _x } } } forEach _enemyVehList;
     if (_carClasses isEqualTo [] && { count _enemyVehList > 0 }) then { _carClasses = _enemyVehList };
     if (!(_carClasses isEqualTo []) && { count _groundUnits > 0 }) then {
-        private _numVeh = 1 + floor random 2;
+        private _numVeh = [1 + floor random 2, 1] call FADE_scaleOpforCount;
         private _spawnedPatrolVehs = [];
         private _roadHit = [];
         private _roadPos = [0, 0, 0];
@@ -493,13 +493,13 @@ FADE_enemyPatrol_spawnForZone = {
         _thinnedBlds = +(_buildingsWithPos select [0, _minGar min count _buildingsWithPos]);
     };
     _thinnedBlds = _thinnedBlds call BIS_fnc_arrayShuffle;
-    private _numGarrison = (2 + floor random 3) min count _thinnedBlds;
+    private _numGarrison = ([2 + floor random 3, 1] call FADE_scaleOpforCount) min count _thinnedBlds;
     private _vgFn = missionNamespace getVariable ["FADE_vg_register", {}];
     for "_b" from 0 to (_numGarrison - 1) do {
         private _bld = _thinnedBlds select _b;
         private _bldPos = _bld buildingPos -1;
         if (_bldPos isEqualTo []) then { continue };
-        private _cnt = (2 + floor random 2) min count _bldPos;
+        private _cnt = ([2 + floor random 2, 1] call FADE_scaleOpforCount) min count _bldPos;
         private _indices = [];
         for "_i" from 0 to (count _bldPos - 1) do { _indices pushBack _i };
         _indices = _indices call BIS_fnc_arrayShuffle;
@@ -560,7 +560,7 @@ FADE_enemyPatrol_spawnForZone = {
             private _sniperClasses = call FADE_resolveEnemySniperClasses;
             if !(_sniperClasses isEqualTo []) then {
                 private _maxSn = (missionNamespace getVariable ["FADE_enemyPatrolSniperMaxPerZone", 2]) max 1;
-                private _numSn = 1 + floor random _maxSn;
+                private _numSn = [1 + floor random _maxSn, 1] call FADE_scaleOpforCount;
                 private _usedRoofs = [];
                 private _snMinElev = missionNamespace getVariable ["FADE_enemyPatrolSniperMinElevAboveTerrainM", 7];
                 for "_sn" from 1 to _numSn do {

@@ -23,8 +23,10 @@ Admins and Zeus can usually override group-leader-only GUI locks. Changes from S
 ### Scenario control
 
 - Weather, time of day, and gear policy (including optional ACE Arsenal on loadout boxes).
-- Friendly, enemy, and civilian factions from `CfgFactionClasses`. Friendly list covers EAST / WEST / GUER. Enemy list is filtered to opposed sides (GUER counts as hostile to both majors). Invalid mixes are corrected on Apply with a hint; player side syncs on Apply, JIP, and respawn.
+- Friendly, enemy, and civilian factions from `CfgFactionClasses`, limited to factions the server can spawn infantry for. Friendly list covers EAST / WEST / GUER. Enemy list is filtered to opposed sides (GUER counts as hostile to both majors). Apply rejects a faction with no infantry and keeps the previous one. Invalid mixes are corrected on Apply with a hint; player side syncs on Apply, JIP, and respawn.
 - OPFOR population multiplier, patrols (including town chance), skill / routing / retreat behaviour, and AAA (Off / AAA / AAA+MANPADS).
+- OPFOR grenades (Normal / Reduced / Minimal / None, default Reduced): caps thrown HE, under-barrel HE, and dedicated grenade launchers on enemy infantry. Smoke, flares, and chemlights stay.
+- OPFOR player scaling (default On): garrison, patrol, and QRF counts follow alive player count on top of the population multiplier. Off keeps population-only counts.
 - OPFOR air and drones (Off / Low / Normal / High): ambient UAV patrol plus QRF vectoring when configured.
 - Ambient civilian budget and density; who may talk to civilians; who may read building intel.
 - HQ auto-heal and other gameplay toggles from lobby and Scenario Admin.
@@ -113,7 +115,7 @@ Grouped roughly as:
 - **CIVILIANS:** Ambient on/off at start, who can interrogate, who can read intel.
 - **GAMEPLAY:** Gear policy, HQ auto-heal.
 - **MISSIONS:** AO strength.
-- **OPFOR:** Air, drones, patrols, patrol town chance, population multiplier.
+- **OPFOR:** Air, drones, grenades, patrols, patrol town chance, player scaling, population multiplier.
 - **WORLD:** Starting time and weather.
 - **DEBUG:** Spawn prints, garrison building markers, civilian town markers, script debug tools (including Zeus via Admin tab when enabled).
 

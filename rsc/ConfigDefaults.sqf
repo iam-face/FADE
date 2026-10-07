@@ -120,6 +120,8 @@ FADE_opforPatrolTownChanceSetting = "Low";  // "Low" 25%, "Medium" 50%, "High" 7
 FADE_enemyPatrolTownChance = 0.25;           // Resolved from FADE_opforPatrolTownChanceSetting
 FADE_opforPopulationSetting = "Low";  // "VeryLow" 0.25x, "Low" 0.5x, "Normal" 1x, "High" 1.5x, "VeryHigh" 2x, "Insane" 4x
 FADE_opforLauncherSetting = "Normal";     // "Normal", "Reduced", "Minimal", "None"  -  AT launchers (not MANPADS AA)
+FADE_opforGrenadeSetting = "Reduced";     // same steps: thrown HE, under-barrel HE, dedicated grenade launchers
+FADE_opforPlayerScale = true;             // FADE_scaleOpforCount also follows alive friendly player count
 FADE_limitGearToFriendlyFaction = false;  // When true, Loadout and Vehicle GUIs restrict to chosen Friendly faction
 FADE_limitToPresetLoadouts = false;          // When true, Loadout GUI allows preset loadouts only
 FADE_teleportToPlayerMode = 0;            // 0 = all players can teleport-to-player, 1 = SL/admin/Zeus only

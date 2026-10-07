@@ -5,7 +5,7 @@ FADE_applyScenarioSettings = {
     // Scenario GUI sends one wrapped array so remoteExec always delivers a single _this (reliable with many args on dedicated servers).
     params ["_args"];
     if !(_args isEqualType []) exitWith {};
-    _args params ["_hour", "_weather", "_enemyFaction", "_friendlyFaction", "_civFaction", ["_limitGear", false], ["_presetOnly", false], ["_player", objNull], ["_patrolsEnabled", true], ["_enemySkill", 0.0], ["_enemyRouting", 0], ["_enemyAAA", "Off"], ["_civiliansEnabled", true], ["_aoStrength", "Medium"], ["_timeCompressionScale", 1], ["_opforPopulationSetting", "Low"], ["_teleportToPlayerMode", 0], ["_opforLauncherSetting", "Normal"], ["_opforAirSetting", "Off"], ["_operationZoneCount", 6], ["_weatherParams", []], ["_civGlobalMaxAlive", 55], ["_civDensityScale", 1], ["_civTalkInterpretersOnly", false], ["_intelSpecialistsOnly", false], ["_opforDroneSetting", "Off"], ["_opforPatrolTownChanceSetting", "Low"]];
+    _args params ["_hour", "_weather", "_enemyFaction", "_friendlyFaction", "_civFaction", ["_limitGear", false], ["_presetOnly", false], ["_player", objNull], ["_patrolsEnabled", true], ["_enemySkill", 0.0], ["_enemyRouting", 0], ["_enemyAAA", "Off"], ["_civiliansEnabled", true], ["_aoStrength", "Medium"], ["_timeCompressionScale", 1], ["_opforPopulationSetting", "Low"], ["_teleportToPlayerMode", 0], ["_opforLauncherSetting", "Normal"], ["_opforAirSetting", "Off"], ["_operationZoneCount", 6], ["_weatherParams", []], ["_civGlobalMaxAlive", 55], ["_civDensityScale", 1], ["_civTalkInterpretersOnly", false], ["_intelSpecialistsOnly", false], ["_opforDroneSetting", "Off"], ["_opforPatrolTownChanceSetting", "Low"], ["_opforGrenadeSetting", "Reduced"], ["_opforPlayerScale", true]];
     if (!([_player] call FADE_playerCanUseScenarioGui)) exitWith {
         if (!isNull _player) then {
             ["Scenario access denied by lobby settings."] remoteExec ["systemChat", _player];
@@ -20,6 +20,7 @@ FADE_applyScenarioSettings = {
     private _prevCivCap = missionNamespace getVariable ["FADE_civGlobalMaxAlive", 55];
     private _prevCivDen = missionNamespace getVariable ["FADE_civDensityScale", 1];
     private _prevLauncher = missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"];
+    private _prevGrenade = missionNamespace getVariable ["FADE_opforGrenadeSetting", "Reduced"];
     private _prevOpforAir = missionNamespace getVariable ["FADE_opforAirSetting", "Off"];
     private _prevOpforDrone = missionNamespace getVariable ["FADE_opforDroneSetting", "Off"];
     private _normalized = [_friendlyFaction, _enemyFaction] call FADE_normalizeScenarioFactions;
@@ -54,6 +55,8 @@ FADE_applyScenarioSettings = {
     _opforAirSetting = [_opforAirSetting] call FADE_normalizeOpforThreatSetting;
     _opforDroneSetting = [_opforDroneSetting] call FADE_normalizeOpforThreatSetting;
     _opforLauncherSetting = [_opforLauncherSetting] call FADE_normalizeOpforLauncherSetting;
+    _opforGrenadeSetting = [_opforGrenadeSetting] call FADE_normalizeOpforGrenadeSetting;
+    _opforPlayerScale = _opforPlayerScale isEqualTo true || { _opforPlayerScale isEqualTo 1 };
     _operationZoneCount = (round _operationZoneCount) max 2 min 10;
     private _civRefreshNeeded = (_civFaction != _prevCiv)
         || { _civiliansEnabled != _prevCiviliansEnabled }
@@ -88,6 +91,8 @@ FADE_applyScenarioSettings = {
     missionNamespace setVariable ["FADE_limitToPresetLoadouts", _presetOnly];
     missionNamespace setVariable ["FADE_opforPopulationSetting", _opforPopulationSetting, true];
     missionNamespace setVariable ["FADE_opforLauncherSetting", _opforLauncherSetting, true];
+    missionNamespace setVariable ["FADE_opforGrenadeSetting", _opforGrenadeSetting, true];
+    missionNamespace setVariable ["FADE_opforPlayerScale", _opforPlayerScale, true];
     missionNamespace setVariable ["FADE_opforAirSetting", _opforAirSetting, true];
     missionNamespace setVariable ["FADE_opforDroneSetting", _opforDroneSetting, true];
     missionNamespace setVariable ["FADE_operationZoneCount", _operationZoneCount, true];
@@ -144,6 +149,78 @@ FADE_applyScenarioSettings = {
         if (_friendlyUnits isEqualTo [] && { _friendlyFaction isEqualTo "BLU_F" }) then {
             _friendlyUnits = [+(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"]])] call FADE_filterInfantryManClasses;
         };
+        private _getDn = missionNamespace getVariable ["FADE_getFactionDisplayName", { _this select 0 }];
+        private _factionReverted = false;
+        if (_friendlyUnits isEqualTo [] && { _friendlyFaction != _prevAppliedFriendly }) then {
+            if (!isNull _player) then {
+                [
+                    format [
+                        "Friendly faction %1 has no infantry. Kept %2.",
+                        [_friendlyFaction] call _getDn,
+                        [_prevAppliedFriendly] call _getDn
+                    ]
+                ] remoteExec ["systemChat", _player];
+            };
+            _friendlyFaction = _prevAppliedFriendly;
+            _friendlySideNum = [_friendlyFaction, 1] call FADE_getFactionSideNum;
+            _friendlyUnits = [_friendlyFaction, _friendlySideNum] call FADE_getUnitsForFaction;
+            if (_friendlyUnits isEqualTo [] && { _friendlyFaction isEqualTo "BLU_F" }) then {
+                _friendlyUnits = +(missionNamespace getVariable ["FADE_fallbackFriendlyUnits", ["B_Soldier_TL_F", "B_Soldier_F", "B_Soldier_AR_F", "B_medic_F"]]);
+            };
+            _friendlyUnits = [_friendlyUnits] call FADE_filterUnitsArmed;
+            _friendlyUnits = [_friendlyUnits, _friendlyFaction, _friendlySideNum, true] call FADE_filterUnitsForScenarioFactionSafe;
+            _friendlyUnits = [_friendlyUnits] call FADE_filterInfantryManClasses;
+            missionNamespace setVariable ["FADE_scenarioFriendlyFaction", _friendlyFaction, true];
+            missionNamespace setVariable ["FADE_scenarioFriendlySideNum", _friendlySideNum, true];
+            missionNamespace setVariable ["FADE_sideFriendly", [_friendlySideNum] call FADE_sideNumToSide, true];
+            missionNamespace setVariable ["FADE_markerColorFriendly", ([_friendlySideNum] call FADE_markerColorForSideNum), true];
+            _factionReverted = true;
+        };
+        if (_enemyUnits isEqualTo [] && { _enemyFaction != _prevAppliedEnemy }) then {
+            if (!isNull _player) then {
+                [
+                    format [
+                        "Enemy faction %1 has no infantry. Kept %2.",
+                        [_enemyFaction] call _getDn,
+                        [_prevAppliedEnemy] call _getDn
+                    ]
+                ] remoteExec ["systemChat", _player];
+            };
+            _enemyFaction = _prevAppliedEnemy;
+            _enemySideNum = [_enemyFaction, 0] call FADE_getFactionSideNum;
+            _enemyUnits = [_enemyFaction, _enemySideNum] call FADE_getUnitsForFaction;
+            if (_enemyUnits isEqualTo [] && { _enemyFaction isEqualTo "OPF_F" }) then {
+                _enemyUnits = +(missionNamespace getVariable ["FADE_fallbackEnemyUnits", ["O_Soldier_TL_F", "O_Soldier_F", "O_Soldier_AR_F"]]);
+            };
+            _enemyUnits = [_enemyUnits] call FADE_filterUnitsArmed;
+            _enemyUnits = [_enemyUnits] call FADE_filterEnemyUnitsByLauncherPolicy;
+            _enemyUnits = [_enemyUnits, _enemyFaction, _enemySideNum, false] call FADE_filterUnitsForScenarioFactionSafe;
+            missionNamespace setVariable ["FADE_scenarioEnemyFaction", _enemyFaction, true];
+            missionNamespace setVariable ["FADE_scenarioEnemySideNum", _enemySideNum, true];
+            missionNamespace setVariable ["FADE_sideEnemy", [_enemySideNum] call FADE_sideNumToSide, true];
+            missionNamespace setVariable ["FADE_markerColorEnemy", ([_enemySideNum] call FADE_markerColorForSideNum), true];
+            _factionReverted = true;
+        };
+        if (_civUnits isEqualTo [] && { _civFaction != _prevCiv }) then {
+            if (!isNull _player) then {
+                [
+                    format [
+                        "Civilian faction %1 has no units. Kept %2.",
+                        [_civFaction] call _getDn,
+                        [_prevCiv] call _getDn
+                    ]
+                ] remoteExec ["systemChat", _player];
+            };
+            _civFaction = _prevCiv;
+            _civUnits = [_civFaction, 3] call FADE_getUnitsForFaction;
+            _civVehicles = [_civFaction] call FADE_getCivVehiclesForFaction;
+            missionNamespace setVariable ["FADE_scenarioCivFaction", _civFaction, true];
+            _factionReverted = true;
+        };
+        if (_factionReverted) then {
+            call FADE_applyScenarioFactionSideSync;
+        };
+        _factionsChanged = (_friendlyFaction != _prevAppliedFriendly) || { _enemyFaction != _prevAppliedEnemy };
         // #region agent log
         diag_log format [
             "[FAC DbgBrowser 62d308] H8 applyFriendlyUnits faction=%1 count=%2 sample=%3",
@@ -207,8 +284,8 @@ FADE_applyScenarioSettings = {
     missionNamespace setVariable ["FADE_scenarioAppliedEnemyFaction", _enemyFaction, true];
 
     if (_factionsChanged) then {
-        [_prevFriendlySide, _prevEnemySide, _civRefreshNeeded, _weatherParams, _weather, _opforLauncherSetting, _prevLauncher] spawn {
-            params ["_friendlySide", "_enemySide", "_civRefresh", "_weatherParams", "_weather", "_launcher", "_prevLauncher"];
+        [_prevFriendlySide, _prevEnemySide, _civRefreshNeeded, _weatherParams, _weather, _opforLauncherSetting, _prevLauncher, _opforGrenadeSetting, _prevGrenade] spawn {
+            params ["_friendlySide", "_enemySide", "_civRefresh", "_weatherParams", "_weather", "_launcher", "_prevLauncher", "_opforGrenadeSetting", "_prevGrenade"];
             if ((count _weatherParams) >= 9) then {
                 missionNamespace setVariable ["FADE_scenarioWeatherParams", _weatherParams, true];
                 [_weatherParams] call FADE_applyWeatherFromParams;
@@ -231,12 +308,13 @@ FADE_applyScenarioSettings = {
                 };
             };
             if (_launcher != _prevLauncher) then { [] call FADE_reapplyOpforLauncherPolicyToAliveEnemy };
+            if (_opforGrenadeSetting != _prevGrenade) then { [] call FADE_reapplyOpforGrenadePolicyToAliveEnemy };
             [_friendlySide, _enemySide] call FADE_despawnScenarioWorldUnits;
             if (!isNil "FADE_aaa_applyLevel") then { call FADE_aaa_applyLevel };
         };
     } else {
-        [_civRefreshNeeded, _weatherParams, _weather, _opforLauncherSetting, _prevLauncher] spawn {
-            params ["_civRefresh", "_weatherParams", "_weather", "_launcher", "_prevLauncher"];
+        [_civRefreshNeeded, _weatherParams, _weather, _opforLauncherSetting, _prevLauncher, _opforGrenadeSetting, _prevGrenade] spawn {
+            params ["_civRefresh", "_weatherParams", "_weather", "_launcher", "_prevLauncher", "_opforGrenadeSetting", "_prevGrenade"];
             if ((count _weatherParams) >= 9) then {
                 missionNamespace setVariable ["FADE_scenarioWeatherParams", _weatherParams, true];
                 [_weatherParams] call FADE_applyWeatherFromParams;
@@ -259,6 +337,7 @@ FADE_applyScenarioSettings = {
                 };
             };
             if (_launcher != _prevLauncher) then { [] call FADE_reapplyOpforLauncherPolicyToAliveEnemy };
+            if (_opforGrenadeSetting != _prevGrenade) then { [] call FADE_reapplyOpforGrenadePolicyToAliveEnemy };
             if (!isNil "FADE_aaa_applyLevel") then { call FADE_aaa_applyLevel };
         };
     };

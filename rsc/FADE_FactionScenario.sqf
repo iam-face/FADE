@@ -87,15 +87,31 @@ FADE_collectFactionsForSideNums = {
     +_result
 };
 
+// Prefer the server-published rows (infantry only). Fall back to a local config scan before that list arrives.
+FADE_factionRowsForSideNums = {
+    params [["_sideNums", []]];
+    if (_sideNums isEqualType 0) then { _sideNums = [_sideNums] };
+    if (!(_sideNums isEqualType [])) then { _sideNums = [] };
+    private _rows = missionNamespace getVariable ["FADE_factionChoiceRows", []];
+    if (_rows isEqualTo []) exitWith { [_sideNums] call FADE_collectFactionsForSideNums };
+    private _out = [];
+    {
+        if ((_x select 2) in _sideNums) then {
+            _out pushBack [_x select 0, _x select 1];
+        };
+    } forEach _rows;
+    _out
+};
+
 FADE_getPlayableFactions = {
-    [FADE_playableFactionSideNums] call FADE_collectFactionsForSideNums
+    [FADE_playableFactionSideNums] call FADE_factionRowsForSideNums
 };
 
 FADE_getEnemyFactionsForFriendlyFaction = {
     params ["_friendlyFaction"];
     private _fsn = [_friendlyFaction, 1] call FADE_getFactionSideNum;
     private _opposed = [_fsn] call FADE_getOpposedSideNums;
-    [_opposed] call FADE_collectFactionsForSideNums
+    [_opposed] call FADE_factionRowsForSideNums
 };
 
 FADE_pickDefaultEnemyFactionForFriendly = {

@@ -190,13 +190,17 @@ FADE_counterAttack_spawnFootWave = {
         ["footWave aborted badArgs task=%1 objCount=%2 enemyUnits=%3", _taskId, count _objectivePos, count _enemyUnits] call FADE_qrfDbgLog;
     };
     private _sideEnemy = missionNamespace getVariable ["FADE_sideEnemy", east];
-    private _sqMin = (missionNamespace getVariable ["FADE_counterAttackFootSquadsMin", 2]) max 1;
-    private _sqMax = (missionNamespace getVariable ["FADE_counterAttackFootSquadsMax", 3]) max _sqMin;
+    private _sqMinRaw = (missionNamespace getVariable ["FADE_counterAttackFootSquadsMin", 2]) max 1;
+    private _sqMaxRaw = (missionNamespace getVariable ["FADE_counterAttackFootSquadsMax", 3]) max _sqMinRaw;
+    private _sqMin = [_sqMinRaw, 1] call FADE_scaleOpforCount;
+    private _sqMax = [_sqMaxRaw, _sqMin] call FADE_scaleOpforCount;
     // Floor keeps standoff even if older ConfigDefaults (80–220) is still published to missionNamespace.
     private _distMin = (missionNamespace getVariable ["FADE_counterAttackFootSpawnDistMin", 280]) max 250;
     private _distMax = (missionNamespace getVariable ["FADE_counterAttackFootSpawnDistMax", 450]) max (_distMin + 80);
-    private _sizeMin = (missionNamespace getVariable ["FADE_counterAttackFootSquadSizeMin", 4]) max 2;
-    private _sizeMax = (missionNamespace getVariable ["FADE_counterAttackFootSquadSizeMax", 6]) max _sizeMin;
+    private _sizeMinRaw = (missionNamespace getVariable ["FADE_counterAttackFootSquadSizeMin", 4]) max 2;
+    private _sizeMaxRaw = (missionNamespace getVariable ["FADE_counterAttackFootSquadSizeMax", 6]) max _sizeMinRaw;
+    private _sizeMin = [_sizeMinRaw, 1] call FADE_scaleOpforCount;
+    private _sizeMax = [_sizeMaxRaw, _sizeMin] call FADE_scaleOpforCount;
     private _bldChance = (missionNamespace getVariable ["FADE_counterAttackFootBuildingChance", 0.4]) min 0.45;
     private _minFromPlayers = (missionNamespace getVariable ["FADE_counterAttackFootMinDistFromPlayers", 150]) max 80;
     private _numSquads = _sqMin + floor random (1 + _sqMax - _sqMin);
@@ -325,7 +329,7 @@ FADE_counterAttackStart = {
     if (_firstMax < _firstMin) then { _firstMax = _firstMin };
     private _betMin = missionNamespace getVariable ["FADE_counterAttackBetweenMin", 540];
     private _betMax = missionNamespace getVariable ["FADE_counterAttackBetweenMax", 660];
-    private _numTrucks = (missionNamespace getVariable ["FADE_counterAttackTruckCount", 3]) max 1;
+    private _numTrucks = [((missionNamespace getVariable ["FADE_counterAttackTruckCount", 3]) max 1), 1] call FADE_scaleOpforCount;
     private _pollInterval = (missionNamespace getVariable ["FADE_counterAttackPollInterval", 10]) max 1;
     private _applyGrp = missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}];
     if (_applyGrp isEqualTo {}) exitWith {
@@ -380,7 +384,7 @@ FADE_counterAttackStart = {
                 ["endedBeforeQrf task=%1 (skipDetection)", _taskId] call FADE_qrfDbgLog;
             };
         };
-        private _maxWaves = if (_ambientSingleWave) then { 1 } else { 1 + floor random 3 };
+        private _maxWaves = if (_ambientSingleWave) then { 1 } else { [1 + floor random 3, 1] call FADE_scaleOpforCount };
         ["plan task=%1 maxWaves=%2 footWave=%3", _taskId, _maxWaves, _footWave] call FADE_qrfDbgLog;
         if (_footWave) then {
             [_taskId, _objectivePos, _enemyUnits, _allGroups, _applyGrp] call FADE_counterAttack_spawnFootWave;
@@ -564,7 +568,7 @@ FADE_counterAttackStart = {
             };
             if (count _vehPick == 0) exitWith {
                 ["vehicleWave infantryFallback task=%1 (no cargo trucks) road=%2", _taskId, _roadPos] call FADE_qrfDbgLog;
-                private _sz = 4 + floor random 4;
+                private _sz = [4 + floor random 4, 1] call FADE_scaleOpforCount;
                 private _cls = (_enemyUnits select [0, _sz min count _enemyUnits]);
                 for "_k" from (count _cls) to (_sz - 1) do { _cls pushBack (_enemyUnits select 0) };
                 private _grp = [_roadPos, _sideEnemy, _cls] call BIS_fnc_spawnGroup;

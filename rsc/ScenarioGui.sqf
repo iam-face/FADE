@@ -48,6 +48,7 @@ FAC_scenarioGui_factionsContentIdcs = [
     60910, 60911, 60912, 60913, 60914, 60915, 60916, 60917, 60918, 60919, 60920, 60921,
     60870, 60871, 60872, 60873, 60874, 60875, 60876, 60877, 60878, 60879, 60880,
     60881, 60882, 60883, 60884, 60886, 60887, 60888, 60889, 60890, 60891, 60892, 60893, 60894, 60957,
+    60985, 60986, 60987, 60988, 60989, 60990, 60991, 60992,
     60958, 60959, 60960, 60961, 60962,
     60980, 60981, 60982, 60983, 60984,
     60310, 60311, 60312
@@ -66,7 +67,7 @@ FAC_scenarioGui_getFactionDisplayName = {
 
 FAC_scenarioGui_getFactionsForSide = {
     params ["_sideNum"];
-    [_sideNum] call FADE_collectFactionsForSideNums
+    [_sideNum] call FADE_factionRowsForSideNums
 };
 
 FAC_scenarioGui_rebuildEnemyFactionList = {
@@ -505,6 +506,32 @@ FAC_scenarioGui_syncAAABtns = {
     } forEach _map;
 };
 
+FAC_scenarioGui_syncGrenadeBtns = {
+    private _d = findDisplay FAC_scenarioGui_IDD;
+    if (isNull _d) exitWith {};
+    private _v = [missionNamespace getVariable ["FAC_scenarioGui_grenade", "Reduced"]] call FADE_normalizeOpforGrenadeSetting;
+    private _map = [["Normal", 60986], ["Reduced", 60987], ["Minimal", 60988], ["None", 60989]];
+    {
+        _x params ["_name", "_idc"];
+        private _c = _d displayCtrl _idc;
+        if (!isNull _c) then {
+            [_c, _name == _v] call FAC_theme_applyTab;
+        };
+    } forEach _map;
+};
+
+FAC_scenarioGui_syncPlayerScaleBtns = {
+    private _d = findDisplay FAC_scenarioGui_IDD;
+    if (isNull _d) exitWith {};
+    private _on = missionNamespace getVariable ["FAC_scenarioGui_playerScale", true];
+    private _b0 = _d displayCtrl 60991;
+    private _b1 = _d displayCtrl 60992;
+    if (!isNull _b0 && { !isNull _b1 }) then {
+        [_b0, !_on] call FAC_theme_applyTab;
+        [_b1, _on] call FAC_theme_applyTab;
+    };
+};
+
 FAC_scenarioGui_syncLauncherBtns = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
@@ -709,6 +736,8 @@ FAC_scenarioGui_fnc = {
             };
             missionNamespace setVariable ["FAC_scenarioGui_aaa", _aaaNorm];
             missionNamespace setVariable ["FAC_scenarioGui_launcher", missionNamespace getVariable ["FADE_opforLauncherSetting", "Normal"]];
+            missionNamespace setVariable ["FAC_scenarioGui_grenade", [missionNamespace getVariable ["FADE_opforGrenadeSetting", "Reduced"]] call FADE_normalizeOpforGrenadeSetting];
+            missionNamespace setVariable ["FAC_scenarioGui_playerScale", missionNamespace getVariable ["FADE_opforPlayerScale", true]];
             missionNamespace setVariable ["FAC_scenarioGui_opforPop", missionNamespace getVariable ["FADE_opforPopulationSetting", "Low"]];
             missionNamespace setVariable ["FAC_scenarioGui_patrolTownChance", missionNamespace getVariable ["FADE_opforPatrolTownChanceSetting", "Low"]];
             missionNamespace setVariable ["FAC_scenarioGui_opforAir", [missionNamespace getVariable ["FADE_opforAirSetting", "Off"]] call FADE_normalizeOpforThreatSetting];
@@ -818,6 +847,8 @@ FAC_scenarioGui_fnc = {
             [] call FAC_scenarioGui_syncRoutingBtns;
             [] call FAC_scenarioGui_syncAAABtns;
             [] call FAC_scenarioGui_syncLauncherBtns;
+            [] call FAC_scenarioGui_syncGrenadeBtns;
+            [] call FAC_scenarioGui_syncPlayerScaleBtns;
             [] call FAC_scenarioGui_syncOpforPopBtns;
             [] call FAC_scenarioGui_syncPatrolTownChanceBtns;
             [] call FAC_scenarioGui_syncOpforAirBtns;
@@ -954,6 +985,16 @@ FAC_scenarioGui_fnc = {
             _params params ["_v"];
             missionNamespace setVariable ["FAC_scenarioGui_launcher", _v];
             [] call FAC_scenarioGui_syncLauncherBtns;
+        };
+        case "setGrenade": {
+            _params params ["_v"];
+            missionNamespace setVariable ["FAC_scenarioGui_grenade", [_v] call FADE_normalizeOpforGrenadeSetting];
+            [] call FAC_scenarioGui_syncGrenadeBtns;
+        };
+        case "setPlayerScale": {
+            _params params ["_on"];
+            missionNamespace setVariable ["FAC_scenarioGui_playerScale", _on];
+            [] call FAC_scenarioGui_syncPlayerScaleBtns;
         };
         case "setOpforPop": {
             _params params ["_v"];
@@ -1092,6 +1133,8 @@ FAC_scenarioGui_fnc = {
             private _enemyRouting = if (missionNamespace getVariable ["FAC_scenarioGui_routing", false]) then { 0.5 } else { 0 };
             private _enemyAAA = missionNamespace getVariable ["FAC_scenarioGui_aaa", "Off"];
             private _opforLauncherSetting = missionNamespace getVariable ["FAC_scenarioGui_launcher", "Normal"];
+            private _opforGrenadeSetting = [missionNamespace getVariable ["FAC_scenarioGui_grenade", "Reduced"]] call FADE_normalizeOpforGrenadeSetting;
+            private _opforPlayerScale = missionNamespace getVariable ["FAC_scenarioGui_playerScale", true];
             private _opforAirSetting = [missionNamespace getVariable ["FAC_scenarioGui_opforAir", "Off"]] call FADE_normalizeOpforThreatSetting;
             private _opforDroneSetting = [missionNamespace getVariable ["FAC_scenarioGui_opforDrone", "Off"]] call FADE_normalizeOpforThreatSetting;
             private _opforPopulationSetting = missionNamespace getVariable ["FAC_scenarioGui_opforPop", "Low"];
@@ -1130,6 +1173,8 @@ FAC_scenarioGui_fnc = {
             missionNamespace setVariable ["FADE_opforPatrolTownChanceSetting", _opforPatrolTownChanceSetting];
             missionNamespace setVariable ["FADE_enemyPatrolTownChance", [_opforPatrolTownChanceSetting] call FADE_resolveOpforPatrolTownChance];
             missionNamespace setVariable ["FADE_opforLauncherSetting", _opforLauncherSetting];
+            missionNamespace setVariable ["FADE_opforGrenadeSetting", _opforGrenadeSetting];
+            missionNamespace setVariable ["FADE_opforPlayerScale", _opforPlayerScale];
             missionNamespace setVariable ["FADE_opforAirSetting", _opforAirSetting];
             missionNamespace setVariable ["FADE_opforDroneSetting", _opforDroneSetting];
             missionNamespace setVariable ["FADE_operationZoneCount", _operationZoneCount];
@@ -1154,7 +1199,7 @@ FAC_scenarioGui_fnc = {
                 _opforAirSetting, _operationZoneCount, _weatherParams,
                 _civGlobalMaxAlive, _civDensityScale,
                 _civTalkInterpretersOnly, _intelSpecialistsOnly, _opforDroneSetting,
-                _opforPatrolTownChanceSetting
+                _opforPatrolTownChanceSetting, _opforGrenadeSetting, _opforPlayerScale
             ];
             [_scenarioApplyArgs] remoteExec ["FADE_applyScenarioSettings", 2];
             closeDialog 0;
