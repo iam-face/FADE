@@ -253,6 +253,60 @@ FADE_collectUnitsByFactionTokenFromSidePool = {
 missionNamespace setVariable ["FADE_collectGroupUnitClasses", FADE_collectGroupUnitClasses];
 missionNamespace setVariable ["FADE_collectCfgGroupUnitsDeep", FADE_collectCfgGroupUnitsDeep];
 
+// One walk of every CfgGroups root (East, West, Indep, and mod roots). Keyed by the group faction class.
+FADE_groupUnitsByFactionKey = createHashMap;
+{
+    private _sideRoot = _x;
+    {
+        private _facName = configName _x;
+        if (_facName == "") then { continue };
+        private _units = [_x] call FADE_collectCfgGroupUnitsDeep;
+        if (_units isEqualTo []) then { continue };
+        private _have = FADE_groupUnitsByFactionKey getOrDefault [_facName, []];
+        { _have pushBackUnique _x } forEach _units;
+        FADE_groupUnitsByFactionKey set [_facName, _have];
+    } forEach ("true" configClasses _sideRoot);
+} forEach ("true" configClasses (configFile >> "CfgGroups"));
+
+// True when one faction class is the other plus an underscore suffix (parent/child sub-faction).
+FADE_factionKeysShareStem = {
+    params ["_a", "_b"];
+    if (!(_a isEqualType "") || { !(_b isEqualType "") } || { _a == "" } || { _b == "" } || { _a == _b }) exitWith { false };
+    if (count _a < 4 || { count _b < 4 }) exitWith { false };
+    (_b find _a == 0 && { _b select [count _a, 1] == "_" })
+        || { _a find _b == 0 && { _a select [count _b, 1] == "_" } }
+};
+
+FADE_groupUnitsForFactionKey = {
+    params ["_faction"];
+    if (!(_faction isEqualType "") || { _faction == "" }) exitWith { [] };
+    if (isNil "FADE_groupUnitsByFactionKey") exitWith { [] };
+    private _exact = FADE_groupUnitsByFactionKey getOrDefault [_faction, []];
+    if !(_exact isEqualTo []) exitWith { +_exact };
+    private _best = "";
+    private _bestLen = 0;
+    {
+        private _key = _x;
+        if ([_faction, _key] call FADE_factionKeysShareStem && { count _key > _bestLen }) then {
+            _best = _key;
+            _bestLen = count _key;
+        };
+    } forEach (keys FADE_groupUnitsByFactionKey);
+    if (_best == "") exitWith { [] };
+    +(FADE_groupUnitsByFactionKey getOrDefault [_best, []])
+};
+
+FADE_classesOnSide = {
+    params ["_classes", "_sideNum"];
+    if !(_classes isEqualType []) exitWith { [] };
+    private _cfgRoot = configFile >> "CfgVehicles";
+    _classes select {
+        _x isEqualType "" && { isClass (_cfgRoot >> _x) } && { getNumber (_cfgRoot >> _x >> "side") == _sideNum }
+    }
+};
+missionNamespace setVariable ["FADE_factionKeysShareStem", FADE_factionKeysShareStem];
+missionNamespace setVariable ["FADE_groupUnitsForFactionKey", FADE_groupUnitsForFactionKey];
+
 // Friendly group callsigns for RATEL-style sideChat (e.g. "Bravo 1-2")
 FADE_friendlyCallsignPhonetics = ["Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel"];
 FADE_assignGroupCallsign = {
@@ -316,28 +370,14 @@ FADE_getUnitsForFaction = {
         // `faction` property in CfgVehicles, causing the cache lookup to fail - but CfgGroups
         // is explicitly authored per faction and is much more reliable.
         private _out = [];
-
-        // CfgGroups side category names for each numeric side
-        private _sideCategories = switch (_sideNum) do {
-            case 0: { ["East", "Opfor"] };
-            case 1: { ["West", "Blufor"] };
-            case 2: { ["Guerrilla", "Independent", "Resistance", "Indfor"] };
-            default { ["East", "West", "Guerrilla"] };
-        };
-
-        // 1) CfgGroups: deep walk (RHS/mod nested categories); match faction name or token in sibling faction keys.
         private _token = [_faction] call FADE_factionUnitSearchToken;
-        {
-            private _sideRoot = configFile >> "CfgGroups" >> _x;
-            if (!isClass _sideRoot) then { continue };
-            {
-                private _facCfg = _x;
-                private _facName = configName _facCfg;
-                private _nameMatch = (_facName == _faction) || { count _token >= 3 && { toLower _facName find _token >= 0 } };
-                if (!_nameMatch) then { continue };
-                _out append ([_facCfg] call FADE_collectCfgGroupUnitsDeep);
-            } forEach ("true" configClasses _sideRoot);
-        } forEach _sideCategories;
+
+        // 1) CfgGroups index (every side root, including Indep) plus parent/child faction keys.
+        private _fromGroups = [_faction] call FADE_groupUnitsForFactionKey;
+        if !(_fromGroups isEqualTo []) then {
+            private _sided = [_fromGroups, _sideNum] call FADE_classesOnSide;
+            _out = if (_sided isEqualTo []) then { _fromGroups } else { _sided };
+        };
 
         // 2) Fallback: cache keyed by faction+sideNum, then addon-filtered side pool (mod units often use parent faction in CfgVehicles)
         if (_out isEqualTo []) then {
@@ -530,6 +570,26 @@ FADE_getFactionDisplayName = {
 };
 missionNamespace setVariable ["FADE_getFactionDisplayName", FADE_getFactionDisplayName];
 publicVariable "FADE_getFactionDisplayName";
+
+// Server-authoritative faction lists: only classes that resolve at least one infantry soldier.
+FADE_publishFactionChoiceRows = {
+    if (!isServer) exitWith {};
+    private _rows = [];
+    {
+        private _cfg = _x;
+        private _sn = getNumber (_cfg >> "side");
+        if !(_sn in [0, 1, 2, 3]) then { continue };
+        private _faction = configName _cfg;
+        private _units = [_faction, _sn] call FADE_getUnitsForFaction;
+        if (_units isEqualTo []) then { continue };
+        _rows pushBack [[_faction] call FADE_getFactionDisplayName, _faction, _sn];
+    } forEach ("true" configClasses (configFile >> "CfgFactionClasses"));
+    _rows sort true;
+    _rows = _rows apply { [_x select 1, _x select 0, _x select 2] };
+    missionNamespace setVariable ["FADE_factionChoiceRows", _rows, true];
+    diag_log format ["[FAC] Faction choice rows: %1 with infantry", count _rows];
+};
+call FADE_publishFactionChoiceRows;
 FADE_sideNumToSide = {
     params ["_n"];
     switch (_n) do {
@@ -652,18 +712,51 @@ FADE_resolveOpforPopulationScale = {
     }
 };
 
-// Scale an OPFOR count with current scenario multiplier.
+FADE_countScenarioFriendlyPlayers = {
+    private _n = 0;
+    {
+        if (alive _x && { isPlayer _x } && { [_x] call FADE_isScenarioFriendlyUnit }) then { _n = _n + 1 };
+    } forEach allPlayers;
+    _n
+};
+
+// Anchor written mission baselines at about six players. 0 players (boot) stays 1.
+FADE_opforPlayerScaleForCount = {
+    params ["_n"];
+    if !(missionNamespace getVariable ["FADE_opforPlayerScale", true]) exitWith { 1 };
+    _n = round _n;
+    if (_n <= 0) exitWith { 1 };
+    if (_n <= 1) exitWith { 0.55 };
+    if (_n == 2) exitWith { 0.70 };
+    if (_n <= 4) exitWith { 0.85 };
+    if (_n <= 8) exitWith { 1 };
+    if (_n <= 12) exitWith { 1.15 };
+    1.25
+};
+
+FADE_opforPlayerScaleFactor = {
+    private _n = [] call FADE_countScenarioFriendlyPlayers;
+    [_n] call FADE_opforPlayerScaleForCount
+};
+
+// Scale an OPFOR count with the population multiplier and, when enabled, player count.
 FADE_scaleOpforCount = {
     params ["_baseCount", ["_minCount", 1], ["_maxCount", -1]];
     private _base = floor (_baseCount max 0);
     if (_base <= 0) exitWith { 0 };
-    private _scale = missionNamespace getVariable ["FADE_opforPopulationScale", 1];
-    private _scaled = ceil (_base * _scale);
-    if (_scaled < _minCount) then { _scaled = _minCount };
+    private _pop = missionNamespace getVariable ["FADE_opforPopulationScale", 1];
+    private _playerFactor = [] call FADE_opforPlayerScaleFactor;
+    private _scaled = ceil (_base * _pop * _playerFactor);
+    private _minUse = _minCount;
+    if ((missionNamespace getVariable ["FADE_opforPlayerScale", true]) && { _playerFactor < 1 } && { _minCount > 0 }) then {
+        _minUse = (ceil (_minCount * _playerFactor)) max 1;
+    };
+    if (_scaled < _minUse) then { _scaled = _minUse };
     if (_maxCount >= 0 && { _scaled > _maxCount }) then { _scaled = _maxCount };
     _scaled
 };
 publicVariable "FADE_scaleOpforCount";
+publicVariable "FADE_opforPlayerScaleForCount";
 
 // AI radio lines: replicate to clients so dedicated players see BLUFOR/OPFOR lines (P15).
 FADE_aiSideChat = {
@@ -789,7 +882,110 @@ FADE_applyOpforLauncherPolicyToUnit = {
 };
 publicVariable "FADE_applyOpforLauncherPolicyToUnit";
 
-// Enemy group skill/routing/launcher policy from Scenario (Missions / AO / Operation / roadblocks / counter-attack).
+// Thrown HE, under-barrel HE, and dedicated grenade launchers. Smoke, flares, and chemlights stay.
+// isKindOf config form: https://community.bistudio.com/wiki/isKindOf (syntax 3). Syntax 2 only searches CfgVehicles.
+FADE_cfgEntryIsKind = {
+    params ["_class", "_parent", "_root"];
+    if (!(_class isEqualType "") || { _class == "" }) exitWith { false };
+    _class isKindOf [_parent, _root]
+};
+
+FADE_magazineOpforGrenadeKind = {
+    params ["_mag"];
+    if (!(_mag isEqualType "") || { _mag == "" }) exitWith { "" };
+    private _magRoot = configFile >> "CfgMagazines";
+    private _ammoRoot = configFile >> "CfgAmmo";
+    if (!isClass (_magRoot >> _mag)) exitWith { "" };
+    private _ammo = getText (_magRoot >> _mag >> "ammo");
+    if ([_ammo, "SmokeShell", _ammoRoot] call FADE_cfgEntryIsKind) exitWith { "" };
+    if ([_ammo, "G_40mm_Smoke", _ammoRoot] call FADE_cfgEntryIsKind) exitWith { "" };
+    if (
+        ([_ammo, "GrenadeHand", _ammoRoot] call FADE_cfgEntryIsKind)
+        || { [_mag, "HandGrenade", _magRoot] call FADE_cfgEntryIsKind }
+    ) exitWith { "throw" };
+    if (
+        ([_ammo, "G_40mm_HE", _ammoRoot] call FADE_cfgEntryIsKind)
+        || { [_mag, "1Rnd_HE_Grenade_shell", _magRoot] call FADE_cfgEntryIsKind }
+    ) exitWith { "gl" };
+    ""
+};
+
+FADE_weaponIsDedicatedGrenadeLauncher = {
+    params ["_weapon"];
+    if (!(_weapon isEqualType "") || { _weapon == "" } || { _weapon in ["Throw", "Put"] }) exitWith { false };
+    [_weapon, "GrenadeLauncher", configFile >> "CfgWeapons"] call FADE_cfgEntryIsKind
+};
+
+FADE_trimUnitMagazines = {
+    params ["_unit", "_classes", "_keep"];
+    if (_keep < 0) exitWith {};
+    if (_keep == 0) exitWith {
+        { _unit removeMagazines _x } forEach (_classes arrayIntersect _classes);
+    };
+    private _excess = (count _classes) - _keep;
+    if (_excess <= 0) exitWith {};
+    { _unit removeMagazine _x } forEach (_classes select [0, _excess]);
+};
+
+FADE_applyOpforGrenadePolicyToUnit = {
+    params ["_unit"];
+    if (!isServer) exitWith {};
+    if (isNull _unit || { !alive _unit }) exitWith {};
+    private _enemySide = missionNamespace getVariable ["FADE_sideEnemy", east];
+    if (side _unit != _enemySide) exitWith {};
+    [_unit] spawn {
+        params ["_unit"];
+        private _enemySide2 = missionNamespace getVariable ["FADE_sideEnemy", east];
+        private _minimalKeep = random 1 <= 0.125;
+        {
+            sleep _x;
+            if (isNull _unit || { !alive _unit }) exitWith {};
+            if (side _unit != _enemySide2) exitWith {};
+            private _setting = [missionNamespace getVariable ["FADE_opforGrenadeSetting", "Reduced"]] call FADE_normalizeOpforGrenadeSetting;
+            if (_setting == "Normal") exitWith {};
+            private _throwKeep = 0;
+            private _glKeep = 0;
+            private _stripDedicated = false;
+            switch _setting do {
+                case "Reduced": { _throwKeep = 1; _glKeep = 2 };
+                case "Minimal": {
+                    if (_minimalKeep) then { _throwKeep = 1; _glKeep = 1 };
+                };
+                case "None": { _stripDedicated = true };
+            };
+            private _throw = [];
+            private _gl = [];
+            {
+                private _cls = _x param [0, ""];
+                private _kind = [_cls] call FADE_magazineOpforGrenadeKind;
+                if (_kind == "throw") then { _throw pushBack _cls };
+                if (_kind == "gl") then { _gl pushBack _cls };
+            } forEach (magazinesAmmoFull _unit);
+            [_unit, _throw, _throwKeep] call FADE_trimUnitMagazines;
+            [_unit, _gl, _glKeep] call FADE_trimUnitMagazines;
+            if (_stripDedicated) then {
+                {
+                    if ([_x] call FADE_weaponIsDedicatedGrenadeLauncher) then {
+                        _unit removeWeapon _x;
+                    };
+                } forEach (weapons _unit);
+            };
+        } forEach [0.15, 0.6, 1.5];
+    };
+};
+publicVariable "FADE_applyOpforGrenadePolicyToUnit";
+missionNamespace setVariable ["FADE_magazineOpforGrenadeKind", FADE_magazineOpforGrenadeKind];
+missionNamespace setVariable ["FADE_weaponIsDedicatedGrenadeLauncher", FADE_weaponIsDedicatedGrenadeLauncher];
+
+FADE_reapplyOpforGrenadePolicyToAliveEnemy = {
+    if (!isServer) exitWith {};
+    private _enemySide = missionNamespace getVariable ["FADE_sideEnemy", east];
+    {
+        if (alive _x && { side _x == _enemySide }) then { [_x] call FADE_applyOpforGrenadePolicyToUnit };
+    } forEach allUnits;
+};
+
+// Enemy group skill/routing/launcher/grenade policy from Scenario (Missions / AO / Operation / roadblocks / counter-attack).
 FAC_applyEnemyScenarioToGroup = {
     params ["_grp"];
     private _enemySide = missionNamespace getVariable ["FADE_sideEnemy", east];
@@ -813,6 +1009,9 @@ FAC_applyEnemyScenarioToGroup = {
     _grp allowFleeing _routing;
     if (!isNil "FADE_applyOpforLauncherPolicyToUnit") then {
         { [_x] call FADE_applyOpforLauncherPolicyToUnit } forEach units _grp;
+    };
+    if (!isNil "FADE_applyOpforGrenadePolicyToUnit") then {
+        { [_x] call FADE_applyOpforGrenadePolicyToUnit } forEach units _grp;
     };
 };
 missionNamespace setVariable ["FAC_applyEnemyScenarioToGroup", FAC_applyEnemyScenarioToGroup];

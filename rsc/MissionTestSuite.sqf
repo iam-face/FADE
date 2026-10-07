@@ -383,6 +383,54 @@ FAC_missionTestSuite_runServer = {
     _ok = _unitsE isEqualType [] && { count _unitsE > 0 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_getUnitsForFaction(enemy) (%1)", count _unitsE]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_getUnitsForFaction(enemy)"; };
 
+    private _indUnits = ["IND_F", 2] call FADE_getUnitsForFaction;
+    _ok = "I_soldier_F" in _indUnits;
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_getUnitsForFaction(IND_F)"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_getUnitsForFaction(IND_F)"; };
+
+    private _missingFaction = ["FADE_NO_SUCH_FACTION", 0] call FADE_getUnitsForFaction;
+    _ok = _missingFaction isEqualTo [];
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): empty faction stays empty"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): empty faction stays empty"; };
+
+    _ok = ["rhs_faction_usarmy", "rhs_faction_usarmy_wd"] call FADE_factionKeysShareStem
+        && { !(["IND_F", "IND_C_F"] call FADE_factionKeysShareStem) }
+        && { !(["BLU_F", "BLU_F"] call FADE_factionKeysShareStem) };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): faction stem match"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): faction stem match"; };
+
+    private _choiceRows = missionNamespace getVariable ["FADE_factionChoiceRows", []];
+    _ok = _choiceRows isEqualType [] && { { (_x select 0) == "BLU_F" } count _choiceRows > 0 } && { { (_x select 0) == "FADE_NO_SUCH_FACTION" } count _choiceRows == 0 };
+    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): faction choice rows (%1)", count _choiceRows]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): faction choice rows"; };
+
+    _ok = (["HandGrenade"] call FADE_magazineOpforGrenadeKind) == "throw"
+        && { (["SmokeShell"] call FADE_magazineOpforGrenadeKind) == "" }
+        && { (["1Rnd_HE_Grenade_shell"] call FADE_magazineOpforGrenadeKind) == "gl" }
+        && { (["1Rnd_Smoke_Grenade_shell"] call FADE_magazineOpforGrenadeKind) == "" }
+        && { !(["arifle_MX_GL_F"] call FADE_weaponIsDedicatedGrenadeLauncher) }
+        && { !(["launch_RPG32_F"] call FADE_weaponIsDedicatedGrenadeLauncher) };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): OPFOR grenade kind"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): OPFOR grenade kind"; };
+
+    private _scaleWas = missionNamespace getVariable ["FADE_opforPlayerScale", true];
+    private _popWas = missionNamespace getVariable ["FADE_opforPopulationScale", 1];
+    missionNamespace setVariable ["FADE_opforPlayerScale", true];
+    _ok = ([1] call FADE_opforPlayerScaleForCount) == 0.55
+        && { ([2] call FADE_opforPlayerScaleForCount) == 0.70 }
+        && { ([3] call FADE_opforPlayerScaleForCount) == 0.85 }
+        && { ([6] call FADE_opforPlayerScaleForCount) == 1 }
+        && { ([10] call FADE_opforPlayerScaleForCount) == 1.15 }
+        && { ([14] call FADE_opforPlayerScaleForCount) == 1.25 };
+    missionNamespace setVariable ["FADE_opforPlayerScale", false];
+    _ok = _ok && { ([1] call FADE_opforPlayerScaleForCount) == 1 };
+    missionNamespace setVariable ["FADE_opforPopulationScale", 1];
+    private _scaleOff = [10, 8] call FADE_scaleOpforCount;
+    private _savedPlayerFactor = FADE_opforPlayerScaleFactor;
+    FADE_opforPlayerScaleFactor = { 0.55 };
+    missionNamespace setVariable ["FADE_opforPlayerScale", true];
+    private _scaleShrunk = [8, 8] call FADE_scaleOpforCount;
+    FADE_opforPlayerScaleFactor = _savedPlayerFactor;
+    missionNamespace setVariable ["FADE_opforPlayerScale", _scaleWas];
+    missionNamespace setVariable ["FADE_opforPopulationScale", _popWas];
+    _ok = _ok && { _scaleOff == 10 } && { _scaleShrunk == 5 };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): OPFOR player scale"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): OPFOR player scale off=%1 shrunk=%2", _scaleOff, _scaleShrunk]; };
+
     private _ev = [_ef] call FADE_getEnemyVehiclesForFaction;
     _ok = _ev isEqualType [];
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_getEnemyVehiclesForFaction (%1)", count _ev]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_getEnemyVehiclesForFaction"; };

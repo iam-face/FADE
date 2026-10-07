@@ -34,12 +34,14 @@ FAC_LOBBY_IDX_AO_STRENGTH        = 18;
 // OPFOR
 FAC_LOBBY_IDX_OPFOR_AIR           = 19;
 FAC_LOBBY_IDX_OPFOR_DRONES        = 20;
-FAC_LOBBY_IDX_OPFOR_PATROLS       = 21;
-FAC_LOBBY_IDX_OPFOR_PATROL_TOWN   = 22;
-FAC_LOBBY_IDX_OPFOR_THREAT        = 23;
+FAC_LOBBY_IDX_OPFOR_GRENADES      = 21;
+FAC_LOBBY_IDX_OPFOR_PATROLS       = 22;
+FAC_LOBBY_IDX_OPFOR_PATROL_TOWN   = 23;
+FAC_LOBBY_IDX_OPFOR_PLAYER_SCALE  = 24;
+FAC_LOBBY_IDX_OPFOR_THREAT        = 25;
 // WORLD
-FAC_LOBBY_IDX_STARTING_TIME       = 24;
-FAC_LOBBY_IDX_STARTING_WEATHER    = 25;
+FAC_LOBBY_IDX_STARTING_TIME       = 26;
+FAC_LOBBY_IDX_STARTING_WEATHER    = 27;
 
 FAC_lobbyParams_getArray = {
     if (!isNil "paramsArray" && { paramsArray isEqualType [] }) then { paramsArray } else { [] }
@@ -68,8 +70,10 @@ FAC_lobbyParams_read = {
     missionNamespace setVariable ["FAC_param_hqAutoHeal", _p param [FAC_LOBBY_IDX_HQ_AUTO_HEAL, 1]];
     missionNamespace setVariable ["FAC_param_opforAir", _p param [FAC_LOBBY_IDX_OPFOR_AIR, 0]];
     missionNamespace setVariable ["FAC_param_opforDrones", _p param [FAC_LOBBY_IDX_OPFOR_DRONES, 0]];
+    missionNamespace setVariable ["FAC_param_opforGrenades", _p param [FAC_LOBBY_IDX_OPFOR_GRENADES, 1]];
     missionNamespace setVariable ["FAC_param_opforPatrols", _p param [FAC_LOBBY_IDX_OPFOR_PATROLS, 1]];
     missionNamespace setVariable ["FAC_param_opforPatrolTownChance", _p param [FAC_LOBBY_IDX_OPFOR_PATROL_TOWN, 0]];
+    missionNamespace setVariable ["FAC_param_opforPlayerScale", _p param [FAC_LOBBY_IDX_OPFOR_PLAYER_SCALE, 1]];
 };
 
 // Population labels match Scenario GUI (Very Low … Insane). Other fields scale with threat tier.
@@ -187,6 +191,15 @@ FAC_lobbyParams_applyScenarioDefaults = {
     missionNamespace setVariable ["FADE_enemyPatrolTownChance", [_patrolTown] call FADE_resolveOpforPatrolTownChance, true];
     missionNamespace setVariable ["FADE_enemyRouting", _routing, true];
     missionNamespace setVariable ["FADE_opforLauncherSetting", _launcher, true];
+    private _grenadeChoice = missionNamespace getVariable ["FAC_param_opforGrenades", 1];
+    private _grenadeSetting = switch (round _grenadeChoice) do {
+        case 0: { "Normal" };
+        case 2: { "Minimal" };
+        case 3: { "None" };
+        default { "Reduced" };
+    };
+    missionNamespace setVariable ["FADE_opforGrenadeSetting", [_grenadeSetting] call FADE_normalizeOpforGrenadeSetting, true];
+    missionNamespace setVariable ["FADE_opforPlayerScale", (missionNamespace getVariable ["FAC_param_opforPlayerScale", 1]) > 0, true];
     missionNamespace setVariable ["FADE_enemySkill", (_skill max 0) min 1, true];
 
     private _gearPol = missionNamespace getVariable ["FAC_param_gearPolicy", 0];
@@ -244,6 +257,8 @@ FAC_lobbyParams_publishAccessVars = {
         "FADE_opforAirSetting",
         "FADE_opforDroneSetting",
         "FADE_opforLauncherSetting",
+        "FADE_opforGrenadeSetting",
+        "FADE_opforPlayerScale",
         "FADE_opforPopulationSetting",
         "FADE_enemySkill",
         "FADE_enemyRouting",
