@@ -1,34 +1,36 @@
-
+![](img/gh-logo.jpg)
 
 # FADE (Face's Dynamic Environment)
-### You are welcome to fork this repository and submit pull requests. If you are interested in joining CTB or supporting development of this project, see the discord link below.
+You are welcome to fork this repository and submit pull requests. If you are interested in joining CTB or supporting development of this project, see the discord link below.
 
 ---
 
+<img src="./img/flagCTB.jpg" alt="CTB Flag" width="150">
+
 ### What is CTB?
-Combat Team Bravo (CTB) is an Australian Arma group with over 17 years of history running immersive, story-driven MilSim missions. We run missions every Sunday and Monday night (1930 AEST), playing Arma Reforger on Sundays and Arma 3 on Mondays.
+Combat Team Bravo (CTB) is an Australian Arma group with 20 years of history running immersive, story-driven MilSim missions. We run missions every Sunday and Monday night (1930 AEST), across Arma 3 and Reforger.
 
 We take a approachable milsim approach focused on tactics, techniques and immersion, but not at the expense of fun. There are no ranks, no fixed roles, and no major attendance requirements. Just good missions, solid teamwork, and plenty of banter.
 
 What we offer:
-• Narrative-driven MilSim in Arma 3.
-• No ranks, no mandatory roles
-• 18+ only
-• No minimum attendance. Real life comes first, just mark your RSVP!
-• Arma 3 training/mini-ops every Sunday
-• Arma 3 ops every Monday
-• We regularly use Apex, Contact, SOG, GM, and SPE 1944 DLCs for A3
-• A welcoming, active community built on mateship and shared interest beyond mission nights
+- Narrative-driven MilSim in Arma 3.
+- No ranks, no mandatory roles
+- 18+ only
+- No minimum attendance. Real life comes first, just mark your RSVP!
+- Arma 3 training/mini-ops every Sunday
+- Arma 3 ops every Monday
+- We regularly use Apex, Contact, SOG, GM, and SPE 1944 DLCs for A3
+- A welcoming, active community built on mateship and shared interest beyond mission nights
 
 Think you’ve got what it takes to run with one of Australia’s longest-standing Arma units? Join our Discord and start your path with CTB.
 
-🔗 Discord: https://discord.gg/d5g2dFH
+🔗 CTB Discord: https://discord.gg/d5g2dFH
 
 ---
 
-### Current State
+### Current State (Beta 7)
 
-**Beta 7.** FADE is a multiplayer Arma 3 sandbox mission on Altis, tailored for CTB use. Players configure the fight and run training or dynamic missions from boards and GUIs at a fixed player base. You do not need Zeus for day-to-day play.
+FADE is a multiplayer Arma 3 sandbox mission on Altis, tailored for CTB use. Players configure the fight and run training or dynamic missions from boards and GUIs at a fixed player base. You do not need Zeus for day-to-day play.
 
 It is built for rotary, joint fires, and infantry practice on a listen server or dedicated server. Up to 31 players. Mission folder name: `CTB_FAC_FADE.Altis`.
 
