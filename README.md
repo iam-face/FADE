@@ -1,22 +1,52 @@
-# FADE (Face's Dynamic Environment)
 
-**Beta 7.** FADE is a multiplayer Arma 3 sandbox mission on Altis. Players configure the fight and run training or dynamic missions from boards and GUIs at a fixed player base. You do not need Zeus for day-to-day play.
+
+# FADE (Face's Dynamic Environment)
+### You are welcome to fork this repository and submit pull requests. If you are interested in joining CTB or supporting development of this project, see the discord link below.
+
+---
+
+### What is CTB?
+Combat Team Bravo (CTB) is an Australian Arma group with over 17 years of history running immersive, story-driven MilSim missions. We run missions every Sunday and Monday night (1930 AEST), playing Arma Reforger on Sundays and Arma 3 on Mondays.
+
+We take a approachable milsim approach focused on tactics, techniques and immersion, but not at the expense of fun. There are no ranks, no fixed roles, and no major attendance requirements. Just good missions, solid teamwork, and plenty of banter.
+
+What we offer:
+• Narrative-driven MilSim in Arma 3.
+• No ranks, no mandatory roles
+• 18+ only
+• No minimum attendance. Real life comes first, just mark your RSVP!
+• Arma 3 training/mini-ops every Sunday
+• Arma 3 ops every Monday
+• We regularly use Apex, Contact, SOG, GM, and SPE 1944 DLCs for A3
+• A welcoming, active community built on mateship and shared interest beyond mission nights
+
+Think you’ve got what it takes to run with one of Australia’s longest-standing Arma units? Join our Discord and start your path with CTB.
+
+🔗 Discord: https://discord.gg/d5g2dFH
+
+---
+
+### Current State
+
+**Beta 7.** FADE is a multiplayer Arma 3 sandbox mission on Altis, tailored for CTB use. Players configure the fight and run training or dynamic missions from boards and GUIs at a fixed player base. You do not need Zeus for day-to-day play.
 
 It is built for rotary, joint fires, and infantry practice on a listen server or dedicated server. Up to 31 players. Mission folder name: `CTB_FAC_FADE.Altis`.
 
 Server owns scenario state, AI, and mission spawns. Clients use GUIs and get updates over `remoteExec` / public variables. Lobby parameters in `description.ext` set access locks and starting defaults before the mission starts.
 
----
+### Note on mods
 
-## How a session runs
+This project utilises several mods which are contained within the mission.sqm. Much of the scenario does not depend on these mods, however - available equipment for players is governed by reading your running Arma 3 config files.
+
+Some content is hard-coded, such as loadouts and the base layout, and will not function correctly without the CTB modlist loaded. The modlist can be obtained by joining the CTB discord.
+
+### How a session runs
 
 1. Open **Manage Scenario** at the mission board: weather, time, friendly/enemy/civilian factions, OPFOR threat, civilians, gear policy, and related options.
 2. Open **Manage Missions**: pick a type, read the in-GUI blurb, start. Some types ask for a map click or player pick first.
 3. Use base terminals and boards for vehicles, loadouts, recruit AI, fast travel, CQB, jukebox, medical training, live-fire / AT / sniper ranges, and the FIRES range.
 
 Admins and Zeus can usually override group-leader-only GUI locks. Changes from Scenario apply on the server and sync to players who join later (JIP).
-
----
 
 ## Features
 
@@ -119,17 +149,11 @@ Grouped roughly as:
 
 ---
 
-## Mods
-
-Vanilla-friendly core. **ACE** and **KAT** are expected for full medical training and CASEVAC depth. Keep the dedicated server mod list aligned with the addons listed in `mission.sqm`.
-
----
-
 ## Planned work
 
-Full backlog and design notes: [TODO.md](TODO.md). Status there is the source of truth.
+Full backlog and design notes: [TODO.md](TODO.md).
 
-**Open**
+**Open items**
 
 - **Intercept Convoy re-enable** (`FADE_disabledMissionTypes`): fix route / road spawn / RPT errors, then show it in the Missions GUI again.
 - **SEAD / DEAD:** destroy enemy air-defence sites in a sector (reuse AAA class resolution).
