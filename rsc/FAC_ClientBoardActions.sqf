@@ -411,7 +411,7 @@ private _teleportBoardMap = [
     ];
 };
 
-// ACE self-interact (FADE) within 500 m of base. Same terminal actions; see FAC_aceSelf_install.
+// ACE self-interact (FADE) within 1000 m of base. Same terminal actions; see FAC_aceSelf_install.
 if (!isNil "FAC_aceSelf_install") then { [] call FAC_aceSelf_install };
 
 // SDE's bar: Nesk_1 (Eden name) - drink interaction (local player only; lethal)
@@ -452,12 +452,12 @@ if (!isNull _nesk) then {
 
 };
 
-// ACE self-interact while within 500 m of FADE_basePos. Statements call the same
+// ACE self-interact while within 1000 m of FADE_basePos. Statements call the same
 // terminal / loadout / vehicle paths as the boards (no separate feature logic).
 FAC_aceSelf_nearPlayerBase = {
     private _hq = missionNamespace getVariable ["FADE_basePos", []];
     if (count _hq < 2) exitWith { false };
-    (getPosATL player) distance2D [_hq select 0, _hq select 1] <= 500
+    (getPosATL player) distance2D [_hq select 0, _hq select 1] <= 1000
 };
 
 // Vehicle the player is in, or the Air/Land vehicle they are looking at.
@@ -488,6 +488,16 @@ FAC_aceSelf_arsenalBox = {
     private _box = missionNamespace getVariable ["FADE_loadoutBox", objNull];
     if (!isNull _workbench && { _box isEqualTo _workbench }) exitWith { objNull };
     _box
+};
+
+// Same body as the HQ auto-heal poll in initPlayerLocal.sqf.
+FAC_hqHeal_applyLocal = {
+    params [["_u", player]];
+    if (isNull _u || {!alive _u} || {!local _u}) exitWith {};
+    _u setDamage 0;
+    _u setFatigue 0;
+    if ((getBleedingRemaining _u) > 0) then { _u setBleedingRemaining 0 };
+    if (!isNil "ace_medical_fnc_fullHeal") then { _u call ace_medical_fnc_fullHeal };
 };
 
 // Quick repair / refuel / rearm: same RPC as the Vehicle GUI service buttons.
@@ -525,7 +535,7 @@ FAC_aceSelf_install = {
 
     // ["", "#FF0000"] tints ACE's default dot. The label keeps the menu text color.
     private _fade = [["ACE_SelfActions"], "FAC_aceSelf_fade", "FADE...", {}, { [] call FAC_aceSelf_nearPlayerBase }, ["", "#FF0000"]] call _add;
-    private _gear = [_fade, "FAC_aceSelf_gear", "Gear...", {}] call _add;
+    private _gear = [_fade, "FAC_aceSelf_gear", "Gear and Units...", {}] call _add;
     private _veh = [_fade, "FAC_aceSelf_veh", "Vehicles...", {}] call _add;
     private _scn = [_fade, "FAC_aceSelf_scn", "Scenario...", {}] call _add;
 
@@ -566,6 +576,17 @@ FAC_aceSelf_install = {
         ["restoreLoadout", []] call FAC_loadoutGui_fnc;
     }] call _add;
 
+    [_gear, "FAC_aceSelf_recruit", "Recruit AI", {
+        if !(["FAC_playerCanUseRecruitGui"] call FAC_lobbyParams_callAccess) exitWith {
+            systemChat "Recruit GUI access denied by lobby settings.";
+        };
+        [] spawn { call FAC_ensureRecruitGui; sleep 0.2; ["open", []] call FAC_recruitGui_fnc };
+    }] call _add;
+
+    [_gear, "FAC_aceSelf_heal", "Heal Me", {
+        [player] call FAC_hqHeal_applyLocal;
+    }] call _add;
+
     [_veh, "FAC_aceSelf_vehicleGui", "Open Vehicle GUI", {
         if !(["FAC_playerCanUseVehicleGui"] call FAC_lobbyParams_callAccess) exitWith {
             systemChat "Vehicle GUI access denied by lobby settings.";
@@ -601,6 +622,10 @@ FAC_aceSelf_install = {
         [] spawn { call FAC_ensureScenarioGui; sleep 0.2; ["open", []] call FAC_scenarioGui_fnc };
     }] call _add;
 
+    [_scn, "FAC_aceSelf_fastTravel", "Fast Travel", {
+        [] spawn { call FAC_ensureTeleportGui; sleep 0.2; ["open", []] call FAC_teleportGui_fnc };
+    }] call _add;
+
     player setVariable ["FAC_aceSelf_added", true, false];
 };
 
@@ -611,4 +636,5 @@ missionNamespace setVariable ["FAC_aceSelf_nearPlayerBase", FAC_aceSelf_nearPlay
 missionNamespace setVariable ["FAC_aceSelf_myVehicle", FAC_aceSelf_myVehicle];
 missionNamespace setVariable ["FAC_aceSelf_arsenalBox", FAC_aceSelf_arsenalBox];
 missionNamespace setVariable ["FAC_aceSelf_requestVehicleService", FAC_aceSelf_requestVehicleService];
+missionNamespace setVariable ["FAC_hqHeal_applyLocal", FAC_hqHeal_applyLocal];
 missionNamespace setVariable ["FAC_aceSelf_install", FAC_aceSelf_install];

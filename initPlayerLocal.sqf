@@ -557,10 +557,7 @@ hint parseText _welcomeText;
                 (count _hq >= 2)
                 && {(getPosATL _u) distance2D [_hq select 0, _hq select 1] <= _radius}
             ) then {
-                _u setDamage 0;
-                _u setFatigue 0;
-                if ((getBleedingRemaining _u) > 0) then { _u setBleedingRemaining 0 };
-                if (!isNil "ace_medical_fnc_fullHeal") then { _u call ace_medical_fnc_fullHeal };
+                [_u] call FAC_hqHeal_applyLocal;
             };
         };
     };
