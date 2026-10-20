@@ -77,32 +77,36 @@ FADE_sniperStartSession = {
 };
 publicVariable "FADE_sniperStartSession";
 
-addMissionEventHandler ["HandleDisconnect", {
+// PlayerDisconnected args are [id, uid, name, jip, owner, idstr]. HandleDisconnect is
+// [unit, id, uid, name]; using those names there made _uid a number and `_uid == _ou` threw.
+FADE_onPlayerDisconnected = {
     params ["_id", "_uid", "_name", "_jip", "_owner", "_idstr"];
+    if !(_uid isEqualType "") exitWith {};
+    private _fnc_sameUid = {
+        params ["_stored"];
+        _stored isEqualType "" && {_stored != ""} && {_stored isEqualTo _uid}
+    };
     if (missionNamespace getVariable ["FADE_cqbDrillActive", false]) then {
-        private _suid = missionNamespace getVariable ["FADE_cqbStarterUid", ""];
-        if (_suid != "" && { _uid == _suid }) then {
+        if ([missionNamespace getVariable ["FADE_cqbStarterUid", ""]] call _fnc_sameUid) then {
             [objNull, "CQB drill ended: trainee disconnected.", true] call FADE_cqbEndDrill;
         };
     };
     if (missionNamespace getVariable ["FADE_sniperRangeActive", false]) then {
-        private _suid = missionNamespace getVariable ["FADE_sniperStarterUid", ""];
-        if (_suid != "" && { _uid == _suid }) then {
+        if ([missionNamespace getVariable ["FADE_sniperStarterUid", ""]] call _fnc_sameUid) then {
             [objNull, "Sniper range ended: shooter disconnected.", true] call FADE_sniperEndSession;
         };
     };
     if (missionNamespace getVariable ["FADE_rangeSessionActive", false]) then {
-        private _suid = missionNamespace getVariable ["FADE_rangeStarterUid", ""];
-        if (_suid != "" && { _uid == _suid }) then {
+        if ([missionNamespace getVariable ["FADE_rangeStarterUid", ""]] call _fnc_sameUid) then {
             [objNull, "Range session ended: shooter disconnected."] call FADE_rangeEndSession;
         };
     };
-    private _ou = missionNamespace getVariable ["FAC_firesFoS_droneOwnerUid", ""];
-    if (_uid == _ou && { _ou != "" }) then {
+    if ([missionNamespace getVariable ["FAC_firesFoS_droneOwnerUid", ""]] call _fnc_sameUid) then {
         private _fn = missionNamespace getVariable ["FADE_firesFoS_droneDespawnServer", {}];
         if (_fn isEqualType {}) then { [] call _fn };
     };
-}];
+};
+addMissionEventHandler ["PlayerDisconnected", { _this call FADE_onPlayerDisconnected }];
 
 publicVariable "FADE_loadoutBoxes";
 publicVariable "FADE_loadoutBox";

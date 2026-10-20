@@ -3,3 +3,5 @@
 call compile preprocessFileLineNumbers "rsc\fn_bisCpPreInit.sqf";
 // Base NPC (S Wordsman): compile here so postInit + initServer retries can call FADE_baseNpc_spawnAndRegister.
 call compile preprocessFileLineNumbers "rsc\BaseNpcTalk.sqf";
+// Pylon apply (owner only) and the Rho MH-6 sync override. After ACE/ZEN/mod postInit.
+call compile preprocessFileLineNumbers "rsc\FADE_PylonApply.sqf";

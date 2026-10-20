@@ -182,6 +182,7 @@ FADE_opforDrone_doSpawn = {
     private _uav = createVehicle [_class, _spawnPos, [], 0, "FLY"];
     if (isNull _uav) exitWith {};
     _uav setPosASL _spawnPos;
+    [_uav] call FADE_pylon_sanitizeVehicle;
     createVehicleCrew _uav;
     if (isNull driver _uav) then {
         private _sideE = missionNamespace getVariable ["FADE_sideEnemy", east];
