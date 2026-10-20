@@ -1473,6 +1473,7 @@ FAC_missionTestSuite_runClient = {
         "FAC_aceSelf_install",
         "FAC_aceSelf_nearPlayerBase",
         "FAC_aceSelf_myVehicle",
+        "FAC_hqHeal_applyLocal",
         "FAC_addScenarioActionToTerminal",
         "FAC_vehicleGui_fnc",
         "FAC_missionsGui_fnc",
