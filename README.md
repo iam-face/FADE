@@ -8,8 +8,7 @@ You are welcome to fork this repository and submit pull requests. If you are int
 
 <img src="./img/flagCTB.jpg" alt="CTB Flag" width="150">
 
-### What is CTB?
-Combat Team Bravo (CTB) is an Australian Arma group with 20 years of history running immersive, story-driven MilSim missions. We run missions every Sunday and Monday night (1930 AEST), across Arma 3 and Reforger.
+**Beta 8.** FADE is a multiplayer Arma 3 sandbox mission. Players configure the session and run training or dynamic missions from boards and GUIs at a fixed player base. You do not need Zeus for day-to-day play.
 
 We take a approachable milsim approach focused on tactics, techniques and immersion, but not at the expense of fun. There are no ranks, no fixed roles, and no major attendance requirements. Just good missions, solid teamwork, and plenty of banter.
 
@@ -53,8 +52,10 @@ Admins and Zeus can usually override group-leader-only GUI locks. Changes from S
 ### Scenario control
 
 - Weather, time of day, and gear policy (including optional ACE Arsenal on loadout boxes).
-- Friendly, enemy, and civilian factions from `CfgFactionClasses`. Friendly list covers EAST / WEST / GUER. Enemy list is filtered to opposed sides (GUER counts as hostile to both majors). Invalid mixes are corrected on Apply with a hint; player side syncs on Apply, JIP, and respawn.
+- Friendly, enemy, and civilian factions from `CfgFactionClasses`, limited to factions the server can spawn infantry for. Friendly list covers EAST / WEST / GUER. Enemy list is filtered to opposed sides (GUER counts as hostile to both majors). Apply rejects a faction with no infantry and keeps the previous one. Invalid mixes are corrected on Apply with a hint; player side syncs on Apply, JIP, and respawn.
 - OPFOR population multiplier, patrols (including town chance), skill / routing / retreat behaviour, and AAA (Off / AAA / AAA+MANPADS).
+- OPFOR grenades (Normal / Reduced / Minimal / None, default Reduced): caps thrown HE, under-barrel HE, and dedicated grenade launchers on enemy infantry. Smoke, flares, and chemlights stay.
+- OPFOR player scaling (default On): garrison, patrol, and QRF counts follow alive player count on top of the population multiplier. Off keeps population-only counts.
 - OPFOR air and drones (Off / Low / Normal / High): ambient UAV patrol plus QRF vectoring when configured.
 - Ambient civilian budget and density; who may talk to civilians; who may read building intel.
 - HQ auto-heal and other gameplay toggles from lobby and Scenario Admin.
@@ -128,9 +129,9 @@ Search-style globals (HVT, Hostage, Search & Destroy, Asset Retrieval, Raid) use
 ### Base and world
 
 - Fast travel boards around base (base, medical, pads, range, CQB, locker, pub, and related spots). Lobby can restrict teleport-to-player.
+- Within 1000 m of base, ACE self-interact opens a FADE menu (gear and units, vehicles, scenario). Those entries run the same actions as the loadout boxes, recruit board, vehicle terminal, mission board, and fast travel. Heal Me uses the HQ full heal.
 - Ambient civilians in map-derived zones (`CIV_T_*`); talk for tips; building intel packages; dynamic roadblocks.
 - Terrain survey (`FADE_AoSurvey`) buckets roads, flat ground, forest, and buildings for patrol placement.
-- Jukebox on `Radio_1` to `Radio_4` plus in-vehicle loudspeaker (`@CTB - Mission Sounds Library`). Scenario Admin can stop all.
 - Map diary briefing with scenario notes and joint-fires reference (`rsc/Briefing.sqf`).
 - MOTD boards rotate messages; HQ main board shows the current procedural op name.
 - Procedural mission lore / SMEAC-style brief content for started missions.
@@ -139,11 +140,11 @@ Search-style globals (HVT, Hostage, Search & Destroy, Asset Retrieval, Raid) use
 
 Grouped roughly as:
 
-- **ACCESS:** Scenario, Missions, Vehicle, Loadout, Recruit, Jukebox, Fast Travel to player, Scenario Admin, ACE Arsenal on loadout boxes.
+- **ACCESS:** Scenario, Missions, Vehicle, Loadout, Recruit, Fast Travel to player, Scenario Admin, ACE Arsenal on loadout boxes.
 - **CIVILIANS:** Ambient on/off at start, who can interrogate, who can read intel.
 - **GAMEPLAY:** Gear policy, HQ auto-heal.
 - **MISSIONS:** AO strength.
-- **OPFOR:** Air, drones, patrols, patrol town chance, population multiplier.
+- **OPFOR:** Air, drones, grenades, patrols, patrol town chance, player scaling, population multiplier.
 - **WORLD:** Starting time and weather.
 - **DEBUG:** Spawn prints, garrison building markers, civilian town markers, script debug tools (including Zeus via Admin tab when enabled).
 

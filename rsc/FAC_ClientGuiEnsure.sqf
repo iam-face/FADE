@@ -1,7 +1,7 @@
 // =============================================================================
 // FAC_ClientGuiEnsure.sqf  -  lazy compile for client GUIs (initPlayerLocal)
 // =============================================================================
-// Call FAC_ensure* before using missionNamespace FAC_*Gui_fnc / jukebox helpers.
+// Call FAC_ensure* before using missionNamespace FAC_*Gui_fnc helpers.
 // Idempotent: safe to call multiple times.
 // =============================================================================
 
@@ -147,38 +147,6 @@ FAC_ensureCivTalkGui = {
     if (_refresh isEqualType {}) then { [] call _refresh };
 };
 
-FAC_ensureJukeboxGui = {
-    call FAC_ensureLobbyParams;
-    if (missionNamespace getVariable ["FAC_clientGui_jukebox", false]) exitWith {
-        [] call FAC_jukebox_clientPlay_ensureDrain;
-        [] call FAC_jukebox_fnc_registerClientRpc;
-    };
-    call compile preprocessFileLineNumbers "rsc\JukeboxGui.sqf";
-    missionNamespace setVariable ["FAC_jukeboxGui_fnc", FAC_jukeboxGui_fnc];
-    missionNamespace setVariable ["FAC_jukebox_fnc_addVehicleLoudspeakerAction", FAC_jukebox_fnc_addVehicleLoudspeakerAction];
-    missionNamespace setVariable ["FAC_jukebox_fnc_installVehicleLoudspeakerHandlers", FAC_jukebox_fnc_installVehicleLoudspeakerHandlers];
-    missionNamespace setVariable ["FAC_clientGui_jukebox", true];
-    [] call FAC_jukebox_fnc_registerClientRpc;
-    [] call FAC_jukebox_clientPlay_ensureDrain;
-};
-
-// remoteExec by name (server -> client) requires missionNamespace global registration on each client.
-FAC_jukebox_fnc_registerClientRpc = {
-    if (!hasInterface) exitWith {};
-    {
-        _x params ["_name", "_fn"];
-        if (_fn isEqualType {}) then {
-            missionNamespace setVariable [_name, _fn, true];
-            publicVariable _name;
-        };
-    } forEach [
-        ["FAC_jukebox_clientPlay", missionNamespace getVariable ["FAC_jukebox_clientPlay", {}]],
-        ["FAC_jukebox_clientStopAll", missionNamespace getVariable ["FAC_jukebox_clientStopAll", {}]],
-        ["FAC_jukebox_serverDbgChat", missionNamespace getVariable ["FAC_jukebox_serverDbgChat", {}]]
-    ];
-};
-missionNamespace setVariable ["FAC_jukebox_fnc_registerClientRpc", FAC_jukebox_fnc_registerClientRpc];
-
 FAC_ensureCQBGui = {
     if (missionNamespace getVariable ["FAC_clientGui_cqb", false]) exitWith {};
     call compile preprocessFileLineNumbers "rsc\CQBGui.sqf";
@@ -272,4 +240,3 @@ missionNamespace setVariable ["FAC_ensureSniperGui", FAC_ensureSniperGui];
 missionNamespace setVariable ["FAC_ensureRangeGui", FAC_ensureRangeGui];
 missionNamespace setVariable ["FAC_ensureTeleportGui", FAC_ensureTeleportGui];
 missionNamespace setVariable ["FAC_ensureRecruitGui", FAC_ensureRecruitGui];
-missionNamespace setVariable ["FAC_ensureJukeboxGui", FAC_ensureJukeboxGui];

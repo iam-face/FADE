@@ -217,41 +217,8 @@ FADE_abortMissionSlot = {
     };
 };
 
-// Jukebox: stop-all (also Scenario Admin); must be defined before FADE_adminCleanupAction references it.
-FAC_jukebox_stopAllMusic = {
-    if (!isServer) exitWith {};
-    params [["_requester", objNull]];
-    private _sources = +(missionNamespace getVariable ["FAC_jukebox_activeSources", []]);
-    private _sourceKeys = [];
-    {
-        private _k = _x param [0, ""];
-        if (_k != "") then { _sourceKeys pushBackUnique _k };
-        if (_k != "") then { ["", _k, _requester] call FAC_jukebox_serverPlay };
-    } forEach _sources;
-    if (!isNil "FADE_roadVehicles") then {
-        {
-            if (!isNull _x) then {
-                _x setVariable ["FADE_civCarRadioSuppressed", true, false];
-                _x setVariable ["FADE_civCarRadioStarted", true, false];
-                _x setVariable ["FADE_civCarRadioPending", false, false];
-            };
-        } forEach FADE_roadVehicles;
-    };
-    missionNamespace setVariable ["FAC_jukebox_activeSources", []];
-    [_sourceKeys] remoteExec ["FAC_jukebox_clientStopAll", 0];
-    diag_log format ["[FAC Jukebox] stopAllMusic (%1 sources, requester=%2)", count _sources, if (isNull _requester) then {"?"} else {name _requester}];
-    if (!isNull _requester) then {
-        ["All jukebox music stopped (every source)."] remoteExec ["systemChat", _requester];
-    };
-};
-publicVariable "FAC_jukebox_stopAllMusic";
-
 FADE_adminCleanupAction = {
     params ["_action", "_requester"];
-    if (_action == "stopAllMusic") exitWith {
-        if ([_requester, "FAC_playerCanUseScenarioAdmin", "Scenario Admin access denied by lobby settings."] call FAC_lobbyParams_serverDenyUnless) exitWith {};
-        [_requester] call FAC_jukebox_stopAllMusic
-    };
     if (isNull _requester) exitWith {};
     if (_action in ["makeZeus", "removeMyZeus"]) then {
         if ([_requester, "FAC_playerCanUseScenarioAdmin", "Scenario Admin access denied by lobby settings."] call FAC_lobbyParams_serverDenyUnless) exitWith {};
@@ -333,9 +300,6 @@ FADE_adminCleanupAction = {
             deleteVehicle _mine;
             _requester setVariable ["FAC_scriptGrantedCurator", nil, true];
             [format ["%1 is no longer Zeus (script module removed).", name _requester]] remoteExec ["systemChat", 0];
-        };
-        case "stopAllMusic": {
-            [_requester] call FAC_jukebox_stopAllMusic;
         };
         case "teleportAllToBase": {
             // Same anchor as Fast Travel HQ (rsc/TeleportGui.sqf FAC_teleportGui_destBaseKey)
