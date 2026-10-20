@@ -438,6 +438,9 @@ private _teleportBoardMap = [
     };
 } forEach ["Radio_1", "Radio_2", "Radio_3", "Radio_4"];
 
+// ACE self-interact (FADE) within 500 m of base. Same terminal actions; see FAC_aceSelf_install.
+if (!isNil "FAC_aceSelf_install") then { [] call FAC_aceSelf_install };
+
 // Jukebox: Vehicle loudspeaker UI on the *player unit* only (local addAction / ACE self  -  not on vehicle hull)
 call FAC_ensureJukeboxGui;
 if (!isNil "FAC_jukebox_fnc_addVehicleLoudspeakerAction") then {
@@ -485,6 +488,163 @@ if (!isNull _nesk) then {
 
 };
 
+// ACE self-interact while within 500 m of FADE_basePos. Statements call the same
+// terminal / loadout / vehicle paths as the boards (no separate feature logic).
+FAC_aceSelf_nearPlayerBase = {
+    private _hq = missionNamespace getVariable ["FADE_basePos", []];
+    if (count _hq < 2) exitWith { false };
+    (getPosATL player) distance2D [_hq select 0, _hq select 1] <= 500
+};
+
+// Vehicle the player is in, or the Air/Land vehicle they are looking at.
+// Look distance matches ace_pylons_searchDistance (cba_settings.sqf, 50 m) so
+// Open Pylon Editor uses the same reach as the existing pylon dialog.
+FAC_aceSelf_myVehicle = {
+    private _veh = vehicle player;
+    if (!(_veh isEqualTo player) && { _veh isKindOf "Air" || { _veh isKindOf "LandVehicle" } }) exitWith { _veh };
+    private _look = cursorObject;
+    if (isNull _look || { !(_look isKindOf "Air") && { !(_look isKindOf "LandVehicle") } }) then {
+        _look = cursorTarget;
+    };
+    if (isNull _look || {!alive _look}) exitWith { objNull };
+    if !(_look isKindOf "Air" || { _look isKindOf "LandVehicle" }) exitWith { objNull };
+    private _max = missionNamespace getVariable ["ace_pylons_searchDistance", 50];
+    if ((player distance _look) > _max) exitWith { objNull };
+    _look
+};
+
+// Full ACE Arsenal box (not the attachments-only workbench).
+FAC_aceSelf_arsenalBox = {
+    private _workbench = missionNamespace getVariable ["FADE_workbench", objNull];
+    private _boxes = missionNamespace getVariable ["FADE_loadoutBoxes", []];
+    private _idx = _boxes findIf {
+        !isNull _x && { isNull _workbench || { !(_x isEqualTo _workbench) } }
+    };
+    if (_idx >= 0) exitWith { _boxes select _idx };
+    private _box = missionNamespace getVariable ["FADE_loadoutBox", objNull];
+    if (!isNull _workbench && { _box isEqualTo _workbench }) exitWith { objNull };
+    _box
+};
+
+// Quick repair / refuel / rearm: same RPC as the Vehicle GUI service buttons.
+FAC_aceSelf_requestVehicleService = {
+    params ["_part"];
+    if !(["FAC_playerCanUseVehicleGui"] call FAC_lobbyParams_callAccess) exitWith {
+        systemChat "Vehicle GUI access denied by lobby settings.";
+    };
+    private _veh = [] call FAC_aceSelf_myVehicle;
+    if (isNull _veh || {!alive _veh}) exitWith { systemChat "Select a vehicle first."; };
+    call FAC_ensureVehicleGui;
+    private _nid = [_veh] call FAC_vehicleGui_vehicleRpcId;
+    if (_nid == "") exitWith { systemChat "Vehicle reference lost - refresh the list and try again."; };
+    private _msg = switch (toLower _part) do {
+        case "repair": { "Requesting repair..." };
+        case "refuel": { "Requesting refuel..." };
+        case "rearm": { "Requesting rearm..." };
+        default { "Requesting service..." };
+    };
+    systemChat _msg;
+    [_nid, player, toLower _part, -1, ""] remoteExec ["FADE_serviceVehiclePart", 2];
+};
+
+FAC_aceSelf_install = {
+    if (!hasInterface) exitWith {};
+    if (isNull player || {!local player}) exitWith {};
+    if (isNil "ace_interact_menu_fnc_createAction" || { isNil "ace_interact_menu_fnc_addActionToObject" }) exitWith {};
+    if (player getVariable ["FAC_aceSelf_added", false]) exitWith {};
+
+    private _add = {
+        params ["_parent", "_name", "_text", "_statement", ["_condition", { true }], ["_icon", ""]];
+        private _act = [_name, _text, _icon, _statement, _condition] call ace_interact_menu_fnc_createAction;
+        [player, 1, _parent, _act] call ace_interact_menu_fnc_addActionToObject
+    };
+
+    // ["", "#FF0000"] tints ACE's default dot. The label keeps the menu text color.
+    private _fade = [["ACE_SelfActions"], "FAC_aceSelf_fade", "FADE...", {}, { [] call FAC_aceSelf_nearPlayerBase }, ["", "#FF0000"]] call _add;
+    private _gear = [_fade, "FAC_aceSelf_gear", "Gear...", {}] call _add;
+    private _veh = [_fade, "FAC_aceSelf_veh", "Vehicles...", {}] call _add;
+    private _scn = [_fade, "FAC_aceSelf_scn", "Scenario...", {}] call _add;
+
+    [_gear, "FAC_aceSelf_arsenal", "ACE Arsenal", {
+        if !(isNull objectParent player) exitWith {
+            systemChat "Leave the vehicle before opening ACE Arsenal.";
+        };
+        private _box = [] call FAC_aceSelf_arsenalBox;
+        if (isNull _box) exitWith {};
+        [_box, player] call ace_arsenal_fnc_openBox;
+    }, {
+        isClass (configFile >> "CfgPatches" >> "ace_arsenal")
+        && { (missionNamespace getVariable ["FAC_param_enableAceArsenalActions", 1]) > 0 }
+        && { ["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess }
+        && { !isNull ([] call FAC_aceSelf_arsenalBox) }
+    }] call _add;
+
+    [_gear, "FAC_aceSelf_presets", "Loadout GUI", {
+        if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
+            systemChat "Loadout GUI access denied by lobby settings.";
+        };
+        [] spawn { call FAC_ensureLoadoutGui; sleep 0.2; ["open", []] call FAC_loadoutGui_fnc };
+    }] call _add;
+
+    [_gear, "FAC_aceSelf_saveLoadout", "Save my Loadout", {
+        if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
+            systemChat "Loadout GUI access denied by lobby settings.";
+        };
+        call FAC_ensureLoadoutGui;
+        ["saveLoadout", []] call FAC_loadoutGui_fnc;
+    }] call _add;
+
+    [_gear, "FAC_aceSelf_reloadLoadout", "Reload my Saved Loadout", {
+        if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
+            systemChat "Loadout GUI access denied by lobby settings.";
+        };
+        call FAC_ensureLoadoutGui;
+        ["restoreLoadout", []] call FAC_loadoutGui_fnc;
+    }] call _add;
+
+    [_veh, "FAC_aceSelf_vehicleGui", "Open Vehicle GUI", {
+        if !(["FAC_playerCanUseVehicleGui"] call FAC_lobbyParams_callAccess) exitWith {
+            systemChat "Vehicle GUI access denied by lobby settings.";
+        };
+        [] spawn { call FAC_ensureVehicleGui; sleep 0.2; ["open", []] call FAC_vehicleGui_fnc };
+    }] call _add;
+
+    private _vehReady = { !isNull ([] call FAC_aceSelf_myVehicle) };
+    [_veh, "FAC_aceSelf_rearm", "Rearm my Vehicle", { ["rearm"] call FAC_aceSelf_requestVehicleService }, _vehReady] call _add;
+    [_veh, "FAC_aceSelf_repair", "Repair my Vehicle", { ["repair"] call FAC_aceSelf_requestVehicleService }, _vehReady] call _add;
+    [_veh, "FAC_aceSelf_refuel", "Refuel my Vehicle", { ["refuel"] call FAC_aceSelf_requestVehicleService }, _vehReady] call _add;
+    [_veh, "FAC_aceSelf_pylons", "Open Pylon Editor", {
+        call FAC_ensureVehicleGui;
+        private _pylonVeh = [] call FAC_aceSelf_myVehicle;
+        if (isNull _pylonVeh) exitWith {};
+        [_pylonVeh] call FAC_vehicleGui_tryOpenPylonDialog;
+    }, {
+        private _pylonVeh = [] call FAC_aceSelf_myVehicle;
+        !isNull _pylonVeh && { count getAllPylonsInfo _pylonVeh > 0 }
+    }] call _add;
+
+    [_scn, "FAC_aceSelf_missions", "Open Missions GUI", {
+        if !(["FAC_playerCanUseMissionsGui"] call FAC_lobbyParams_callAccess) exitWith {
+            systemChat "Missions GUI is restricted to group leaders (admin/Zeus override).";
+        };
+        [] spawn { call FAC_ensureMissionsGui; sleep 0.2; ["open", []] call FAC_missionsGui_fnc };
+    }] call _add;
+
+    [_scn, "FAC_aceSelf_scenario", "Open Scenario GUI", {
+        if !(["FAC_playerCanUseScenarioGui"] call FAC_lobbyParams_callAccess) exitWith {
+            systemChat "Scenario GUI is restricted to group leaders (admin/Zeus override).";
+        };
+        [] spawn { call FAC_ensureScenarioGui; sleep 0.2; ["open", []] call FAC_scenarioGui_fnc };
+    }] call _add;
+
+    player setVariable ["FAC_aceSelf_added", true, false];
+};
+
 missionNamespace setVariable ["FAC_addScenarioActionToTerminal", FAC_addScenarioActionToTerminal];
 missionNamespace setVariable ["FAC_clientInstallHotkeys", FAC_clientInstallHotkeys];
 missionNamespace setVariable ["FAC_clientInstallBoardActions", FAC_clientInstallBoardActions];
+missionNamespace setVariable ["FAC_aceSelf_nearPlayerBase", FAC_aceSelf_nearPlayerBase];
+missionNamespace setVariable ["FAC_aceSelf_myVehicle", FAC_aceSelf_myVehicle];
+missionNamespace setVariable ["FAC_aceSelf_arsenalBox", FAC_aceSelf_arsenalBox];
+missionNamespace setVariable ["FAC_aceSelf_requestVehicleService", FAC_aceSelf_requestVehicleService];
+missionNamespace setVariable ["FAC_aceSelf_install", FAC_aceSelf_install];

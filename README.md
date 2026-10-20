@@ -1,6 +1,6 @@
 # FADE (Face's Dynamic Environment)
 
-**Beta 7.** FADE is a multiplayer Arma 3 sandbox mission on Altis. Players configure the fight and run training or dynamic missions from boards and GUIs at a fixed player base. You do not need Zeus for day-to-day play.
+**Beta 8.** FADE is a multiplayer Arma 3 sandbox mission on Altis. Players configure the fight and run training or dynamic missions from boards and GUIs at a fixed player base. You do not need Zeus for day-to-day play.
 
 It is built for rotary, joint fires, and infantry practice on a listen server or dedicated server. Up to 31 players. Mission folder name: `CTB_FAC_FADE.Altis`.
 
@@ -100,6 +100,7 @@ Search-style globals (HVT, Hostage, Search & Destroy, Asset Retrieval, Raid) use
 ### Base and world
 
 - Fast travel boards around base (base, medical, pads, range, CQB, locker, pub, and related spots). Lobby can restrict teleport-to-player.
+- Within 500 m of base, ACE self-interact opens a FADE menu (gear, vehicles, scenario). Those entries run the same actions as the loadout boxes, vehicle terminal, and mission board.
 - Ambient civilians in map-derived zones (`CIV_T_*`); talk for tips; building intel packages; dynamic roadblocks.
 - Terrain survey (`FADE_AoSurvey`) buckets roads, flat ground, forest, and buildings for patrol placement.
 - Jukebox on `Radio_1` to `Radio_4` plus in-vehicle loudspeaker (`@CTB - Mission Sounds Library`). Scenario Admin can stop all.

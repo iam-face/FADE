@@ -526,6 +526,9 @@ Mission board for <font color='#FFD700'>Manage Missions</font> and <font color='
 <font color='#87CEEB'>GEAR AND LOADOUTS</font><br/>
 MB's gear room and loadout boxes: <font color='#90EE90'>Manage My Loadout</font>, <font color='#90EE90'>Save my loadout</font>, ACE Arsenal when enabled, interpreter / Intel specialist flags, and preset or faction gear. Initial mission gear is kept for respawn until you save a replacement.<br/><br/>
 
+<font color='#87CEEB'>ACE SELF-INTERACT</font><br/>
+Within 500 m of base, self-interact and open <font color='#FFD700'>FADE...</font>. Gear, Vehicles, and Scenario run the same actions as the loadout boxes, vehicle terminal, and mission board. Rearm, repair, refuel, and pylons need you in the vehicle, or looking at it from within 50 m.<br/><br/>
+
 <font color='#87CEEB'>TRAINING TERMINALS</font><br/>
 - <font color='#90EE90'>terminalMedical</font>: dummies and KAT presets (bleeding, airway, blood volume, deep penetrating chest, cardiac rhythms, fractures). Not a Missions GUI entry.<br/>
 - <font color='#90EE90'>terminalFires</font>: FIRES pieces, observer UAV, rearm, timed drills, fall-of-shot screens.<br/>
@@ -553,7 +556,7 @@ player createDiaryRecord ["Diary", ["Overview", "
 <font color='#FFD700' size='14'>FACE'S DYNAMIC ENVIRONMENT (FADE)</font><br/><br/>
 
 <font color='#87CEEB'>WHAT IT IS</font><br/>
-FADE Beta 7 is a multiplayer sandbox on <font color='#90EE90'>Altis</font>. No Zeus needed for normal play. Built for CTB training: <font color='#B0D0FF'>rotary</font> (insert, extract, CAS, resupply, sling-load), <font color='#B0D0FF'>joint fires</font>, <font color='#B0D0FF'>urban / dismounted</font> tasks, medical drills, CQB, ranges and combined-arms fights.<br/><br/>
+FADE Beta 8 is a multiplayer sandbox on <font color='#90EE90'>Altis</font>. No Zeus needed for normal play. Built for CTB training: <font color='#B0D0FF'>rotary</font> (insert, extract, CAS, resupply, sling-load), <font color='#B0D0FF'>joint fires</font>, <font color='#B0D0FF'>urban / dismounted</font> tasks, medical drills, CQB, ranges and combined-arms fights.<br/><br/>
 
 <font color='#87CEEB'>HOW TO USE IT</font><br/>
 Spawn vehicles and gear at base. Set the theatre in <font color='#FFD700'>Manage Scenario</font> (Rhodesy's office). Start missions from <font color='#FFD700'>Manage Missions</font> or <font color='#FFD700'>Ctrl+;</font>. Missions hand out tasks, map markers and SMEAC text. Scenario settings (weather, factions, civilians, AI, AAA, access gates) apply server-wide once you hit Apply.<br/><br/>

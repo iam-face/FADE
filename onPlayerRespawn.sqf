@@ -38,6 +38,9 @@ if (!isNil "FAC_loadoutGui_restoreRespawnLoadoutSnapshot") then {
     };
 };
 
+if (!isNil "FAC_aceSelf_install") then {
+    [] call FAC_aceSelf_install;
+};
 if (!isNil "FAC_jukebox_fnc_addVehicleLoudspeakerAction") then {
     [player] call FAC_jukebox_fnc_addVehicleLoudspeakerAction;
 };
