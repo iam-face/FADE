@@ -2,7 +2,6 @@
 
 # FADE (Face's Dynamic Environment)
 You are welcome to fork this repository and submit pull requests. If you are interested in joining CTB or supporting development of this project, see the discord link below.
-
 🔗 [My YouTube channel](https://www.youtube.com/@iamface)
 
 ---
@@ -30,25 +29,22 @@ Think you’ve got what it takes to run with one of Australia’s longest-standi
 
 ---
 
-### Current State (Beta 7)
+### Current State (Beta 8)
 
 FADE is a multiplayer Arma 3 sandbox mission on Altis, tailored for CTB use. Players configure the fight and run training or dynamic missions from boards and GUIs at a fixed player base. You do not need Zeus for day-to-day play.
-
-It is built for rotary, joint fires, and infantry practice on a listen server or dedicated server. Up to 31 players. Mission folder name: `CTB_FAC_FADE.Altis`.
-
-Server owns scenario state, AI, and mission spawns. Clients use GUIs and get updates over `remoteExec` / public variables. Lobby parameters in `description.ext` set access locks and starting defaults before the mission starts.
+It is built for rotary, joint fires, and infantry practice on a local or dedicated server and supports up to 31 players currently.
+The server owns the scenario state, AI, and mission spawns. Clients use GUIs and get updates over `remoteExec` / public variables. Lobby parameters in `description.ext` set access locks and starting defaults before the mission starts.
 
 ### Note on mods
 
-This project utilises several mods which are contained within the mission.sqm. Much of the scenario does not depend on these mods, however - available equipment for players is governed by reading your running Arma 3 config files.
-
+This project utilises several mods which are contained within the mission.sqm. Much of the scenario does not depend on these mods as available equipment for players is governed by reading your running Arma 3 config files.
 Some content is hard-coded, such as loadouts and the base layout, and will not function correctly without the CTB modlist loaded. The modlist can be obtained by joining the CTB discord.
 
 ### How a session runs
-
-1. Open **Manage Scenario** at the mission board: weather, time, friendly/enemy/civilian factions, OPFOR threat, civilians, gear policy, and related options.
+As of Beta 8, you can access GUIs from either their in-world location (the terminals or boards) or via ACE Self-Interact.
+1. Open **Manage Scenario** at the mission board or via ACE self-interact: weather, time, friendly/enemy/civilian factions, OPFOR threat, civilians, gear policy, and related options.
 2. Open **Manage Missions**: pick a type, read the in-GUI blurb, start. Some types ask for a map click or player pick first.
-3. Use base terminals and boards for vehicles, loadouts, recruit AI, fast travel, CQB, jukebox, medical training, live-fire / AT / sniper ranges, and the FIRES range.
+3. Use ACE self-interact base terminals and boards for vehicles, loadouts, recruit AI, fast travel, CQB, jukebox, medical training, live-fire / AT / sniper ranges, and the FIRES range.
 
 Admins and Zeus can usually override group-leader-only GUI locks. Changes from Scenario apply on the server and sync to players who join later (JIP).
 
