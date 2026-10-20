@@ -10,38 +10,37 @@ if (missionNamespace getVariable ["FAC_lobbyParams_installed", false]) exitWith 
 // ACCESS
 FAC_LOBBY_IDX_ACE_ARSENAL        = 0;
 FAC_LOBBY_IDX_FAST_TRAVEL_TP     = 1;
-FAC_LOBBY_IDX_JUKEBOX            = 2;
-FAC_LOBBY_IDX_LOADOUT_GUI        = 3;
-FAC_LOBBY_IDX_MISSIONS_GUI       = 4;
-FAC_LOBBY_IDX_RECRUIT_GUI        = 5;
-FAC_LOBBY_IDX_SCENARIO_ADMIN     = 6;
-FAC_LOBBY_IDX_SCENARIO_GUI       = 7;
-FAC_LOBBY_IDX_VEHICLE_GUI        = 8;
+FAC_LOBBY_IDX_LOADOUT_GUI        = 2;
+FAC_LOBBY_IDX_MISSIONS_GUI       = 3;
+FAC_LOBBY_IDX_RECRUIT_GUI        = 4;
+FAC_LOBBY_IDX_SCENARIO_ADMIN     = 5;
+FAC_LOBBY_IDX_SCENARIO_GUI       = 6;
+FAC_LOBBY_IDX_VEHICLE_GUI        = 7;
 // CIVILIANS
-FAC_LOBBY_IDX_CIVILIANS          = 9;
-FAC_LOBBY_IDX_CIV_TALK           = 10;
-FAC_LOBBY_IDX_INTEL_READ         = 11;
+FAC_LOBBY_IDX_CIVILIANS          = 8;
+FAC_LOBBY_IDX_CIV_TALK           = 9;
+FAC_LOBBY_IDX_INTEL_READ         = 10;
 // DEBUG
-FAC_LOBBY_IDX_DEBUG_PRINT_SPAWNS = 12;
-FAC_LOBBY_IDX_DEBUG_TOOLS        = 13;
-FAC_LOBBY_IDX_DEBUG_CIV_TOWNS    = 14;
-FAC_LOBBY_IDX_DEBUG_VG_MARKERS   = 15;
+FAC_LOBBY_IDX_DEBUG_PRINT_SPAWNS = 11;
+FAC_LOBBY_IDX_DEBUG_TOOLS        = 12;
+FAC_LOBBY_IDX_DEBUG_CIV_TOWNS    = 13;
+FAC_LOBBY_IDX_DEBUG_VG_MARKERS   = 14;
 // GAMEPLAY
-FAC_LOBBY_IDX_GEAR_POLICY        = 16;
-FAC_LOBBY_IDX_HQ_AUTO_HEAL       = 17;
+FAC_LOBBY_IDX_GEAR_POLICY        = 15;
+FAC_LOBBY_IDX_HQ_AUTO_HEAL       = 16;
 // MISSIONS
-FAC_LOBBY_IDX_AO_STRENGTH        = 18;
+FAC_LOBBY_IDX_AO_STRENGTH        = 17;
 // OPFOR
-FAC_LOBBY_IDX_OPFOR_AIR           = 19;
-FAC_LOBBY_IDX_OPFOR_DRONES        = 20;
-FAC_LOBBY_IDX_OPFOR_GRENADES      = 21;
-FAC_LOBBY_IDX_OPFOR_PATROLS       = 22;
-FAC_LOBBY_IDX_OPFOR_PATROL_TOWN   = 23;
-FAC_LOBBY_IDX_OPFOR_PLAYER_SCALE  = 24;
-FAC_LOBBY_IDX_OPFOR_THREAT        = 25;
+FAC_LOBBY_IDX_OPFOR_AIR           = 18;
+FAC_LOBBY_IDX_OPFOR_DRONES        = 19;
+FAC_LOBBY_IDX_OPFOR_GRENADES      = 20;
+FAC_LOBBY_IDX_OPFOR_PATROLS       = 21;
+FAC_LOBBY_IDX_OPFOR_PATROL_TOWN   = 22;
+FAC_LOBBY_IDX_OPFOR_PLAYER_SCALE  = 23;
+FAC_LOBBY_IDX_OPFOR_THREAT        = 24;
 // WORLD
-FAC_LOBBY_IDX_STARTING_TIME       = 26;
-FAC_LOBBY_IDX_STARTING_WEATHER    = 27;
+FAC_LOBBY_IDX_STARTING_TIME       = 25;
+FAC_LOBBY_IDX_STARTING_WEATHER    = 26;
 
 FAC_lobbyParams_getArray = {
     if (!isNil "paramsArray" && { paramsArray isEqualType [] }) then { paramsArray } else { [] }
@@ -66,7 +65,6 @@ FAC_lobbyParams_read = {
     missionNamespace setVariable ["FAC_param_intelReadPolicy", _p param [FAC_LOBBY_IDX_INTEL_READ, 0]];
     missionNamespace setVariable ["FAC_param_aoStrength", _p param [FAC_LOBBY_IDX_AO_STRENGTH, 1]];
     missionNamespace setVariable ["FAC_param_debugTools", _p param [FAC_LOBBY_IDX_DEBUG_TOOLS, 2]];
-    missionNamespace setVariable ["FAC_param_jukeboxAccess", _p param [FAC_LOBBY_IDX_JUKEBOX, 0]];
     missionNamespace setVariable ["FAC_param_hqAutoHeal", _p param [FAC_LOBBY_IDX_HQ_AUTO_HEAL, 1]];
     missionNamespace setVariable ["FAC_param_opforAir", _p param [FAC_LOBBY_IDX_OPFOR_AIR, 0]];
     missionNamespace setVariable ["FAC_param_opforDrones", _p param [FAC_LOBBY_IDX_OPFOR_DRONES, 0]];
@@ -240,7 +238,6 @@ FAC_lobbyParams_publishAccessVars = {
         "FAC_param_loadoutGuiAccess",
         "FAC_param_recruitGuiAccess",
         "FAC_param_debugTools",
-        "FAC_param_jukeboxAccess",
         "FAC_param_hqAutoHeal",
         "FADE_teleportToPlayerMode",
         "FADE_civiliansEnabled",
@@ -350,12 +347,6 @@ FAC_playerCanUseScenarioAdmin = {
     (leader group _player == _player) || { [_player] call FAC_playerHasLeaderOverrideAccess }
 };
 
-FAC_playerCanUseJukebox = {
-    params [["_player", objNull]];
-    if !(_player isEqualType objNull) then { _player = player };
-    ["FAC_param_jukeboxAccess", _player] call FAC_playerCanUseLeaderGatedGui
-};
-
 FAC_playerCanUseDebugTools = {
     params [["_player", objNull]];
     if !(_player isEqualType objNull) then { _player = player };
@@ -423,7 +414,6 @@ FAC_lobbyParams_install = {
         "FAC_playerCanUseRecruitGui",
         "FAC_playerCanTeleportToPlayers",
         "FAC_playerCanUseScenarioAdmin",
-        "FAC_playerCanUseJukebox",
         "FAC_playerCanUseDebugTools",
         "FAC_lobbyParams_callAccess",
         "FAC_lobbyParams_serverDenyUnless"

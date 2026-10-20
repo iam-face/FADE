@@ -7,7 +7,7 @@
 //   Same horn file/vol/pitch/maxDistance; 3D origin 5 m above _emitter (firing/sniper/FIRES terminals).
 // Sound: Sig_CTB_MSL_SFX_Amb - \Sig_CTB_MSL_SFX_Amb\Sounds\Alarm\alarm_2.ogg
 // Origin: 5 m above Eden object cqbLoudspeaker (speaker at top of mesh).
-// Same pattern as jukebox: playSound3D on each machine with hasInterface.
+// playSound3D on each machine with hasInterface.
 // =============================================================================
 
 FAC_cqbLoudspeaker_clientPlay = {

@@ -10,7 +10,6 @@ sleep 0.1;
 
 if (isNil "FAC_ensureLoadoutGui") then { call compile preprocessFileLineNumbers "rsc\FAC_ClientGuiEnsure.sqf"; };
 call FAC_ensureLoadoutGui;
-call FAC_ensureJukeboxGui;
 
 // Keep mission ownership/UI variables across respawn so abort and mission details remain available.
 params [["_newUnit", objNull], ["_oldUnit", objNull]];
@@ -40,12 +39,6 @@ if (!isNil "FAC_loadoutGui_restoreRespawnLoadoutSnapshot") then {
 
 if (!isNil "FAC_aceSelf_install") then {
     [] call FAC_aceSelf_install;
-};
-if (!isNil "FAC_jukebox_fnc_addVehicleLoudspeakerAction") then {
-    [player] call FAC_jukebox_fnc_addVehicleLoudspeakerAction;
-};
-if (!isNil "FAC_jukebox_fnc_installVehicleLoudspeakerHandlers") then {
-    [player] call FAC_jukebox_fnc_installVehicleLoudspeakerHandlers;
 };
 
 // FIRES fall-of-shot: Fired EH is on the unit; re-attach after respawn so mortar tracking keeps working.

@@ -8,7 +8,7 @@ FADE_cutscene_fnc_resolveEdenObject = {
     missionNamespace getVariable [_name, objNull]
 };
 
-// playSound3D returns a numeric handle; stopSound from scheduled context (see rsc\JukeboxGui.sqf).
+// playSound3D returns a numeric handle; stopSound from scheduled context.
 FADE_cutscene_fnc_stopPs3d = {
     params ["_id"];
     if (isNil "_id") exitWith {};
@@ -29,7 +29,7 @@ FADE_cutscene_testCam_clientStopMusic = {
     uiNamespace setVariable ["FADE_cutscene_testCam_snd", nil];
 };
 
-// MP: each client plays local 3D sound tied to emitter object (same pattern as jukebox radios).
+// MP: each client plays local 3D sound tied to the emitter object.
 FADE_cutscene_testCam_clientPlayMusic = {
     params [
         ["_cfgClass", "FAC_cutscene_callonme"],

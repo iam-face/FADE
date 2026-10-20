@@ -12,7 +12,7 @@ Server owns scenario state, AI, and mission spawns. Clients use GUIs and get upd
 
 1. Open **Manage Scenario** at the mission board: weather, time, friendly/enemy/civilian factions, OPFOR threat, civilians, gear policy, and related options.
 2. Open **Manage Missions**: pick a type, read the in-GUI blurb, start. Some types ask for a map click or player pick first.
-3. Use base terminals and boards for vehicles, loadouts, recruit AI, fast travel, CQB, jukebox, medical training, live-fire / AT / sniper ranges, and the FIRES range.
+3. Use base terminals and boards for vehicles, loadouts, recruit AI, fast travel, CQB, medical training, live-fire / AT / sniper ranges, and the FIRES range.
 
 Admins and Zeus can usually override group-leader-only GUI locks. Changes from Scenario apply on the server and sync to players who join later (JIP).
 
@@ -103,7 +103,6 @@ Search-style globals (HVT, Hostage, Search & Destroy, Asset Retrieval, Raid) use
 - Within 500 m of base, ACE self-interact opens a FADE menu (gear, vehicles, scenario). Those entries run the same actions as the loadout boxes, vehicle terminal, and mission board.
 - Ambient civilians in map-derived zones (`CIV_T_*`); talk for tips; building intel packages; dynamic roadblocks.
 - Terrain survey (`FADE_AoSurvey`) buckets roads, flat ground, forest, and buildings for patrol placement.
-- Jukebox on `Radio_1` to `Radio_4` plus in-vehicle loudspeaker (`@CTB - Mission Sounds Library`). Scenario Admin can stop all.
 - Map diary briefing with scenario notes and joint-fires reference (`rsc/Briefing.sqf`).
 - MOTD boards rotate messages; HQ main board shows the current procedural op name.
 - Procedural mission lore / SMEAC-style brief content for started missions.
@@ -112,7 +111,7 @@ Search-style globals (HVT, Hostage, Search & Destroy, Asset Retrieval, Raid) use
 
 Grouped roughly as:
 
-- **ACCESS:** Scenario, Missions, Vehicle, Loadout, Recruit, Jukebox, Fast Travel to player, Scenario Admin, ACE Arsenal on loadout boxes.
+- **ACCESS:** Scenario, Missions, Vehicle, Loadout, Recruit, Fast Travel to player, Scenario Admin, ACE Arsenal on loadout boxes.
 - **CIVILIANS:** Ambient on/off at start, who can interrogate, who can read intel.
 - **GAMEPLAY:** Gear policy, HQ auto-heal.
 - **MISSIONS:** AO strength.

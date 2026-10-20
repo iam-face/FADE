@@ -54,7 +54,7 @@ FAC_scenarioGui_factionsContentIdcs = [
     60310, 60311, 60312
 ];
 
-FAC_scenarioGui_adminContentIdcs = [60930, 60943, 60895, 60896, 60897, 60898, 60899, 60900, 60901];
+FAC_scenarioGui_adminContentIdcs = [60930, 60943, 60895, 60896, 60897, 60899, 60900, 60901];
 
 FAC_scenarioGui_getFactionDisplayName = {
     params ["_faction"];
@@ -101,7 +101,6 @@ FAC_scenarioGui_adminCleanupButtonDefs = [
     ["makeZeus", 60895, "Make me Zeus"],
     ["removeMyZeus", 60896, "Remove my Zeus"],
     ["teleportAllToBase", 60897, "Teleport all players to HQ (teleportBase)"],
-    ["stopAllMusic", 60898, "Stop all music (jukebox)"],
     ["abortAllMissions", 60899, "Abort all missions"],
     ["despawnCivilians", 60900, "Despawn civilians"],
     ["despawnOpfor", 60901, "Despawn OPFOR"]

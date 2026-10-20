@@ -411,44 +411,8 @@ private _teleportBoardMap = [
     ];
 };
 
-// Jukebox: Radio_1..Radio_4 (Eden names); each source gets its own playback slot
-{
-    private _eden = _x;
-    private _key = format ["radio:%1", _eden];
-    private _radio = missionNamespace getVariable [_eden, objNull];
-    if (!isNull _radio) then {
-        _radio addAction [
-            "<t color='#FF69B4'>Jukebox</t>",
-            {
-                params ["_target", "_caller", "_actionId", "_args"];
-                if !(["FAC_playerCanUseJukebox"] call FAC_lobbyParams_callAccess) exitWith {
-                    systemChat "Jukebox access denied by lobby settings.";
-                };
-                missionNamespace setVariable ["FAC_jukebox_guiSource", _args select 0];
-                [] spawn { call FAC_ensureJukeboxGui; sleep 0.2; ["open", []] call FAC_jukeboxGui_fnc };
-            },
-            [_key],
-            5,
-            false,
-            true,
-            "",
-            "",
-            3
-        ];
-    };
-} forEach ["Radio_1", "Radio_2", "Radio_3", "Radio_4"];
-
 // ACE self-interact (FADE) within 500 m of base. Same terminal actions; see FAC_aceSelf_install.
 if (!isNil "FAC_aceSelf_install") then { [] call FAC_aceSelf_install };
-
-// Jukebox: Vehicle loudspeaker UI on the *player unit* only (local addAction / ACE self  -  not on vehicle hull)
-call FAC_ensureJukeboxGui;
-if (!isNil "FAC_jukebox_fnc_addVehicleLoudspeakerAction") then {
-    [player] call FAC_jukebox_fnc_addVehicleLoudspeakerAction;
-};
-if (!isNil "FAC_jukebox_fnc_installVehicleLoudspeakerHandlers") then {
-    [player] call FAC_jukebox_fnc_installVehicleLoudspeakerHandlers;
-};
 
 // SDE's bar: Nesk_1 (Eden name) - drink interaction (local player only; lethal)
 private _nesk = missionNamespace getVariable ["Nesk_1", objNull];
