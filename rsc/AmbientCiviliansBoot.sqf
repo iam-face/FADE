@@ -40,7 +40,7 @@ missionNamespace setVariable ["FADE_civAirCleanupDist", missionNamespace getVari
 missionNamespace setVariable ["FADE_civGlobalMaxAlive", missionNamespace getVariable ["FADE_civGlobalMaxAlive", if (isNil "FADE_civGlobalMaxAlive") then { 55 } else { FADE_civGlobalMaxAlive }]];
 missionNamespace setVariable ["FADE_civDensityScale", missionNamespace getVariable ["FADE_civDensityScale", if (isNil "FADE_civDensityScale") then { 1 } else { FADE_civDensityScale }]];
 missionNamespace setVariable ["FADE_civUnitCullDist", missionNamespace getVariable ["FADE_civUnitCullDist", if (isNil "FADE_civUnitCullDist") then { 750 } else { FADE_civUnitCullDist }]];
-// Ambient road car radio (Sig list / jukebox vehicle path): chance, proximity trigger, client vol/dist (fallback path; CfgVehicles Sound uses mission FAC_JukeVeh_*)
+// Ambient road car radio (Sig list via FADE_civCarRadio_serverPlay): chance, proximity trigger, client vol/dist
 missionNamespace setVariable ["FADE_civCarRadioChance", missionNamespace getVariable ["FADE_civCarRadioChance", if (isNil "FADE_civCarRadioChance") then { 1 } else { FADE_civCarRadioChance }]];
 missionNamespace setVariable ["FADE_civCarRadioTriggerDist", missionNamespace getVariable ["FADE_civCarRadioTriggerDist", if (isNil "FADE_civCarRadioTriggerDist") then { 1000 } else { FADE_civCarRadioTriggerDist }]];
 missionNamespace setVariable ["FADE_civCarRadioVolume", missionNamespace getVariable ["FADE_civCarRadioVolume", if (isNil "FADE_civCarRadioVolume") then { 25 } else { FADE_civCarRadioVolume }]];

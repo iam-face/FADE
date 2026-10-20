@@ -370,7 +370,6 @@ FAC_guiScheduleHeaderRefresh = {
         if (!isNull (findDisplay 60002)) then { call FAC_ensureMissionsGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_missionsGui_fnc") };
         if (!isNull (findDisplay 60003)) then { call FAC_ensureScenarioGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_scenarioGui_fnc") };
         if (!isNull (findDisplay 60200)) then { call FAC_ensureLoadoutGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_loadoutGui_fnc") };
-        if (!isNull (findDisplay 60400)) then { call FAC_ensureJukeboxGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_jukeboxGui_fnc") };
         if (!isNull (findDisplay 60500)) then { call FAC_ensureCQBGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_cqbGui_fnc") };
         if (!isNull (findDisplay 60600)) then { call FAC_ensureTeleportGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_teleportGui_fnc") };
         if (!isNull (findDisplay 60700)) then { call FAC_ensureFiresGui; ["headerRefresh", []] call (missionNamespace getVariable "FAC_firesGui_fnc") };
@@ -424,7 +423,8 @@ if (count _initPack > 0) then { [_initPack] call FADE_applyScenarioClientSync };
 private _initSlots = missionNamespace getVariable ["FADE_missionSlotsSync", []];
 if (count _initSlots > 0) then { [_initSlots] call FADE_applyMissionSlotsClientSync };
 
-// Server remoteExec hooks (CQB loudspeaker, cutscene RTT) — keep loaded once past mission sync; not full GUI stack.
+// Server remoteExec hooks (civ car radio, CQB loudspeaker, cutscene RTT) — keep loaded once past mission sync; not full GUI stack.
+call compile preprocessFileLineNumbers "rsc\FAC_CivCarRadio.sqf";
 call compile preprocessFileLineNumbers "rsc\CqbLoudspeaker.sqf";
 call compile preprocessFileLineNumbers "rsc\CutsceneClient.sqf";
 call compile preprocessFileLineNumbers "rsc\FAC_ClientBoardActions.sqf";
@@ -557,10 +557,7 @@ hint parseText _welcomeText;
                 (count _hq >= 2)
                 && {(getPosATL _u) distance2D [_hq select 0, _hq select 1] <= _radius}
             ) then {
-                _u setDamage 0;
-                _u setFatigue 0;
-                if ((getBleedingRemaining _u) > 0) then { _u setBleedingRemaining 0 };
-                if (!isNil "ace_medical_fnc_fullHeal") then { _u call ace_medical_fnc_fullHeal };
+                [_u] call FAC_hqHeal_applyLocal;
             };
         };
     };

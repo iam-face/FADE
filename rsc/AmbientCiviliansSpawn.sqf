@@ -625,7 +625,7 @@ FADE_civ_despawnZone = {
 };
 
 // -----------------------------------------------------------------------------
-// Ambient road car: one random Sig track, starts once when any player is within trigger distance; same 3D path as jukebox vehicle
+// Ambient road car: one random Sig track, starts once when any player is within trigger distance
 // -----------------------------------------------------------------------------
 FADE_civ_setupRoadCarRadio = {
     params ["_veh"];
@@ -648,7 +648,7 @@ FADE_civ_setupRoadCarRadio = {
         params ["_veh"];
         if (_veh getVariable ["FADE_civCarRadioStarted", false]) then {
             private _key = _veh getVariable ["FADE_civCarRadioSourceKey", ""];
-            if (_key != "") then { ["", _key, objNull] remoteExec ["FAC_jukebox_serverPlay", 2]; };
+            if (_key != "") then { ["", _key] remoteExec ["FADE_civCarRadio_serverPlay", 2]; };
         };
     }];
 };
@@ -684,7 +684,7 @@ FADE_civ_tickCarRadios = {
             _key = format ["vehicle:%1", _nid];
             _v setVariable ["FADE_civCarRadioSourceKey", _key, false];
         };
-        [_song, _key, objNull, _vol, _aud] remoteExec ["FAC_jukebox_serverPlay", 2];
+        [_song, _key, _vol, _aud] remoteExec ["FADE_civCarRadio_serverPlay", 2];
     } forEach FADE_roadVehicles;
 };
 

@@ -383,6 +383,54 @@ FAC_missionTestSuite_runServer = {
     _ok = _unitsE isEqualType [] && { count _unitsE > 0 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_getUnitsForFaction(enemy) (%1)", count _unitsE]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_getUnitsForFaction(enemy)"; };
 
+    private _indUnits = ["IND_F", 2] call FADE_getUnitsForFaction;
+    _ok = "I_soldier_F" in _indUnits;
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_getUnitsForFaction(IND_F)"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_getUnitsForFaction(IND_F)"; };
+
+    private _missingFaction = ["FADE_NO_SUCH_FACTION", 0] call FADE_getUnitsForFaction;
+    _ok = _missingFaction isEqualTo [];
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): empty faction stays empty"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): empty faction stays empty"; };
+
+    _ok = ["rhs_faction_usarmy", "rhs_faction_usarmy_wd"] call FADE_factionKeysShareStem
+        && { !(["IND_F", "IND_C_F"] call FADE_factionKeysShareStem) }
+        && { !(["BLU_F", "BLU_F"] call FADE_factionKeysShareStem) };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): faction stem match"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): faction stem match"; };
+
+    private _choiceRows = missionNamespace getVariable ["FADE_factionChoiceRows", []];
+    _ok = _choiceRows isEqualType [] && { { (_x select 0) == "BLU_F" } count _choiceRows > 0 } && { { (_x select 0) == "FADE_NO_SUCH_FACTION" } count _choiceRows == 0 };
+    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): faction choice rows (%1)", count _choiceRows]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): faction choice rows"; };
+
+    _ok = (["HandGrenade"] call FADE_magazineOpforGrenadeKind) == "throw"
+        && { (["SmokeShell"] call FADE_magazineOpforGrenadeKind) == "" }
+        && { (["1Rnd_HE_Grenade_shell"] call FADE_magazineOpforGrenadeKind) == "gl" }
+        && { (["1Rnd_Smoke_Grenade_shell"] call FADE_magazineOpforGrenadeKind) == "" }
+        && { !(["arifle_MX_GL_F"] call FADE_weaponIsDedicatedGrenadeLauncher) }
+        && { !(["launch_RPG32_F"] call FADE_weaponIsDedicatedGrenadeLauncher) };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): OPFOR grenade kind"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): OPFOR grenade kind"; };
+
+    private _scaleWas = missionNamespace getVariable ["FADE_opforPlayerScale", true];
+    private _popWas = missionNamespace getVariable ["FADE_opforPopulationScale", 1];
+    missionNamespace setVariable ["FADE_opforPlayerScale", true];
+    _ok = ([1] call FADE_opforPlayerScaleForCount) == 0.55
+        && { ([2] call FADE_opforPlayerScaleForCount) == 0.70 }
+        && { ([3] call FADE_opforPlayerScaleForCount) == 0.85 }
+        && { ([6] call FADE_opforPlayerScaleForCount) == 1 }
+        && { ([10] call FADE_opforPlayerScaleForCount) == 1.15 }
+        && { ([14] call FADE_opforPlayerScaleForCount) == 1.25 };
+    missionNamespace setVariable ["FADE_opforPlayerScale", false];
+    _ok = _ok && { ([1] call FADE_opforPlayerScaleForCount) == 1 };
+    missionNamespace setVariable ["FADE_opforPopulationScale", 1];
+    private _scaleOff = [10, 8] call FADE_scaleOpforCount;
+    private _savedPlayerFactor = FADE_opforPlayerScaleFactor;
+    FADE_opforPlayerScaleFactor = { 0.55 };
+    missionNamespace setVariable ["FADE_opforPlayerScale", true];
+    private _scaleShrunk = [8, 8] call FADE_scaleOpforCount;
+    FADE_opforPlayerScaleFactor = _savedPlayerFactor;
+    missionNamespace setVariable ["FADE_opforPlayerScale", _scaleWas];
+    missionNamespace setVariable ["FADE_opforPopulationScale", _popWas];
+    _ok = _ok && { _scaleOff == 10 } && { _scaleShrunk == 5 };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): OPFOR player scale"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): OPFOR player scale off=%1 shrunk=%2", _scaleOff, _scaleShrunk]; };
+
     private _ev = [_ef] call FADE_getEnemyVehiclesForFaction;
     _ok = _ev isEqualType [];
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_getEnemyVehiclesForFaction (%1)", count _ev]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_getEnemyVehiclesForFaction"; };
@@ -489,8 +537,7 @@ FAC_missionTestSuite_runServer = {
         "FADE_firesFoS_toggleImpactScreenSlot",
         "FADE_assetIntelTakeServer",
         "FADE_abortMissionSlot",
-        "FAC_jukebox_stopAllMusic",
-        "FAC_jukebox_serverPlay",
+        "FADE_civCarRadio_serverPlay",
         "FADE_adminCleanupAction",
         "FAC_surrenderChallenge_start",
         "FAC_loadoutGui_serverRequestApplyToMember",
@@ -1391,7 +1438,6 @@ FAC_missionTestSuite_runClient = {
         "FAC_ensureVehicleGui",
         "FAC_ensureMissionsGui",
         "FAC_ensureScenarioGui",
-        "FAC_ensureJukeboxGui",
         "FAC_ensureCQBGui",
         "FAC_ensureFiresGui",
         "FAC_ensureTeleportGui",
@@ -1417,7 +1463,6 @@ FAC_missionTestSuite_runClient = {
         "FAC_playerCanUseVehicleGui",
         "FAC_playerCanUseLoadoutGui",
         "FAC_playerCanUseScenarioAdmin",
-        "FAC_playerCanUseJukebox",
         "FAC_playerCanUseDebugTools",
         "FAC_playerCanTeleportToPlayers",
         "FAC_lobbyParams_callAccess",
@@ -1425,6 +1470,10 @@ FAC_missionTestSuite_runClient = {
         "FAC_ensureLobbyParams",
         "FAC_guiScheduleHeaderRefresh",
         "FAC_clientInstallBoardActions",
+        "FAC_aceSelf_install",
+        "FAC_aceSelf_nearPlayerBase",
+        "FAC_aceSelf_myVehicle",
+        "FAC_hqHeal_applyLocal",
         "FAC_addScenarioActionToTerminal",
         "FAC_vehicleGui_fnc",
         "FAC_missionsGui_fnc",
@@ -1439,11 +1488,7 @@ FAC_missionTestSuite_runClient = {
         "FADE_ggClient_showResults",
         "FAC_scenarioGui_fnc",
         "FAC_loadoutGui_fnc",
-        "FAC_jukeboxGui_fnc",
-        "FAC_jukebox_clientPlay",
-        "FAC_jukebox_clientStopAll",
-        "FAC_jukebox_fnc_addVehicleLoudspeakerAction",
-        "FAC_jukebox_fnc_installVehicleLoudspeakerHandlers",
+        "FADE_civCarRadio_clientPlay",
         "FAC_cqbGui_fnc",
         "FAC_firesGui_fnc",
         "FAC_firesFoS_fnc_clientDroneSync",
@@ -1501,7 +1546,6 @@ FAC_missionTestSuite_runClient = {
         "FAC_ensureVehicleGui",
         "FAC_ensureMissionsGui",
         "FAC_ensureScenarioGui",
-        "FAC_ensureJukeboxGui",
         "FAC_ensureCQBGui",
         "FAC_ensureFiresGui",
         "FAC_ensureTeleportGui",
@@ -1535,7 +1579,7 @@ FAC_missionTestSuite_runClient = {
         "rsc\VehicleGui.sqf",
         "rsc\LoadoutGui.sqf",
         "rsc\RecruitGui.sqf",
-        "rsc\JukeboxGui.sqf",
+        "rsc\FAC_CivCarRadio.sqf",
         "rsc\CQBGui.sqf",
         "rsc\FiresGui.sqf",
         "rsc\TeleportGui.sqf",
@@ -1582,7 +1626,7 @@ FAC_missionTestSuite_runClient = {
     _ok = _fires isEqualType [] && { count _fires > 0 };
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (client): FAC_fires_artilleryDefinitions (%1)", count _fires]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (client): FAC_fires_artilleryDefinitions"; };
 
-    // @CTB - Mission Sounds Library (jukebox OGGs in Sig_CTB_MSL_Music_Loudspeaker.pbo)
+    // @CTB - Mission Sounds Library (ambient civ car radio OGGs in Sig_CTB_MSL_Music_Loudspeaker.pbo)
     private _ctbSfx = isClass (configFile >> "CfgSFX" >> "Sig_Buttrock_1");
     if (_ctbSfx) then {
         _pass = _pass + 1;
@@ -1599,15 +1643,6 @@ FAC_missionTestSuite_runClient = {
     } else {
         _fail = _fail + 1;
         diag_log format ["[FAC TestSuite] FAIL (client): CTB music OGG fileExists %1 (mod PBO mounted but path not readable)", _ctbOgg];
-    };
-    private _jukeSfx = getText (missionConfigFile >> "CfgVehicles" >> "FAC_Jukebox_Sig_Buttrock_1" >> "sound");
-    private _jukeChain = (_jukeSfx == "Sig_Buttrock_1") && { isClass (configFile >> "CfgSFX" >> _jukeSfx) };
-    if (_jukeChain) then {
-        _pass = _pass + 1;
-        diag_log "[FAC TestSuite] PASS (client): FAC_Jukebox_Sig_Buttrock_1 sound= -> mod CfgSFX";
-    } else {
-        _fail = _fail + 1;
-        diag_log format ["[FAC TestSuite] FAIL (client): FAC_Jukebox sound chain (got sound=%1; expect Sig_Buttrock_1 + configFile CfgSFX)", _jukeSfx];
     };
 
     // Range vehicle/AT defs live in Config.sqf (server); RangeGui syncs runtime lists via RPC.
@@ -1643,7 +1678,6 @@ FAC_missionTestSuite_runClient = {
         "RscDisplayMissions",
         "RscDisplayScenario",
         "RscDisplayLoadout",
-        "RscDisplayJukebox",
         "RscDisplayCQB",
         "RscDisplayTeleport",
         "RscDisplayTeleportPlayers",
@@ -1728,7 +1762,6 @@ FAC_missionTestSuite_runClient = {
         ["FAC_ensureVehicleGui", "FAC_vehicleGui_fnc"],
         ["FAC_ensureMissionsGui", "FAC_missionsGui_fnc"],
         ["FAC_ensureScenarioGui", "FAC_scenarioGui_fnc"],
-        ["FAC_ensureJukeboxGui", "FAC_jukeboxGui_fnc"],
         ["FAC_ensureCQBGui", "FAC_cqbGui_fnc"],
         ["FAC_ensureFiresGui", "FAC_firesGui_fnc"],
         ["FAC_ensureTeleportGui", "FAC_teleportGui_fnc"],

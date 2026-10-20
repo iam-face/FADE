@@ -76,7 +76,6 @@ FADE_playerCanUseVehicleGui = FAC_playerCanUseVehicleGui;
 FADE_playerCanUseLoadoutGui = FAC_playerCanUseLoadoutGui;
 FADE_playerCanUseRecruitGui = FAC_playerCanUseRecruitGui;
 FADE_playerCanUseScenarioAdmin = FAC_playerCanUseScenarioAdmin;
-FADE_playerCanUseJukebox = FAC_playerCanUseJukebox;
 FADE_playerCanUseDebugTools = FAC_playerCanUseDebugTools;
 
 // Loadout GUI helpers on server: preset/std resolution for squad-leader apply (full LoadoutGui is client-only  -  initPlayerLocal)

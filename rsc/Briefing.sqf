@@ -462,10 +462,10 @@ OPFOR population multipliers on mission spawn counts: <font color='#90EE90'>Very
 Ambient civilians and traffic use civilian zones. With civilian talk on, use <font color='#90EE90'>Talk to civilian</font> on foot civs or the base NPC. Actionable tips append to the map <font color='#FFD700'>Intel</font> log. Building intel props can appear with virtual garrisons; <font color='#90EE90'>Read intel</font> may show live OPFOR, vehicles, garrisons, checkpoints or mission context. Scenario policy can lock talk to interpreters and reading to Intel specialists.<br/><br/>
 
 <font color='#87CEEB'>LOBBY PARAMETERS</font><br/>
-The host can gate Missions, Scenario, Vehicle, Loadout, Fast Travel to player, Scenario Admin, jukebox, ACE Arsenal, civilian talk, intel reading, debug tools and HQ auto-heal. OPFOR patrol town chance can also be preset before load. Group leaders and admin / Zeus usually override leader-only locks. Access denied means the lobby setting is blocking that action.<br/><br/>
+The host can gate Missions, Scenario, Vehicle, Loadout, Fast Travel to player, Scenario Admin, ACE Arsenal, civilian talk, intel reading, debug tools and HQ auto-heal. OPFOR patrol town chance can also be preset before load. Group leaders and admin / Zeus usually override leader-only locks. Access denied means the lobby setting is blocking that action.<br/><br/>
 
 <font color='#87CEEB'>ADMIN AND CLEANUP</font><br/>
-Admin covers aborting missions, despawning civilians or OPFOR, teleport-all to base, Zeus controls, and stop-all jukebox. Use cleanup carefully on live sessions.
+Admin covers aborting missions, despawning civilians or OPFOR, teleport-all to base, and Zeus controls. Use cleanup carefully on live sessions.
 "]];
 
 // -----------------------------------------------------------------------------
@@ -526,6 +526,9 @@ Mission board for <font color='#FFD700'>Manage Missions</font> and <font color='
 <font color='#87CEEB'>GEAR AND LOADOUTS</font><br/>
 MB's gear room and loadout boxes: <font color='#90EE90'>Manage My Loadout</font>, <font color='#90EE90'>Save my loadout</font>, ACE Arsenal when enabled, interpreter / Intel specialist flags, and preset or faction gear. Initial mission gear is kept for respawn until you save a replacement.<br/><br/>
 
+<font color='#87CEEB'>ACE SELF-INTERACT</font><br/>
+Within 1000 m of base, self-interact and open <font color='#FFD700'>FADE...</font>. <font color='#FFD700'>Gear and Units...</font> covers loadouts, Recruit AI, and Heal Me. <font color='#FFD700'>Vehicles...</font> and <font color='#FFD700'>Scenario...</font> cover the vehicle terminal, mission board, and Fast Travel. Rearm, repair, refuel, and pylons need you in the vehicle, or looking at it from within 50 m.<br/><br/>
+
 <font color='#87CEEB'>TRAINING TERMINALS</font><br/>
 - <font color='#90EE90'>terminalMedical</font>: dummies and KAT presets (bleeding, airway, blood volume, deep penetrating chest, cardiac rhythms, fractures). Not a Missions GUI entry.<br/>
 - <font color='#90EE90'>terminalFires</font>: FIRES pieces, observer UAV, rearm, timed drills, fall-of-shot screens.<br/>
@@ -536,8 +539,8 @@ MB's gear room and loadout boxes: <font color='#90EE90'>Manage My Loadout</font>
 <font color='#87CEEB'>FAST TRAVEL</font><br/>
 Teleport boards or <font color='#FFD700'>Ctrl+Shift+apostrophe</font> from anywhere. Destinations include Base HQ, Cargo Slingload, Sultan's CQB Killhouse, Joon's Fires Range, Bean's Medical Area, Officer Area, Firing Range and Sniper Range. Server settings may also allow teleport-to-player.<br/><br/>
 
-<font color='#87CEEB'>JUKEBOX AND SOCIAL AREAS</font><br/>
-Radio_1 through Radio_4 open the jukebox for 3D music at that source. In vehicles, use <font color='#FFD700'>Vehicle loudspeaker...</font> for attached 3D music. SDE's Pub, Juko's Locker Room, C3 Quiet Area and other Eden placements are flavour / training spaces.<br/><br/>
+<font color='#87CEEB'>SOCIAL AREAS</font><br/>
+SDE's Pub, Juko's Locker Room, C3 Quiet Area and other Eden placements are flavour / training spaces.<br/><br/>
 
 <font color='#87CEEB'>KEYBOARD</font><br/>
 <font color='#FFD700'>Ctrl+;</font> - Manage Missions. <font color='#FFD700'>Ctrl+Shift+apostrophe</font> - Fast Travel.<br/><br/>
@@ -553,7 +556,7 @@ player createDiaryRecord ["Diary", ["Overview", "
 <font color='#FFD700' size='14'>FACE'S DYNAMIC ENVIRONMENT (FADE)</font><br/><br/>
 
 <font color='#87CEEB'>WHAT IT IS</font><br/>
-FADE Beta 7 is a multiplayer sandbox on <font color='#90EE90'>Altis</font>. No Zeus needed for normal play. Built for CTB training: <font color='#B0D0FF'>rotary</font> (insert, extract, CAS, resupply, sling-load), <font color='#B0D0FF'>joint fires</font>, <font color='#B0D0FF'>urban / dismounted</font> tasks, medical drills, CQB, ranges and combined-arms fights.<br/><br/>
+FADE Beta 8 is a multiplayer sandbox on <font color='#90EE90'>Altis</font>. No Zeus needed for normal play. Built for CTB training: <font color='#B0D0FF'>rotary</font> (insert, extract, CAS, resupply, sling-load), <font color='#B0D0FF'>joint fires</font>, <font color='#B0D0FF'>urban / dismounted</font> tasks, medical drills, CQB, ranges and combined-arms fights.<br/><br/>
 
 <font color='#87CEEB'>HOW TO USE IT</font><br/>
 Spawn vehicles and gear at base. Set the theatre in <font color='#FFD700'>Manage Scenario</font> (Rhodesy's office). Start missions from <font color='#FFD700'>Manage Missions</font> or <font color='#FFD700'>Ctrl+;</font>. Missions hand out tasks, map markers and SMEAC text. Scenario settings (weather, factions, civilians, AI, AAA, access gates) apply server-wide once you hit Apply.<br/><br/>
