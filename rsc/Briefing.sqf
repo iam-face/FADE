@@ -527,7 +527,7 @@ Mission board for <font color='#FFD700'>Manage Missions</font> and <font color='
 MB's gear room and loadout boxes: <font color='#90EE90'>Manage My Loadout</font>, <font color='#90EE90'>Save my loadout</font>, ACE Arsenal when enabled, interpreter / Intel specialist flags, and preset or faction gear. Initial mission gear is kept for respawn until you save a replacement.<br/><br/>
 
 <font color='#87CEEB'>ACE SELF-INTERACT</font><br/>
-Within 500 m of base, self-interact and open <font color='#FFD700'>FADE...</font>. Gear, Vehicles, and Scenario run the same actions as the loadout boxes, vehicle terminal, and mission board. Rearm, repair, refuel, and pylons need you in the vehicle, or looking at it from within 50 m.<br/><br/>
+Within 1000 m of base, self-interact and open <font color='#FFD700'>FADE...</font>. <font color='#FFD700'>Gear and Units...</font> covers loadouts, Recruit AI, and Heal Me. <font color='#FFD700'>Vehicles...</font> and <font color='#FFD700'>Scenario...</font> cover the vehicle terminal, mission board, and Fast Travel. Rearm, repair, refuel, and pylons need you in the vehicle, or looking at it from within 50 m.<br/><br/>
 
 <font color='#87CEEB'>TRAINING TERMINALS</font><br/>
 - <font color='#90EE90'>terminalMedical</font>: dummies and KAT presets (bleeding, airway, blood volume, deep penetrating chest, cardiac rhythms, fractures). Not a Missions GUI entry.<br/>
