@@ -1,0 +1,14 @@
+---
+description: Do not credit Cursor or cursoragent on git commits or pull requests
+alwaysApply: true
+---
+
+# Git attribution
+
+Commits and pull requests in this repo are authored only by the human owner.
+
+- Do not add `Co-authored-by` for Cursor, Cursor Agent, or `cursoragent@cursor.com`.
+- Do not add `Made-with: Cursor`, `Made with Cursor`, or a `--trailer` that names Cursor.
+- Do not set the commit author or committer to Cursor.
+
+Cursor may still append a trailer after the commit command is written. Before pushing, read the new commit message. If it contains `cursoragent` or a Cursor attribution trailer, amend that unpushed commit and remove only those lines, then push. Do not amend a commit that is already on the remote.

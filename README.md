@@ -100,7 +100,7 @@ Search-style globals (HVT, Hostage, Search & Destroy, Asset Retrieval, Raid) use
 ### Base and world
 
 - Fast travel boards around base (base, medical, pads, range, CQB, locker, pub, and related spots). Lobby can restrict teleport-to-player.
-- Within 500 m of base, ACE self-interact opens a FADE menu (gear, vehicles, scenario). Those entries run the same actions as the loadout boxes, vehicle terminal, and mission board.
+- Within 1000 m of base, ACE self-interact opens a FADE menu (gear and units, vehicles, scenario). Those entries run the same actions as the loadout boxes, recruit board, vehicle terminal, mission board, and fast travel. Heal Me uses the HQ full heal.
 - Ambient civilians in map-derived zones (`CIV_T_*`); talk for tips; building intel packages; dynamic roadblocks.
 - Terrain survey (`FADE_AoSurvey`) buckets roads, flat ground, forest, and buildings for patrol placement.
 - Map diary briefing with scenario notes and joint-fires reference (`rsc/Briefing.sqf`).
