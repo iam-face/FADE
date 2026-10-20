@@ -73,6 +73,7 @@ FADE_spawnHeli = {
     _heli setPosATL _pos;
     _heli setDir _dir;
     _heli setVehicleAmmo 1;
+    [_heli] call FADE_pylon_sanitizeVehicle;
 
     // Clear any existing crew (unmanned spawn)
     { _heli deleteVehicleCrew _x } forEach crew _heli;
@@ -168,6 +169,7 @@ FADE_serviceVehicle = {
     _veh setFuel 1;
     _veh setDamage 0;
     _veh setVehicleAmmo 1;
+    [_veh] call FADE_pylon_sanitizeVehicle;
     ["VEHICLE REPAIRED, REFUELLED, AND REARMED."] remoteExec ["systemChat", _player];
     if (_veh isKindOf "Air") then { call FADE_updateHelipadMarkers };
 };
@@ -259,6 +261,7 @@ FADE_serviceVehiclePart = {
                     };
                 } else {
                     _veh setVehicleAmmo 1;
+                    [_veh] call FADE_pylon_sanitizeVehicle;
                     ["VEHICLE REARMED."] remoteExec ["systemChat", _player];
                 };
             };
@@ -346,6 +349,7 @@ FADE_spawnLandVehicle = {
     _veh setPosATL _selectedPos;
     _veh setDir _selectedDir;
     _veh setVehicleAmmo 1;
+    [_veh] call FADE_pylon_sanitizeVehicle;
     { _veh deleteVehicleCrew _x } forEach crew _veh;
 
     private _displayName = getText (configFile >> "CfgVehicles" >> _vehicleClass >> "displayName");

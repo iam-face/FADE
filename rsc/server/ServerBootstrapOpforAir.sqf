@@ -297,6 +297,7 @@ FADE_opforAir_doSpawn = {
         { if (!isNull _x) then { deleteVehicle _x } } forEach crew _veh;
         deleteVehicle _veh;
     };
+    [_veh] call FADE_pylon_sanitizeVehicle;
     private _cargoCap0 = _veh emptyPositions "cargo";
     private _crewUnits = missionNamespace getVariable ["FADE_enemyUnits", []];
     if (_crewUnits isEqualTo []) then { _crewUnits = [] call (missionNamespace getVariable ["FADE_resolveScenarioEnemyUnits", { [] }]) };

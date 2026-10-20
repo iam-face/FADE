@@ -502,6 +502,7 @@ FAC_missionTestSuite_runServer = {
         "FADE_filterEnemyUnitsByLauncherPolicy",
         "FADE_reapplyOpforLauncherPolicyToAliveEnemy",
         "FADE_spawnHeli",
+        "FADE_pylon_applyLocal",
         "FADE_duplicateVehicleAtBase",
         "FADE_despawnVehicle",
         "FADE_serviceVehicle",
@@ -597,6 +598,7 @@ FAC_missionTestSuite_runServer = {
         "rsc\server\ServerGameplayCqb.sqf",
         "rsc\server\ServerGameplayCore.sqf",
         "rsc\server\ServerGameplayVehicles.sqf",
+        "rsc\FADE_PylonApply.sqf",
         "rsc\server\ServerGameplayMissions.sqf",
         "rsc\server\ServerGameplayMedTrain.sqf",
         "rsc\server\ServerGameplayMissionAdmin.sqf",
@@ -1415,6 +1417,86 @@ FAC_missionTestSuite_runServer = {
     };
     _ok = !isNull _vehicleGuiAnchor;
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): Eden vehicle GUI anchor (%1)", _vehicleGuiLabel]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): Eden vehicle GUI anchor missing (terminalVeh or vehicleBoard)"; };
+
+    // A magazine the pylon does not list is not applied. Pilot turret [-1] normalizes to [].
+    _ok = (!isNil "FADE_pylon_normalizeTurret")
+        && { ([[-1]] call FADE_pylon_normalizeTurret) isEqualTo [] }
+        && { ([[0]] call FADE_pylon_normalizeTurret) isEqualTo [0] };
+    if (_ok) then {
+        private _pylonClass = "";
+        {
+            if (isClass (configFile >> "CfgVehicles" >> _x)) exitWith { _pylonClass = _x };
+        } forEach ["B_Heli_Attack_01_dynamicLoadout_F", "O_Heli_Attack_02_dynamicLoadout_F"];
+        if (_pylonClass == "") then {
+            diag_log "[FAC TestSuite] PASS (server): pylon turret normalize (no dynamic-loadout class to spawn)";
+            _pass = _pass + 1;
+        } else {
+            private _pylonVeh = createVehicle [_pylonClass, [0, 0, 800], [], 0, "NONE"];
+            if (isNull _pylonVeh) then {
+                _fail = _fail + 1;
+                diag_log format ["[FAC TestSuite] FAIL (server): pylon spawn %1", _pylonClass];
+            } else {
+                private _rejected = [_pylonVeh, 1, "FADE_NotARealPylonMag", [-1], -1] call FADE_pylon_applyLocal;
+                private _slotMag = (getPylonMagazines _pylonVeh) param [0, ""];
+                private _slotTurret = [((getAllPylonsInfo _pylonVeh) param [0, []]) param [2, []]] call FADE_pylon_normalizeTurret;
+                _ok = (!_rejected) && {_slotMag != "FADE_NotARealPylonMag"} && {_slotTurret isEqualTo []};
+                if (_ok) then {
+                    _pass = _pass + 1;
+                    diag_log format ["[FAC TestSuite] PASS (server): rejected pylon magazine cleared on %1", _pylonClass];
+                } else {
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): pylon reject applied=%1 mag=%2 turret=%3", _rejected, _slotMag, _slotTurret];
+                };
+                { if (!isNull _x) then { deleteVehicle _x } } forEach crew _pylonVeh;
+                deleteVehicle _pylonVeh;
+            };
+        };
+    } else {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): FADE_pylon_normalizeTurret";
+    };
+
+    if (isClass (configFile >> "CfgVehicles" >> "RS_MH6V3")) then {
+        _ok = missionNamespace getVariable ["FADE_pylon_mh6SyncPatched", false];
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): RS_MH6V3 pylon sync runs on the aircraft owner";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): RS_MH6V3 pylon sync was not replaced";
+        };
+    } else {
+        _pass = _pass + 1;
+        diag_log "[FAC TestSuite] PASS (server): RS_MH6V3 not loaded; pylon sync patch not required";
+    };
+
+    // A non-string uid must not throw. A matching string uid despawns the FIRES drone.
+    _ok = !isNil "FADE_onPlayerDisconnected";
+    if (_ok) then {
+        private _discSavedOu = missionNamespace getVariable ["FAC_firesFoS_droneOwnerUid", ""];
+        private _discSavedFn = missionNamespace getVariable ["FADE_firesFoS_droneDespawnServer", {}];
+        missionNamespace setVariable ["FAC_firesFoS_droneOwnerUid", "FADE_TEST_DISCONNECT_UID"];
+        missionNamespace setVariable ["FADE_testDisconnectDespawned", false];
+        missionNamespace setVariable ["FADE_firesFoS_droneDespawnServer", {
+            missionNamespace setVariable ["FADE_testDisconnectDespawned", true];
+        }];
+        [1, 5, "name", false, 2, "1"] call FADE_onPlayerDisconnected;
+        [1, "other-uid", "name", false, 2, "1"] call FADE_onPlayerDisconnected;
+        private _kept = !(missionNamespace getVariable ["FADE_testDisconnectDespawned", false])
+            && {(missionNamespace getVariable ["FAC_firesFoS_droneOwnerUid", ""]) isEqualTo "FADE_TEST_DISCONNECT_UID"};
+        [1, "FADE_TEST_DISCONNECT_UID", "name", false, 2, "1"] call FADE_onPlayerDisconnected;
+        _ok = _kept && {missionNamespace getVariable ["FADE_testDisconnectDespawned", false]};
+        missionNamespace setVariable ["FAC_firesFoS_droneOwnerUid", _discSavedOu];
+        missionNamespace setVariable ["FADE_firesFoS_droneDespawnServer", _discSavedFn];
+        missionNamespace setVariable ["FADE_testDisconnectDespawned", nil];
+    };
+    if (_ok) then {
+        _pass = _pass + 1;
+        diag_log "[FAC TestSuite] PASS (server): PlayerDisconnected uid match";
+    } else {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): PlayerDisconnected uid match";
+    };
 
     diag_log format ["[FAC TestSuite] ========== SERVER SUITE END: %1 passed, %2 failed ==========", _pass, _fail];
     [_pass, _fail]

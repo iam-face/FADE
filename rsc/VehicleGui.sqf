@@ -73,6 +73,7 @@ FAC_vehicleGui_syncWhitelistSpawnControl = {
 // ACE3 Pylons: ace_pylons_fnc_showDialog  -  non-curator mode auto-closes the dialog when player is farther than
 // ace_pylons_searchDistance (default 15m) from the aircraft (vehicle board vs pad). Curator mode [veh, true] skips
 // that check when ace_zeus is loaded (same as Zeus “configure pylons”). See cba_settings.sqf for distance fallback.
+// Apply itself is replaced in rsc\FADE_PylonApply.sqf so setPylonLoadout runs on the vehicle owner only.
 FAC_vehicleGui_tryOpenPylonDialog = {
     params ["_veh"];
     if (isNull _veh || {!alive _veh}) exitWith { false };

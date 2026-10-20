@@ -165,6 +165,7 @@ FADE_fires_spawnPiece = {
     _newVeh setPosATL _pos;
     _newVeh setDir _dir;
     _newVeh setVehicleAmmo 1;
+    [_newVeh] call FADE_pylon_sanitizeVehicle;
     { _newVeh deleteVehicleCrew _x } forEach crew _newVeh;
 
     FADE_fires_slots set [_idx, [_sn, _logicObj, _newVeh]];
@@ -203,6 +204,7 @@ FADE_fires_rearmSlot = {
     private _veh = (FADE_fires_slots select _idx) select 2;
     if (isNull _veh || {!alive _veh}) exitWith { ["FIRES: nothing to rearm at this slot."] remoteExec ["systemChat", _player]; };
     _veh setVehicleAmmo 1;
+    [_veh] call FADE_pylon_sanitizeVehicle;
     [] call FAC_fires_publishState;
     ["FIRES: ammunition replenished."] remoteExec ["systemChat", _player];
 };
