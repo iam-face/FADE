@@ -2,7 +2,8 @@
 
 # FADE (Face's Dynamic Environment)
 You are welcome to fork this repository and submit pull requests. If you are interested in joining CTB or supporting development of this project, see the discord link below.
-🔗 [My YouTube channel](https://www.youtube.com/@iamface)
+
+🔗 [My YouTube channel](https://www.youtube.com/@iamface) | 🔗 [CTB Discord](https://discord.gg/d5g2dFH)
 
 ---
 
@@ -23,8 +24,6 @@ What we offer:
 - A welcoming, active community built on mateship and shared interest beyond mission nights
 
 Think you’ve got what it takes to run with one of Australia’s longest-standing Arma units? Join our Discord and start your path with CTB.
-
-🔗 [CTB Discord](https://discord.gg/d5g2dFH)
 
 ---
 
