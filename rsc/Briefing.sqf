@@ -462,10 +462,10 @@ OPFOR population multipliers on mission spawn counts: <font color='#90EE90'>Very
 Ambient civilians and traffic use civilian zones. With civilian talk on, use <font color='#90EE90'>Talk to civilian</font> on foot civs or the base NPC. Actionable tips append to the map <font color='#FFD700'>Intel</font> log. Building intel props can appear with virtual garrisons; <font color='#90EE90'>Read intel</font> may show live OPFOR, vehicles, garrisons, checkpoints or mission context. Scenario policy can lock talk to interpreters and reading to Intel specialists.<br/><br/>
 
 <font color='#87CEEB'>LOBBY PARAMETERS</font><br/>
-The host can gate Missions, Scenario, Vehicle, Loadout, Fast Travel to player, Scenario Admin, jukebox, ACE Arsenal, civilian talk, intel reading, debug tools and HQ auto-heal. OPFOR patrol town chance can also be preset before load. Group leaders and admin / Zeus usually override leader-only locks. Access denied means the lobby setting is blocking that action.<br/><br/>
+The host can gate Missions, Scenario, Vehicle, Loadout, Fast Travel to player, Scenario Admin, ACE Arsenal, civilian talk, intel reading, debug tools and HQ auto-heal. OPFOR patrol town chance can also be preset before load. Group leaders and admin / Zeus usually override leader-only locks. Access denied means the lobby setting is blocking that action.<br/><br/>
 
 <font color='#87CEEB'>ADMIN AND CLEANUP</font><br/>
-Admin covers aborting missions, despawning civilians or OPFOR, teleport-all to base, Zeus controls, and stop-all jukebox. Use cleanup carefully on live sessions.
+Admin covers aborting missions, despawning civilians or OPFOR, teleport-all to base, and Zeus controls. Use cleanup carefully on live sessions.
 "]];
 
 // -----------------------------------------------------------------------------
@@ -539,8 +539,8 @@ Within 500 m of base, self-interact and open <font color='#FFD700'>FADE...</font
 <font color='#87CEEB'>FAST TRAVEL</font><br/>
 Teleport boards or <font color='#FFD700'>Ctrl+Shift+apostrophe</font> from anywhere. Destinations include Base HQ, Cargo Slingload, Sultan's CQB Killhouse, Joon's Fires Range, Bean's Medical Area, Officer Area, Firing Range and Sniper Range. Server settings may also allow teleport-to-player.<br/><br/>
 
-<font color='#87CEEB'>JUKEBOX AND SOCIAL AREAS</font><br/>
-Radio_1 through Radio_4 open the jukebox for 3D music at that source. In vehicles, use <font color='#FFD700'>Vehicle loudspeaker...</font> for attached 3D music. SDE's Pub, Juko's Locker Room, C3 Quiet Area and other Eden placements are flavour / training spaces.<br/><br/>
+<font color='#87CEEB'>SOCIAL AREAS</font><br/>
+SDE's Pub, Juko's Locker Room, C3 Quiet Area and other Eden placements are flavour / training spaces.<br/><br/>
 
 <font color='#87CEEB'>KEYBOARD</font><br/>
 <font color='#FFD700'>Ctrl+;</font> - Manage Missions. <font color='#FFD700'>Ctrl+Shift+apostrophe</font> - Fast Travel.<br/><br/>

@@ -410,7 +410,7 @@ private _loadoutMapTex = "img\whiteboardLoadouts.jpg";
 };
 // Music board next to base radios (non-interactable)
 [missionNamespace getVariable ["musicBoard", objNull], "img\sigsound.jpg"] call _applyBoardTexture;
-// Base radio props (jukebox interaction via FAC_ClientBoardActions on Radio_1..4)
+// Base radio props (scenery / cutscene screens; no player action)
 [missionNamespace getVariable ["Radio_1", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
 [missionNamespace getVariable ["Radio_2", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;
 [missionNamespace getVariable ["Radio_3", objNull], "img\laptopJukebox.jpg"] call _applyBoardTexture;

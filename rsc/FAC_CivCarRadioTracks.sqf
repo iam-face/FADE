@@ -1,7 +1,7 @@
 // =============================================================================
 // FAC_CivCarRadioTracks.sqf  -  Sig_* classnames for ambient civ car radio
 // =============================================================================
-// Keep in sync with rsc/JukeboxGui.sqf FAC_jukebox_tracks (second column only).
+// Sig_* classnames from @CTB Mission Sounds Library (CfgSFX).
 // Loaded on server by AmbientCivilians.sqf when the first eligible car rolls radio.
 // =============================================================================
 FAC_civRadio_trackClassnames = [
