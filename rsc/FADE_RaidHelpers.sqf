@@ -59,12 +59,10 @@ FADE_raid_pickObjectiveCodenames = {
 
 FADE_raid_zoneDifficultyMul = {
     params ["_zoneIndex", "_friendlyPlayerCount"];
-    // Zone/player boost only — FADE_scaleOpforCount applies FADE_opforPopulationScale once inside FADE_raid_applyScale.
-    private _playerStep = missionNamespace getVariable ["FADE_raidPlayerDifficultyStep", 0.15];
+    // Later zones only. Player count is applied once inside FADE_scaleOpforCount.
     private _zoneStep = missionNamespace getVariable ["FADE_raidZoneDifficultyStep", 0.1];
-    private _playerBoost = 1 + (_playerStep * ((_friendlyPlayerCount - 1) max 0));
     private _zoneBoost = 1 + (_zoneStep * (_zoneIndex max 0));
-    ((_playerBoost * _zoneBoost) min 2.5) max 0.5
+    (_zoneBoost min 2.5) max 0.5
 };
 
 // SQF nested code cannot close over outer locals — pass _difficultyMul explicitly (not a returned lambda).

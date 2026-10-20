@@ -600,7 +600,8 @@ FAC_loadoutGui_populateWorker = {
 FAC_loadoutGui_fnc = {
     params ["_action", "_params"];
     private _display = findDisplay 60200;
-    if (isNull _display && { _action != "open" }) exitWith {};
+    // save/restore also run from ACE self-interact, with the loadout dialog closed.
+    if (isNull _display && { !(_action in ["open", "saveLoadout", "restoreLoadout"]) }) exitWith {};
 
     switch _action do {
         case "open": {
