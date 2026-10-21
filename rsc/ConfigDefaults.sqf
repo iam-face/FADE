@@ -99,7 +99,8 @@ FADE_aaa_respawnCooldownSec = 120;
 FADE_aaa_baseExclusionM = 1500;
 FADE_aaa_baseExclusionRelaxedM = 800;
 FADE_aaa_baseRelaxAirDistM = 2500;
-FADE_aaa_manpadsRoofChance = 0.35;           // MANPADS try a roof near ground spawn anchor (fallback: open ground)
+FADE_aaa_manpadsClusterChance = 0.10;       // AAA+MANPADS: chance one of the three slots is a MANPADS team (else all static AAA)
+FADE_aaa_manpadsRoofChance = 0.20;           // MANPADS try a roof near ground spawn anchor (fallback: open ground)
 FADE_aaa_manpadsRoofSearchM = 150;           // building search radius around ground anchor
 FADE_aaa_manpadsMinBuildingHeightM = 4;      // skip low sheds / walls (bbox height)
 FADE_aaa_manpadsRoofSamples = 10;            // ray samples per building for flat roof hit
@@ -673,6 +674,13 @@ FADE_hostageIdentities = [
 ];
 FADE_hostageFreeHoldSec = 5;
 FADE_hostageFreeDistM = 3;
+// Hostage voice cues (base-game files, played with playSound3D). Idle groans only while a player is this close.
+FADE_hostageCueIdleNearM = 40;
+FADE_hostageCueIdleDelayMin = 20;
+FADE_hostageCueIdleDelayRand = 20;
+FADE_hostageCueIdleVol = 1;
+FADE_hostageCueSpeechVol = 2;
+FADE_hostageCueAudibleM = 40;
 
 // QRF. One budget per mission. Delays are seconds. Foot distance is metres from the objective.
 FADE_qrfKnowsAboutThreshold = 1.5;

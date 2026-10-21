@@ -224,6 +224,20 @@ class Params
         texts[] = {"1000 m of base", "Anywhere"};
         default = 0;
     };
+    class FAC_BuildCatalog
+    {
+        title = "BUILD: Object list";
+        values[] = {0, 1};
+        texts[] = {"Anything", "Realistic"};
+        default = 0;
+    };
+    class FAC_BuildRequire
+    {
+        title = "BUILD: Base structures";
+        values[] = {0, 1};
+        texts[] = {"Not required", "Required"};
+        default = 0;
+    };
 };
 
 // Respawn: override mission.sqm to avoid respawn on mission start (no script calls forceRespawn).
@@ -362,23 +376,7 @@ class CfgSounds
     class FAC_apprehend006 { name = "FAC_apprehend006"; sound[] = {"\Sounds\fac_apprehend-006.ogg", 2.5, 1, 500}; titles[] = {}; };
     class FAC_apprehend011 { name = "FAC_apprehend011"; sound[] = {"\Sounds\fac_apprehend-011.ogg", 2.5, 1, 500}; titles[] = {}; };
     // Troop transport: add FADE_embarkStart / FADE_embarkDone / FADE_disembarkStart / FADE_disembarkDone here when the matching OGGs exist in Sounds\ (TroopTransport.sqf skips playSound if absent)
-    // Locker Room (rsc\LockerRoomAmbient.sqf) -- CfgSounds maxDistance 250 m; say3D also passes 250
-    // OGG filenames need not match class names; sound[] path is authoritative.
-    class FAC_hostage_interrupt_1 { name = "FAC_hostage_interrupt_1"; sound[] = {"\Sounds\hostage_interrupt_1.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_interrupt_2 { name = "FAC_hostage_interrupt_2"; sound[] = {"\Sounds\hostage_interrupt_2.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_interrupt_3 { name = "FAC_hostage_interrupt_3"; sound[] = {"\Sounds\hostage_interrupt_3.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_pain_1 { name = "FAC_hostage_pain_1"; sound[] = {"\Sounds\hostage_pain_1.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_pain_2 { name = "FAC_hostage_pain_2"; sound[] = {"\Sounds\hostage_pain_2.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_pain_3 { name = "FAC_hostage_pain_3"; sound[] = {"\Sounds\hostage_pain_3.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_pickup_1 { name = "FAC_hostage_pickup_1"; sound[] = {"\Sounds\hostage_pickup_1.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_pickup_2 { name = "FAC_hostage_pickup_2"; sound[] = {"\Sounds\hostage_pickup_2.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_pickup_3 { name = "FAC_hostage_pickup_3"; sound[] = {"\Sounds\hostage_pickup_3.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_rescued_1 { name = "FAC_hostage_rescued_1"; sound[] = {"\Sounds\hostage_rescued_1.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_rescued_2 { name = "FAC_hostage_rescued_2"; sound[] = {"\Sounds\hostage_rescued_2.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_rescued_3 { name = "FAC_hostage_rescued_3"; sound[] = {"\Sounds\hostage_rescued_3.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_struggle_1 { name = "FAC_hostage_struggle_1"; sound[] = {"\Sounds\hostage_struggle_1.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_struggle_2 { name = "FAC_hostage_struggle_2"; sound[] = {"\Sounds\hostage_struggle_2.ogg", 1, 1, 100}; titles[] = {}; };
-    class FAC_hostage_struggle_3 { name = "FAC_hostage_struggle_3"; sound[] = {"\Sounds\hostage_struggle_3.ogg", 1, 1, 100}; titles[] = {}; };
+    // Locker Room slaps (rsc\LockerRoomAmbient.sqf) -- CfgSounds maxDistance 250 m; say3D also passes 250
     class FAC_sig_lockerslap_001 { name = "FAC_sig_lockerslap_001"; sound[] = {"\Sounds\sig_lockerslap-001.ogg", 1, 1, 250}; titles[] = {}; };
     class FAC_sig_lockerslap_002 { name = "FAC_sig_lockerslap_002"; sound[] = {"\Sounds\sig_lockerslap-002.ogg", 1, 1, 250}; titles[] = {}; };
     class FAC_sig_lockerslap_003 { name = "FAC_sig_lockerslap_003"; sound[] = {"\Sounds\sig_lockerslap-003.ogg", 1, 1, 250}; titles[] = {}; };

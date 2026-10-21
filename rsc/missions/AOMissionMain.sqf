@@ -466,20 +466,15 @@ private _fnc_spawnAoOpforVehicle = {
     private _existingAoVehs = missionNamespace getVariable ["FADE_aoVehicles_" + _tid, []];
     private _roadSpawnFn = missionNamespace getVariable ["FADE_findOpforGroundVehicleRoadSpawn", { [] }];
     private _useRoadPool = _roadCandidates isEqualType [] && { count _roadCandidates > 0 };
+    // One road search. Repeating it from every road in the pool froze mission start (~20s for one objective).
     private _roadHit = [];
-    private _roadCand = [];
-    private _poolIdx = 0;
-    private _poolCount = 0;
     if (_useRoadPool) then {
-        private _pool = _roadCandidates call BIS_fnc_arrayShuffle;
-        _poolCount = count _pool;
-        while { _poolIdx < _poolCount && { count _roadHit < 2 } } do {
-            _roadCand = [getPos (_pool select _poolIdx), 150, _existingAoVehs, -1, [], _face] call _roadSpawnFn;
-            if (_roadCand isEqualType [] && { count _roadCand >= 2 }) then { _roadHit = _roadCand };
-            _poolIdx = _poolIdx + 1;
-        };
-    } else {
-        _roadHit = [_anchorPos, 250, _existingAoVehs, -1, [], _face] call _roadSpawnFn;
+        private _seed = getPos (selectRandom _roadCandidates);
+        if (count _seed < 3) then { _seed = [(_seed select 0), (_seed select 1), 0] };
+        _roadHit = [_seed, 80, _existingAoVehs, -1, [], _face] call _roadSpawnFn;
+    };
+    if (!(_roadHit isEqualType []) || { count _roadHit < 2 }) then {
+        _roadHit = [_anchorPos, 150, _existingAoVehs, -1, [], _face] call _roadSpawnFn;
     };
     if (!(_roadHit isEqualType []) || { count _roadHit < 2 }) exitWith { [] };
     _roadHit params ["_vehPos", "_vehDir"];

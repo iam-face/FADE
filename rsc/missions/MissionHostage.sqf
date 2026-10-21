@@ -163,6 +163,7 @@ FADE_runMission_Hostage = {
             if (!_done && _aliveCount > 0) then {
                 private _allAtBase = (_alive findIf { (_x distance _basePos) >= _baseDistForComplete }) == -1;
                 if (_allAtBase) then {
+                    [_alive select 0] call FADE_hostage_playReturnCue;
                     [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
                     _done = true;
                 };

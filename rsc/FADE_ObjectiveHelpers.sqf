@@ -85,12 +85,76 @@ FADE_objective_isSettlementBuilding = {
     private _minCluster = missionNamespace getVariable ["FADE_objectiveBuildingMinClusterSize", 2];
     if (_minCluster <= 1) exitWith { true };
     private _bldPos = getPosATL _building;
-    private _neighbours = (nearestObjects [_bldPos, ["House", "Building"], _clusterRadius]) select {
-        !(_x isEqualTo _building) &&
-        { [_x] call FADE_objective_isInfrastructureClass isEqualTo false } &&
-        { count (_x buildingPos -1) >= 1 }
+    private _neighbours = nearestObjects [_bldPos, ["House", "Building"], _clusterRadius];
+    private _nearCount = 0;
+    private _need = _minCluster - 1;
+    {
+        if (_nearCount >= _need) exitWith {};
+        if (!(_x isEqualTo _building) && { [_x] call FADE_objective_isInfrastructureClass isEqualTo false }) then {
+            _nearCount = _nearCount + 1;
+        };
+    } forEach _neighbours;
+    _nearCount >= _need
+};
+
+// nearestObjects is closest-first. Keep a random subset so a town does not reuse the same houses.
+FADE_samplePlacementList = {
+    params ["_list", ["_max", 40]];
+    if (!(_list isEqualType []) || { count _list <= _max }) exitWith { _list };
+    private _copy = +_list;
+    (_copy call BIS_fnc_arrayShuffle) select [0, _max]
+};
+
+// One nearestObjects for the town. Slot counts are cached. Cluster size is counted from
+// those positions, so a candidate does not start another house query.
+// Record: [building, slotCount, posATL, neighbourCount]
+FADE_objective_buildingRecords = {
+    params ["_pos", "_radius", ["_max", 40], ["_randomSample", true]];
+    private _raw = nearestObjects [_pos, ["House", "Building"], _radius];
+    if (_raw isEqualTo []) exitWith { [] };
+    private _clusterR = missionNamespace getVariable ["FADE_objectiveBuildingClusterRadiusM", 120];
+    private _cluster = [];
+    {
+        private _bld = _x;
+        if !([_bld] call FADE_objective_isInfrastructureClass) then {
+            private _p = getPosATL _bld;
+            if (count _p >= 2) then { _cluster pushBack _p };
+        };
+    } forEach _raw;
+    private _sample = if (_randomSample) then {
+        [_raw, _max] call FADE_samplePlacementList
+    } else {
+        if (count _raw > _max) then { _raw resize _max };
+        _raw
     };
-    (count _neighbours) >= (_minCluster - 1)
+    private _out = [];
+    {
+        private _bld = _x;
+        if !([_bld] call FADE_objective_isInfrastructureClass) then {
+            private _slots = count (_bld buildingPos -1);
+            if (_slots >= 1) then {
+                private _bp = getPosATL _bld;
+                private _nearN = 0;
+                {
+                    private _d = _x distance2D _bp;
+                    if (_d > 1 && { _d <= _clusterR }) then { _nearN = _nearN + 1 };
+                } forEach _cluster;
+                _out pushBack [_bld, _slots, _bp, _nearN];
+            };
+        };
+    } forEach _sample;
+    _out
+};
+
+FADE_objective_pickFromRecords = {
+    params ["_recs", "_searchPos"];
+    if (_recs isEqualTo []) exitWith { objNull };
+    private _scored = _recs apply {
+        [((_x select 3) * 1000) - ((_x select 2) distance2D _searchPos), _x select 0]
+    };
+    _scored = [_scored, [], { _x select 0 }, "DESCEND"] call BIS_fnc_sortBy;
+    private _topN = 3 min count _scored;
+    (selectRandom (_scored select [0, _topN])) select 1
 };
 
 // Prefer dense clusters, then nearer to the search centre; random among top scorers.
@@ -98,56 +162,74 @@ FADE_objective_pickBestBuilding = {
     params ["_candidates", "_searchPos"];
     if (_candidates isEqualTo []) exitWith { objNull };
     private _clusterR = missionNamespace getVariable ["FADE_objectiveBuildingClusterRadiusM", 120];
-    private _scored = _candidates apply {
+    private _around = nearestObjects [_searchPos, ["House", "Building"], 450];
+    private _cluster = [];
+    {
+        private _bld = _x;
+        if !([_bld] call FADE_objective_isInfrastructureClass) then {
+            _cluster pushBack (getPosATL _bld);
+        };
+    } forEach _around;
+    private _recs = [];
+    {
         private _bld = _x;
         private _bp = getPosATL _bld;
-        private _nearCount = (nearestObjects [_bp, ["House", "Building"], _clusterR]) select {
-            [_x] call FADE_objective_isInfrastructureClass isEqualTo false &&
-            { count (_x buildingPos -1) >= 1 }
-        };
-        private _score = (count _nearCount) * 1000 - (_bp distance2D _searchPos);
-        [_score, _bld]
-    };
-    _scored = [_scored, [], { _x select 0 }, "DESCEND"] call BIS_fnc_sortBy;
-    private _topN = 3 min count _scored;
-    (selectRandom (_scored select [0, _topN])) select 1
+        private _nearN = 0;
+        {
+            private _d = _x distance2D _bp;
+            if (_d > 1 && { _d <= _clusterR }) then { _nearN = _nearN + 1 };
+        } forEach _cluster;
+        _recs pushBack [_bld, 1, _bp, _nearN];
+    } forEach _candidates;
+    [_recs, _searchPos] call FADE_objective_pickFromRecords
+};
+
+FADE_objective_recordsMeeting = {
+    params ["_recs", "_minSlots", ["_requireCluster", true]];
+    private _need = (missionNamespace getVariable ["FADE_objectiveBuildingMinClusterSize", 2]) - 1;
+    _recs select {
+        (_x select 1) >= _minSlots && { !_requireCluster || { (_x select 3) >= _need } }
+    }
 };
 
 FADE_objective_findBuilding = {
     params ["_pos", "_radius", "_minSlots"];
-    private _candidates = (nearestObjects [_pos, ["House", "Building"], _radius]) select {
-        count (_x buildingPos -1) >= _minSlots &&
-        { [_x] call FADE_objective_isSettlementBuilding }
-    };
-    [_candidates, _pos] call FADE_objective_pickBestBuilding
+    private _recs = [_pos, _radius, 40, true] call FADE_objective_buildingRecords;
+    private _pool = [_recs, _minSlots, true] call FADE_objective_recordsMeeting;
+    [_pool, _pos] call FADE_objective_pickFromRecords
 };
 
 FADE_objective_findBuildingRelaxed = {
     params ["_pos", "_radius", "_preferSlots"];
-    private _b = [_pos, _radius, _preferSlots] call FADE_objective_findBuilding;
-    if (isNull _b) then { _b = [_pos, _radius, (_preferSlots * 0.6) max 3] call FADE_objective_findBuilding };
-    if (isNull _b) then { _b = [_pos, _radius, 1] call FADE_objective_findBuilding };
-    if (isNull _b) then {
-        private _any = (nearestObjects [_pos, ["House", "Building"], _radius]) select {
-            !([_x] call FADE_objective_isInfrastructureClass) &&
-            { count (_x buildingPos -1) >= 1 }
+    private _recs = [_pos, _radius, 40, true] call FADE_objective_buildingRecords;
+    if (_recs isEqualTo []) exitWith { objNull };
+    private _tiers = [
+        [_preferSlots, true],
+        [(_preferSlots * 0.6) max 3, true],
+        [1, true],
+        [1, false]
+    ];
+    private _chosen = objNull;
+    {
+        _x params ["_minSlots", "_requireCluster"];
+        private _pool = [_recs, _minSlots, _requireCluster] call FADE_objective_recordsMeeting;
+        if !(_pool isEqualTo []) exitWith {
+            _chosen = [_pool, _pos] call FADE_objective_pickFromRecords;
         };
-        if (count _any > 0) then { _b = [_any, _pos] call FADE_objective_pickBestBuilding };
-    };
-    _b
+    } forEach _tiers;
+    _chosen
 };
 
-// Try each search center (map-click missions); shuffled building list per center.
+// Try each search center (map-click missions). Nearest houses to the click, not a random town sample.
 FADE_objective_findBuildingAtCenters = {
     params ["_centers", "_radius", "_minSlots", ["_shuffle", true]];
     private _found = objNull;
     {
-        private _candidates = (nearestObjects [_x, ["House", "Building"], _radius]) select {
-            count (_x buildingPos -1) >= _minSlots &&
-            { [_x] call FADE_objective_isSettlementBuilding }
-        };
-        if (_shuffle) then { _candidates = _candidates call BIS_fnc_arrayShuffle };
-        _found = [_candidates, _x] call FADE_objective_pickBestBuilding;
+        private _center = _x;
+        private _recs = [_center, _radius, 40, false] call FADE_objective_buildingRecords;
+        private _pool = [_recs, _minSlots, true] call FADE_objective_recordsMeeting;
+        if (_shuffle && { count _pool > 1 }) then { _pool = _pool call BIS_fnc_arrayShuffle };
+        _found = [_pool, _center] call FADE_objective_pickFromRecords;
         if (!isNull _found) exitWith {};
     } forEach _centers;
     _found
@@ -276,6 +358,7 @@ FADE_objective_spawnHVTInBuilding = {
     removeAllItems _hvt;
     removeHeadgear _hvt;
     if (_hvtCodename isEqualTo "") then { _hvtCodename = [] call FADE_pickHvtCodename };
+    _hvt setVariable ["FADE_hvt", true, true];
     _hvt setIdentity ("FADE_hvt_" + _hvtCodename);
     _hvt setUnitPos "MIDDLE";
     [_hvt, _hvtPos] spawn {
@@ -330,6 +413,7 @@ FADE_objective_spawnHostageInBuilding = {
         sleep 0.3;
         if (alive _u) then { _u allowDamage true };
     };
+    [_hostage] call FADE_hostage_assignCues;
     [_hostage, _hostageGrp]
 };
 
@@ -371,6 +455,7 @@ FADE_objective_addHostageToGroup = {
         sleep 0.3;
         if (alive _u) then { _u allowDamage true };
     };
+    [_hostage] call FADE_hostage_assignCues;
     [_hostage, name _hostage]
 };
 
@@ -424,6 +509,7 @@ FADE_hostage_serverFree = {
 
     private _msg = format ["%1 freed and attached to your group.", name _hostage];
     [_msg] remoteExec ["FADE_showMissionHint", owner _player];
+    [_hostage, _hostage getVariable ["FADE_hostageReadySound", ""], "speech"] call FADE_hostage_playCue;
 };
 
 FADE_objective_registerHostageFreeHold = {
@@ -433,6 +519,89 @@ FADE_objective_registerHostageFreeHold = {
     _hostage setVariable ["FADE_hostageFreed", false, true];
     if (_taskId != "") then { _hostage setVariable ["FADE_hostageTaskId", _taskId, true] };
     [_hostage] remoteExec ["FADE_hostage_clientRegisterHold", 0, true];
+    if !(_hostage getVariable ["FADE_hostageCueLoop", false]) then {
+        _hostage setVariable ["FADE_hostageCueLoop", true];
+        [_hostage] spawn FADE_hostage_cueLoop;
+    };
+};
+
+// Base-game hostage audio. playSound3D is global: one call is heard on every machine.
+// Paths have no leading backslash (addon files). soundPosition is ASL.
+FADE_hostage_voiceFile = {
+    params ["_speaker", "_rel"];
+    format ["A3\dubbing_radio_f\data\engb\%1\RadioProtocolENG\%2", _speaker, _rel]
+};
+
+FADE_hostage_assignCues = {
+    params ["_hostage"];
+    if (isNull _hostage) exitWith {};
+    private _n = missionNamespace getVariable ["FADE_hostageCueSeq", 0];
+    missionNamespace setVariable ["FADE_hostageCueSeq", _n + 1];
+    private _raw = toLower (speaker _hostage);
+    private _speaker = if (_raw == "male02engb") then { "Male02ENGB" } else { "Male01ENGB" };
+    private _helps = [
+        "Normal\140_Com_Status\HealthSomebodyHelpMe.ogg",
+        "Normal\140_Com_Status\HealthINeedHelpNow.ogg",
+        "Normal\140_Com_Status\HealthINeedSomeHelpHere.ogg"
+    ];
+    _hostage setVariable ["FADE_hostageSpeaker", _speaker];
+    _hostage setVariable ["FADE_hostageHelpSound", [_speaker, _helps select (_n mod 3)] call FADE_hostage_voiceFile, true];
+    _hostage setVariable ["FADE_hostageReadySound", [_speaker, "Normal\110_Com_Announce\IAmReady.ogg"] call FADE_hostage_voiceFile];
+    _hostage setVariable ["FADE_hostageBodySet", format ["P0%1", (_n mod 9) + 1]];
+};
+
+FADE_hostage_idleFile = {
+    params ["_body"];
+    private _idx = 1 + floor random 8;
+    private _kind = if (random 1 < 0.5) then { "Soundbreathinjured_Low_" } else { "Soundinjured_Low_" };
+    format ["A3\sounds_f\characters\human-sfx\%1\%2%3.wss", _body, _kind, format ["0%1", _idx]]
+};
+
+// _kind: "idle" (quiet, inside), "speech" (inside), "return" (outside).
+FADE_hostage_playCue = {
+    params ["_unit", "_file", "_kind"];
+    if (isNull _unit || { _file isEqualTo "" }) exitWith {};
+    private _speech = _kind != "idle";
+    private _volKey = if (_speech) then { "FADE_hostageCueSpeechVol" } else { "FADE_hostageCueIdleVol" };
+    private _volFallback = if (_speech) then { 2 } else { 1 };
+    private _vol = missionNamespace getVariable [_volKey, _volFallback];
+    private _dist = missionNamespace getVariable ["FADE_hostageCueAudibleM", 40];
+    playSound3D [_file, _unit, _kind != "return", getPosASL _unit, _vol, 1, _dist];
+};
+
+FADE_hostage_playReturnCue = {
+    params ["_hostage"];
+    if (isNull _hostage || { !alive _hostage }) exitWith {};
+    private _taskId = _hostage getVariable ["FADE_hostageTaskId", ""];
+    private _key = if (_taskId != "") then { "FADE_hostageReturnCue_" + _taskId } else { "" };
+    if (_key != "" && { missionNamespace getVariable [_key, false] }) exitWith {};
+    if (_key == "" && { _hostage getVariable ["FADE_hostageReturnCue", false] }) exitWith {};
+    if (_key != "") then {
+        missionNamespace setVariable [_key, true];
+    } else {
+        _hostage setVariable ["FADE_hostageReturnCue", true];
+    };
+    private _speaker = _hostage getVariable ["FADE_hostageSpeaker", "Male01ENGB"];
+    private _rel = format ["Combat\200_CombatShouts\CheeringE_%1.ogg", 1 + floor random 5];
+    [_hostage, [_speaker, _rel] call FADE_hostage_voiceFile, "return"] call FADE_hostage_playCue;
+};
+
+FADE_hostage_cueLoop = {
+    params ["_hostage"];
+    if (!isServer) exitWith {};
+    private _delayMin = missionNamespace getVariable ["FADE_hostageCueIdleDelayMin", 20];
+    private _delayRand = missionNamespace getVariable ["FADE_hostageCueIdleDelayRand", 20];
+    private _nearM = missionNamespace getVariable ["FADE_hostageCueIdleNearM", 40];
+    private _nearSq = _nearM * _nearM;
+    while { alive _hostage } do {
+        if (_hostage getVariable ["FADE_hostageFreed", false]) exitWith {};
+        sleep (_delayMin + random _delayRand);
+        if (!alive _hostage) exitWith {};
+        if (_hostage getVariable ["FADE_hostageFreed", false]) exitWith {};
+        if (allPlayers findIf { alive _x && { _x distanceSqr _hostage < _nearSq } } >= 0) then {
+            [_hostage, [_hostage getVariable ["FADE_hostageBodySet", "P01"]] call FADE_hostage_idleFile, "idle"] call FADE_hostage_playCue;
+        };
+    };
 };
 
 // Garrison specific building slot indices (hostage missions).
@@ -462,23 +631,30 @@ FADE_objective_findBuildingsWithMinSlots = {
         ["_minDist", 1000],
         ["_findPosFn", {}]
     ];
+    private _want = (_minCount max 1) + 6;
+    private _scanBuildings = {
+        params ["_pos"];
+        private _recs = [_pos, _buildRadius, 40, !_fromMapClick] call FADE_objective_buildingRecords;
+        private _pool = [_recs, _minSlots, true] call FADE_objective_recordsMeeting;
+        private _hits = [];
+        private _i = 0;
+        private _limit = count _pool;
+        while { _i < _limit && { count _hits < _want } } do {
+            _hits pushBack ((_pool select _i) select 0);
+            _i = _i + 1;
+        };
+        _hits
+    };
     private _found = [];
     if (_fromMapClick) then {
-        _found = (nearestObjects [_searchCenter, ["House", "Building"], _buildRadius]) select {
-            count (_x buildingPos -1) >= _minSlots &&
-            { [_x] call FADE_objective_isSettlementBuilding }
-        };
+        _found = [_searchCenter] call _scanBuildings;
     } else {
         private _attempt = 0;
         while { _attempt < _maxAttempts && { count _found < _minCount } } do {
             _attempt = _attempt + 1;
             private _pos = [_minDist] call _findPosFn;
             if (count _pos >= 2) then {
-                private _buildings = nearestObjects [_pos, ["House", "Building"], _buildRadius];
-                _found = _buildings select {
-                    count (_x buildingPos -1) >= _minSlots &&
-                    { [_x] call FADE_objective_isSettlementBuilding }
-                };
+                _found = [_pos] call _scanBuildings;
             };
         };
     };
@@ -537,6 +713,7 @@ FADE_objective_addRecoverHoldAction = {
     if (isNull _objCase || { _taskId == "" }) exitWith {};
     missionNamespace setVariable ["FADE_assetIntelTaken_" + _taskId, false];
     _objCase setVariable ["FADE_recoverTaskId", _taskId, true];
+    missionNamespace setVariable ["FADE_raidRecoverObj_" + _taskId, _objCase];
     private _displayName = [typeOf _objCase] call (missionNamespace getVariable ["FADE_getRecoverObjectDisplayName", { _this select 0 }]);
     _objCase setVariable ["FADE_recoverObjectDisplayName", _displayName, true];
     [_objCase] remoteExec ["FADE_recover_clientRegisterHold", 0, true];
@@ -650,12 +827,14 @@ FADE_objective_registerNearbyGarrisons = {
     private _surroundBChance = missionNamespace getVariable ["FADE_garrisonMissionNearbyBuildingChance", 0.25];
     private _hasExcl = _excludeRadius > 0 && { _excludeCenter isEqualType [] } && { count _excludeCenter >= 2 };
     private _exclC = if (_hasExcl) then { [_excludeCenter] call FADE_normPos3 } else { [0, 0, 0] };
-    private _surroundFull = (nearestObjects [_zoneCenter, ["House", "Building"], _surroundRadius] select {
+    private _surroundRaw = nearestObjects [_zoneCenter, ["House", "Building"], _surroundRadius];
+    _surroundRaw = [_surroundRaw, 40] call FADE_samplePlacementList;
+    private _surroundFull = _surroundRaw select {
         !(_x in _excludeBuildings) &&
         { isNull _anchorBuilding || { !(_x isEqualTo _anchorBuilding) } } &&
         { count (_x buildingPos -1) >= 1 } &&
         { !_hasExcl || { (getPosATL _x) distance2D _exclC >= _excludeRadius } }
-    });
+    };
     private _surroundBuildings = _surroundFull select { random 1 < _surroundBChance };
     if (count _surroundBuildings == 0 && { count _surroundFull > 0 }) then {
         if (_emptyFallbackMax < 0) then {
@@ -776,6 +955,9 @@ missionNamespace setVariable ["FADE_getRecoverObjectDisplayName", FADE_getRecove
 missionNamespace setVariable ["FADE_smeac_recoverObjectIntelLine", FADE_smeac_recoverObjectIntelLine];
 missionNamespace setVariable ["FADE_objective_isInfrastructureClass", FADE_objective_isInfrastructureClass];
 missionNamespace setVariable ["FADE_objective_isSettlementBuilding", FADE_objective_isSettlementBuilding];
+missionNamespace setVariable ["FADE_samplePlacementList", FADE_samplePlacementList];
+missionNamespace setVariable ["FADE_objective_buildingRecords", FADE_objective_buildingRecords];
+missionNamespace setVariable ["FADE_objective_pickFromRecords", FADE_objective_pickFromRecords];
 missionNamespace setVariable ["FADE_objective_pickBestBuilding", FADE_objective_pickBestBuilding];
 missionNamespace setVariable ["FADE_objective_findBuilding", FADE_objective_findBuilding];
 missionNamespace setVariable ["FADE_objective_findBuildingRelaxed", FADE_objective_findBuildingRelaxed];
@@ -797,4 +979,5 @@ missionNamespace setVariable ["FADE_objective_spawnRecoverHostage", FADE_objecti
 missionNamespace setVariable ["FADE_objective_releaseHostage", FADE_objective_releaseHostage];
 missionNamespace setVariable ["FADE_objective_registerHostageFreeHold", FADE_objective_registerHostageFreeHold];
 missionNamespace setVariable ["FADE_hostage_serverFree", FADE_hostage_serverFree];
+missionNamespace setVariable ["FADE_hostage_playReturnCue", FADE_hostage_playReturnCue];
 publicVariable "FADE_hostage_serverFree";

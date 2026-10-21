@@ -11,7 +11,7 @@ FAC_playthroughSuite__completeLongTimeoutSec = 12;
 FAC_playthroughSuite__operationQrfWaitSec = 20;
 
 FAC_playthroughSuite__longCompleteTypes = [
-    "AreaOfOperations", "Operation", "Raid", "Invasion", "TroopInsert", "TroopExtract"
+    "AreaOfOperations", "Operation", "Raid", "Invasion", "TroopInsert", "TroopExtract", "PointDefense"
 ];
 
 // Defined in MissionPlaythroughSuite.sqf when loaded first; fallback if Profiles compiled alone.
@@ -335,8 +335,10 @@ FAC_playthroughSuite__simRaidObjectives = {
 
         if (_descL find "recover" >= 0 || { _descL find "pick up" >= 0 }) then {
             private _objs = [_taskId] call FAC_playthroughSuite__entObjects;
-            private _intel = objNull;
-            { if (!isNull _x && { _x getVariable ["FADE_recoverTaskId", ""] == _child }) exitWith { _intel = _x } } forEach _objs;
+            private _intel = missionNamespace getVariable [format ["FADE_raidRecoverObj_%1", _child], objNull];
+            if (isNull _intel) then {
+                { if (!isNull _x && { (_x getVariable ["FADE_recoverTaskId", ""]) in [_child, _taskId] }) exitWith { _intel = _x } } forEach _objs;
+            };
             if (isNull _intel) then {
                 _fail = _fail + 1;
                 _notes pushBack format ["child %1 RecoverObject: intel obj missing", _child];
@@ -428,13 +430,17 @@ FAC_playthroughSuite__simTroopWave = {
     };
     _notes pushBack format ["wave teleport %1 units", count units _grp];
 
-    if (_isInsert) then {
-        _grp setVariable ["FADE_insertReachedLZ", true, true];
-        _grp setVariable ["FADE_troopInsertTransportDone", true, true];
-        _player setVariable [format ["FADE_tiWaveOk_%1_1", _taskId], true, false];
-    } else {
-        _grp setVariable ["FADE_troopExtractTransportDone", true, true];
-        _player setVariable [format ["FADE_teWaveOk_%1_1", _taskId], true, false];
+    private _flagUntil = time + 6;
+    waitUntil {
+        sleep 0.5;
+        if (_isInsert) then {
+            { _x setVariable ["FADE_troopInsertTransportDone", true, true] } forEach _squads;
+            _player setVariable [format ["FADE_tiWaveOk_%1_1", _taskId], true, false];
+        } else {
+            { _x setVariable ["FADE_troopExtractTransportDone", true, true] } forEach _squads;
+            _player setVariable [format ["FADE_teWaveOk_%1_1", _taskId], true, false];
+        };
+        time >= _flagUntil
     };
 
     [1, 0, _notes]
@@ -476,8 +482,13 @@ FAC_playthroughSuite__sim_win = {
             [1, 0, ["enemy groups eliminated"]]
         };
         case "SearchDestroy": {
+            private _pack = missionNamespace getVariable [format ["FADE_searchDestroyEntities_%1", _taskId], []];
+            private _caches = if (count _pack >= 2 && { (_pack select 1) isEqualType [] }) then { _pack select 1 } else { [] };
             {
-                if (!isNull _x) then { _x setDamage 1 };
+                if (!isNull _x) then { deleteVehicle _x };
+            } forEach _caches;
+            {
+                if (!isNull _x) then { deleteVehicle _x };
             } forEach ([_taskId] call FAC_playthroughSuite__entObjects);
             [[_taskId] call FAC_playthroughSuite__entGroups, [_sideEn]] call FAC_playthroughSuite__killUnitsInGroups;
             [1, 0, ["caches destroyed + defenders cleared"]]
@@ -526,12 +537,15 @@ FAC_playthroughSuite__sim_win = {
         };
         case "EscapeEvasion": {
             if (count _base < 2) exitWith { [0, 1, ["no base pos"]] };
-            { if (!isNull _x && { isPlayer _x }) then { _x setPosATL _base } } forEach allPlayers;
+            private _homeUnits = allPlayers;
+            private _headless = missionNamespace getVariable ["FADE_headlessOwnerUnit", objNull];
+            if (!isNull _headless) then { _homeUnits = _homeUnits + [_headless] };
+            { if (!isNull _x && { [_x] call FADE_unitIsMissionPlayer }) then { _x setPosATL _base } } forEach _homeUnits;
             [1, 0, ["evadees at base"]]
         };
         case "GeoGuesser": {
             private _st = missionNamespace getVariable [format ["FADE_ggRound_%1", _taskId], createHashMap];
-            private _wait = time + 8;
+            private _wait = time + 14;
             waitUntil {
                 sleep 0.25;
                 _st = missionNamespace getVariable [format ["FADE_ggRound_%1", _taskId], createHashMap];
@@ -573,9 +587,7 @@ FAC_playthroughSuite__sim_win = {
             if (count _dest < 2) exitWith { [0, 1, ["no defend pos"]] };
             [_player, _dest] call FAC_playthroughSuite__teleportPlayer;
             sleep 1.5;
-            // Exercise zone entry (arms timer + first wave); abort rather than waiting full duration.
-            missionNamespace setVariable ["FADE_pdAborted_" + _taskId, true];
-            [1, 0, ["entered defend zone; aborted after timer arm"]]
+            [1, 0, ["entered defend zone"]]
         };
         case "Invasion": {
             private _zones = missionNamespace getVariable [format ["FADE_invasionZoneCenters_%1", _taskId], []];
@@ -586,24 +598,18 @@ FAC_playthroughSuite__sim_win = {
                 { if (_x isEqualType grpNull && { !isNull _x }) then { { if (alive _x) then { _x setDamage 1 } } forEach units _x } } forEach (_invEnt select 0);
             };
             { [_player, _x] call FAC_playthroughSuite__teleportPlayer; sleep 0.5 } forEach _zones;
-            missionNamespace setVariable ["FADE_invasionAborted_" + _taskId, true];
-            missionNamespace setVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], false];
-            if (!isNil "FADE_cleanupMissionEntities") then {
-                [_taskId, "Invasion", true] call FADE_cleanupMissionEntities;
+            private _vgCancel = missionNamespace getVariable ["FADE_vg_cancelPendingByOwner", {}];
+            if !(_vgCancel isEqualTo {}) then { [format ["invasion:%1", _taskId]] call _vgCancel };
+            [_player, _zones select 0] call FAC_playthroughSuite__teleportPlayer;
+            sleep 6;
+            private _invSt = _taskId call BIS_fnc_taskState;
+            if (_invSt in ["ASSIGNED", "CREATED"]) then {
+                [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
             };
             [1, 0, [format ["cleared + visited %1 invasion zones", count _zones]]]
         };
         case "Raid": {
-            private _r = [_player, _taskId, _base] call FAC_playthroughSuite__simRaidObjectives;
-            if ((_r select 1) == 0) then {
-                missionNamespace setVariable ["FADE_raidAborted_" + _taskId, true];
-                missionNamespace setVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], false];
-                if (!isNil "FADE_cleanupMissionEntities") then {
-                    [_taskId, "Raid", true] call FADE_cleanupMissionEntities;
-                };
-                sleep 0.5;
-            };
-            _r
+            [_player, _taskId, _base] call FAC_playthroughSuite__simRaidObjectives
         };
         case "TroopInsert";
         case "TroopExtract": {

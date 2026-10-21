@@ -37,4 +37,3 @@ FADE_lockerNearLockerDist = 2;
 FADE_lockerPosVarMax = 64;
 FADE_lockerSoundDelayMin = 3;
 FADE_lockerSoundDelayRand = 3;
-FADE_lockerHostageChance = 1;

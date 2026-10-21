@@ -230,6 +230,7 @@ FADE_recruit_spawnUnit = {
     params [["_requester", objNull], ["_targetNetId", "", [""]], ["_rowKey", "", [""]]];
     if (isNull _requester || { _rowKey == "" }) exitWith {};
     if ([_requester, "FAC_playerCanUseRecruitGui", "Recruit GUI access denied by lobby settings."] call FAC_lobbyParams_serverDenyUnless) exitWith {};
+    if (!isNil "FAC_build_denyService" && { [_requester, "barracks"] call FAC_build_denyService }) exitWith {};
 
     private _target = _requester;
     if (_targetNetId != "" && { _targetNetId != netId _requester }) then {

@@ -128,58 +128,131 @@ FADE_pylon_sanitizeVehicle = {
     } forEach _infos;
 };
 
-// ACE Apply and ZEN OK run on the client that opened the dialog. Redirect them before the first use.
-if (hasInterface) then {
-    if (!isNil "ace_pylons_fnc_configurePylons") then {
-        ace_pylons_fnc_configurePylons = {
-            params ["_pylonsToConfigure", ["_currentPylon", 0]];
-            if (_currentPylon != 0) exitWith {};
+// ACE 3.21.2 Apply starts ace_common_fnc_progressBar from ace_pylons_fnc_configurePylons.
+// The bar's canInteractWith check uses objNull as the target, so isNotInside fails while the
+// player is seated and the bar calls its failure hint: "Stopped at pylon 1!".
+// CBA keeps the function in uiNamespace as well as missionNamespace. Dialog actions resolve
+// the uiNamespace copy, so a missionNamespace-only overwrite never runs.
+FADE_pylon_publishFn = {
+    params ["_name", "_code"];
+    missionNamespace setVariable [_name, _code];
+    uiNamespace setVariable [_name, _code];
+};
+
+FADE_pylon_aceConfigure = {
+    params ["_pylonsToConfigure", ["_currentPylon", 0]];
+    if (_currentPylon != 0) exitWith {};
+    private _apply = missionNamespace getVariable ["FADE_pylon_apply", {}];
+    if (_apply isEqualTo {}) exitWith {};
+    private _aircraft = missionNamespace getVariable ["ace_pylons_currentAircraft", objNull];
+    if (isNull _aircraft) exitWith {};
+    private _combos = missionNamespace getVariable ["ace_pylons_comboBoxes", []];
+    private _rearm = (missionNamespace getVariable ["ace_pylons_rearmNewPylons", false])
+        || { missionNamespace getVariable ["ace_pylons_isCurator", false] };
+    {
+        private _pylonIndex = _x;
+        private _row = _combos param [_pylonIndex, []];
+        if (_row isEqualTo []) then { continue };
+        private _combo = _row select 0;
+        if (isNull _combo) then { continue };
+        private _magazine = _combo lbData (lbCurSel _combo);
+        private _turret = [];
+        private _button = _row param [2, controlNull];
+        if (!isNull _button) then {
+            _turret = _button getVariable ["ace_pylons_turret", []];
+        };
+        private _ammo = 0;
+        if (_rearm && {_magazine != ""}) then {
+            _ammo = getNumber (configFile >> "CfgMagazines" >> _magazine >> "count");
+        };
+        [_aircraft, _pylonIndex + 1, _magazine, _turret, _ammo] call _apply;
+    } forEach _pylonsToConfigure;
+};
+
+// Same changed-slot scan as ACE 3.21.2 onButtonApply, plus a turret-only edit.
+// Dialog idd 654654 / FRIES checkbox 141 match ace_pylons/script_component.hpp.
+FADE_pylon_aceOnButtonApply = {
+    private _display = findDisplay 654654;
+    if (!isNull _display) then {
+        private _checkbox = _display displayCtrl 141;
+        if (
+            ctrlShown _checkbox
+            && { (cbChecked _checkbox) isNotEqualTo (_checkbox getVariable ["ace_pylons_originalState", false]) }
+        ) then {
             private _aircraft = missionNamespace getVariable ["ace_pylons_currentAircraft", objNull];
-            if (isNull _aircraft) exitWith {};
-            private _combos = missionNamespace getVariable ["ace_pylons_comboBoxes", []];
-            private _rearm = (missionNamespace getVariable ["ace_pylons_rearmNewPylons", false])
-                || { missionNamespace getVariable ["ace_pylons_isCurator", false] };
-            {
-                private _pylonIndex = _x;
-                private _row = _combos param [_pylonIndex, []];
-                if (_row isEqualTo []) then { continue };
-                private _combo = _row select 0;
-                if (isNull _combo) then { continue };
-                private _magazine = _combo lbData (lbCurSel _combo);
-                private _turret = [];
-                private _button = _row param [2, controlNull];
-                if (!isNull _button) then {
-                    _turret = _button getVariable ["ace_pylons_turret", []];
-                };
-                private _ammo = 0;
-                if (_rearm && {_magazine != ""}) then {
-                    _ammo = getNumber (configFile >> "CfgMagazines" >> _magazine >> "count");
-                };
-                [_aircraft, _pylonIndex + 1, _magazine, _turret, _ammo] call FADE_pylon_apply;
-            } forEach _pylonsToConfigure;
+            if (cbChecked _checkbox) then {
+                private _equip = uiNamespace getVariable ["ace_fastroping_fnc_equipFRIES", missionNamespace getVariable ["ace_fastroping_fnc_equipFRIES", {}]];
+                if !(_equip isEqualTo {}) then { [_aircraft] call _equip };
+            } else {
+                private _cut = uiNamespace getVariable ["ace_fastroping_fnc_cutRopes", missionNamespace getVariable ["ace_fastroping_fnc_cutRopes", {}]];
+                if !(_cut isEqualTo {}) then { [_aircraft] call _cut };
+                private _fries = _aircraft getVariable ["ace_fastroping_FRIES", objNull];
+                if (!isNull _fries) then { deleteVehicle _fries };
+            };
+            _checkbox setVariable ["ace_pylons_originalState", cbChecked _checkbox];
         };
     };
 
-    if (!isNil "zen_pylons_fnc_handleConfirm") then {
-        zen_pylons_fnc_handleConfirm = {
-            params ["_ctrlButtonOK"];
-            private _display = ctrlParent _ctrlButtonOK;
-            private _aircraft = _display getVariable ["zen_pylons_aircraft", objNull];
-            if (isNull _aircraft) exitWith {};
-            private _controls = _display getVariable ["zen_pylons_controls", []];
-            {
-                _x params ["_ctrlCombo", "_ctrlTurret"];
-                if (isNull _ctrlCombo) then { continue };
-                private _magazine = _ctrlCombo lbData (lbCurSel _ctrlCombo);
-                private _turretPath = [];
-                if (!isNull _ctrlTurret) then {
-                    _turretPath = _ctrlTurret getVariable ["zen_pylons_turretPath", []];
-                };
-                [_aircraft, _forEachIndex + 1, _magazine, _turretPath, -1] call FADE_pylon_apply;
-            } forEach _controls;
+    private _aircraft = missionNamespace getVariable ["ace_pylons_currentAircraft", objNull];
+    private _combos = missionNamespace getVariable ["ace_pylons_comboBoxes", []];
+    private _toConfigure = [];
+    if (!isNull _aircraft) then {
+        {
+            _x params ["_combo", "", "_button", ["_originalIndex", -1]];
+            if (isNull _combo) then { continue };
+            private _norm = missionNamespace getVariable ["FADE_pylon_normalizeTurret", { _this select 0 }];
+            private _turret = [];
+            if (!isNull _button) then {
+                _turret = [_button getVariable ["ace_pylons_turret", []]] call _norm;
+            };
+            private _info = (getAllPylonsInfo _aircraft) param [_forEachIndex, []];
+            private _curTurret = [_info param [2, []]] call _norm;
+            if ((lbCurSel _combo) != _originalIndex || {!(_turret isEqualTo _curTurret)}) then {
+                _toConfigure pushBack _forEachIndex;
+            };
+        } forEach _combos;
+    };
+    if (_toConfigure isEqualTo []) exitWith {};
+    [_toConfigure, 0] call (missionNamespace getVariable ["FADE_pylon_aceConfigure", {}]);
+    private _close = uiNamespace getVariable ["ace_pylons_fnc_onButtonClose", missionNamespace getVariable ["ace_pylons_fnc_onButtonClose", {}]];
+    if !(_close isEqualTo {}) then { call _close };
+};
+
+FADE_pylon_zenOnConfirm = {
+    params ["_ctrlButtonOK"];
+    private _apply = missionNamespace getVariable ["FADE_pylon_apply", {}];
+    if (_apply isEqualTo {}) exitWith {};
+    private _display = ctrlParent _ctrlButtonOK;
+    private _aircraft = _display getVariable ["zen_pylons_aircraft", objNull];
+    if (isNull _aircraft) exitWith {};
+    private _controls = _display getVariable ["zen_pylons_controls", []];
+    {
+        _x params ["_ctrlCombo", "_ctrlTurret"];
+        if (isNull _ctrlCombo) then { continue };
+        private _magazine = _ctrlCombo lbData (lbCurSel _ctrlCombo);
+        private _turretPath = [];
+        if (!isNull _ctrlTurret) then {
+            _turretPath = _ctrlTurret getVariable ["zen_pylons_turretPath", []];
         };
+        [_aircraft, _forEachIndex + 1, _magazine, _turretPath, -1] call _apply;
+    } forEach _controls;
+};
+
+FADE_pylon_installDialogHooks = {
+    if (!hasInterface) exitWith {};
+    private _ace = uiNamespace getVariable ["ace_pylons_fnc_configurePylons", missionNamespace getVariable ["ace_pylons_fnc_configurePylons", scriptNull]];
+    if !(_ace isEqualTo scriptNull) then {
+        ["ace_pylons_fnc_configurePylons", missionNamespace getVariable "FADE_pylon_aceConfigure"] call FADE_pylon_publishFn;
+        ["ace_pylons_fnc_onButtonApply", missionNamespace getVariable "FADE_pylon_aceOnButtonApply"] call FADE_pylon_publishFn;
+        FADE_pylon_uiHooksInstalled = true;
+    };
+    private _zen = uiNamespace getVariable ["zen_pylons_fnc_handleConfirm", missionNamespace getVariable ["zen_pylons_fnc_handleConfirm", scriptNull]];
+    if !(_zen isEqualTo scriptNull) then {
+        ["zen_pylons_fnc_handleConfirm", missionNamespace getVariable "FADE_pylon_zenOnConfirm"] call FADE_pylon_publishFn;
     };
 };
+
+[] call FADE_pylon_installDialogHooks;
 
 // Runs on every machine. GetIn / controlsShifted fire where the event is raised, then this
 // continues only where the aircraft is local. A failed loadout is cached so the same pair is not retried.

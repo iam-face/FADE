@@ -48,3 +48,39 @@ private _keyed = _rows apply { [_x select 5, _x select 6, _x select 1, _x] };
 _keyed sort true;
 FADE_buildCatalog = _keyed apply { _x select 3 };
 FADE_buildCatalogIndex = _index;
+
+// Realistic keeps the original costs. A class missing from this config is skipped.
+private _realisticSrc = [
+    ["Land_BagFence_Long_F", "Sandbag fence (long)", 15, "Sandbags"],
+    ["Land_BagFence_Short_F", "Sandbag fence (short)", 8, "Sandbags"],
+    ["Land_BagFence_Round_F", "Sandbag fence (round)", 10, "Sandbags"],
+    ["Land_HBarrier_1_F", "H-barrier (single)", 20, "Barriers"],
+    ["Land_HBarrier_5_F", "H-barrier (5)", 40, "Barriers"],
+    ["Land_Razorwire_F", "Razor wire", 12, "Barriers"],
+    ["Land_CncBarrierMedium4_F", "Concrete barrier", 25, "Barriers"],
+    ["Land_BagBunker_Small_F", "Small bag bunker", 80, "Bunkers"],
+    ["Land_CamoNet_BIG_F", "Camo net (large)", 30, "Camo"],
+    ["Land_PortableLight_single_F", "Portable light", 10, "Lights"]
+];
+private _realistic = [];
+{
+    _x params ["_class", "_dn", "_cost", "_sub"];
+    if !(isClass (configFile >> "CfgVehicles" >> _class)) then { continue };
+    _realistic pushBack [_class, _dn, _cost, 0, "", "Fortifications", _sub];
+} forEach _realisticSrc;
+FADE_buildCatalogRealistic = _realistic;
+
+// Four placements. Gear, Barracks, and Vehicles share a model. The role tells them apart.
+private _baseSrc = [
+    ["gear", "Gear", "Land_MedicalTent_01_NATO_generic_closed_F"],
+    ["barracks", "Barracks", "Land_MedicalTent_01_NATO_generic_closed_F"],
+    ["vehicles", "Vehicles", "Land_MedicalTent_01_NATO_generic_closed_F"],
+    ["medical", "Medical", "Land_MedicalTent_01_MTP_closed_F"]
+];
+private _base = [];
+{
+    _x params ["_role", "_dn", "_class"];
+    if !(isClass (configFile >> "CfgVehicles" >> _class)) then { continue };
+    _base pushBack [_class, _dn, 10, 0, "", "Base buildings", "Structures", _role];
+} forEach _baseSrc;
+FADE_buildCatalogBase = _base;

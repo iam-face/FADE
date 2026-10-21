@@ -86,6 +86,7 @@ FAC_vehicleGui_syncPlaceMultiple = {
 // Apply itself is replaced in rsc\FADE_PylonApply.sqf so setPylonLoadout runs on the vehicle owner only.
 FAC_vehicleGui_tryOpenPylonDialog = {
     params ["_veh"];
+    if (!isNil "FAC_build_denyService" && { [player, "vehicles"] call FAC_build_denyService }) exitWith { false };
     if (isNull _veh || {!alive _veh}) exitWith { false };
     if (count getAllPylonsInfo _veh <= 0) exitWith { false };
     if (!isNil "ace_pylons_fnc_showDialog") exitWith {
@@ -351,6 +352,7 @@ FAC_vehicleGui_fnc = {
             if !(["FAC_playerCanUseVehicleGui"] call FAC_lobbyParams_callAccess) exitWith {
                 systemChat "Vehicle GUI access denied by lobby settings.";
             };
+            if (!isNil "FAC_build_denyService" && { [player, "vehicles"] call FAC_build_denyService }) exitWith {};
             private _hasAircraft = !(isNil "FADE_heliClasses") && { count FADE_heliClasses > 0 };
             private _hasLand = !(isNil "FADE_landVehicleClasses") && { count FADE_landVehicleClasses > 0 };
             if (!_hasAircraft && !_hasLand) then {

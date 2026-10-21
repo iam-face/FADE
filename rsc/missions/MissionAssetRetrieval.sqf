@@ -372,6 +372,7 @@ FADE_runMission_AssetRetrieval = {
 
     if (_fromMapClick && { count _mapAnchor >= 2 }) then {
         private _buildingsNear = nearestObjects [_mapAnchor, ["House", "Building"], 500];
+        if (count _buildingsNear > 40) then { _buildingsNear resize 40 };
         private _suitableNear = [];
         {
             private _bps = _x buildingPos -1;
@@ -568,7 +569,9 @@ FADE_runMission_AssetRetrieval = {
         private _nearRad = missionNamespace getVariable ["FADE_garrisonMissionNearbyRadiusM", 450];
         private _nearBldChance = missionNamespace getVariable ["FADE_garrisonMissionNearbyBuildingChance", 0.25];
         private _nearSlotP = missionNamespace getVariable ["FADE_vgNearbySlotChance", 0.165];
-        private _nearBuildingsFull = (nearestObjects [_center, ["House", "Building"], _nearRad]) select {
+        private _nearRaw = nearestObjects [_center, ["House", "Building"], _nearRad];
+        _nearRaw = [_nearRaw, 40] call FADE_samplePlacementList;
+        private _nearBuildingsFull = _nearRaw select {
             !(_x isEqualTo _house) && { count (_x buildingPos -1) >= 1 } && { [getPosATL _x] call _dryPos }
         };
         if (count _nearBuildingsFull > 16) then {

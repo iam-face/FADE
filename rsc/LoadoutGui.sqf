@@ -616,6 +616,7 @@ FAC_loadoutGui_fnc = {
             if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
                 systemChat "Loadout GUI access denied by lobby settings.";
             };
+            if (!isNil "FAC_build_denyService" && { [player, "gear"] call FAC_build_denyService }) exitWith {};
             if (!createDialog "RscDisplayLoadout") then {
                 systemChat "LOADOUT GUI: RESOURCE NOT FOUND.";
             };
@@ -891,6 +892,10 @@ FAC_loadoutGui_fnc = {
         };
 
         case "saveLoadout": {
+            if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Loadout GUI access denied by lobby settings.";
+            };
+            if (!isNil "FAC_build_denyService" && { [player, "gear"] call FAC_build_denyService }) exitWith {};
             // Capture gear + Medic/Engineer traits per UID (onPlayerRespawn restores both).
             [player] call FAC_loadoutGui_saveRespawnLoadoutSnapshot;
             systemChat "Loadout saved - will be restored on respawn.";
@@ -899,6 +904,10 @@ FAC_loadoutGui_fnc = {
         };
 
         case "restoreLoadout": {
+            if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
+                systemChat "Loadout GUI access denied by lobby settings.";
+            };
+            if (!isNil "FAC_build_denyService" && { [player, "gear"] call FAC_build_denyService }) exitWith {};
             private _saved = missionNamespace getVariable ["FAC_savedLoadout_" + getPlayerUID player, []];
             if (count _saved == 0) exitWith {
                 systemChat "No saved loadout - use SAVE LOADOUT first.";

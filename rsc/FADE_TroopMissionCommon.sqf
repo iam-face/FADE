@@ -118,6 +118,14 @@ FADE_troopMission_runTransportWave = {
     waitUntil {
         sleep 2;
         if (_missionEnded || { missionNamespace getVariable [_abortFlag, false] }) exitWith { true };
+        private _flagsOk = true;
+        {
+            _x params ["_scr", "_grp", "_owner"];
+            private _ownerOk = !isNull _owner && { _owner getVariable [_waveOkKeyPrefix + str _waveIdx, false] };
+            private _grpOk = !isNull _grp && { _grp getVariable [_transportDoneVar, false] };
+            if (!_ownerOk && { !_grpOk }) then { _flagsOk = false };
+        } forEach _scripts;
+        if (_flagsOk) exitWith { true };
         ({ scriptDone (_x select 0) } count _scripts) == count _scripts || { time - _waveStart > _waveTimeout }
     };
     private _modeLabel = if (_modePrefix == "ti") then { "TROOP INSERT" } else { "TROOP EXTRACT" };

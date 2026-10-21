@@ -148,6 +148,10 @@ FAC_gui_spec_scenario = [
     ]]],
     ["page", "admin", [
         ["section", "Admin tools", 60930],
+        ["segments", "Object list", "Anything is every prop. Realistic is fortifications only.", [
+            ["Anything", 60848, "setBuildCatalog", [0], "primary"],
+            ["Realistic", 60849, "setBuildCatalog", [1], "idle"]
+        ]],
         ["text", 60943, 0.03, "Destructive actions require a second click (Are you sure?)"],
         ["buttonRow", [
             ["Make me Zeus", 60895, "adminCleanup", ["makeZeus"], "primary"],
@@ -635,24 +639,33 @@ FAC_gui_spec_build = [
         ["build", "Place", 60966],
         ["placed", "Placed", 60967]
     ]],
-    ["page", "build", ["fit", [
-        ["text", 60956, 0.028, "Supply"],
-        ["combo", "Category", "", -1, 60961, "catChanged", []],
-        ["combo", "Type", "", -1, 60962, "subChanged", []],
-        ["edit", "Search", "", -1, 60963, "searchChanged", []],
-        ["list", "Pieces", "", -1, "fill", 60951, "selChanged", []],
-        ["text", 60954, 0.056, ""],
-        ["buttonRow", [
-            ["Simulation: On", 60980, "toggleOpt", ["sim"], "primary"],
-            ["Damage: On", 60981, "toggleOpt", ["damage"], "primary"]
-        ]],
-        ["buttonRow", [
-            ["Simple object: Off", 60982, "toggleOpt", ["simple"], "idle"],
-            ["Place multiple: Off", 60983, "toggleOpt", ["multi"], "idle"]
-        ]],
-        ["structured", 60955, 0.13, "<t color='#9ea3ad' size='0.85'>WASD moves the camera. Mouse looks. Wheel sets distance.<br/>Q and E turn the piece. Page Up raises it. Page Down lowers it. T follows the slope.<br/>Space places the piece. Esc cancels. Ctrl+Z undoes the last piece you placed.<br/>Place multiple stays in the camera. A simple object ignores simulation and damage.</t>"],
-        ["button", "Place", "", 60953, "place", [], "primary"]
-    ]]],
+    ["page", "build", ["columns",
+        [
+            ["segments", "Build", "Fortifications use the object list. Each base building unlocks one service.", [
+                ["Fortifications", 60969, "setStream", ["fort"], "primary"],
+                ["Base buildings", 60970, "setStream", ["base"], "idle"]
+            ]],
+            ["text", 60956, 0.028, "Supply"],
+            ["combo", "Category", "", -1, 60961, "catChanged", []],
+            ["combo", "Type", "", -1, 60962, "subChanged", []],
+            ["edit", "Search", "", -1, 60963, "searchChanged", []],
+            ["list", "Pieces", "", -1, "fill", 60951, "selChanged", []],
+            ["button", "Place", "", 60953, "place", [], "primary"]
+        ],
+        [
+            ["picture", 60968, "ratio", 1.778, 0.32],
+            ["text", 60954, 0.056, ""],
+            ["buttonRow", [
+                ["Simulation: On", 60980, "toggleOpt", ["sim"], "primary"],
+                ["Damage: On", 60981, "toggleOpt", ["damage"], "primary"]
+            ]],
+            ["buttonRow", [
+                ["Simple object: Off", 60982, "toggleOpt", ["simple"], "idle"],
+                ["Place multiple: Off", 60983, "toggleOpt", ["multi"], "idle"]
+            ]],
+            ["structured", 60955, 0.24, "<t color='#9ea3ad' size='0.85'>WASD moves the camera. Mouse looks. Wheel sets distance.<br/>Q and E turn the piece. Page Up raises it. Page Down lowers it.<br/>T follows the slope. Space places the piece.<br/>Esc returns to this menu. Ctrl+Z undoes the last piece you placed.<br/>Place multiple stays in the camera.<br/>A simple object ignores simulation and damage.</t>"]
+        ]
+    ]],
     ["page", "placed", ["fit", [
         ["list", "Placed", "Select a piece.", -1, "fill", 60964, "", []],
         ["button", "Delete", "", 60965, "deletePlaced", [], "danger"]

@@ -66,6 +66,9 @@ FADE_runMission_ClearArea = {
     private _buildingsAll = nearestObjects [_center, ["House", "Building"], _areaRadius + _caGarExtra];
     private _buildings = (_buildingsAll select { random 1 < _caBldChance });
     if (count _buildings == 0 && { count _buildingsAll > 0 }) then { _buildings = +_buildingsAll };
+    if (count _buildings > 18) then {
+        _buildings = (_buildings call BIS_fnc_arrayShuffle) select [0, 18];
+    };
     private _usedPositions = [];
     private _maxUnitsPerBuilding = 2;
     private _maxGarrisonTotal = [35, 8] call _scaleOpforCount;

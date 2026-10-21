@@ -220,6 +220,7 @@ for "_pg" from 0 to (_numPatrol - 1) do {
 };
 
 private _blds = nearestObjects [_invasionCenter, ["House", "Building"], _zoneRadius * 0.9];
+_blds = [_blds, 24] call FADE_samplePlacementList;
 _blds = (_blds select { count (_x buildingPos -1) >= 2 }) call BIS_fnc_arrayShuffle;
 private _maxB = 2 min count _blds;
 for "_b" from 0 to (_maxB - 1) do {

@@ -565,6 +565,7 @@ hint parseText _welcomeText;
             if (
                 (count _hq >= 2)
                 && {(getPosATL _u) distance2D [_hq select 0, _hq select 1] <= _radius}
+                && { isNil "FAC_build_serviceUp" || { ["medical"] call FAC_build_serviceUp } }
             ) then {
                 [_u] call FAC_hqHeal_applyLocal;
             };
@@ -631,20 +632,22 @@ FAC_missionTestSuite_execClient = {
 
 FAC_missionTestSuite_execAll = {
     if (!hasInterface) exitWith {};
-    if (isNil "FAC_missionTestSuite_runClient") then {
-        call compile preprocessFileLineNumbers "rsc\MissionTestSuite.sqf";
-    };
-    if (isNil "FAC_missionTestSuite_runClient" || { isNil "FAC_missionTestSuite_showSummary" }) exitWith {
-        systemChat "[FAC TestSuite] aborted: rsc\MissionTestSuite.sqf failed to load (check RPT).";
-    };
-    private _cRes = call FAC_missionTestSuite_runClient;
-    missionNamespace setVariable ["FAC_missionTestSuite_clientRes", _cRes, false];
-    if (isServer) then {
-        private _sRes = [player] call FAC_missionTestSuite_runServer;
-        [_cRes, _sRes, false] call FAC_missionTestSuite_showSummary;
-    } else {
-        [_cRes, [0, 0], true] call FAC_missionTestSuite_showSummary;
-        [player, true] remoteExec ["FAC_missionTestSuite_execServer", 2];
+    [] spawn {
+        if (isNil "FAC_missionTestSuite_runClient") then {
+            call compile preprocessFileLineNumbers "rsc\MissionTestSuite.sqf";
+        };
+        if (isNil "FAC_missionTestSuite_runClient" || { isNil "FAC_missionTestSuite_showSummary" }) exitWith {
+            systemChat "[FAC TestSuite] aborted: rsc\MissionTestSuite.sqf failed to load (check RPT).";
+        };
+        private _cRes = call FAC_missionTestSuite_runClient;
+        missionNamespace setVariable ["FAC_missionTestSuite_clientRes", _cRes, false];
+        if (isServer) then {
+            private _sRes = [player] call FAC_missionTestSuite_runServer;
+            [_cRes, _sRes, false] call FAC_missionTestSuite_showSummary;
+        } else {
+            [_cRes, [0, 0], true] call FAC_missionTestSuite_showSummary;
+            [player, true] remoteExec ["FAC_missionTestSuite_execServer", 2];
+        };
     };
 };
 

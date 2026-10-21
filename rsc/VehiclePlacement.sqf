@@ -274,6 +274,7 @@ FADE_spawnVehicleAtPos = {
     if (!isServer) exitWith {};
     params ["_class", "_player", "_posASL", ["_dir", 0]];
     if ([_player, "FAC_playerCanUseVehicleGui", "Vehicle GUI access denied by lobby settings."] call FAC_lobbyParams_serverDenyUnless) exitWith {};
+    if (!isNil "FAC_build_denyService" && { [_player, "vehicles"] call FAC_build_denyService }) exitWith {};
     if ([_player] call FADE_base_denyUntilDefined) exitWith {};
     if !(_class isEqualType "") then { _class = "" };
     if !(_dir isEqualType 0) then { _dir = 0 };

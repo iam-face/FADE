@@ -25,6 +25,7 @@ FADE_runMission_CASEVAC = {
 
     private _groupData = [_destPos, _sideFriendly, _pickupClasses, _survPos] call FADE_mission_spawnFriendlyPickupGroup;
     _groupData params ["_group", "_wpPos"];
+    if (!isNull _group) then { [_taskId, _group] call FADE_missionEnt_registerGroup };
 
     [_group] call FADE_mission_casevacCasualtyPrep;
 
@@ -89,6 +90,7 @@ FADE_runMission_CSAR = {
     };
     private _groupData = [_destPos, _sideFriendly, _pickupClasses, _survPos] call FADE_mission_spawnFriendlyPickupGroup;
     _groupData params ["_group", "_survPos"];
+    if (!isNull _group) then { [_taskId, _group] call FADE_missionEnt_registerGroup };
     { _x allowDamage false } forEach units _group;
     private _crashCenter = if (!isNull _wreck) then { getPosATL _wreck } else { +_wpPos };
     if (count _crashCenter < 3) then { _crashCenter = [(_crashCenter select 0), (_crashCenter select 1), 0] };
