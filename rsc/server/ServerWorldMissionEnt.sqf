@@ -260,7 +260,9 @@ FADE_missionEnt_deleteGroupFull = {
 FADE_missionEnt_deleteVehicleFull = {
     params ["_veh"];
     if (isNull _veh) exitWith {};
-    private _cg = _veh getVariable ["FADE_eeQrfCargoGrp", grpNull];
+    private _cg = _veh getVariable ["FADE_qrfCargoGrp", grpNull];
+    if (isNull _cg) then { _cg = _veh getVariable ["FADE_eeQrfCargoGrp", grpNull] };
+    if (isNull _cg) then { _cg = _veh getVariable ["FADE_opCargoGrp", grpNull] };
     if (isNull _cg) then { _cg = _veh getVariable ["FADE_opforAirCargoGrp", grpNull] };
     if (!isNull _cg) then {
         { if (!isNull _x) then { deleteVehicle _x } } forEach units _cg;

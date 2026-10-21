@@ -27,7 +27,7 @@ Admins and Zeus can usually override group-leader-only GUI locks. Changes from S
 - OPFOR population multiplier, patrols (including town chance), skill / routing / retreat behaviour, and AAA (Off / AAA / AAA+MANPADS).
 - OPFOR grenades (Normal / Reduced / Minimal / None, default Reduced): caps thrown HE, under-barrel HE, and dedicated grenade launchers on enemy infantry. Smoke, flares, and chemlights stay.
 - OPFOR player scaling (default On): garrison, patrol, and QRF counts follow alive player count on top of the population multiplier. Off keeps population-only counts.
-- OPFOR air and drones (Off / Low / Normal / High): ambient UAV patrol plus QRF vectoring when configured.
+- OPFOR air and drones (Off / Low / Normal / High): ambient UAV patrol. A spot inside the objective can start that mission's QRF.
 - Ambient civilian budget and density; who may talk to civilians; who may read building intel.
 - HQ auto-heal and other gameplay toggles from lobby and Scenario Admin.
 - Scenario Admin tab for operators (access locked by lobby param).
@@ -38,7 +38,7 @@ Admins and Zeus can usually override group-leader-only GUI locks. Changes from S
 
 In-GUI blurbs under Manage Missions are the source of truth for objectives and win conditions. Mission logic lives under `rsc/missions/`; `rsc/Missions.sqf` dispatches.
 
-Search-style globals (HVT, Hostage, Search & Destroy, Asset Retrieval, Raid) use 100 m grid search zones and shared `mil_*` map markers. Dead OPFOR can be searched for field intel that tightens those zones (server-side, dedicated-safe).
+Cargo camps, Clear Area camps, and two Area of Operations objectives use a shared prop set: a camp (three tents), a mortar pit, or a comms relay. HVT, Hostage, Search & Destroy, and Asset Retrieval use 100 m grid search zones and shared `mil_*` map markers. Searching a dead enemy for field intel tightens the zone. The marked area still contains every objective. Raid uses the same grid zones and reveals the objective when friendly forces close in, or the garrison is in contact.
 
 **Intercept Convoy** is temporarily hidden in the Missions GUI (`FADE_disabledMissionTypes`) while route and spawn fixes finish.
 
@@ -101,7 +101,8 @@ Search-style globals (HVT, Hostage, Search & Destroy, Asset Retrieval, Raid) use
 
 - Fast travel boards around base (base, medical, pads, range, CQB, locker, pub, and related spots). Lobby can restrict teleport-to-player.
 - Within 1000 m of base, ACE self-interact opens a FADE menu (gear and units, vehicles, scenario). Those entries run the same actions as the loadout boxes, recruit board, vehicle terminal, mission board, fast travel, and map teleport. Heal Me uses the HQ full heal.
-- Within 1000 m of base, Build (FADE self-interact, under Base) places Eden props, grouped by category and type, with a search box. Place opens a camera. Space places the piece. Esc cancels. Place multiple stays in the camera. Simulation, damage, and simple object are toggles in the menu. Lobby Where can instead allow Build anywhere: outside the base bubble it appears on ACE self-interact itself, and the rest of the FADE menu stays at base. Confirming a single placement opens the menu again. The server records each object. Lobby settings choose who may build, and whether a shared supply pool is charged. Look at a placed piece and use ACE Interact, then Destroy, to take it down. On a placed piece that already has a texture, Write sets the text. Type \n for a new line. Clear erases it.
+- Within 1000 m of base, Build (FADE self-interact, under Base) places Eden props, grouped by category and type, with a search box. Place opens a camera. Space places the piece. Esc cancels. Ctrl+Z removes the last piece you placed. Place multiple stays in the camera. Simulation, damage, and simple object are toggles in the menu. The Placed tab lists every placed piece. Select one and press Delete to remove it. Lobby Where can instead allow Build anywhere: outside the base bubble it appears on ACE self-interact itself, and the rest of the FADE menu stays at base. Confirming a single placement opens the menu again. The server records each object. Lobby settings choose who may build, and whether a shared supply pool is charged. Look at a placed piece and use ACE Interact, then Destroy, to take it down. On a placed piece that already has a texture, Write sets the text. Type \n for a new line. Clear erases it.
+- On a map other than Altis, a logged-in admin places the player base, or players suggest a point (60 seconds) and then vote (60 seconds). Ranges stay off. ACE self-interact and Build are the interface there. Map bounds are the terrain square (`0..worldSize`) on every world.
 - Ambient civilians in map-derived zones (`CIV_T_*`); talk for tips; building intel packages; dynamic roadblocks.
 - Terrain survey (`FADE_AoSurvey`) buckets roads, flat ground, forest, and buildings for patrol placement.
 - Map diary briefing with scenario notes and joint-fires reference (`rsc/Briefing.sqf`).
@@ -137,15 +138,12 @@ Full backlog and design notes: [TODO.md](TODO.md). Status there is the source of
 
 - **Shared GUI shell:** every current terminal is a spec in `rsc/FAC_GuiSpecs.sqf` filled into `FAC_Terminal` by `FAC_gui_build`. Civ talk stays radial and uses the shared button and text classes. A client pass is still needed for scroll and for combo menus inside the scroll area.
 - **Intercept Convoy re-enable** (`FADE_disabledMissionTypes`): fix route / road spawn / RPT errors, then show it in the Missions GUI again.
-- **SEAD / DEAD:** destroy enemy air-defence sites in a sector (reuse AAA class resolution).
 - **Operation v2:** intel-gated 3×3 km grid with three hidden objectives (civ talk + body search); replaces standalone Hunt (not planned as its own type).
 - **Spoken radio:** `kbTell` voice on top of existing `FADE_aiSideChat` subtitles.
 - **OPFOR roadblocks:** place blocks using `FADE_AoSurvey` road buckets and real player traffic.
-- **Commander / RCT-C:** map-order UI at a command tent (HQ recruit board already covers base spawn/dismiss). Deferred until after Operation v2.
 - **Portable FADE:** mod package + Eden base module so FADE can run on maps other than Altis with thin mission glue.
-- **Non-Altis base pick:** on any map other than Altis, a logged-in admin places the player base, or players suggest and vote. Play continues from ACE self-interact and the build GUI. Map bounds are the terrain square (`0..worldSize`); `FADE_Corner_*` logics are unused.
 
-**Already shipped (see Features above, not the open list):** Raid, Invasion, Point Defense, lore, AAA engagement fix, OPFOR drones, field intel / grid search / AoSurvey, any-side factions, HQ recruit board, player-facing copy pass, player construction.
+**Already shipped (see Features above, not the open list):** Raid, Invasion, Point Defense, lore, AAA engagement fix, OPFOR drones, field intel / grid search / AoSurvey, any-side factions, HQ recruit board, player-facing copy pass, player construction, non-Altis base pick.
 
 ---
 

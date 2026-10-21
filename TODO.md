@@ -1,6 +1,6 @@
 # FADE planned features
 
-Backlog for upcoming systems and fixes. Shipped behaviour is summarised in **README.md**. Detailed design for finished work is collapsed below; git history still has the original plans.
+Backlog for upcoming systems and fixes. Shipped behaviour is summarised in **README.md**. Git history still has the original plans.
 
 **Conventions (all items):** server authority (`isServer`), scenario data from **missionNamespace**, mission runners via **`FADE_installMissionModules`** + **`FADE_runMission_<Type>`**, client feedback via **`remoteExec`** to `_player` / **`FADE_showMissionHint`**, new server RPCs **`publicVariable`'d** in **initServer** / **ServerGameplay***, GUIs via **`FAC_*Gui_fnc`** dispatcher, placement via **`FADE_findSafePosArray`** / civ-zone snap helpers. See **`.cursor/agent-docs/AGENTS_PATTERNS.md`** and **SCRIPT_INDEX.md**.
 
@@ -9,72 +9,10 @@ Backlog for upcoming systems and fixes. Shipped behaviour is summarised in **REA
 | # | Item | Status |
 |---|------|--------|
 | 1 | Spoken radio messages | Open |
-| 2 | Raid mission | Shipped (Beta 6) |
-| 3 | Lore mechanic | Shipped (Beta 6/7) |
-| 4 | Invasion mission | Shipped (Beta 6) |
-| 5 | Commander / RCT-C | Open (deferred after Operation v2) |
-| 6 | Enemy AAA engagement fix | Shipped (Beta 7) |
-| 7 | OPFOR drones | Shipped (Beta 7) |
-| 8 | Point Defense mission | Shipped (Beta 7) |
-| 9 | SEAD / DEAD mission | Open |
-| 10 | Hunt mission | Superseded by Operation v2 |
 | 11 | Operation v2 | Open |
 | 12 | OPFOR roadblocks placement | Open |
 | 13 | Portable FADE (mod / multi-map) | Open |
 | 14 | Intercept Convoy re-enable | Open |
-| 15 | Any-side player faction | Shipped (Beta 7; minor residuals) |
-| 16 | Field intel + grid search + AoSurvey | Shipped (Beta 7) |
-| 17 | HQ recruit board | Shipped (Beta 6) |
-| 18 | Player-facing copy (Humanizer pass) | Shipped (Beta 7) |
-| 19 | Player construction | Shipped |
-
----
-
-## Shipped (stubs)
-
-### 2. Raid mission
-
-Global **[G]**: three linked objectives at separate civ zones, variant pool (recover / destroy / HVT / hostage), map or random pick, QRF on zone entry. Runner: `rsc/missions/MissionRaid.sqf`.
-
-### 3. Lore mechanic
-
-Procedural situation paragraphs from `rsc/MissionLore.sqf`; feeds SMEAC / mission intro. Faction-agnostic pools.
-
-### 4. Invasion mission
-
-Global **[G]**: OPFOR beachhead through nearest civil zones; retake INVASION. Runner: `rsc/missions/MissionInvasion.sqf`.
-
-### 6. Enemy AAA engagement
-
-`rsc/EnemyAAA.sqf`: AA-class resolution (`FADE_aaa_getStaticAAClass`), armed-turret scoring, scenario Off / AAA / AAA+MANPADS. Covered by MissionTestSuite AAA cases.
-
-### 7. OPFOR drones
-
-`rsc/server/ServerBootstrapOpforDrones.sqf`: ambient UAV patrol + ground-spot QRF vectoring. Lobby / Scenario: Off / Low / Normal / High (`FADE_opforDroneSetting`).
-
-### 8. Point Defense mission
-
-Global **[G]**: hold 250 m zone for chosen duration; timer on first player entry; INF / VEH waves. Runner: `rsc/missions/MissionPointDefense.sqf`.
-
-### 15. Any-side player faction
-
-Friendly list: all EAST / WEST / GUER `CfgFactionClasses`. Enemy list: opposed sides only. Normalize on Apply (`FADE_normalizeScenarioFactions`); player side sync on Apply, JIP, respawn. Residual: some briefing prose still says BLUFOR/OPFOR; optional `FADE_isScenarioFriendlyUnit` follow-up.
-
-### 16. Field intel, grid search, AoSurvey
-
-100 m grid search zones on HVT, Hostage, S&D, Asset Retrieval, Raid; body-search intel (`FADE_FieldIntel*`); terrain survey buckets (`FADE_AoSurvey`) for patrol WP placement; shared `mil_*` markers.
-
-### 17. HQ recruit board
-
-`hqRecruitBoard` + `rsc/RecruitGui.sqf`: spawn/dismiss friendly AI, presets or faction infantry, Roster tab, lobby access Everyone / Group leaders / Admin.
-
-### 18. Player-facing copy
-
-`.cursor/skills/fade-player-copy/` (+ vendored Humanizer). Narrative surfaces scrubbed: lore, Missions GUI, SMEAC, Briefing/Intel, welcome, lobby overview, civ talk, per-mission briefs, setup chatter, FIRES/Sniper Info. Keep using the skill for new player-visible strings.
-
-### 10. Hunt mission (superseded)
-
-Standalone Hunt is **not** planned. Intel-gated locate-and-assault moves to **Operation v2** (§11), reusing FieldIntel, civ talk, and grid search.
 
 ---
 
@@ -163,123 +101,6 @@ No mass replace in v1: migrate the ~10 highest-traffic lines only; leave remaind
 
 ---
 
-## 5. Commander mechanic (command tent) / RCT-C
-
-**Status:** Deferred. Prefer after Operation v2 (§11). Note: **HQ recruit board** (§17) already covers squad spawn/dismiss at base; RCT-C is the map-order / force-package commander layer on top.
-
-**Goal:** Friendly commander UI at a command tent: recruit/manage AI (infantry, vehicles, aircraft), map waypoints, dismiss, **no Zeus**. Working name **RCT-C** (Regimental Combat Team, Charlie) for AI support elements taskable from an embedded map UI.
-
-### Expected approach
-
-#### Eden / client entry
-
-1. **mission.sqm** — logic object **`terminalCommand`** on command tent (document in **AGENTS_EDEN.md**).
-2. **FAC_ClientBoardActions.sqf** — `addAction` → `['open',[]] call FAC_commanderGui_fnc` after **`FADE_clientInitReady`**.
-3. **initPlayerLocal.sqf** — `compile preprocessFileLineNumbers "rsc\CommanderGui.sqf"`.
-
-#### GUI: `rsc/CommanderGui.sqf` + **description.ext**
-
-| idd | `RscDisplayCommander` **60900** |
-|-----|----------------------------------|
-| Tabs | **Recruit** (type list), **Roster** (active units), **Orders** (waypoint) |
-| Pattern | **`FAC_commanderGui_fnc`**: `"open"`, `"onLoad"`, `"recruit"`, `"dismiss"`, `"orderMove"` |
-| Layout | **BaseControls.hpp**; margins 0.02/0.96; listboxes `lbSetData` = netId / groupId |
-
-**Recruit tab**
-
-- Infantry: headless list from **`FADE_friendlyUnits`** (scenario); count slider; spawn at **`B_SP_1`** (or nearest free **`B_SP_*`**) via server.
-- Vehicle: list from **`FADE_getFriendlyVehicleClasses`**; land → **`VEH_1`/`VEH_2`** + **`BIS_fnc_findSafePos`**; air → pad picker like **VehicleGui** (reuse **`FADE_padNames`**).
-- Aircraft: **`FADE_spawnVehicleAtPos`** reuse. Do not duplicate spawn logic; commander RPC wraps that func with an ownership tag.
-
-**Roster tab**
-
-- Server-maintained **`FADE_commander_roster`** PV or request/response: `[[groupId, type, displayName, netId], ...]`.
-- Buttons: **Dismiss** → server cleanup group + vehicles.
-
-**Orders tab**
-
-- Select roster row → **Set waypoint** → reuse **`FADE_mapClickPick_start`** (**FADE_MapClickPick.sqf**) → `remoteExec ["FADE_commander_setWaypoint", 2]` with `[groupId, pos, "MOVE"|"LAND"]`.
-
-#### Server: `rsc/server/ServerGameplayCommander.sqf` (or `rsc/CommanderServer.sqf`)
-
-Compiled from **ServerGameplay.sqf** shell like other submodules.
-
-| RPC | Behaviour |
-|-----|-----------|
-| `FADE_commander_requestRoster` | Return tagged groups |
-| `FADE_commander_spawnSquad` | Validate cap → `BIS_fnc_spawnGroup` at B_SP → `FADE_commander_tagGroup` |
-| `FADE_commander_spawnVehicle` | Validate cap → call **`FADE_spawnVehicleAtPos`** |
-| `FADE_commander_dismiss` | Delete group/vehicle if `FADE_commanderOwned` |
-| `FADE_commander_setWaypoint` | Server: clear WPs, add move / synchronised **`BIS_fnc_wpLand`** if helo |
-
-**Ownership:** `_grp setVariable ["FADE_commanderOwned", true, true]; _grp setVariable ["FADE_commanderOwnerUid", _uid, true];`
-
-**Caps (Config.sqf):** `FADE_commander_maxInfantry = 24`, `maxVehicles = 4`, `maxAircraft = 2`.
-
-**Authority:** `FADE_commander_playerUid`. First opener sets commander; transfer via UI later (v2). Optional SL-only gate like **`FADE_playerCanUseMissionsGui`**.
-
-**Cleanup:** **HandleDisconnect** / Scenario Admin abort → `FADE_commander_dismissAllForUid`.
-
-All RPCs **`publicVariable`** in **initServer** after compile.
-
-#### Phased delivery
-
-| Phase | Scope |
-|-------|--------|
-| **MVP** | Infantry squad recruit/dismiss, one move WP |
-| **V2** | Land vehicles + helo recruit, land WP |
-| **V3** | Formation, hold/fire orders, FIRES request stub |
-
-#### Files to touch
-
-| File | Change |
-|------|--------|
-| `mission.sqm` | `terminalCommand` |
-| `rsc/CommanderGui.sqf` | New |
-| `description.ext` | Dialog 60900 |
-| `rsc/server/ServerGameplayCommander.sqf` | New |
-| `rsc/server/ServerGameplay.sqf` | Compile commander module |
-| `rsc/Config.sqf` | Caps |
-| `rsc/FAC_ClientBoardActions.sqf` | Board action |
-| `initPlayerLocal.sqf` | GUI compile |
-| `initServer.sqf` / ServerGameplay area | PV RPCs |
-| `rsc/MissionTestSuite.sqf` | RPC surface exists |
-
-### Acceptance
-
-- [ ] Dedicated: recruit squad at B_SP, dismiss, single move order works.
-- [ ] Caps enforced server-side (client cannot bypass).
-- [ ] No spawn inside base safe radius (<700 m **BASE_1**).
-
-### Open questions
-
-- [ ] Single commander slot vs per-squad leader?
-- [ ] Recruited AI count toward ambient friendly caps / performance budget?
-- [ ] How much to share with existing **RecruitGui** vs duplicate roster?
-
----
-
-## 9. SEAD / DEAD mission (destroy enemy air defences)
-
-**Goal:** Global **[G]**: locate and **destroy** enemy air-defence assets (static AA, SAM sites, MANPADS caches, radar) in a marked sector before a time limit, optionally before friendly air can be called (CAS phase).
-
-### Expected approach
-
-- **Targets:** reuse **`FADE_aaa_getStaticAAClass`** / **`EnemyAAA.sqf`** classification; spawn 2–4 clustered sites in one **CIV_T_*** zone or map-click sector.
-- **Intel:** approximate markers (large ellipse) until players enter zone or complete a building search; refine to exact site on proximity.
-- **Win:** all AA objectives destroyed (`Killed` EH on static / crate) or marked destroyed via hold action on radar truck.
-- **Fail:** timeout; optional lose if friendly aircraft destroyed (tie to scenario AAA for ambient threat during mission).
-- **Reuse:** **Search & Destroy** cache loop pattern + **Clear Area** garrison; no new QRF pattern required unless detection triggers counter-attack.
-- **Registration:** **MissionSEAD.sqf** (or **MissionDead.sqf**), global type, map-click placement like S&D.
-
-### Open questions
-
-- [ ] SEAD (suppress) vs DEAD (kill): v1 destroy-only or include "disable for 10 min" hold action?
-- [ ] Tie to player-flown CAS objective or ground-only?
-- [ ] Spawn live AAA that engages players during mission vs static props only?
-
----
-
 ## 11. Operation v2 (intel-gated multi-objective grid)
 
 **Goal:** Global **[G]** replacement for current **Operation**. Players get a **3×3 km grid** (100 m cells) with **three hidden objectives**; intel from **civilian interviews** and **body search** (existing **`FADE_FieldIntel`**) narrows zones before assault.
@@ -331,7 +152,6 @@ All RPCs **`publicVariable`** in **initServer** after compile.
 - Base spawn is lean: key terminals / boards only; system auto-finds nearby vehicle and friendly-AI spawn points.
 - System auto-discovers civ zones, reads configs, and bootstraps the rest of the FADE stack.
 - Mission may only need thin glue (`initServer`, `description.ext` hooks) plus optional map-specific props.
-- A mission that is not Altis has playable soldiers only. Players pick the base in game (logged-in admin, or a 60 second suggestion window and a 60 second vote). Ranges stay unavailable. ACE self-interact and the build GUI are the interface. Map bounds are `0..worldSize` on every world, including Altis, so `FADE_Corner_*` can be deleted.
 
 ### Expected approach (high level)
 
@@ -374,32 +194,9 @@ All RPCs **`publicVariable`** in **initServer** after compile.
 
 ---
 
-## 19. Player construction
-
-**Goal:** Players build cosmetic structures at the player base. Placement follows GRAD Fortifications (menu, ghost, rotate, height, collision) and the WARDOGS loop of a shared base stockpile inside a build radius. FADE owns the code. The server records every object so a later pass can unlock functions (vehicle maintenance and similar) from specific structures.
-
-### Lobby
-
-- **Who can build:** Engineers / Anyone / No-one. Engineers means `getUnitTrait "Engineer"`, which the Loadout GUI already sets (Engineer and Combat Engineer presets, Breacher, and faction classes with `engineer = 1`). Server checks the trait when placing and when removing. Admin and Zeus override, same as other ACCESS locks.
-- **Logistics:** Required / Not required. Default Not required. Each catalog item has a supply cost. The server debits a shared base pool only when Required. The menu shows Free when the charge is off. No income loop in this pass: the pool is a config starting value.
-
-### This pass
-
-- Build menu and ghost placement inside the existing base radius. Server creates the object and stores class, position, owner, cost, and state.
-- Remove refunds the cost when logistics is Required, so a practice base can be rearranged.
-- `buildTime` on each item defaults to 0, and confirm places the finished object. A later interaction (hold action or animation on a blueprint) can use that field without a new data shape. Functional unlocks key off the finished state.
-- One supply number only. Ammo, fuel, and parts stay out until a structure actually consumes them.
-- The catalog is the Eden prop list from `CfgVehicles` (category, then type, then name), with a search box. Cost is 10 for every piece. Write puts text on the highest texture slot. Lower slots stay as the material. Clear erases the written slot. Place uses a camera. Space places. Esc cancels. Toggles: simulation, damage, simple object, place multiple.
-
-### Out of scope
-
-Hammer items, vendor prices, personal carry inventory, deployable FOBs, and gating the vehicle terminal.
-
----
-
 ## Cross-cutting checklist (new missions + systems)
 
-When shipping **SEAD/DEAD**, **Operation v2**, **Commander / RCT-C**, **Radio voice**, or **re-enabled Convoy**:
+When shipping **Operation v2**, **Radio voice**, or **re-enabled Convoy**:
 
 1. **FADE_MissionCompile.sqf** module list (missions)
 2. **ServerGameplayMissions.sqf** types / placement flags
@@ -415,4 +212,4 @@ When shipping **SEAD/DEAD**, **Operation v2**, **Commander / RCT-C**, **Radio vo
 
 ---
 
-*Last updated: Beta 7 backlog sync (shipped stubs collapsed; open specs retained).*
+*Last updated: open specs only. Shipped plans removed (Raid, Invasion, Point Defense, lore, AAA, drones, field intel, factions, recruit board, player copy, construction, non-Altis base pick).*

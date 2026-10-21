@@ -93,9 +93,9 @@ FAC_playthroughSuite__getDestPos = {
 
 FAC_playthroughSuite__saveCounterAttackTiming = {
     private _keys = [
-        "FADE_counterAttackFirstDelayMin", "FADE_counterAttackFirstDelayMax",
-        "FADE_counterAttackBetweenMin", "FADE_counterAttackBetweenMax",
-        "FADE_counterAttackPollInterval", "FADE_counterAttackDetectionRadius"
+        "FADE_qrfFirstDelayMin", "FADE_qrfFirstDelayMax",
+        "FADE_qrfBetweenMin", "FADE_qrfBetweenMax",
+        "FADE_qrfPollInterval", "FADE_qrfDetectionRadius"
     ];
     private _saved = createHashMap;
     { _saved set [_x, missionNamespace getVariable [_x, nil]] } forEach _keys;
@@ -116,11 +116,11 @@ FAC_playthroughSuite__restoreCounterAttackTiming = {
 };
 
 FAC_playthroughSuite__fastCounterAttackTiming = {
-    missionNamespace setVariable ["FADE_counterAttackFirstDelayMin", 1];
-    missionNamespace setVariable ["FADE_counterAttackFirstDelayMax", 2];
-    missionNamespace setVariable ["FADE_counterAttackBetweenMin", 3];
-    missionNamespace setVariable ["FADE_counterAttackBetweenMax", 5];
-    missionNamespace setVariable ["FADE_counterAttackPollInterval", 1];
+    missionNamespace setVariable ["FADE_qrfFirstDelayMin", 1];
+    missionNamespace setVariable ["FADE_qrfFirstDelayMax", 2];
+    missionNamespace setVariable ["FADE_qrfBetweenMin", 3];
+    missionNamespace setVariable ["FADE_qrfBetweenMax", 5];
+    missionNamespace setVariable ["FADE_qrfPollInterval", 1];
 };
 
 FAC_playthroughSuite__teleportPlayer = {
@@ -490,6 +490,7 @@ FAC_playthroughSuite__runQrfProbe = {
 
     [_savedTiming] call FAC_playthroughSuite__restoreCounterAttackTiming;
     [] call FAC_playthroughSuite__fastCounterAttackTiming;
+    // Detection still needs an OPFOR unit to know the player. Teleport alone does not arm a wave.
 
     private _probePos = if (count _dest >= 3) then { +_dest } else { [(_dest select 0), (_dest select 1), 0] };
     [_player, _probePos] call FAC_playthroughSuite__teleportPlayer;

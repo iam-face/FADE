@@ -401,11 +401,20 @@ FADE_runMission_EscapeEvasion = {
 
     private _eeDeleteQrf = {
         params ["_tid"];
+        private _feet = missionNamespace getVariable ["FADE_eeQrfFoot_" + _tid, []];
+        {
+            if (!isNull _x) then {
+                { if (!isNull _x) then { deleteVehicle _x } } forEach units _x;
+                deleteGroup _x;
+            };
+        } forEach _feet;
+        missionNamespace setVariable ["FADE_eeQrfFoot_" + _tid, []];
         private _lst = missionNamespace getVariable ["FADE_eeQrfVehs_" + _tid, []];
         {
             private _v = _x;
             if (!isNull _v) then {
                 private _cg = _v getVariable ["FADE_eeQrfCargoGrp", grpNull];
+                if (isNull _cg) then { _cg = _v getVariable ["FADE_qrfCargoGrp", grpNull] };
                 if (!isNull _cg) then {
                     { if (!isNull _x) then { deleteVehicle _x } } forEach units _cg;
                     deleteGroup _cg;
@@ -423,93 +432,129 @@ FADE_runMission_EscapeEvasion = {
     };
 
     private _eeSpawnQrf = {
-        params ["_tid", "_detP", "_zc", "_baseQ", "_enemyUnitsLoc", "_applyLoc", "_sideEn"];
+        params ["_tid", "_detP", "_enemyUnitsLoc"];
+        if (isNull _detP || { !alive _detP }) exitWith { false };
         [_tid] call _eeDeleteQrf;
-        private _objPos = if (!isNull _detP) then { getPosATL _detP } else { +_zc };
-        private _footGrps = [];
-        private _footFn = missionNamespace getVariable ["FADE_counterAttack_spawnFootWave", {}];
-        if (!(_footFn isEqualTo {}) && { count _objPos >= 2 }) then {
-            [_tid, _objPos, _enemyUnitsLoc, _footGrps, _applyLoc] call _footFn;
+        private _objPos = getPosATL _detP;
+        private _anchor = _objPos getPos [1600 + random 800, random 360];
+        private _bag = [];
+        private _pack = [_tid, _objPos, _enemyUnitsLoc, _bag, _anchor, _detP, false] call FADE_qrfSpawnWave;
+        private _foot = _pack select 0;
+        private _vehs = _pack select 1;
+        missionNamespace setVariable ["FADE_eeQrfFoot_" + _tid, _foot];
+        missionNamespace setVariable ["FADE_eeQrfVehs_" + _tid, _vehs];
+        (count _foot > 0) || { count _vehs > 0 }
+    };
+
+    [_taskId, _evadeePlayers, _basePos, _enemyUnitsEe, _eeSpawnQrf] spawn {
+        params ["_taskId", "_evadeePlayers", "_basePos", "_enemyUnitsEe", "_eeSpawnQrf"];
+        scriptName "FADE_ee_qrf";
+        [_taskId] call FADE_qrfEnsureWavesLeft;
+        private _poll = (missionNamespace getVariable ["FADE_qrfPollInterval", 10]) max 1;
+        private _holding = false;
+        private _detP = objNull;
+        private _state = "";
+        private _delay = 0;
+        private _bw = 0;
+        private _until = 0;
+        private _live = [];
+        private _home = false;
+        private _hit = objNull;
+        private _thr = 1.5;
+        private _sideE = east;
+        private _near = [];
+        private _p = objNull;
+        private _fncHomeOrDead = {
+            if ([_taskId] call FADE_counterAttack_missionEnded) exitWith { "ended" };
+            _live = _evadeePlayers select { !isNull _x && { alive _x } && { isPlayer _x } };
+            if (_live isEqualTo []) exitWith { "ended" };
+            _home = true;
+            { if ((_x distance2D _basePos) > 1000) then { _home = false } } forEach _live;
+            if (_home) exitWith { "home" };
+            "ready"
         };
-        private _staging = _zc getPos [2200 + random 1800, random 360];
-        private _roadHit = [_staging, 500, [], -1, [], getPosATL _detP] call FADE_findOpforGroundVehicleRoadSpawn;
-        if (_roadHit isEqualTo []) exitWith {};
-        _roadHit params ["_roadPos", "_dir"];
-        if !([_roadPos] call _dryPos) exitWith {};
-        private _flEe = missionNamespace getVariable ["FADE_qrfSpawnHintFlare", {}];
-        if (!isNull _detP && { !(_flEe isEqualTo {}) }) then { [getPosATL _detP, 220] call _flEe };
-        private _vehClasses = missionNamespace getVariable ["FADE_enemyVehicles", []];
-        if (_vehClasses isEqualTo []) then {
-            private _ef = missionNamespace getVariable ["FADE_scenarioEnemyFaction", "OPF_F"];
-            _vehClasses = [_ef] call FADE_getEnemyVehiclesForFaction;
+        private _fncDetect = {
+            _hit = objNull;
+            _thr = missionNamespace getVariable ["FADE_qrfKnowsAboutThreshold", 1.5];
+            _sideE = missionNamespace getVariable ["FADE_sideEnemy", east];
+            {
+                _p = _x;
+                if (isNull _hit && { alive _p } && { isPlayer _p }) then {
+                    _near = (getPosATL _p) nearEntities ["CAManBase", 550];
+                    {
+                        if (alive _x && { side _x == _sideE } && { !isPlayer _x } && { [_x, _p, _thr] call FADE_qrfKnowsPlayer }) exitWith { _hit = _p };
+                    } forEach _near;
+                    if (isNull _hit) then {
+                        {
+                            if (!isNull _x && { alive _x } && { [_x, _p, _thr] call FADE_qrfKnowsPlayer }) exitWith { _hit = _p };
+                        } forEach (missionNamespace getVariable ["FADE_opforDrone_active", []]);
+                    };
+                };
+            } forEach _evadeePlayers;
+            _hit
         };
-        private _soft = [];
-        {
-            if (!(_x isKindOf "Air") && { !(_x isKindOf "Ship") } && { !(_x isKindOf "StaticWeapon") }) then {
-                if (!(_x isKindOf "Tank") && { !(_x isKindOf "Wheeled_APC_F") }) then { _soft pushBack _x };
+        while {
+            !([_taskId] call FADE_counterAttack_missionEnded) &&
+            { (missionNamespace getVariable ["FADE_qrfWavesLeft_" + _taskId, 0]) > 0 }
+        } do {
+            _poll = (missionNamespace getVariable ["FADE_qrfPollInterval", 10]) max 1;
+            _state = [] call _fncHomeOrDead;
+            if (_state != "ready") exitWith {};
+            if (!_holding) then {
+                _detP = [] call _fncDetect;
+                if (isNull _detP) then {
+                    sleep _poll;
+                } else {
+                    ["eeQrf detected task=%1 unit=%2", _taskId, _detP] call FADE_qrfDbgLog;
+                    _delay = ["FADE_qrfFirstDelayMin", 120, "FADE_qrfFirstDelayMax", 360] call FADE_qrfRandomSpan;
+                    _until = time + _delay;
+                    waitUntil {
+                        sleep _poll;
+                        _state = [] call _fncHomeOrDead;
+                        _state != "ready" || { time >= _until }
+                    };
+                };
+            } else {
+                _bw = ["FADE_qrfBetweenMin", 540, "FADE_qrfBetweenMax", 660] call FADE_qrfRandomSpan;
+                _until = time + _bw;
+                waitUntil {
+                    sleep _poll;
+                    _state = [] call _fncHomeOrDead;
+                    _state != "ready" || { time >= _until }
+                };
             };
-        } forEach _vehClasses;
-        private _minCargo = 4;
-        private _vehPick = [_soft, _minCargo] call FADE_counterAttack_filterClassesByMinCargo;
-        if (count _vehPick == 0) then {
-            private _landAll = _vehClasses select { !(_x isKindOf "Air") && { !(_x isKindOf "Ship") } && { !(_x isKindOf "StaticWeapon") } };
-            _vehPick = [_landAll, _minCargo] call FADE_counterAttack_filterClassesByMinCargo;
-        };
-        if (count _vehPick == 0) exitWith {};
-        private _vClass = selectRandom _vehPick;
-        private _crewPack = [
-            _vClass, _roadPos, _dir, _enemyUnitsLoc, _sideEn,
-            ["driver", "gunner", "cargo"], "random", true, 6, 0, -1, 1
-        ] call FADE_spawnCrewedGroundVehicle;
-        _crewPack params ["_veh", "_vehGrp", "_cargoGrp"];
-        if (isNull _veh) exitWith {};
-        if (isNull _vehGrp) then { _vehGrp = createGroup _sideEn };
-        _vehGrp setBehaviour "AWARE";
-        _vehGrp setCombatMode "RED";
-        _veh setVariable ["FADE_eeQrfCargoGrp", _cargoGrp];
-        private _tgtPos = getPosATL _detP;
-        private _wp1 = _vehGrp addWaypoint [_tgtPos, 80];
-        _wp1 setWaypointType "MOVE";
-        _wp1 setWaypointSpeed "FULL";
-        private _wp2 = _vehGrp addWaypoint [_tgtPos, 25];
-        _wp2 setWaypointType "SAD";
-        [_veh, _vehGrp, _cargoGrp, _tid, _detP] spawn {
-            params ["_veh", "_vehGrp", "_cargoGrp", "_tid", "_detP"];
-            scriptName "FADE_ee_qrfWp";
-            private _eeWpIv = (missionNamespace getVariable ["FADE_qrfHuntWaypointIntervalS", 60]) max 15;
-            while {
-                alive _veh && {!isNull _veh} &&
-                {!(((_tid call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"]))} &&
-                {!(missionNamespace getVariable ["FADE_eeAborted_" + _tid, false])}
-            } do {
-                sleep _eeWpIv;
-                if (!alive _veh || { isNull _veh }) exitWith {};
-                if (isNull _detP || { !alive _detP }) exitWith {};
-                while { count waypoints _vehGrp > 0 } do { deleteWaypoint [_vehGrp, 0] };
-                private _p = getPosATL _detP;
-                private _w1 = _vehGrp addWaypoint [_p, 80];
-                _w1 setWaypointType "MOVE";
-                _w1 setWaypointSpeed "FULL";
-                private _w2 = _vehGrp addWaypoint [_p, 20];
-                _w2 setWaypointType "SAD";
+            if (_state == "ended" || { _state == "home" }) exitWith {
+                ["eeQrf stop task=%1 reason=%2", _taskId, _state] call FADE_qrfDbgLog;
             };
-            if (!isNull _veh && { alive _veh } && {!isNull _cargoGrp} && { count units _cargoGrp > 0 } && {!isNull _detP} && { alive _detP }) then {
-                {
-                    unassignVehicle _x;
-                    _x action ["GetOut", _veh];
-                } forEach units _cargoGrp;
+            if (isNull _detP) then { continue };
+            if (_state != "ready" || { !alive _detP }) then {
+                ["eeQrf cancelled task=%1 reason=%2", _taskId, _state] call FADE_qrfDbgLog;
+                _holding = false;
+                continue
+            };
+            _state = [] call _fncHomeOrDead;
+            if (_state == "ended" || { _state == "home" }) exitWith {
+                ["eeQrf stop task=%1 reason=%2", _taskId, _state] call FADE_qrfDbgLog;
+            };
+            if (_state != "ready" || { !alive _detP }) then {
+                ["eeQrf cancelled task=%1 reason=notPresent atSpawn", _taskId] call FADE_qrfDbgLog;
+                _holding = false;
+                continue
+            };
+            if ([_taskId, _detP, _enemyUnitsEe] call _eeSpawnQrf) then {
+                [_taskId] call FADE_qrfTakeWave;
+                _holding = (missionNamespace getVariable ["FADE_qrfWavesLeft_" + _taskId, 0]) > 0;
+            } else {
+                ["eeQrf empty task=%1 waveNotSpent", _taskId] call FADE_qrfDbgLog;
+                _holding = false;
+                sleep _poll;
             };
         };
-        private _cur = missionNamespace getVariable ["FADE_eeQrfVehs_" + _tid, []];
-        _cur pushBack _veh;
-        missionNamespace setVariable ["FADE_eeQrfVehs_" + _tid, _cur];
-        [_tid, _veh] call FADE_missionEnt_registerVehicle;
     };
 
     [_taskId, _evadeePlayers, _zoneCenter, _basePos, _enemyUnitsEe, _applyGrpEe, _sideEnemy, _eeDeleteQrf, _eeSpawnQrf, _eeSpawnSearchHeli, _eeDeleteSearchHeli, _player] spawn {
         params ["_taskId", "_evadeePlayers", "_zoneCenter", "_basePos", "_enemyUnitsEe", "_applyGrpEe", "_sideEnemy", "_eeDeleteQrf", "_eeSpawnQrf", "_eeSpawnSearchHeli", "_eeDeleteSearchHeli", "_player"];
         scriptName "FADE_ee_main";
-        private _lastQrf = -1e9;
         private _eeHeliVeh = objNull;
         private _eeHeliGrp = grpNull;
         private _eeHeliCargo = grpNull;
@@ -582,25 +627,6 @@ FADE_runMission_EscapeEvasion = {
             if (_allHome) exitWith {
                 [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
                 true
-            };
-            if ((time - _lastQrf) >= 600) then {
-                private _detP = objNull;
-                {
-                    private _p = _x;
-                    if (!isNull _p && { alive _p }) then {
-                        {
-                            private _u = _x;
-                            if (side _u == _sideEnemy && { alive _u } && { _u isKindOf "Man" } && { _u distance2D _p < 550 }) then {
-                                if (_u knowsAbout _p > 1.59) then { _detP = _p };
-                            };
-                        } forEach allUnits;
-                    };
-                    if (!isNull _detP) exitWith {};
-                } forEach _liveE;
-                if (!isNull _detP) then {
-                    [_taskId, _detP, _zoneCenter, _basePos, _enemyUnitsEe, _applyGrpEe, _sideEnemy] call _eeSpawnQrf;
-                    _lastQrf = time;
-                };
             };
             false
         };

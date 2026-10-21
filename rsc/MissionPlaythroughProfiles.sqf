@@ -8,7 +8,7 @@ FAC_playthroughSuite__enablePhase3 = false;
 FAC_playthroughSuite__enablePhase4 = true;
 FAC_playthroughSuite__completeTimeoutSec = 8;
 FAC_playthroughSuite__completeLongTimeoutSec = 12;
-FAC_playthroughSuite__operationQrfWaitSec = 4;
+FAC_playthroughSuite__operationQrfWaitSec = 20;
 
 FAC_playthroughSuite__longCompleteTypes = [
     "AreaOfOperations", "Operation", "Raid", "Invasion", "TroopInsert", "TroopExtract"
@@ -266,8 +266,14 @@ FAC_playthroughSuite__runOperationQrfProbe = {
     private _zones = missionNamespace getVariable [format ["FADE_operationZoneCenters_%1", _taskId], []];
     if (count _zones < 2) exitWith { [0, 0, ["operation zones not ready"]] };
 
-    private _savedCd = missionNamespace getVariable ["FADE_operationQrfCooldown", 180];
-    missionNamespace setVariable ["FADE_operationQrfCooldown", 5];
+    private _savedMin = missionNamespace getVariable ["FADE_qrfFirstDelayMin", 120];
+    private _savedMax = missionNamespace getVariable ["FADE_qrfFirstDelayMax", 360];
+    private _savedPoll = missionNamespace getVariable ["FADE_qrfPollInterval", 10];
+    private _savedThr = missionNamespace getVariable ["FADE_qrfKnowsAboutThreshold", 1.5];
+    missionNamespace setVariable ["FADE_qrfFirstDelayMin", 1];
+    missionNamespace setVariable ["FADE_qrfFirstDelayMax", 1];
+    missionNamespace setVariable ["FADE_qrfPollInterval", 1];
+    missionNamespace setVariable ["FADE_qrfKnowsAboutThreshold", 0];
 
     private _vehBefore = count ([_taskId] call FAC_playthroughSuite__entVehicles);
     private _opEnt = missionNamespace getVariable [format ["FADE_operationEntities_%1", _taskId], []];
@@ -294,12 +300,15 @@ FAC_playthroughSuite__runOperationQrfProbe = {
         if (time >= _deadline) then { true } else { _qrfSeen }
     };
 
-    missionNamespace setVariable ["FADE_operationQrfCooldown", _savedCd];
+    missionNamespace setVariable ["FADE_qrfFirstDelayMin", _savedMin];
+    missionNamespace setVariable ["FADE_qrfFirstDelayMax", _savedMax];
+    missionNamespace setVariable ["FADE_qrfPollInterval", _savedPoll];
+    missionNamespace setVariable ["FADE_qrfKnowsAboutThreshold", _savedThr];
     private _home = [] call FAC_playthroughSuite__getBasePos;
     if (!isNil "FAC_playthroughSuite__restorePlayerHome") then { [_player] call FAC_playthroughSuite__restorePlayerHome } else { if (count _home >= 2) then { [_player, _home] call FAC_playthroughSuite__teleportPlayer } };
 
     if (_qrfSeen) then { [1, 0, ["operation zone QRF vehicle spawned"]] }
-    else { [0, 1, [format ["no operation QRF within %1s (need BLUFOR+OPFOR contact in zone)", FAC_playthroughSuite__operationQrfWaitSec]]] }
+    else { [0, 1, [format ["no operation QRF within %1s (need OPFOR to know a player in the zone)", FAC_playthroughSuite__operationQrfWaitSec]]] }
 };
 
 // --- Phase 3: Raid child-objective flow ---

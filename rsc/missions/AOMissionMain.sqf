@@ -300,40 +300,21 @@ if (_aoObjPlacementFailed || { count _points < 3 }) exitWith {
     [_player, "AO ERROR", "Could not place objectives on dry land. Try again.", "#FF6666"] call FADE_missionOutcomeHint;
 };
 
-// Composition at OBJ 1 and OBJ 3 only (Cargo-style: [classname, dist, angle, dirOffset]). OBJ 2 is urban - no composition.
+// Composition at OBJ 1 and OBJ 3 only. OBJ 2 is urban and stays empty. The two sites get different layouts.
 private _aoCompositionObjects = [];
-private _objComposition = [
-    ["Land_TentA_F", 8, 0, 0],
-    ["Land_TentDome_F", 10, 180, 0],
-    ["Land_CampingTable_F", 5, 90, 0],
-    ["Land_CampingChair_V2_F", 6, 120, 0],
-    ["Land_CampingChair_V2_F", 6, 60, 0],
-    ["Campfire_burning_F", 4, 270, 0],
-    ["Box_NATO_Ammo_F", 12, 45, 0],
-    ["Box_NATO_Support_F", 12, 315, 0]
-];
+private _aoCompIds = +FADE_comp_ids;
+_aoCompIds = _aoCompIds call BIS_fnc_arrayShuffle;
+private _aoCompPick = 0;
+private _aoCompId = "";
+private _aoCompSpawned = [];
 {
     private _pos = _x;
     private _objIdx = _forEachIndex;
     if (_objIdx != 1) then {
-        private _dir = random 360;
-        {
-            _x params ["_class", "_dist", "_angle", "_dirObj"];
-            if (isClass (configFile >> "CfgVehicles" >> _class)) then {
-                private _ang = _angle + _dir;
-                private _relPos = [(_pos select 0) + _dist * (cos (_ang)), (_pos select 1) + _dist * (sin (_ang)), (_pos param [2, 0])];
-                private _safe = [[_relPos, 0, 2, 0, 1, 0.3, 0, [], _relPos], _relPos] call FADE_findSafePosArray;
-                if (_safe isEqualType [] && { count _safe >= 2 }) then {
-                    _relPos = [(_safe select 0), (_safe select 1), (_safe param [2, 0])];
-                    private _obj = createVehicle [_class, _relPos, [], 0, "NONE"];
-                    _obj setDir (_angle + _dir + _dirObj);
-                    _obj setPosATL _relPos;
-                    if (!surfaceIsWater _relPos) then { _obj setVectorUp surfaceNormal _relPos };
-                    _aoCompositionObjects pushBack _obj;
-                    [_taskId, _obj] call FADE_aoRegisterObject;
-                };
-            };
-        } forEach _objComposition;
+        _aoCompId = _aoCompIds select _aoCompPick;
+        _aoCompPick = _aoCompPick + 1;
+        _aoCompSpawned = [_aoCompId, _pos, _taskId] call FADE_comp_spawn;
+        { _aoCompositionObjects pushBack _x } forEach _aoCompSpawned;
     };
 } forEach _points;
 

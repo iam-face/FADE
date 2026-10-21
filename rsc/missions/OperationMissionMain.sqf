@@ -782,155 +782,120 @@ missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, time];
         if (count _sp < 2) then { _sp = _zc };
         _sp
     };
-    private _qrfCd = missionNamespace getVariable ["FADE_operationQrfCooldown", 180];
+    [_taskId] call FADE_qrfEnsureWavesLeft;
+    private _pollQ = (missionNamespace getVariable ["FADE_qrfPollInterval", 10]) max 1;
+    private _holding = false;
+    private _qrfCenter = [0, 0, 0];
+    private _qrfIdx = -1;
+    private _state = "";
+    private _cap = [];
+    private _hqI = 0;
+    private _found = false;
+    private _zoneCenter = [0, 0, 0];
+    private _zi = 0;
+    private _bag = [];
+    private _pack = [];
+    private _foot = [];
+    private _vehs = [];
+    private _from = [0, 0, 0];
+    private _delay = 0;
+    private _bw = 0;
+    private _ent = [];
+    private _grps = [];
+    private _vehList = [];
+    private _vg = grpNull;
+    private _cg = grpNull;
     while {
         !(missionNamespace getVariable ["FADE_operationAborted_" + _taskId, false])
         && { !((_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"]) }
+        && { (missionNamespace getVariable ["FADE_qrfWavesLeft_" + _taskId, 0]) > 0 }
     } do {
-        sleep 5;
-        if ((time - (missionNamespace getVariable ["FADE_operationQrfLast_" + _taskId, 0])) >= _qrfCd) then {
-        private _cap = missionNamespace getVariable ["FADE_operationCapState_" + _taskId, []];
-        private _hqI = missionNamespace getVariable ["FADE_operationHqIdx_" + _taskId, 0];
-        if (count _cap == count _zones && { !(_cap select _hqI) }) then {
-        private _didQrf = false;
-        {
-            if (_didQrf) exitWith {};
-            private _zoneCenter = _x;
-            private _i = _forEachIndex;
-            if (!(_cap select _i)) then {
-            private _w = [_zoneCenter, _zoneRadius] call FADE_op_countBluforPlayersInRadius;
-            private _e = [_zoneCenter, _zoneRadius] call FADE_op_countEnemyMenSpawnedInRadius;
-            if (_w > 0 && _e > 0) then {
-                    missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, time];
-                    _didQrf = true;
-                    ["opQrf trigger task=%1 zoneIdx=%2 blu=%3 enemy=%4 center=%5", _taskId, _i, _w, _e, _zoneCenter] call FADE_qrfDbgLog;
-                    private _from = _zones select _hqI;
-                    private _footGrps = [];
-                    private _footFn = missionNamespace getVariable ["FADE_counterAttack_spawnFootWave", {}];
-                    if (!(_footFn isEqualTo {})) then {
-                        ["opQrf footWave task=%1 zone=%2", _taskId, _zoneCenter] call FADE_qrfDbgLog;
-                        [_taskId, _zoneCenter, _enemyUnits, _footGrps, _facApply] call _footFn;
-                        private _entFoot = missionNamespace getVariable ["FADE_operationEntities_" + _taskId, []];
-                        if (count _entFoot >= 1 && { count _footGrps > 0 }) then {
-                            private _grpsFoot = _entFoot select 0;
-                            { _grpsFoot pushBack _x } forEach _footGrps;
-                            _entFoot set [0, _grpsFoot];
-                            missionNamespace setVariable ["FADE_operationEntities_" + _taskId, _entFoot];
-                        };
-                    };
-                    private _flOp = missionNamespace getVariable ["FADE_qrfSpawnHintFlare", {}];
-                    if (!(_flOp isEqualTo {})) then { [_from, _zoneRadius] call _flOp };
-                    private _nVeh = 1 + floor random 3;
-                    ["opQrf vehicles task=%1 fromHQ=%2 nVeh=%3 zone=%4", _taskId, _from, _nVeh, _zoneCenter] call FADE_qrfDbgLog;
-                    [_from, _zoneCenter, _enemyUnits, _facApply, _taskId, _nVeh, _zoneRadius, _spawnMinDistPl, _fncFindSpawn] call {
-                        params ["_fromCenter", "_toCenter", "_enemyUnits", "_facApply", "_taskId", "_nVehs", "_zoneRadius", "_spawnMinDistPl", "_fncFindSpawn"];
-                        private _sp = [_fromCenter, _zoneRadius, _spawnMinDistPl] call _fncFindSpawn;
-                        private _to3 = [_toCenter] call {
-                            params ["_p"];
-                            if (count _p < 2) exitWith { [0, 0, 0] };
-                            if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
-                        };
-                        private _huntOp = (([_to3, _zoneRadius] call FADE_op_countBluforPlayersInRadius) == 0);
-                        ["opQrf vehPlan task=%1 spawn=%2 tgt=%3 hunt=%4", _taskId, _sp, _to3, _huntOp] call FADE_qrfDbgLog;
-                        private _centFO = missionNamespace getVariable ["FADE_qrfFriendlyCentroidATL", {}];
-                        private _wpTgt = if (_huntOp && {!(_centFO isEqualTo {})}) then { [_to3] call _centFO } else { +_to3 };
-                        if (count _wpTgt < 3) then { _wpTgt = [(_wpTgt select 0), (_wpTgt select 1), 0] };
-                        private _dir = _sp getDir _wpTgt;
-                        private _huntIvOp = (missionNamespace getVariable ["FADE_qrfHuntWaypointIntervalS", 60]) max 15;
-                        private _fncMake = missionNamespace getVariable ["FADE_operationMakeVehFn_" + _taskId, {}];
-                        private _qrfVehs = [];
-                        for "_qv" from 0 to (_nVehs - 1) do {
-                            if (_qv > 0) then { sleep 6 };
-                            private _off = if (_qv == 0) then { +_sp } else {
-                                private _prev = _qrfVehs select ((count _qrfVehs) - 1);
-                                if (isNull _prev) then { +_sp } else {
-                                    (getPosATL _prev) getPos [14, _dir + 180]
-                                }
-                            };
-                            if (count _off < 3) then { _off = [(_off select 0), (_off select 1), 0] };
-                            private _pack = [_off, _enemyUnits, _facApply, _qrfVehs, _wpTgt, _zoneRadius] call _fncMake;
-                            _pack params ["_veh", "_vGrp", "_cGrp"];
-                            if (!isNull _veh) then {
-                                _qrfVehs pushBack _veh;
-                                ["opQrf vehSpawned task=%1 idx=%2 veh=%3 class=%4", _taskId, _qv, _veh, typeOf _veh] call FADE_qrfDbgLog;
-                                _veh setVariable ["FADE_opVehQrf", true, false];
-                                _veh engineOn true;
-                                private _wp1 = _vGrp addWaypoint [_wpTgt, 0];
-                                _wp1 setWaypointType "MOVE";
-                                _wp1 setWaypointCompletionRadius 20;
-                                private _wp2 = _vGrp addWaypoint [_wpTgt, 0];
-                                _wp2 setWaypointType "SAD";
-                                private _ent = missionNamespace getVariable ["FADE_operationEntities_" + _taskId, []];
-                                if (count _ent >= 6) then {
-                                    private _vehs = _ent select 4;
-                                    _vehs pushBack _veh;
-                                    [_taskId, _veh] call FADE_missionEnt_registerVehicle;
-                                    _ent set [4, _vehs];
-                                    private _grps = _ent select 0;
-                                    _grps pushBack _vGrp;
-                                    if (!isNull _cGrp) then { _grps pushBack _cGrp };
-                                    _ent set [0, _grps];
-                                    missionNamespace setVariable ["FADE_operationEntities_" + _taskId, _ent];
-                                };
-                                if (_huntOp) then {
-                                    [_vGrp, _veh, _taskId, _to3, _huntIvOp] spawn {
-                                        params ["_vehGrp", "_veh", "_taskId", "_fall", "_iv"];
-                                        private _cf = missionNamespace getVariable ["FADE_qrfFriendlyCentroidATL", {}];
-                                        private _td = { (_taskId call BIS_fnc_taskState) in ["SUCCEEDED", "CANCELED", "FAILED"] };
-                                        while { alive _veh && {!isNull _veh} && {!isNull _vehGrp} && { !(call _td) } } do {
-                                            sleep _iv;
-                                            if (!alive _veh || { isNull _veh } || { isNull _vehGrp }) exitWith {};
-                                            private _p = if (!(_cf isEqualTo {})) then { [_fall] call _cf } else { getPosATL _veh };
-                                            if (count _p < 3) then { _p = [(_p select 0), (_p select 1), 0] };
-                                            while { count waypoints _vehGrp > 0 } do { deleteWaypoint [_vehGrp, 0] };
-                                            private _wM = _vehGrp addWaypoint [_p, 0];
-                                            _wM setWaypointType "MOVE";
-                                            _wM setWaypointCompletionRadius 20;
-                                            private _wS = _vehGrp addWaypoint [_p, 0];
-                                            _wS setWaypointType "SAD";
-                                        };
-                                    };
-                                };
-                                [_veh, _vGrp, _cGrp, _to3, _enemyUnits, _facApply, _huntOp, _taskId] spawn {
-                                    params ["_veh", "_vehGrp", "_cargoGrp", "_to3", "_enemyUnits", "_facApply", "_huntOp", "_taskId"];
-                                    private _poll = missionNamespace getVariable ["FADE_counterAttackPollInterval", 10];
-                                    private _cf = missionNamespace getVariable ["FADE_qrfFriendlyCentroidATL", {}];
-                                    waitUntil {
-                                        sleep _poll;
-                                        if (!alive _veh || { isNull _veh }) then {
-                                            true
-                                        } else {
-                                            if (_huntOp) then {
-                                                private _g = if (!(_cf isEqualTo {})) then { [_to3] call _cf } else { +_to3 };
-                                                (_veh distance2D _g) < 130
-                                            } else {
-                                                (_veh distance2D _to3) < 130
-                                            }
-                                        };
-                                    };
-                                    if (!alive _veh || { isNull _veh }) exitWith {};
-                                    if (!isNull _cargoGrp && { count units _cargoGrp > 0 }) then {
-                                        {
-                                            unassignVehicle _x;
-                                            _x action ["GetOut", _veh];
-                                        } forEach units _cargoGrp;
-                                        sleep 4;
-                                        _cargoGrp setBehaviour "COMBAT";
-                                        _cargoGrp setCombatMode "RED";
-                                        private _drop = if (_huntOp && {!(_cf isEqualTo {})}) then { [_to3] call _cf } else { +_to3 };
-                                        if (count _drop < 3) then { _drop = [(_drop select 0), (_drop select 1), 0] };
-                                        ["opQrf cargoUnload task=%1 veh=%2 units=%3 drop=%4", _taskId, _veh, count units _cargoGrp, _drop] call FADE_qrfDbgLog;
-                                        private _wp = _cargoGrp addWaypoint [_drop, 0];
-                                        _wp setWaypointType "SAD";
-                                    };
-                                };
-                            };
-                        };
-                    };
-                };
-            };
-        } forEach _zones;
+        _pollQ = (missionNamespace getVariable ["FADE_qrfPollInterval", 10]) max 1;
+        _cap = missionNamespace getVariable ["FADE_operationCapState_" + _taskId, []];
+        _hqI = missionNamespace getVariable ["FADE_operationHqIdx_" + _taskId, 0];
+        if (count _cap != count _zones) then {
+            sleep _pollQ;
+            continue
         };
+        if (_cap select _hqI) exitWith {
+            ["opQrf stop task=%1 hqCaptured", _taskId] call FADE_qrfDbgLog;
+        };
+        if (!_holding) then {
+            _found = false;
+            {
+                if (_found) exitWith {};
+                _zoneCenter = _x;
+                _zi = _forEachIndex;
+                if (!(_cap select _zi) && { [_zoneCenter, _zoneRadius] call FADE_qrfSensorDetected }) then {
+                    _qrfCenter = [_zoneCenter] call FADE_qrfNorm3;
+                    _qrfIdx = _zi;
+                    _found = true;
+                };
+            } forEach _zones;
+            if (!_found) then {
+                _state = "wait";
+            } else {
+                ["opQrf detected task=%1 zone=%2", _taskId, _qrfCenter] call FADE_qrfDbgLog;
+                _delay = ["FADE_qrfFirstDelayMin", 120, "FADE_qrfFirstDelayMax", 360] call FADE_qrfRandomSpan;
+                _state = [_taskId, _qrfCenter, _zoneRadius, _delay, _pollQ] call FADE_qrfWaitDelayOrLeave;
+            };
+        } else {
+            _bw = ["FADE_qrfBetweenMin", 540, "FADE_qrfBetweenMax", 660] call FADE_qrfRandomSpan;
+            _state = [_taskId, _qrfCenter, _zoneRadius, _bw, _pollQ] call FADE_qrfWaitDelayOrLeave;
+            _cap = missionNamespace getVariable ["FADE_operationCapState_" + _taskId, []];
+            if (_state == "ready" && { count _cap == count _zones } && { _qrfIdx >= 0 } && { _cap select _qrfIdx }) then {
+                _state = "retarget";
+            };
+        };
+        if (_state == "ended") exitWith {};
+        _cap = missionNamespace getVariable ["FADE_operationCapState_" + _taskId, []];
+        if (count _cap == count _zones && { _cap select _hqI }) exitWith {
+            ["opQrf stop task=%1 hqCaptured", _taskId] call FADE_qrfDbgLog;
+        };
+        if (_state == "wait") then {
+            sleep _pollQ;
+            continue
+        };
+        if (_state == "left" || { _state == "retarget" }) then {
+            ["opQrf cancelled task=%1 reason=%2", _taskId, _state] call FADE_qrfDbgLog;
+            _holding = false;
+            continue
+        };
+        if (([_qrfCenter, _zoneRadius] call FADE_qrfFriendliesInRadius) isEqualTo []) then {
+            ["opQrf cancelled task=%1 reason=zoneEmpty atSpawn", _taskId] call FADE_qrfDbgLog;
+            _holding = false;
+            continue
+        };
+        _from = [_zones select _hqI] call FADE_qrfNorm3;
+        _bag = [];
+        _pack = [_taskId, _qrfCenter, _enemyUnits, _bag, _from, objNull, true] call FADE_qrfSpawnWave;
+        _foot = _pack select 0;
+        _vehs = _pack select 1;
+        if ((count _foot) == 0 && { count _vehs == 0 }) then {
+            ["opQrf empty task=%1 waveNotSpent", _taskId] call FADE_qrfDbgLog;
+            _holding = false;
+            sleep _pollQ;
+        } else {
+            _ent = missionNamespace getVariable ["FADE_operationEntities_" + _taskId, []];
+            if (count _ent >= 6) then {
+                _grps = _ent select 0;
+                { _grps pushBack _x } forEach _foot;
+                _vehList = _ent select 4;
+                {
+                    _vehList pushBack _x;
+                    _vg = group driver _x;
+                    if (!isNull _vg && { !(_vg in _grps) }) then { _grps pushBack _vg };
+                    _cg = _x getVariable ["FADE_qrfCargoGrp", grpNull];
+                    if (isNull _cg) then { _cg = _x getVariable ["FADE_opCargoGrp", grpNull] };
+                    if (!isNull _cg && { !(_cg in _grps) }) then { _grps pushBack _cg };
+                } forEach _vehs;
+                _ent set [0, _grps];
+                _ent set [4, _vehList];
+                missionNamespace setVariable ["FADE_operationEntities_" + _taskId, _ent];
+            };
+            [_taskId] call FADE_qrfTakeWave;
+            _holding = (missionNamespace getVariable ["FADE_qrfWavesLeft_" + _taskId, 0]) > 0;
+            ["opQrf committed task=%1 foot=%2 trucks=%3 wavesLeft=%4", _taskId, count _foot, count _vehs, missionNamespace getVariable ["FADE_qrfWavesLeft_" + _taskId, 0]] call FADE_qrfDbgLog;
         };
     };
 };

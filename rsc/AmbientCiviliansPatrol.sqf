@@ -391,10 +391,19 @@ FADE_enemyPatrol_spawnForZone = {
             private _angle = random 360;
             private _dist = _spawnMinD + random ((_spawnMaxD - _spawnMinD) max 1);
             private _rough = _center getPos [_dist, _angle];
-            _sp = [[_rough, 0, 15, 3, 1, 0.4, 0, [], _rough], _rough] call FADE_findSafePosArray;
-            if (!(_sp isEqualType []) || { count _sp < 2 }) then { _sp = +_rough };
-            if (count _sp < 3) then { _sp set [2, 0] };
-            if ([_sp] call _dryFn && { [_sp, _patrolPlClearM] call _patrolFarFromPlayers }) exitWith {};
+            _sp = [[_rough, 0, 20, 2, 0, 0.5, 0, [], _rough]] call FADE_findLandPosWithArgs;
+            if (count _sp >= 2) then {
+                _sp = [_sp] call FADE_normPos3;
+            } else {
+                _sp = [];
+            };
+            if (
+                count _sp >= 2 &&
+                { [_sp, 15] call FADE_posClearOfWater } &&
+                { (_sp distance2D _center) <= (_spawnMaxD + 25) } &&
+                { (_sp distance2D _center) >= ((_spawnMinD * 0.6) min _spawnMaxD) } &&
+                { [_sp, _patrolPlClearM] call _patrolFarFromPlayers }
+            ) exitWith {};
             _sp = [];
         };
         if (count _sp < 2) then { continue };

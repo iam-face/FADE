@@ -85,8 +85,13 @@ FAC_gui_spec_scenario = [
             ["structured", 60940, 0.28, ""]
         ]
     ]],
-    ["page", "factions", ["pin",
-        ["columns",
+    ["page", "factions", ["fit", [
+        ["band", [
+            ["list", "Friendly", "", 60919, "fill", 60311, "factionListChanged", [60311]],
+            ["list", "Enemy", "", 60920, "fill", 60310, "factionListChanged", [60310]],
+            ["list", "Civilian", "", 60921, "fill", 60312, "factionListChanged", [60312]]
+        ]],
+        ["cols", [
             [
                 ["section", "Enemy behaviour"],
                 ["segments", "Patrols", "", [
@@ -139,14 +144,8 @@ FAC_gui_spec_scenario = [
                     ["High", 60962, "setOpforDrone", ["High"], "idle"]
                 ]]
             ]
-        ],
-        [
-            [["list", "Friendly", "", 60919, "fill", 60311, "factionListChanged", [60311]]],
-            [["list", "Enemy", "", 60920, "fill", 60310, "factionListChanged", [60310]]],
-            [["list", "Civilian", "", 60921, "fill", 60312, "factionListChanged", [60312]]]
-        ],
-        0.28
-    ]],
+        ]]
+    ]]],
     ["page", "admin", [
         ["section", "Admin tools", 60930],
         ["text", 60943, 0.03, "Destructive actions require a second click (Are you sure?)"],
@@ -393,14 +392,11 @@ FAC_gui_spec_vehicle = [
             ],
             0.46
         ],
-        ["list", "Selected vehicle details", "", 61241, 0.16, 61211, "", []],
+        ["list", "Selected vehicle details", "", 61241, 0.34, 61211, "", []],
         ["list", "Ammo", "", 61242, 0.14, 61220, "manageAmmoSelChanged", []],
-        ["slider", "Ammo load: 0 / 0", "", 61222, -1, 61221, "manageAmmoSliderChanged", "args"],
-        ["button", "Apply ammo", "", 61223, "manageApplyAmmo", [], "primary"],
-        ["slider", "Fuel: 0%", "", 61225, -1, 61224, "manageFuelSliderChanged", "args"],
-        ["button", "Apply fuel", "", 61226, "manageApplyFuel", [], "primary"],
-        ["slider", "Health: 0%", "", 61228, -1, 61227, "manageHealthSliderChanged", "args"],
-        ["button", "Apply health", "", 61229, "manageApplyHealth", [], "primary"],
+        ["sliderApply", "Ammo load: 0 / 0", "", 61222, 61221, "manageAmmoSliderChanged", "args", ["Apply ammo", 61223, "manageApplyAmmo", [], "primary"]],
+        ["sliderApply", "Fuel: 0%", "", 61225, 61224, "manageFuelSliderChanged", "args", ["Apply fuel", 61226, "manageApplyFuel", [], "primary"]],
+        ["sliderApply", "Health: 0%", "", 61228, 61227, "manageHealthSliderChanged", "args", ["Apply health", 61229, "manageApplyHealth", [], "primary"]],
         ["buttonRow", [
             ["Quick repair", 61201, "servicePart", ["repair"], "primary"],
             ["Quick refuel", 61205, "servicePart", ["refuel"], "primary"],
@@ -633,8 +629,12 @@ FAC_gui_spec_build = [
     ["title", "BUILD", 0.16],
     ["handler", "FAC_buildGui_fnc"],
     ["frame", "full"],
-    ["refresh", false],
+    ["refresh", true],
     ["default", "build"],
+    ["tabs", [
+        ["build", "Place", 60966],
+        ["placed", "Placed", 60967]
+    ]],
     ["page", "build", ["fit", [
         ["text", 60956, 0.028, "Supply"],
         ["combo", "Category", "", -1, 60961, "catChanged", []],
@@ -650,8 +650,12 @@ FAC_gui_spec_build = [
             ["Simple object: Off", 60982, "toggleOpt", ["simple"], "idle"],
             ["Place multiple: Off", 60983, "toggleOpt", ["multi"], "idle"]
         ]],
-        ["structured", 60955, 0.11, "<t color='#9ea3ad' size='0.85'>WASD moves the camera. Mouse looks. Wheel sets distance.<br/>Q and E turn the piece. Page Up raises it. Page Down lowers it. T follows the slope.<br/>Space places the piece. Esc cancels. Place multiple stays in the camera.<br/>A simple object ignores simulation and damage.</t>"],
+        ["structured", 60955, 0.13, "<t color='#9ea3ad' size='0.85'>WASD moves the camera. Mouse looks. Wheel sets distance.<br/>Q and E turn the piece. Page Up raises it. Page Down lowers it. T follows the slope.<br/>Space places the piece. Esc cancels. Ctrl+Z undoes the last piece you placed.<br/>Place multiple stays in the camera. A simple object ignores simulation and damage.</t>"],
         ["button", "Place", "", 60953, "place", [], "primary"]
+    ]]],
+    ["page", "placed", ["fit", [
+        ["list", "Placed", "Select a piece.", -1, "fill", 60964, "", []],
+        ["button", "Delete", "", 60965, "deletePlaced", [], "danger"]
     ]]]
 ];
 

@@ -179,7 +179,7 @@ FAC_vehicleGui_buildVehicleDetailsPlain = {
     if (_armor > 0) then { _stats pushBack format ["Armor: %1", _armor] };
     private _sling = getNumber (_cfg >> "slingLoadMaxCargoMass");
     if (_sling > 0) then { _stats pushBack format ["Sling load max (kg): %1", _sling] };
-    if (count _stats > 0) then { _lines pushBack (_stats joinString ", ") };
+    { _lines pushBack _x } forEach _stats;
     private _weapons = getArray (_cfg >> "weapons");
     _weapons = _weapons select { _x != "" && { _x != "Throw" } && { _x != "Put" } };
     if (count _weapons > 0) then {
@@ -229,7 +229,7 @@ FAC_vehicleGui_buildManageConfigDetailsPlain = {
     if (_armor > 0) then { _stats pushBack format ["Armor [cfg]: %1", _armor] };
     private _sling = getNumber (_cfg >> "slingLoadMaxCargoMass");
     if (_sling > 0) then { _stats pushBack format ["Sling load max [cfg] (kg): %1", _sling] };
-    if (count _stats > 0) then { _lines pushBack (_stats joinString ", ") };
+    { _lines pushBack _x } forEach _stats;
     _lines joinString _nl
 };
 
@@ -325,7 +325,7 @@ FAC_vehicleGui_rebuildManageAmmoList = {
             if (_cur > _max) then { _cur = _max };
             private _dn = if (isClass _cfgMag) then { getText (_cfgMag >> "displayName") } else { "" };
             if (_dn == "") then { _dn = _mag };
-            private _row = _ammoLb lbAdd format ["Pylon %1: %2 (%3)  -  %4/%5", _pylonId, _dn, _mag, _cur, _max];
+            private _row = _ammoLb lbAdd format ["Pylon %1: %2 - %3/%4", _pylonId, _dn, _cur, _max];
             _ammoLb lbSetData [_row, str ["PYLON", _pylonId, _mag, _cur, _max]];
         };
     };
@@ -615,7 +615,7 @@ FAC_vehicleGui_fnc = {
                 _ammoApply ctrlEnable false;
                 _ammoSlider sliderSetRange [0, 1];
                 _ammoSlider sliderSetPosition 0;
-                _ammoLabel ctrlSetText "Ammo: no turret/pylon slots (use Quick rearm or Configure pylons)";
+                _ammoLabel ctrlSetText "No ammo slots.";
             } else {
                 _ammoSlider ctrlEnable true;
                 _ammoApply ctrlEnable true;

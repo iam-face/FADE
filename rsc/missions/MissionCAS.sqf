@@ -138,7 +138,9 @@ FADE_runMission_CAS = {
         ]] call FADE_aiSideChat;
     };
 
-    // When player within 1km: night -- radio callsign; day -- green smoke. QRF counter-attack starts from this moment (same as "detected in zone").
+    [_taskId, _destPos, _basePos, _enemyUnits, _enemyGroups] call FADE_counterAttackStart;
+
+    // When player within 1km: night -- radio callsign; day -- green smoke.
     [_friendlyGroup, _player, _taskId, _destPos, _basePos, _enemyUnits, _enemyGroups] spawn {
         params ["_grp", "_player", "_taskId", "_destPos", "_basePos", "_enemyUnits", "_enemyGroups"];
         private _done = false;
@@ -163,7 +165,6 @@ FADE_runMission_CAS = {
                         [_speaker, format ["RZ, This is %1. Marking our position with green smoke. Over.", _callsign]] call FADE_aiSideChat;
                     };
                 };
-                [_taskId, _destPos, _basePos, _enemyUnits, _enemyGroups, -1, true] call FADE_counterAttackStart;
                 _done = true;
             };
         };
