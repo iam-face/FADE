@@ -28,6 +28,17 @@ FADE_hostage_clientRegisterHold = {
             if (!(_caller isEqualTo player)) exitWith {};
             [_target, _caller] remoteExecCall ["FADE_hostage_serverFree", 2];
         },
-        _dur
+        _dur,
+        {
+            params ["_target", "_caller"];
+            if (!(_caller isEqualTo player)) exitWith {};
+            if (time < (_target getVariable ["FADE_hostageHelpAt", -10]) + 4) exitWith {};
+            _target setVariable ["FADE_hostageHelpAt", time];
+            private _file = _target getVariable ["FADE_hostageHelpSound", ""];
+            if (_file isEqualTo "") exitWith {};
+            private _vol = missionNamespace getVariable ["FADE_hostageCueSpeechVol", 2];
+            private _dist = missionNamespace getVariable ["FADE_hostageCueAudibleM", 40];
+            playSound3D [_file, _target, true, getPosASL _target, _vol, 1, _dist];
+        }
     ] call FADE_client_addHoldAction;
 };

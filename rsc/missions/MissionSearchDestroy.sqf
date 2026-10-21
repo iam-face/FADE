@@ -29,17 +29,14 @@ FADE_runMission_SearchDestroy = {
         if (count _pos < 2) exitWith { [[], []] };
         private _c = +_pos;
         if (count _c < 3) then { _c = [(_c select 0), (_c select 1), 0] };
-        private _buildings = nearestObjects [_c, ["House", "Building"], _radius];
-        private _cands = _buildings select {
-            count (_x buildingPos -1) >= 2 &&
-            { [_x] call FADE_objective_isSettlementBuilding }
-        };
-        _cands = _cands call BIS_fnc_arrayShuffle;
+        private _recs = [_c, _radius, 40, true] call FADE_objective_buildingRecords;
+        private _pool = [_recs, 2, true] call FADE_objective_recordsMeeting;
+        _pool = _pool call BIS_fnc_arrayShuffle;
         private _pickedTrial = [];
         {
             if (count _pickedTrial >= 3) exitWith {};
-            _pickedTrial pushBack _x;
-        } forEach _cands;
+            _pickedTrial pushBack (_x select 0);
+        } forEach _pool;
         if (count _pickedTrial >= 3) then {
             [_c, _pickedTrial select [0, 3]]
         } else {
@@ -164,7 +161,9 @@ FADE_runMission_SearchDestroy = {
     private _nearRadSd = missionNamespace getVariable ["FADE_garrisonMissionNearbyRadiusM", 450];
     private _nearBldChanceSd = missionNamespace getVariable ["FADE_garrisonMissionNearbyBuildingChance", 0.25];
     private _nearSlotSd = missionNamespace getVariable ["FADE_vgNearbySlotChance", 0.165];
-    private _nearBuildingsFullSd = (nearestObjects [_center, ["House", "Building"], _nearRadSd]) select {
+    private _nearRawSd = nearestObjects [_center, ["House", "Building"], _nearRadSd];
+    _nearRawSd = [_nearRawSd, 40] call FADE_samplePlacementList;
+    private _nearBuildingsFullSd = _nearRawSd select {
         !(_x in _picked) && { count (_x buildingPos -1) >= 1 }
     };
     private _nearBuildings = (_nearBuildingsFullSd select { random 1 < _nearBldChanceSd });

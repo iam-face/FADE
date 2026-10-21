@@ -379,7 +379,11 @@ FADE_counterAttack_spawnFootWave = {
                 _unitPositions = [];
                 _usedBuilding = false;
                 if (_forEachIndex == 0 && { random 1 < _bldChance }) then {
-                    _bldCandidates = (nearestObjects [_obj3, ["House", "Building"], _rMax]) select {
+                    _bldCandidates = nearestObjects [_obj3, ["House", "Building"], _rMax];
+                    if (count _bldCandidates > 24) then {
+                        _bldCandidates = (_bldCandidates call BIS_fnc_arrayShuffle) select [0, 24];
+                    };
+                    _bldCandidates = _bldCandidates select {
                         private _housePos = getPosATL _x;
                         (_housePos distance2D _obj3) >= _rMin &&
                         { [_housePos] call FADE_qrfPosHiddenFromPlayers } &&

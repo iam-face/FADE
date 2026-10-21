@@ -25,7 +25,7 @@ FAC_build_placeStatus = {
     private _state = if (_clear) then { "Clear" } else { "Blocked" };
     titleText [
         format [
-            "%1. WASD moves the camera. Mouse looks. Wheel sets distance. Q and E turn the piece. Page Up raises it. Page Down lowers it. T follows the slope. Space places. Esc cancels. Ctrl+Z undoes the last piece you placed.",
+            "%1. WASD moves the camera. Mouse looks. Wheel sets distance. Q and E turn the piece. Page Up raises it. Page Down lowers it. T follows the slope. Space places. Esc returns to the menu. Ctrl+Z undoes the last piece you placed.",
             _state
         ],
         "PLAIN DOWN",
@@ -273,7 +273,8 @@ FAC_build_placeOne = {
         missionNamespace getVariable ["FAC_build_align", false],
         missionNamespace getVariable ["FAC_build_optSim", true],
         missionNamespace getVariable ["FAC_build_optDamage", true],
-        _simple
+        _simple,
+        missionNamespace getVariable ["FAC_build_lastRole", ""]
     ] remoteExec ["FADE_build_place", 2];
     true
 };
@@ -371,13 +372,13 @@ FAC_build_ghostStart = {
             };
         };
 
-        private _cancelled = missionNamespace getVariable ["FAC_build_cancel", false] || { !alive player };
+        private _backToMenu = _reopen || { missionNamespace getVariable ["FAC_build_cancel", false] };
         cutText ["", "BLACK OUT", _fade];
         sleep (_fade max 0.1);
         [] call FAC_build_placeTeardown;
         missionNamespace setVariable ["FAC_build_spawnLive", false];
         cutText ["", "BLACK IN", _fade];
-        if (_reopen && { !_cancelled } && { alive player }) then {
+        if (_backToMenu && { alive player }) then {
             [] spawn {
                 sleep 0.15;
                 if (!isNil "FAC_buildGui_fnc") then { ["open", []] call FAC_buildGui_fnc };
@@ -431,46 +432,61 @@ FAC_buildGui_fillSubs = {
     if (_keep == "") then { _keep = [_subCtrl] call FAC_buildGui_comboText };
     private _subs = ["All"];
     if (_cat != "All") then {
-        private _names = (FADE_buildCatalog select { (_x select 5) == _cat }) apply { _x select 6 };
+        private _names = (([] call FADE_build_fortRows) select { (_x select 5) == _cat }) apply { _x select 6 };
         _subs append ([_names] call FAC_buildGui_uniqueSorted);
     };
     [_subCtrl, _subs, _keep] call FAC_buildGui_setCombo;
 };
 
+FAC_buildGui_baseStream = {
+    ([] call FADE_build_requireOn) && { (missionNamespace getVariable ["FAC_build_stream", "fort"]) == "base" }
+};
+
 FAC_buildGui_fillList = {
     private _d = findDisplay FAC_buildGui_IDD;
     if (isNull _d) exitWith {};
+    private _baseStream = [] call FAC_buildGui_baseStream;
     private _cat = [_d displayCtrl FAC_buildGui_CAT] call FAC_buildGui_comboText;
     private _sub = [_d displayCtrl FAC_buildGui_SUB] call FAC_buildGui_comboText;
     private _search = toLower (ctrlText (_d displayCtrl FAC_buildGui_SEARCH));
     private _list = _d displayCtrl FAC_buildGui_LIST;
     if (isNull _list) exitWith {};
-    private _prefer = missionNamespace getVariable ["FAC_build_lastClass", ""];
+    private _prefer = if (_baseStream) then {
+        missionNamespace getVariable ["FAC_build_lastRole", ""]
+    } else {
+        missionNamespace getVariable ["FAC_build_lastClass", ""]
+    };
+    private _source = if (_baseStream) then {
+        missionNamespace getVariable ["FADE_buildCatalogBase", []]
+    } else {
+        [] call FADE_build_fortRows
+    };
     private _cap = 400;
-    private _uncapped = _cat != "All" || { _sub != "All" };
+    private _uncapped = _baseStream || { _cat != "All" } || { _sub != "All" };
     private _shown = 0;
     private _total = 0;
     private _sel = -1;
     missionNamespace setVariable ["FAC_build_guiFilling", true];
     lbClear _list;
     {
-        if (_cat != "All" && { (_x select 5) != _cat }) then { continue };
-        if (_sub != "All" && { (_x select 6) != _sub }) then { continue };
-        if (_search != "") then {
+        if (!_baseStream && { _cat != "All" } && { (_x select 5) != _cat }) then { continue };
+        if (!_baseStream && { _sub != "All" } && { (_x select 6) != _sub }) then { continue };
+        if (!_baseStream && { _search != "" }) then {
             private _blob = toLower ((_x select 1) + " " + (_x select 0) + " " + (_x select 5) + " " + (_x select 6));
             if (_blob find _search < 0) then { continue };
         };
         _total = _total + 1;
         if (!_uncapped && { _shown >= _cap }) then { continue };
         private _label = _x select 1;
-        if (_cat == "All") then {
+        if (!_baseStream && { _cat == "All" }) then {
             _label = format ["%1 > %2 > %3", _x select 5, _x select 6, _x select 1];
         };
         private _row = _list lbAdd _label;
-        _list lbSetData [_row, _x select 0];
-        if ((_x select 0) == _prefer) then { _sel = _row };
+        private _data = if (_baseStream) then { _x param [7, ""] } else { _x select 0 };
+        _list lbSetData [_row, _data];
+        if (_data == _prefer) then { _sel = _row };
         _shown = _shown + 1;
-    } forEach FADE_buildCatalog;
+    } forEach _source;
     if (_sel < 0 && { (lbSize _list) > 0 }) then { _sel = 0 };
     if (_sel >= 0) then { _list lbSetCurSel _sel };
     missionNamespace setVariable ["FAC_build_guiFilling", false];
@@ -487,7 +503,7 @@ FAC_buildGui_fillCats = {
     private _d = findDisplay FAC_buildGui_IDD;
     if (isNull _d) exitWith {};
     private _names = ["All"];
-    _names append ([(FADE_buildCatalog apply { _x select 5 })] call FAC_buildGui_uniqueSorted);
+    _names append ([(([] call FADE_build_fortRows) apply { _x select 5 })] call FAC_buildGui_uniqueSorted);
     private _keepCat = "All";
     private _keepSub = "All";
     private _prefer = missionNamespace getVariable ["FAC_build_lastClass", ""];
@@ -525,10 +541,19 @@ FAC_buildGui_refresh = {
     private _list = _d displayCtrl FAC_buildGui_LIST;
     if (isNull _list) exitWith {};
     private _idx = lbCurSel _list;
-    if (_idx < 0) exitWith { if (!isNull _detail) then { _detail ctrlSetText "" } };
-    private _class = _list lbData _idx;
-    private _entry = [_class] call FADE_build_findEntry;
-    if (_entry isEqualTo []) exitWith {};
+    if (_idx < 0) exitWith {
+        if (!isNull _detail) then { _detail ctrlSetText "" };
+        [_d, ""] call FAC_buildGui_setPreview;
+    };
+    private _data = _list lbData _idx;
+    private _baseStream = [] call FAC_buildGui_baseStream;
+    private _entry = if (_baseStream) then {
+        [_data] call FADE_build_findBase
+    } else {
+        [_data] call FADE_build_findEntry
+    };
+    if (_entry isEqualTo []) exitWith { [_d, ""] call FAC_buildGui_setPreview };
+    private _class = _entry param [0, ""];
     if (!isNull _detail) then {
         _entry params ["_entryClass", "_name", "_cost", "_bt", "_un", ["_cat", ""], ["_sub", ""]];
         private _path = format ["%1 > %2 > %3 (%4)", _cat, _sub, _name, _entryClass];
@@ -538,6 +563,20 @@ FAC_buildGui_refresh = {
             _detail ctrlSetText format ["%1  -  cost %2", _path, _cost];
         };
     };
+    [_d, _class] call FAC_buildGui_setPreview;
+};
+
+FAC_buildGui_setPreview = {
+    params ["_display", ["_class", ""]];
+    if (isNull _display) exitWith {};
+    private _pic = _display displayCtrl 60968;
+    if (isNull _pic) exitWith {};
+    if (_class == "") exitWith { _pic ctrlSetText "" };
+    private _cfg = configFile >> "CfgVehicles" >> _class;
+    private _texture = getText (_cfg >> "editorPreview");
+    if (_texture == "") then { _texture = getText (_cfg >> "picture") };
+    if (_texture == "") then { _texture = getText (_cfg >> "icon") };
+    _pic ctrlSetText _texture;
 };
 
 FAC_buildGui_fnc = {
@@ -559,9 +598,21 @@ FAC_buildGui_fnc = {
         case "onLoad": {
             private _d = findDisplay FAC_buildGui_IDD;
             if (isNull _d) exitWith {};
-            [_d, FAC_gui_spec_build] call FAC_gui_build;
+            [_d, [] call FAC_buildGui_activeSpec] call FAC_gui_build;
             [] call FAC_buildGui_syncOpts;
-            [] call FAC_buildGui_fillCats;
+            [] call FAC_buildGui_syncStream;
+            if ([] call FAC_buildGui_baseStream) then {
+                [] call FAC_buildGui_fillList;
+            } else {
+                missionNamespace setVariable ["FAC_build_stream", "fort"];
+                [] call FAC_buildGui_fillCats;
+            };
+            _d displayAddEventHandler ["KeyDown", {
+                params ["_disp", "_key"];
+                if (_key != 1) exitWith { false };
+                closeDialog 0;
+                true
+            }];
         };
         case "catChanged": {
             if (missionNamespace getVariable ["FAC_build_guiFilling", false]) exitWith {};
@@ -583,8 +634,22 @@ FAC_buildGui_fnc = {
             private _list = _d displayCtrl FAC_buildGui_LIST;
             private _idx = lbCurSel _list;
             if (_idx < 0) exitWith { systemChat "Pick a piece first."; };
-            private _class = _list lbData _idx;
+            private _data = _list lbData _idx;
+            private _class = _data;
+            private _role = "";
+            private _missing = false;
+            if ([] call FAC_buildGui_baseStream) then {
+                _role = _data;
+                private _entry = [_role] call FADE_build_findBase;
+                if (_entry isEqualTo []) then {
+                    _missing = true;
+                } else {
+                    _class = _entry select 0;
+                };
+            };
+            if (_missing || { _class == "" }) exitWith { systemChat "Pick a piece first." };
             missionNamespace setVariable ["FAC_build_lastClass", _class];
+            missionNamespace setVariable ["FAC_build_lastRole", _role];
             closeDialog 0;
             [_class] call FAC_build_ghostStart;
         };
@@ -601,7 +666,11 @@ FAC_buildGui_fnc = {
             if ((_d getVariable ["FAC_gui_page", "build"]) == "placed") then {
                 [player] remoteExec ["FADE_build_sendList", 2];
             } else {
-                [] call FAC_buildGui_fillCats;
+                if ([] call FAC_buildGui_baseStream) then {
+                    [] call FAC_buildGui_fillList;
+                } else {
+                    [] call FAC_buildGui_fillCats;
+                };
             };
         };
         case "deletePlaced": {
@@ -618,6 +687,17 @@ FAC_buildGui_fnc = {
                 sleep 0.2;
                 if (isNull (findDisplay 60950)) exitWith {};
                 [player] remoteExec ["FADE_build_sendList", 2];
+            };
+        };
+        case "setStream": {
+            _params params [["_stream", "fort"]];
+            if (_stream != "base" || { !([] call FADE_build_requireOn) }) then { _stream = "fort" };
+            missionNamespace setVariable ["FAC_build_stream", _stream];
+            [] call FAC_buildGui_syncStream;
+            if (_stream == "base") then {
+                [] call FAC_buildGui_fillList;
+            } else {
+                [] call FAC_buildGui_fillCats;
             };
         };
         case "toggleOpt": {
@@ -638,6 +718,47 @@ FAC_buildGui_fnc = {
             };
             [] call FAC_buildGui_syncOpts;
         };
+    };
+};
+
+FAC_buildGui_activeSpec = {
+    if ([] call FADE_build_requireOn) exitWith { FAC_gui_spec_build };
+    private _out = [];
+    {
+        if ((_x param [0, ""]) == "page" && { (_x param [1, ""]) == "build" }) then {
+            private _body = _x param [2, []];
+            private _left = + (_body param [1, []]);
+            if ((count _left) > 0 && { ((_left select 0) param [0, ""]) == "segments" }) then {
+                _left deleteAt 0;
+            };
+            _out pushBack ["page", "build", ["columns", _left, _body param [2, []]]];
+        } else {
+            _out pushBack _x;
+        };
+    } forEach FAC_gui_spec_build;
+    _out
+};
+
+FAC_buildGui_syncStream = {
+    private _d = findDisplay FAC_buildGui_IDD;
+    if (isNull _d) exitWith {};
+    private _base = [] call FAC_buildGui_baseStream;
+    private _fortBtn = _d displayCtrl 60969;
+    private _baseBtn = _d displayCtrl 60970;
+    if (!isNull _fortBtn) then { [_fortBtn, !_base] call FAC_theme_applyTab };
+    if (!isNull _baseBtn) then { [_baseBtn, _base] call FAC_theme_applyTab };
+    {
+        private _c = _d displayCtrl _x;
+        if (!isNull _c) then { _c ctrlEnable (!_base) };
+    } forEach [60961, 60962, 60963];
+};
+
+FAC_build_refillOpen = {
+    if (isNull (findDisplay FAC_buildGui_IDD)) exitWith {};
+    if ([] call FAC_buildGui_baseStream) then {
+        [] call FAC_buildGui_fillList;
+    } else {
+        [] call FAC_buildGui_fillCats;
     };
 };
 
@@ -677,3 +798,6 @@ missionNamespace setVariable ["FAC_buildGui_applyPlaced", FAC_buildGui_applyPlac
 missionNamespace setVariable ["FAC_build_ghostStop", FAC_build_ghostStop];
 missionNamespace setVariable ["FAC_build_ghostStart", FAC_build_ghostStart];
 missionNamespace setVariable ["FAC_build_placeOne", FAC_build_placeOne];
+missionNamespace setVariable ["FAC_buildGui_activeSpec", FAC_buildGui_activeSpec];
+missionNamespace setVariable ["FAC_buildGui_syncStream", FAC_buildGui_syncStream];
+missionNamespace setVariable ["FAC_build_refillOpen", FAC_build_refillOpen];

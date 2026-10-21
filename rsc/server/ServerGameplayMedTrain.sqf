@@ -396,7 +396,10 @@ FADE_cleanupMissionEntities = {
     } forEach (_ent getOrDefault ["groups", []]);
     { [_x] call FADE_missionEnt_deleteGroupFull } forEach _seenGrps;
     { if (!isNull _x) then { [_x] call FADE_missionEnt_deleteVehicleFull } } forEach (_ent getOrDefault ["vehicles", []]);
-    { if (!isNull _x) then { deleteVehicle _x } } forEach (_ent getOrDefault ["objects", []]);
+    { if (!isNull _x) then {
+        _x allowDamage true;
+        deleteVehicle _x;
+    } } forEach (_ent getOrDefault ["objects", []]);
 
     private _aoEnt = missionNamespace getVariable ["FADE_aoEntities_" + _taskId, []];
     if (_aoEnt isEqualType [] && { count _aoEnt >= 2 }) then {

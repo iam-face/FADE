@@ -491,6 +491,7 @@ FADE_enemyPatrol_spawnForZone = {
     private _garScanR = missionNamespace getVariable ["FADE_garrisonAmbientScanRadiusM", 380];
     private _ambBChance = missionNamespace getVariable ["FADE_garrisonAmbientBuildingChance", 0.55];
     private _buildings = nearestObjects [_center, ["House", "Building"], _garScanR];
+    _buildings = [_buildings, 40] call FADE_samplePlacementList;
     private _buildingsWithPos = _buildings select {
         count (_x buildingPos -1) >= 2 && { [getPosATL _x] call _dryFn }
     };

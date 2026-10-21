@@ -77,6 +77,7 @@ FADE_deleteWrecksNearVehicleTerminal = {
 FADE_serviceVehicle = {
     params ["_veh", "_player"];
     if ([_player, "FAC_playerCanUseVehicleGui", "Vehicle GUI access denied by lobby settings."] call FAC_lobbyParams_serverDenyUnless) exitWith {};
+    if (!isNil "FAC_build_denyService" && { [_player, "vehicles"] call FAC_build_denyService }) exitWith {};
     if (isNull _veh) exitWith { ["INVALID VEHICLE."] remoteExec ["systemChat", _player] };
     if (!alive _veh) exitWith { ["VEHICLE DESTROYED."] remoteExec ["systemChat", _player] };
     if (
@@ -107,6 +108,7 @@ FADE_serviceVehiclePart = {
     params ["_veh", "_player", ["_part", ""], ["_ratio", -1], ["_magClass", ""], ["_pylonIdx", -1]];
     _veh = [_veh] call FADE_fnc_vehicleFromRpcParam;
     if ([_player, "FAC_playerCanUseVehicleGui", "Vehicle GUI access denied by lobby settings."] call FAC_lobbyParams_serverDenyUnless) exitWith {};
+    if (!isNil "FAC_build_denyService" && { [_player, "vehicles"] call FAC_build_denyService }) exitWith {};
     if (isNull _veh) exitWith { ["INVALID VEHICLE."] remoteExec ["systemChat", _player] };
     if (!alive _veh) exitWith { ["VEHICLE DESTROYED."] remoteExec ["systemChat", _player] };
     if (

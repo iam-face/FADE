@@ -605,7 +605,8 @@ FAC_missionTestSuite_runServer = {
         "FADE_build_remove",
         "FADE_build_undo",
         "FADE_build_sendList",
-        "FADE_build_signSet"
+        "FADE_build_signSet",
+        "FADE_build_setCatalog"
     ];
     {
         private _n = _x;
@@ -883,7 +884,8 @@ FAC_missionTestSuite_runServer = {
         "FADE_objective_isSettlementBuilding", "FADE_objective_pickBestBuilding",
         "FADE_raid_applyScale", "FADE_objective_spawnRecoverObject", "FADE_objective_registerNearbyGarrisons", "FADE_raid_startIntelMonitor",
         "FADE_objective_findBuildingsWithMinSlots", "FADE_objective_addHostageToGroup", "FADE_objective_garrisonBuildingSlots",
-        "FADE_objective_spawnPatrolsPerBuilding", "FADE_objective_spawnHostageInBuilding", "FADE_pickHostageIdentity"
+        "FADE_objective_spawnPatrolsPerBuilding", "FADE_objective_spawnHostageInBuilding", "FADE_pickHostageIdentity",
+        "FADE_hostage_playReturnCue"
     ];
 
     // ----- Shared mission helpers (refactor pass) -----
@@ -996,11 +998,17 @@ FAC_missionTestSuite_runServer = {
                 if (_ok) then { _ok = count _compReg == count _compObjs };
                 if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_comp_spawn %1 (%2)", _compId, count _compObjs]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_comp_spawn %1 count=%2 reg=%3", _compId, count _compObjs, count _compReg]; };
                 [_compTid, "", false] call FADE_cleanupMissionEntities;
+                if (canSuspend) then { sleep 0.1 };
                 _compStill = nearestObjects [_compPlaced, ["All"], _compRadius + 2] select {
                     (_x getVariable ["FADE_comp_id", ""]) == _compId
                 };
                 _ok = (count _compStill) == 0 && { missionNamespace getVariable [format ["FADE_missionEnt_cleaned_%1", _compTid], false] };
-                if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): composition cleanup %1", _compId]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): composition cleanup %1 still=%2", _compId, count _compStill]; };
+                if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): composition cleanup %1", _compId]; } else {
+                    private _compTypes = [];
+                    { if ((count _compTypes) < 4) then { _compTypes pushBack (typeOf _x) } } forEach _compStill;
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): composition cleanup %1 still=%2 types=%3", _compId, count _compStill, _compTypes];
+                };
             } forEach FADE_comp_ids;
         };
 
@@ -1032,14 +1040,16 @@ FAC_missionTestSuite_runServer = {
     };
 
     if (!isNil "FADE_map_gridCellsForSearchZone") then {
-        private _testCenter = [FADE_basePos select 0 + 500, FADE_basePos select 1 + 500, 0];
-        private _truePos = [_testCenter select 0 + 120, _testCenter select 1 - 80, 0];
+        private _testCenter = [(FADE_basePos select 0) + 500, (FADE_basePos select 1) + 500, 0];
+        private _truePos = [(_testCenter select 0) + 120, (_testCenter select 1) - 80, 0];
         private _cells = [_testCenter, 200, [_truePos]] call FADE_map_gridCellsForSearchZone;
         _ok = _cells isEqualType [] && { count _cells >= 1 };
         if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_map_gridCellsForSearchZone (%1 cells)", count _cells]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_map_gridCellsForSearchZone"; };
         private _off = [] call FADE_map_gridOriginOffset;
         private _origin = [_testCenter] call FADE_map_gridCellOrigin;
-        _ok = (_origin select 0) == (_off select 0) + (floor (((_testCenter select 0) - (_off select 0)) / 100)) * 100;
+        private _originX = _origin select 0;
+        private _expectedX = (_off select 0) + ((floor (((_testCenter select 0) - (_off select 0)) / 100)) * 100);
+        _ok = _originX == _expectedX;
         if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_map_gridCellOrigin Altis offset %1", _origin]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_map_gridCellOrigin Altis offset %1", _origin]; };
     };
 
@@ -1980,6 +1990,10 @@ FAC_missionTestSuite_runServer = {
     private _buildSavedAccess = missionNamespace getVariable ["FAC_param_buildAccess", 1];
     private _buildSavedLog = missionNamespace getVariable ["FAC_param_buildLogistics", 0];
     private _buildSavedArea = missionNamespace getVariable ["FAC_param_buildArea", 0];
+    private _buildSavedCatalog = missionNamespace getVariable ["FAC_param_buildCatalog", 0];
+    private _buildSavedRequire = missionNamespace getVariable ["FAC_param_buildRequire", 0];
+    missionNamespace setVariable ["FAC_param_buildCatalog", 0];
+    missionNamespace setVariable ["FAC_param_buildRequire", 0];
     private _buildSavedSupply = missionNamespace getVariable ["FADE_buildSupply", 0];
     private _buildCat = missionNamespace getVariable ["FADE_buildCatalog", []];
     _ok = _buildCat isEqualType [] && { count _buildCat > 0 };
@@ -2393,6 +2407,7 @@ FAC_missionTestSuite_runServer = {
             } forEach nearestObjects [_undoSpot, ["All"], 8];
             private _undoId = if (isNull _undoObj) then { "" } else { netId _undoObj };
             private _undoOk = [_buildUnit] call FADE_build_undo;
+            if (canSuspend) then { sleep 0.1 };
             private _undoLeft = objNull;
             {
                 if (_x getVariable ["FADE_build_placed", false] && { (_x distance2D _undoSpot) < 4 }) exitWith { _undoLeft = _x };
@@ -2403,7 +2418,7 @@ FAC_missionTestSuite_runServer = {
                 diag_log "[FAC TestSuite] PASS (server): build undo last piece";
             } else {
                 _fail = _fail + 1;
-                diag_log format ["[FAC TestSuite] FAIL (server): build undo placed=%1 ok=%2 id=%3 left=%4", _undoPlaced, _undoOk, _undoId, !isNull _undoLeft];
+                diag_log format ["[FAC TestSuite] FAIL (server): build undo placed=%1 ok=%2 id=%3 leftId=%4 origNull=%5", _undoPlaced, _undoOk, _undoId, if (isNull _undoLeft) then { "" } else { netId _undoLeft }, isNull _undoObj];
             };
         };
 
@@ -2487,6 +2502,154 @@ FAC_missionTestSuite_runServer = {
                 };
             };
         };
+
+        missionNamespace setVariable ["FAC_param_buildCatalog", 1];
+        private _realRow = ["Land_BagFence_Long_F"] call FADE_build_findEntry;
+        private _signRow = ["Land_WallSign_01_F"] call FADE_build_findEntry;
+        private _realOk = !(_realRow isEqualTo []) && { (_realRow select 2) == 15 };
+        if (isClass (configFile >> "CfgVehicles" >> "Land_WallSign_01_F") && { !(_signRow isEqualTo []) }) then {
+            _realOk = false;
+        };
+        {
+            if (isClass (configFile >> "CfgVehicles" >> _x)) then {
+                private _row = [_x] call FADE_build_findEntry;
+                if (_row isEqualTo [] || { (_row param [5, ""]) != "Fortifications" }) then { _realOk = false };
+            };
+        } forEach [
+            "Land_BagFence_Long_F", "Land_BagFence_Short_F", "Land_BagFence_Round_F",
+            "Land_HBarrier_1_F", "Land_HBarrier_5_F", "Land_Razorwire_F",
+            "Land_CncBarrierMedium4_F", "Land_BagBunker_Small_F",
+            "Land_CamoNet_BIG_F", "Land_PortableLight_single_F"
+        ];
+        missionNamespace setVariable ["FAC_param_buildCatalog", 0];
+        if (isClass (configFile >> "CfgVehicles" >> "Land_WallSign_01_F")) then {
+            private _signBack = ["Land_WallSign_01_F"] call FADE_build_findEntry;
+            if (_signBack isEqualTo []) then { _realOk = false };
+        };
+        if (_realOk) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): build realistic list";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): build realistic list";
+        };
+
+        private _gearEntry = ["gear"] call FADE_build_findBase;
+        private _barEntry = ["barracks"] call FADE_build_findBase;
+        private _vehEntry = ["vehicles"] call FADE_build_findBase;
+        private _medEntry = ["medical"] call FADE_build_findBase;
+        private _baseRowsOk = !(_gearEntry isEqualTo []) && { !(_barEntry isEqualTo []) } && { !(_vehEntry isEqualTo []) };
+        if (_baseRowsOk) then {
+            _baseRowsOk = (_gearEntry select 0) == (_barEntry select 0)
+                && { (_gearEntry select 0) == (_vehEntry select 0) }
+                && { (_gearEntry param [7, ""]) == "gear" }
+                && { (_barEntry param [7, ""]) == "barracks" }
+                && { (_vehEntry param [7, ""]) == "vehicles" };
+            if (isClass (configFile >> "CfgVehicles" >> "Land_MedicalTent_01_MTP_closed_F")) then {
+                _baseRowsOk = _baseRowsOk && { !(_medEntry isEqualTo []) }
+                    && { (_medEntry param [7, ""]) == "medical" }
+                    && { (_medEntry select 0) != (_gearEntry select 0) };
+            };
+        };
+        if !(isClass (configFile >> "CfgVehicles" >> "Land_MedicalTent_01_NATO_generic_closed_F")) then {
+            diag_log "[FAC TestSuite] SKIP (server): build base rows (tent class missing)";
+        } else {
+            if (_baseRowsOk) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): build base rows keep separate roles";
+            } else {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): build base rows keep separate roles";
+            };
+        };
+
+        if (_baseRowsOk) then {
+            missionNamespace setVariable ["FAC_param_buildRequire", 1];
+            missionNamespace setVariable ["FAC_param_buildArea", 1];
+            private _gearPos = [(_buildBase select 0) + 24, (_buildBase select 1) + 24, 0];
+            private _barPos = [(_buildBase select 0) + 32, (_buildBase select 1) + 24, 0];
+            private _gearPlaced = [_buildUnit, _gearEntry select 0, _gearPos, 0, [0, 0, 1], false, true, true, false, "gear"] call FADE_build_place;
+            private _svc = missionNamespace getVariable ["FADE_build_services", []];
+            private _gearOnly = _gearPlaced && { "gear" in _svc } && { !("barracks" in _svc) };
+            private _farLand = [];
+            for "_k" from 0 to 6 do {
+                private _tryFar = [(_buildBase select 0) + 1400 + (_k * 80), (_buildBase select 1) + 80, 0];
+                if (([_gearEntry select 0, _tryFar, 0, objNull] call FADE_build_spotBlocked) == "") exitWith { _farLand = _tryFar };
+            };
+            private _farDenied = true;
+            if !(_farLand isEqualTo []) then {
+                private _farPlaced = [_buildUnit, _barEntry select 0, _farLand, 0, [0, 0, 1], false, true, true, false, "barracks"] call FADE_build_place;
+                _farDenied = !_farPlaced && { !("barracks" in (missionNamespace getVariable ["FADE_build_services", []])) };
+            } else {
+                diag_log "[FAC TestSuite] SKIP (server): build base outside radius (no dry spot)";
+            };
+            private _barPlaced = [_buildUnit, _barEntry select 0, _barPos, 0, [0, 0, 1], false, true, true, false, "barracks"] call FADE_build_place;
+            private _both = missionNamespace getVariable ["FADE_build_services", []];
+            private _bothUp = _barPlaced && { "gear" in _both } && { "barracks" in _both };
+            private _gearId = "";
+            {
+                private _rec = FADE_build_registry getOrDefault [_x, createHashMap];
+                if ((_rec getOrDefault ["role", ""]) == "gear") exitWith { _gearId = _x };
+            } forEach (keys FADE_build_registry);
+            private _gearObj = if (_gearId == "") then { objNull } else { _gearId call BIS_fnc_objectFromNetId };
+            private _roleVar = (!isNull _gearObj) && { (_gearObj getVariable ["FADE_build_role", ""]) == "gear" };
+            private _removed = if (_gearId == "") then { false } else { [_buildUnit, _gearId] call FADE_build_remove };
+            private _after = missionNamespace getVariable ["FADE_build_services", []];
+            private _split = _removed && { !("gear" in _after) } && { "barracks" in _after };
+            missionNamespace setVariable ["FAC_param_buildArea", 0];
+            if (_gearOnly && { _farDenied } && { _bothUp } && { _roleVar } && { _split }) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): build base services follow radius and role";
+            } else {
+                _fail = _fail + 1;
+                diag_log format [
+                    "[FAC TestSuite] FAIL (server): build base services gearOnly=%1 far=%2 both=%3 role=%4 split=%5",
+                    _gearOnly, _farDenied, _bothUp, _roleVar, _split
+                ];
+            };
+            [] call FADE_build_clearAll;
+        };
+
+        missionNamespace setVariable ["FAC_param_buildRequire", 1];
+        missionNamespace setVariable ["FADE_build_services", []];
+        private _savedRecruitAccess = missionNamespace getVariable ["FAC_param_recruitGuiAccess", 0];
+        private _savedVehicleAccess = missionNamespace getVariable ["FAC_param_vehicleGuiAccess", 0];
+        missionNamespace setVariable ["FAC_param_recruitGuiAccess", 0];
+        missionNamespace setVariable ["FAC_param_vehicleGuiAccess", 0];
+        private _deniedRole = "";
+        private _reasonCalls = 0;
+        private _savedDeny = FAC_build_denyService;
+        private _savedReason = FADE_vehiclePlacement_reason;
+        FAC_build_denyService = {
+            params ["_player", "_role"];
+            _deniedRole = _role;
+            true
+        };
+        [_buildUnit, "", "rifle"] call FADE_recruit_spawnUnit;
+        private _recruitDenied = _deniedRole == "barracks";
+        _deniedRole = "";
+        FADE_vehiclePlacement_reason = {
+            _reasonCalls = _reasonCalls + 1;
+            "blocked"
+        };
+        ["B_Quadbike_01_F", _buildUnit, [0, 0, 0], 0] call FADE_spawnVehicleAtPos;
+        private _vehicleDenied = _deniedRole == "vehicles" && { _reasonCalls == 0 };
+        FAC_build_denyService = _savedDeny;
+        FADE_vehiclePlacement_reason = _savedReason;
+        missionNamespace setVariable ["FAC_param_recruitGuiAccess", _savedRecruitAccess];
+        missionNamespace setVariable ["FAC_param_vehicleGuiAccess", _savedVehicleAccess];
+        missionNamespace setVariable ["FAC_param_buildRequire", 0];
+        if (_recruitDenied && { _vehicleDenied }) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): build service denies recruit and vehicle spawn";
+        } else {
+            _fail = _fail + 1;
+            diag_log format [
+                "[FAC TestSuite] FAIL (server): build service denies recruit=%1 vehicle=%2 role=%3",
+                _recruitDenied, _vehicleDenied, _deniedRole
+            ];
+        };
+
         {
             if (_x getVariable ["FADE_build_placed", false] && { !((netId _x) in _buildBeforeIds) }) then {
                 private _id = netId _x;
@@ -2508,6 +2671,8 @@ FAC_missionTestSuite_runServer = {
     missionNamespace setVariable ["FAC_param_buildAccess", _buildSavedAccess];
     missionNamespace setVariable ["FAC_param_buildLogistics", _buildSavedLog];
     missionNamespace setVariable ["FAC_param_buildArea", _buildSavedArea];
+    missionNamespace setVariable ["FAC_param_buildCatalog", _buildSavedCatalog];
+    missionNamespace setVariable ["FAC_param_buildRequire", _buildSavedRequire];
     missionNamespace setVariable ["FADE_buildSupply", _buildSavedSupply];
     publicVariable "FADE_buildSupply";
 

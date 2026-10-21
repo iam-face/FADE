@@ -8,6 +8,14 @@ FADE_normPos3 = {
     if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
 };
 
+// Connected player, or the headless playthrough stand-in (isPlayer is false with no client).
+FADE_unitIsMissionPlayer = {
+    params ["_unit"];
+    if (isNull _unit) exitWith { false };
+    if (isPlayer _unit) exitWith { true };
+    _unit getVariable ["FADE_headlessOwner", false]
+};
+
 FADE_surfaceIsDry = {
     params ["_p"];
     if (!(_p isEqualType []) || { count _p < 2 }) exitWith { false };
@@ -62,7 +70,8 @@ FADE_ensureDryLandPos = {
     private _p = [_pos] call FADE_normPos3;
     if ([_p] call FADE_surfaceIsDry) exitWith { _p };
     private _anchorPos = if (_anchor isEqualTo [] || { count _anchor < 2 }) then { _p } else { [_anchor] call FADE_normPos3 };
-    for "_i" from 1 to _maxAttempts do {
+    private _tries = _maxAttempts min 8;
+    for "_i" from 1 to _tries do {
         private _dist = 10 + (_i * 15) + random 25;
         private _ang = (_i * 41) mod 360;
         private _try = [_anchorPos, _dist, _ang] call BIS_fnc_relPos;
@@ -92,7 +101,8 @@ FADE_findSafePosArray = {
     private _maxGrad = _landArgs param [5, 0.45];
     private _blacklist = _landArgs param [7, []];
     private _result = [];
-    for "_i" from 1 to 24 do {
+    // The first findSafePos is the normal hit. This spiral is only the miss path.
+    for "_i" from 1 to 8 do {
         private _expand = (_i - 1) * 30;
         private _ang = (_i * 43) mod 360;
         private _dist = _minD + random ((_maxD + _expand) - _minD max 1);
@@ -103,6 +113,24 @@ FADE_findSafePosArray = {
     };
     if (count _result >= 2) exitWith { _result };
     [_center, _fb] call FADE_ensureDryLandPos
+};
+
+// Random point in [_minDist, _maxDist], then one short findSafePos.
+// A single findSafePos across a 400–2500 m ring scans that whole ring and stalls mission start.
+FADE_placement_posInRing = {
+    params ["_center", ["_minDist", 0], ["_maxDist", 100]];
+    private _c = [_center] call FADE_normPos3;
+    if (count _c < 2) exitWith { [] };
+    private _minD = _minDist max 0;
+    private _maxD = _maxDist max (_minD + 1);
+    private _seed = [_c, _minD + random (_maxD - _minD), random 360] call BIS_fnc_relPos;
+    if (surfaceIsWater _seed) exitWith { [] };
+    private _hit = [[_seed, 0, 35, 5, 0, 0.5, 0, [], _seed]] call FADE_findLandPosWithArgs;
+    if (count _hit < 2) exitWith { [] };
+    if (surfaceIsWater _hit) exitWith { [] };
+    if ((_hit distance2D _c) > (_maxD + 40)) exitWith { [] };
+    if (_minD > 40 && { (_hit distance2D _c) < (_minD - 40) }) exitWith { [] };
+    _hit
 };
 
 // True when _pos sits on a road surface or within _clearM of a road segment (barrel/campfire hints).
@@ -292,7 +320,9 @@ FADE_findOpforGroundVehicleRoadSpawn = {
         };
         _roads = [_roads, [], { (getPosATL _x) distance2D _anchorN }, "ASCEND"] call BIS_fnc_sortBy;
 
-        private _maxRoadTries = (count _roads) min 12;
+        // A failed town probe used to retry findSafePos 24 times, then walk the next road.
+        // Callers that do this per road stall mission start for tens of seconds.
+        private _maxRoadTries = (count _roads) min 6;
         private _best = [];
         private _bestDir = 0;
 
@@ -301,7 +331,6 @@ FADE_findOpforGroundVehicleRoadSpawn = {
         private _nearVeh = [];
         private _blacklist = [];
         private _probe = [0, 0, 0];
-        private _terr = [];
         private _nearStatic = [];
         private _tooClose = false;
         private _block = [];
@@ -323,14 +352,11 @@ FADE_findOpforGroundVehicleRoadSpawn = {
                 };
             } forEach (_nearVeh + _existingVehs);
 
-            _probe = [[_roadPos, 0, 6, _objClear, 0, 0.35, 0, _blacklist, _roadPos], _roadPos] call FADE_findSafePosArray;
+            _probe = [[_roadPos, 0, 6, _objClear, 0, 0.35, 0, _blacklist, _roadPos]] call FADE_findLandPosWithArgs;
             if (!(_probe isEqualType []) || { count _probe < 2 } || { !([_probe] call _dryFn) }) then { continue };
             if (count _probe < 3) then { _probe = [(_probe select 0), (_probe select 1), 0] };
 
             if !(isOnRoad _probe || { count (_probe nearRoads 10) > 0 }) then { continue };
-
-            _terr = nearestTerrainObjects [_probe, ["HOUSE", "BUILDING", "WALL", "FENCE", "ROCK", "BUSH", "TREE"], _terrainClear, false, true];
-            if (count _terr > 0) then { continue };
 
             _nearStatic = nearestObjects [_probe, ["House", "Building", "Wall", "Rock"], _terrainClear];
             if (count _nearStatic > 0) then { continue };
@@ -598,6 +624,7 @@ missionNamespace setVariable ["FADE_surfaceIsDry", FADE_surfaceIsDry];
 missionNamespace setVariable ["FADE_findLandPosWithArgs", FADE_findLandPosWithArgs];
 missionNamespace setVariable ["FADE_ensureDryLandPos", FADE_ensureDryLandPos];
 missionNamespace setVariable ["FADE_findSafePosArray", FADE_findSafePosArray];
+missionNamespace setVariable ["FADE_placement_posInRing", FADE_placement_posInRing];
 missionNamespace setVariable ["FADE_posOnOrNearRoad", FADE_posOnOrNearRoad];
 missionNamespace setVariable ["FADE_findOutdoorHintPos", FADE_findOutdoorHintPos];
 missionNamespace setVariable ["FADE_jitterMarkerPos", FADE_jitterMarkerPos];

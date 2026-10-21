@@ -54,7 +54,7 @@ FAC_scenarioGui_factionsContentIdcs = [
     60310, 60311, 60312
 ];
 
-FAC_scenarioGui_adminContentIdcs = [60930, 60943, 60895, 60896, 60897, 60898, 60899, 60900, 60901];
+FAC_scenarioGui_adminContentIdcs = [60930, 60943, 60848, 60849, 60895, 60896, 60897, 60898, 60899, 60900, 60901];
 
 FAC_scenarioGui_getFactionDisplayName = {
     params ["_faction"];
@@ -523,6 +523,16 @@ FAC_scenarioGui_syncGrenadeBtns = {
     } forEach _map;
 };
 
+FAC_scenarioGui_syncBuildCatalog = {
+    private _d = findDisplay FAC_scenarioGui_IDD;
+    if (isNull _d) exitWith {};
+    private _realistic = (missionNamespace getVariable ["FAC_param_buildCatalog", 0]) > 0;
+    private _a = _d displayCtrl 60848;
+    private _r = _d displayCtrl 60849;
+    if (!isNull _a) then { [_a, !_realistic] call FAC_theme_applyTab };
+    if (!isNull _r) then { [_r, _realistic] call FAC_theme_applyTab };
+};
+
 FAC_scenarioGui_syncPlayerScaleBtns = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
@@ -851,8 +861,9 @@ FAC_scenarioGui_fnc = {
             [] call FAC_scenarioGui_syncRoutingBtns;
             [] call FAC_scenarioGui_syncAAABtns;
             [] call FAC_scenarioGui_syncLauncherBtns;
-            [] call FAC_scenarioGui_syncGrenadeBtns;
-            [] call FAC_scenarioGui_syncPlayerScaleBtns;
+    [] call FAC_scenarioGui_syncGrenadeBtns;
+    [] call FAC_scenarioGui_syncBuildCatalog;
+    [] call FAC_scenarioGui_syncPlayerScaleBtns;
             [] call FAC_scenarioGui_syncOpforPopBtns;
             [] call FAC_scenarioGui_syncPatrolTownChanceBtns;
             [] call FAC_scenarioGui_syncOpforAirBtns;
@@ -989,6 +1000,20 @@ FAC_scenarioGui_fnc = {
             _params params ["_v"];
             missionNamespace setVariable ["FAC_scenarioGui_launcher", _v];
             [] call FAC_scenarioGui_syncLauncherBtns;
+        };
+        case "setBuildCatalog": {
+            if !([player] call FAC_playerCanUseScenarioAdmin) exitWith {
+                systemChat "Scenario Admin access denied by lobby settings.";
+            };
+            private _mode = 0;
+            if (_params isEqualType [] && { count _params > 0 }) then { _mode = _params select 0 };
+            if (_mode > 0) then { _mode = 1 } else { _mode = 0 };
+            missionNamespace setVariable ["FAC_param_buildCatalog", _mode];
+            [] call FAC_scenarioGui_syncBuildCatalog;
+            if (!isNil "FADE_build_setCatalog") then {
+                [player, _mode] remoteExec ["FADE_build_setCatalog", 2];
+            };
+            if (!isNil "FAC_build_refillOpen") then { [] call FAC_build_refillOpen };
         };
         case "setGrenade": {
             _params params ["_v"];

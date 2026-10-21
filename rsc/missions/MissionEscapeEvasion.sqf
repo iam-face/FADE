@@ -32,7 +32,9 @@ FADE_runMission_EscapeEvasion = {
     private _guardCap = 15;
     private _eeGarRad = missionNamespace getVariable ["FADE_garrisonEeBuildingSearchRadiusM", 900];
     private _eeBldChance = missionNamespace getVariable ["FADE_garrisonMissionNearbyBuildingChance", 0.25];
-    private _bldsEeFull = (nearestObjects [_zoneCenter, ["House", "Building"], _eeGarRad]) select { count (_x buildingPos -1) >= 1 };
+    private _bldsEeRaw = nearestObjects [_zoneCenter, ["House", "Building"], _eeGarRad];
+    _bldsEeRaw = [_bldsEeRaw, 40] call FADE_samplePlacementList;
+    private _bldsEeFull = _bldsEeRaw select { count (_x buildingPos -1) >= 1 };
     private _bldsEe = (_bldsEeFull select { random 1 < _eeBldChance });
     if (count _bldsEe == 0 && { count _bldsEeFull > 0 }) then { _bldsEe = +_bldsEeFull };
     _bldsEe = _bldsEe call BIS_fnc_arrayShuffle;
@@ -466,7 +468,7 @@ FADE_runMission_EscapeEvasion = {
         private _p = objNull;
         private _fncHomeOrDead = {
             if ([_taskId] call FADE_counterAttack_missionEnded) exitWith { "ended" };
-            _live = _evadeePlayers select { !isNull _x && { alive _x } && { isPlayer _x } };
+            _live = _evadeePlayers select { !isNull _x && { alive _x } && { [_x] call FADE_unitIsMissionPlayer } };
             if (_live isEqualTo []) exitWith { "ended" };
             _home = true;
             { if ((_x distance2D _basePos) > 1000) then { _home = false } } forEach _live;
@@ -607,7 +609,7 @@ FADE_runMission_EscapeEvasion = {
                     };
                 };
             };
-            private _liveE = _evadeePlayers select { !isNull _x && { alive _x } && { isPlayer _x } };
+            private _liveE = _evadeePlayers select { !isNull _x && { alive _x } && { [_x] call FADE_unitIsMissionPlayer } };
             private _anyDead = false;
             {
                 if (isNull _x) then { _anyDead = true } else { if (!alive _x) then { _anyDead = true } };

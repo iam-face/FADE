@@ -45,6 +45,8 @@ FAC_LOBBY_IDX_STARTING_WEATHER    = 26;
 FAC_LOBBY_IDX_BUILD_ACCESS        = 27;
 FAC_LOBBY_IDX_BUILD_LOGISTICS     = 28;
 FAC_LOBBY_IDX_BUILD_AREA          = 29;
+FAC_LOBBY_IDX_BUILD_CATALOG       = 30;
+FAC_LOBBY_IDX_BUILD_REQUIRE       = 31;
 
 FAC_lobbyParams_getArray = {
     if (!isNil "paramsArray" && { paramsArray isEqualType [] }) then { paramsArray } else { [] }
@@ -79,6 +81,10 @@ FAC_lobbyParams_read = {
     missionNamespace setVariable ["FAC_param_buildAccess", _p param [FAC_LOBBY_IDX_BUILD_ACCESS, 1]];
     missionNamespace setVariable ["FAC_param_buildLogistics", _p param [FAC_LOBBY_IDX_BUILD_LOGISTICS, 0]];
     missionNamespace setVariable ["FAC_param_buildArea", _p param [FAC_LOBBY_IDX_BUILD_AREA, 0]];
+    if (isNil { missionNamespace getVariable "FAC_param_buildCatalog" }) then {
+        missionNamespace setVariable ["FAC_param_buildCatalog", _p param [FAC_LOBBY_IDX_BUILD_CATALOG, 0]];
+    };
+    missionNamespace setVariable ["FAC_param_buildRequire", _p param [FAC_LOBBY_IDX_BUILD_REQUIRE, 0]];
 };
 
 // Population labels match Scenario GUI (Very Low … Insane). Other fields scale with threat tier.
@@ -249,6 +255,8 @@ FAC_lobbyParams_publishAccessVars = {
         "FAC_param_buildAccess",
         "FAC_param_buildLogistics",
         "FAC_param_buildArea",
+        "FAC_param_buildCatalog",
+        "FAC_param_buildRequire",
         "FADE_teleportToPlayerMode",
         "FADE_civiliansEnabled",
         "FADE_limitGearToFriendlyFaction",

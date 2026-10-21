@@ -444,6 +444,7 @@ FADE_runMission_Raid = {
                             _result = "FAILED";
                         };
                         if (!_done && { alive _hostage } && { (_hostage distance _basePos) < _baseDistForComplete }) then {
+                            [_hostage] call FADE_hostage_playReturnCue;
                             _done = true;
                             _result = "SUCCEEDED";
                         };

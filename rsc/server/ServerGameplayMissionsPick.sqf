@@ -124,7 +124,7 @@ FADE_fnc_urbanPosNearZoneCenter = {
     params ["_zoneCenter", "_minDist", ["_innerMin", 50], ["_innerMax", 400]];
     if (count _zoneCenter < 2) exitWith { [] };
     private _base = FADE_basePos;
-    private _candidate = [[_zoneCenter, _innerMin, _innerMax, 5, 1, 0.5, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray;
+    private _candidate = [_zoneCenter, _innerMin, _innerMax] call FADE_placement_posInRing;
     if (count _candidate < 2 || { surfaceIsWater _candidate } || { (_candidate distance _base) < _minDist }) exitWith { [] };
     if !([_candidate] call FADE_mapPosInBounds) exitWith { [] };
     _candidate
@@ -135,7 +135,14 @@ FADE_fnc_siteIfEnoughBuildingSlots = {
     params ["_zoneCenter", "_minDist", "_attempt", "_searchR", "_minSlots", "_minBuildings"];
     private _site = [_zoneCenter, _minDist, 40, _attempt] call FADE_fnc_posAtCivZoneCenter;
     private _buildings = nearestObjects [_zoneCenter, ["House", "Building"], _searchR];
-    if (({ count (_x buildingPos -1) >= _minSlots } count _buildings) < _minBuildings) exitWith { [] };
+    private _limit = (count _buildings) min 40;
+    private _found = 0;
+    private _i = 0;
+    while { _i < _limit && { _found < _minBuildings } } do {
+        if ((count ((_buildings select _i) buildingPos -1)) >= _minSlots) then { _found = _found + 1 };
+        _i = _i + 1;
+    };
+    if (_found < _minBuildings) exitWith { [] };
     _site
 };
 
@@ -222,7 +229,15 @@ FADE_fnc_tryHostageDestAtRadius = {
         {
             params ["_destPos", "_anchor", "_radiusM"];
             private _buildings = nearestObjects [_destPos, ["House", "Building"], 450];
-            private _candidates = _buildings select { count (_x buildingPos -1) >= 5 };
+            if (count _buildings > 40) then { _buildings resize 40 };
+            private _candidates = [];
+            private _bi = 0;
+            while { _bi < count _buildings && { count _candidates < 2 } } do {
+                if ((count ((_buildings select _bi) buildingPos -1)) >= 5) then {
+                    _candidates pushBack (_buildings select _bi);
+                };
+                _bi = _bi + 1;
+            };
             if (count _candidates < 2) exitWith { [] };
             private _center = getPosATL (_candidates select 0);
             if (_radiusM < 0 || { (_center distance2D _anchor) <= _radiusM }) then { _destPos } else { [] }
@@ -243,6 +258,7 @@ FADE_fnc_tryHvtDestAtRadius = {
             params ["_destPos", "_anchor", "_radiusM", "_extra"];
             _extra params ["_minSlots", "_buildRadius"];
             private _buildings = nearestObjects [_destPos, ["House", "Building"], _buildRadius];
+            if (count _buildings > 40) then { _buildings resize 40 };
             private _found = _buildings findIf { count (_x buildingPos -1) >= _minSlots };
             if (_found < 0) exitWith { [] };
             private _center = getPosATL (_buildings select _found);
@@ -269,7 +285,14 @@ FADE_fnc_trySearchDestroySiteAtRadius = {
             private _c = +_tryPos;
             if (count _c < 3) then { _c = [(_c select 0), (_c select 1), 0] };
             private _buildings = nearestObjects [_c, ["House", "Building"], _areaRadius];
-            if (({ count (_x buildingPos -1) >= 2 } count _buildings) < 3) exitWith { [] };
+            if (count _buildings > 40) then { _buildings resize 40 };
+            private _slotCount = 0;
+            private _bi = 0;
+            while { _bi < count _buildings && { _slotCount < 3 } } do {
+                if ((count ((_buildings select _bi) buildingPos -1)) >= 2) then { _slotCount = _slotCount + 1 };
+                _bi = _bi + 1;
+            };
+            if (_slotCount < 3) exitWith { [] };
             if (_radiusM < 0 || { (_c distance2D _anchor) <= _radiusM }) then { _c } else { [] }
         },
         [_areaRadius]

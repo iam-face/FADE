@@ -24,9 +24,9 @@ FAC_playthroughSuite__counterAttackTypes = [
     "AssetRetrieval", "SearchDestroy", "ClearArea", "CAS", "Raid", "Hostage", "HVT", "CASEVAC", "CSAR"
 ];
 
-FAC_playthroughSuite__longInitTypes = ["AreaOfOperations", "Operation", "Raid", "Invasion", "InterceptConvoy", "AssetRetrieval"];
+FAC_playthroughSuite__longInitTypes = ["AreaOfOperations", "Operation", "Raid", "Invasion", "InterceptConvoy", "AssetRetrieval", "ClearArea", "EscapeEvasion"];
 FAC_playthroughSuite__initTimeoutSec = 14;
-FAC_playthroughSuite__longInitTimeoutSec = 22;
+FAC_playthroughSuite__longInitTimeoutSec = 50;
 FAC_playthroughSuite__convoyInitTimeoutSec = 40;
 FAC_playthroughSuite__cleanupTimeoutSec = 8;
 FAC_playthroughSuite__betweenMissionSec = 0.5;
@@ -83,12 +83,13 @@ FAC_playthroughSuite__getDestPos = {
         +(_global select 2)
     };
     private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
+    private _pos = [];
     {
         if ((_x select 0) == _missionType && { [_x, _player] call FADE_isMissionEntryOwnedByPlayer }) exitWith {
-            +(_x select 2)
+            _pos = +(_x select 2);
         };
     } forEach _singleList;
-    []
+    _pos
 };
 
 FAC_playthroughSuite__saveCounterAttackTiming = {
@@ -164,7 +165,9 @@ FAC_playthroughSuite__startMission = {
             [[_uid], 30, "Normal", _player] call FADE_startGeoGuesser;
         };
         case "PointDefense": {
-            [_player, [], missionNamespace getVariable ["FADE_pdRun_durationSec", 12]] call FADE_startPointDefense;
+            missionNamespace setVariable ["FADE_pointDefenseDurationMinSec", 4];
+            missionNamespace setVariable ["FADE_pdRun_durationSec", 4];
+            [_player, [], 4] call FADE_startPointDefense;
         };
         default {
             [_missionType, _player] call FADE_startMission;
@@ -621,9 +624,14 @@ FAC_playthroughSuite__runOne = {
 FAC_playthroughSuite_runServer = {
     params [
         ["_notifyPlayer", objNull],
-        ["_types", FAC_playthroughSuite__missionTypes]
+        ["_types", []]
     ];
     if (!isServer) exitWith { [0, 0, 0] };
+    if (_types isEqualTo []) then { _types = +FAC_playthroughSuite__missionTypes };
+    if (_types isEqualTo []) exitWith {
+        diag_log "[FAC Playthrough] FAIL: no mission types to run";
+        [0, 1, 0]
+    };
 
     if (missionNamespace getVariable ["FAC_playthroughSuite_running", false]) exitWith {
         ["[FAC Playthrough] Already running.", _notifyPlayer] call FAC_playthroughSuite__chat;
@@ -634,7 +642,27 @@ FAC_playthroughSuite_runServer = {
         _notifyPlayer = objNull;
         { if (isPlayer _x) exitWith { _notifyPlayer = _x } } forEach allPlayers;
     };
-    if (isNull _notifyPlayer || { !isPlayer _notifyPlayer }) exitWith {
+    private _headlessOwner = false;
+    if ((isNull _notifyPlayer || { !isPlayer _notifyPlayer }) && { missionNamespace getVariable ["FADE_headlessTestActive", false] }) then {
+        private _side = missionNamespace getVariable ["FADE_sideFriendly", west];
+        if !(_side isEqualType west) then { _side = west };
+        private _class = switch (_side) do {
+            case east: { "O_Soldier_F" };
+            case independent: { "I_Soldier_F" };
+            default { "B_Soldier_F" };
+        };
+        private _pos = missionNamespace getVariable ["FADE_basePos", [0, 0, 0]];
+        if (count _pos < 2) then { _pos = [0, 0, 0] };
+        private _grp = createGroup [_side, true];
+        _notifyPlayer = _grp createUnit [_class, _pos, [], 0, "NONE"];
+        if (!isNull _notifyPlayer) then {
+            _notifyPlayer setVariable ["FADE_headlessOwner", true, true];
+            _notifyPlayer allowDamage false;
+            missionNamespace setVariable ["FADE_headlessOwnerUnit", _notifyPlayer];
+        };
+        _headlessOwner = !isNull _notifyPlayer;
+    };
+    if ((isNull _notifyPlayer || { !isPlayer _notifyPlayer }) && { !_headlessOwner }) exitWith {
         diag_log "[FAC Playthrough] FAIL: no player available for mission ownership";
         [0, 1, 0]
     };

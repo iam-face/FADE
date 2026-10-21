@@ -74,7 +74,7 @@ FADE_geoGuesser_pickDropPos = {
 FADE_geoGuesser_submitGuess = {
     params ["_taskId", "_guessPos", "_player"];
     if (!isServer) exitWith {};
-    if (_taskId == "" || { isNull _player } || { !isPlayer _player }) exitWith {};
+    if (_taskId == "" || { isNull _player } || { !([_player] call FADE_unitIsMissionPlayer) }) exitWith {};
     if !(_guessPos isEqualType []) exitWith {};
     if (count _guessPos < 2) exitWith {};
     private _stateKey = "FADE_ggRound_" + _taskId;

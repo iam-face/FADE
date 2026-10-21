@@ -239,6 +239,7 @@ private _fnc_opMakeVeh = {
     private _opGarMult = missionNamespace getVariable ["FADE_garrisonOperationScanMult", 1.25];
     private _opBChance = missionNamespace getVariable ["FADE_garrisonMissionNearbyBuildingChance", 0.25];
     private _blds = nearestObjects [_center, ["House", "Building"], _zoneRadius * 0.95 * _opGarMult];
+    _blds = [_blds, 24] call FADE_samplePlacementList;
     _blds = (_blds select { count (_x buildingPos -1) >= 2 }) call BIS_fnc_arrayShuffle;
     private _bldsPick = _blds select { random 1 < _opBChance };
     if (count _bldsPick < 1) then { _bldsPick = +_blds };

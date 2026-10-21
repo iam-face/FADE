@@ -1,6 +1,6 @@
 // =============================================================================
 // EnemyAAA.sqf — dynamic AAA / MANPADS around airborne player aircraft (server)
-// Modes: Off | AAA (3 static AA) | AAA+MANPADS (static + 2 MANPADS infantry)
+// Modes: Off | AAA (3 static AA) | AAA+MANPADS (3 static AA; one slot is a MANPADS team on FADE_aaa_manpadsClusterChance)
 // =============================================================================
 
 if (!isServer) exitWith {};
@@ -379,20 +379,23 @@ FADE_aaa_despawnManpadsInZone = {};
 FADE_aaa_spawnClusterForVehicle = {
     params ["_veh", "_mode"];
     private _bearings = [0, 120, 200];
-    private _roles = if (_mode == "AAA+MANPADS") then {
-        ["static", "manpads", "manpads"]
-    } else {
-        ["static", "static", "static"]
-    };
+    private _manpadsChance = missionNamespace getVariable ["FADE_aaa_manpadsClusterChance", 0.25];
+    private _includeManpads = _mode == "AAA+MANPADS" && { random 1 < _manpadsChance };
+    private _manpadsSlot = if (_includeManpads) then { floor random 3 } else { -1 };
     private _objects = [];
     private _groups = [];
     private _gunners = [];
     {
-        private _role = _roles select _forEachIndex;
+        private _role = if (_forEachIndex == _manpadsSlot) then { "manpads" } else { "static" };
         private _pos = if (_role == "manpads") then {
             [_veh, _x] call FADE_aaa_pickManpadsSpawnPos
         } else {
             [_veh, _x] call FADE_aaa_pickSpawnPos
+        };
+        if (_role == "manpads" && { count _pos < 2 }) then {
+            _role = "static";
+            _pos = [_veh, _x] call FADE_aaa_pickSpawnPos;
+            _includeManpads = false;
         };
         if (count _pos < 2) then { continue };
         private _spawned = if (_role == "manpads") then {
@@ -413,7 +416,8 @@ FADE_aaa_spawnClusterForVehicle = {
         ["spawnedAt", time],
         ["objects", _objects],
         ["groups", _groups],
-        ["gunners", _gunners]
+        ["gunners", _gunners],
+        ["manpads", _includeManpads]
     ];
     if ((count _groups) == 0 && { count _objects == 0 }) then {
         diag_log format ["[FADE AAA] WARN: no threats spawned for airborne %1 (placement or base exclusion?)", typeOf _veh];
@@ -502,7 +506,13 @@ if (isNil "FADE_aaa_monitorStarted") then {
                             FADE_aaa_clusters set [_id, _cluster];
                             [_cluster] call FADE_aaa_clusterTick;
                             if (missionNamespace getVariable ["FADE_aaa_debug", false]) then {
-                                diag_log format ["[FADE AAA] cluster for %1 (%2 groups, %3 objects)", typeOf _x, count (_cluster get "groups"), count (_cluster get "objects")];
+                                diag_log format [
+                                    "[FADE AAA] cluster for %1 (%2 groups, %3 objects, manpads %4)",
+                                    typeOf _x,
+                                    count (_cluster get "groups"),
+                                    count (_cluster get "objects"),
+                                    _cluster getOrDefault ["manpads", false]
+                                ];
                             };
                         };
                     } forEach _active;

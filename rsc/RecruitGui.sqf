@@ -257,6 +257,7 @@ FAC_recruitGui_fnc = {
             if !(["FAC_playerCanUseRecruitGui"] call FAC_lobbyParams_callAccess) exitWith {
                 systemChat "Recruit GUI access denied by lobby settings.";
             };
+            if (!isNil "FAC_build_denyService" && { [player, "barracks"] call FAC_build_denyService }) exitWith {};
             if (!createDialog "RscDisplayRecruit") then {
                 systemChat "RECRUIT GUI: RESOURCE NOT FOUND.";
             };

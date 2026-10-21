@@ -139,5 +139,71 @@ for "_attempt" from 1 to 90 do {
     };
 };
 
+if (!_routeFound) then {
+    private _zoneNames = missionNamespace getVariable ["FADE_civTriggerNames", []];
+    private _roadPts = [];
+    private _pushRoad = {
+        params ["_raw"];
+        if (count _raw < 2) exitWith {};
+        private _roads = _raw nearRoads 800;
+        if (_roads isEqualTo []) exitWith {};
+        private _sp = getPosATL (_roads select 0);
+        if (count _sp < 3) then { _sp = [(_sp select 0), (_sp select 1), 0] };
+        if (surfaceIsWater _sp) exitWith {};
+        if ((_sp distance2D _basePos) < _minFromBase) exitWith {};
+        _roadPts pushBack _sp;
+    };
+    private _zi = 0;
+    while { _zi < count _zoneNames && { count _roadPts < 40 } } do {
+        private _tr = missionNamespace getVariable [_zoneNames select _zi, objNull];
+        _zi = _zi + 1;
+        if (isNull _tr) then { continue };
+        private _zc = getPosATL _tr;
+        if (count _zc < 2) then { continue };
+        if ((_zc distance2D _basePos) < _minFromBase) then { continue };
+        [_zc] call _pushRoad;
+    };
+    private _ws = worldSize;
+    {
+        [_x] call _pushRoad;
+    } forEach [
+        [_ws * 0.28, _ws * 0.36, 0],
+        [_ws * 0.48, _ws * 0.58, 0],
+        [_ws * 0.64, _ws * 0.40, 0],
+        [_ws * 0.72, _ws * 0.70, 0],
+        [_ws * 0.36, _ws * 0.74, 0]
+    ];
+    private _bestD = 0;
+    private _bestS = [];
+    private _bestE = [];
+    private _ai = 0;
+    while { _ai < count _roadPts } do {
+        private _sp = _roadPts select _ai;
+        _ai = _ai + 1;
+        private _bi = _ai;
+        while { _bi < count _roadPts } do {
+            private _ep = _roadPts select _bi;
+            _bi = _bi + 1;
+            private _d = _sp distance2D _ep;
+            if (_d > _bestD) then {
+                _bestD = _d;
+                _bestS = _sp;
+                _bestE = _ep;
+            };
+        };
+    };
+    private _acceptM = _minRouteM min 1500;
+    if (count _bestS >= 2 && { count _bestE >= 2 } && { _bestD >= _acceptM }) then {
+        _startPos = _bestS;
+        _endPos = _bestE;
+        _routeFound = true;
+    } else {
+        diag_log format [
+            "[FADE] Convoy route search failed: zones=%1 roadPts=%2 bestPairM=%3 needM=%4",
+            count _zoneNames, count _roadPts, round _bestD, round _minRouteM
+        ];
+    };
+};
+
 if (!_routeFound || { count _startPos < 2 } || { count _endPos < 2 }) exitWith { [] };
 [_startPos, _endPos]
