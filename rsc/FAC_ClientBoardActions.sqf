@@ -462,7 +462,7 @@ FAC_aceSelf_nearPlayerBase = {
 
 // Vehicle the player is in, or the Air/Land vehicle they are looking at.
 // Look distance matches ace_pylons_searchDistance (cba_settings.sqf, 50 m) so
-// Open Pylon Editor uses the same reach as the existing pylon dialog.
+// Open pylon menu uses the same reach as the existing pylon dialog.
 FAC_aceSelf_myVehicle = {
     private _veh = vehicle player;
     if (!(_veh isEqualTo player) && { _veh isKindOf "Air" || { _veh isKindOf "LandVehicle" } }) exitWith { _veh };
@@ -544,13 +544,16 @@ FAC_aceSelf_install = {
             systemChat "Leave the vehicle before opening ACE Arsenal.";
         };
         private _box = [] call FAC_aceSelf_arsenalBox;
-        if (isNull _box) exitWith {};
-        [_box, player] call ace_arsenal_fnc_openBox;
+        if (isNull _box) then {
+            // Mode true fills the arsenal from config. No box object, and initBox is not used, so ACE does not add a second Arsenal action.
+            [player, player, true] call ace_arsenal_fnc_openBox;
+        } else {
+            [_box, player] call ace_arsenal_fnc_openBox;
+        };
     }, {
         isClass (configFile >> "CfgPatches" >> "ace_arsenal")
         && { (missionNamespace getVariable ["FAC_param_enableAceArsenalActions", 1]) > 0 }
         && { ["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess }
-        && { !isNull ([] call FAC_aceSelf_arsenalBox) }
     }] call _add;
 
     [_gear, "FAC_aceSelf_presets", "Loadout GUI", {
@@ -598,7 +601,7 @@ FAC_aceSelf_install = {
     [_veh, "FAC_aceSelf_rearm", "Rearm my Vehicle", { ["rearm"] call FAC_aceSelf_requestVehicleService }, _vehReady] call _add;
     [_veh, "FAC_aceSelf_repair", "Repair my Vehicle", { ["repair"] call FAC_aceSelf_requestVehicleService }, _vehReady] call _add;
     [_veh, "FAC_aceSelf_refuel", "Refuel my Vehicle", { ["refuel"] call FAC_aceSelf_requestVehicleService }, _vehReady] call _add;
-    [_veh, "FAC_aceSelf_pylons", "Open Pylon Editor", {
+    [_veh, "FAC_aceSelf_pylons", "Open pylon menu", {
         call FAC_ensureVehicleGui;
         private _pylonVeh = [] call FAC_aceSelf_myVehicle;
         if (isNull _pylonVeh) exitWith {};
@@ -624,6 +627,33 @@ FAC_aceSelf_install = {
 
     [_scn, "FAC_aceSelf_fastTravel", "Fast Travel", {
         [] spawn { call FAC_ensureTeleportGui; sleep 0.2; ["open", []] call FAC_teleportGui_fnc };
+    }] call _add;
+
+    [_scn, "FAC_aceSelf_mapTeleport", "Teleport to Map Location", {
+        execVM "rsc\TeleportMapPick.sqf";
+    }] call _add;
+
+    private _base = [_fade, "FAC_aceSelf_base", "Base...", {}, {
+        ["FAC_playerCanBuild"] call FAC_lobbyParams_callAccess
+    }] call _add;
+
+    [_base, "FAC_aceSelf_build", "Build", {
+        [] spawn {
+            call FAC_ensureBuildGui;
+            ["open", []] call FAC_buildGui_fnc;
+        };
+    }] call _add;
+
+    // FADE... stays inside the base bubble. Anywhere mode adds Build on self-interact itself, and only while outside that bubble.
+    [["ACE_SelfActions"], "FAC_aceSelf_buildField", "Build", {
+        [] spawn {
+            call FAC_ensureBuildGui;
+            ["open", []] call FAC_buildGui_fnc;
+        };
+    }, {
+        ([] call FADE_build_anywhere)
+        && { !( [] call FAC_aceSelf_nearPlayerBase ) }
+        && { ["FAC_playerCanBuild"] call FAC_lobbyParams_callAccess }
     }] call _add;
 
     player setVariable ["FAC_aceSelf_added", true, false];

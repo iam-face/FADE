@@ -32,11 +32,15 @@ FAC_teleportGui_syncTabs = {
     if (isNull _d) exitWith {};
     private _tab = missionNamespace getVariable ["FAC_teleportGui_tab", "dest"];
     private _isDest = _tab == "dest";
-    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow _isDest } } forEach FAC_teleportGui_tabDestIdcs;
-    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow (!_isDest) } } forEach FAC_teleportGui_tabPlayersIdcs;
+    if (!isNull (_d displayCtrl 59900)) then {
+        [_d, _tab] call FAC_gui_showPage;
+    } else {
+        { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow _isDest } } forEach FAC_teleportGui_tabDestIdcs;
+        { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow (!_isDest) } } forEach FAC_teleportGui_tabPlayersIdcs;
+        [_d displayCtrl 60609, _isDest] call FAC_theme_applyTab;
+        [_d displayCtrl 60619, !_isDest] call FAC_theme_applyTab;
+    };
     [_isDest] call FAC_teleportGui_syncDestButtonsVisible;
-    [_d displayCtrl 60609, _isDest] call FAC_theme_applyTab;
-    [_d displayCtrl 60619, !_isDest] call FAC_theme_applyTab;
 };
 
 FAC_teleportGui_fnc_buildDestButtons = {
@@ -55,14 +59,23 @@ FAC_teleportGui_fnc_buildDestButtons = {
 
     private _meta = [];
     private _idc = FAC_teleportGui_destBtnIdcFirst;
-    private _gx0 = 0.04;
-    private _gx1 = 0.96;
-    private _gy0 = 0.148;
-    private _gy1 = 0.82;
+    private _host = controlNull;
+    {
+        _x params ["_pageName", "_group"];
+        if (_pageName isEqualTo "dest") then { _host = _group };
+    } forEach (_display getVariable ["FAC_gui_pages", []]);
+    private _body = _display getVariable ["FAC_gui_body", [0.035, 0.12, 0.93, 0.74]];
+    _body params ["_bx", "_by", "_bw", "_bh"];
     private _gapH = 0.01;
     private _gapV = 0.01;
-    private _totalW = _gx1 - _gx0;
-    private _totalH = _gy1 - _gy0;
+    private _ox = 0.012;
+    private _oy = 0.05;
+    private _totalW = (_bw - 0.04) max 0.4;
+    private _totalH = (_bh - 0.08) max 0.4;
+    if (isNull _host) then {
+        _ox = _bx + 0.012;
+        _oy = _by + 0.05;
+    };
     private _cols = ((ceil (sqrt _count)) max 1) min 5;
     if (_count > 16) then { _cols = 5; };
     private _rows = ceil (_count / _cols);
@@ -74,9 +87,13 @@ FAC_teleportGui_fnc_buildDestButtons = {
         _x params ["_label", "_objName"];
         private _row = floor (_gi / _cols);
         private _col = _gi % _cols;
-        private _xPos = _gx0 + _col * (_cellW + _gapH);
-        private _yPos = _gy0 + _row * (_cellH + _gapV);
-        private _ctrl = _display ctrlCreate ["RscButton", _idc];
+        private _xPos = _ox + _col * (_cellW + _gapH);
+        private _yPos = _oy + _row * (_cellH + _gapV);
+        private _ctrl = if (isNull _host) then {
+            _display ctrlCreate ["FACRscPrimaryBtn", _idc]
+        } else {
+            _display ctrlCreate ["FACRscPrimaryBtn", _idc, _host]
+        };
         _ctrl ctrlSetPosition [_xPos, _yPos, _cellW, _cellH];
         _ctrl ctrlCommit 0;
         _ctrl ctrlSetText _label;
@@ -178,6 +195,15 @@ FAC_teleportGui_fnc_resolveDestination = {
         [true, [_p select 0, _p select 1, 0.15], markerDir _mn]
     } else {
         private _o = missionNamespace getVariable [_objName, objNull];
+        if (isNull _o && { _objName == "teleportBase" }) exitWith {
+            private _bp = missionNamespace getVariable ["FADE_basePos", []];
+            if !(missionNamespace getVariable ["FADE_baseDefined", false]) then { _bp = [] };
+            if (!(_bp isEqualType []) || { count _bp < 2 }) then {
+                [false, [0, 0, 0], 0]
+            } else {
+                [true, [_bp select 0, _bp select 1, 0.15], 0]
+            }
+        };
         if (isNull _o) exitWith { [false, [0, 0, 0], 0] };
         [true, getPosATL _o, getDir _o]
     };
@@ -448,6 +474,13 @@ FAC_teleportGui_fnc = {
         case "onLoad": {
             private _display = findDisplay 60600;
             if (isNull _display) exitWith {};
+            [_display, FAC_gui_spec_teleport] call FAC_gui_build;
+            private _plist = _display displayCtrl 60611;
+            if (!isNull _plist) then {
+                _plist ctrlAddEventHandler ["LBDblClick", {
+                    ["teleportPlayer", []] call (missionNamespace getVariable ["FAC_teleportGui_fnc", {}]);
+                }];
+            };
             missionNamespace setVariable ["FAC_teleportGui_fnc", FAC_teleportGui_fnc];
             uinamespace setVariable ["FAC_teleportGui_fnc", FAC_teleportGui_fnc];
             missionNamespace setVariable ["FAC_teleportGui_tab", "dest"];
@@ -592,3 +625,6 @@ FAC_teleportGui_fnc = {
 };
 
 missionNamespace setVariable ["FAC_teleportGui_fnc", FAC_teleportGui_fnc];
+// Map-click string and the return action run outside this compile scope.
+missionNamespace setVariable ["FAC_teleport_fnc_addReturnToBase", FAC_teleport_fnc_addReturnToBase];
+missionNamespace setVariable ["FAC_teleport_fnc_returnToBase", FAC_teleport_fnc_returnToBase];

@@ -20,7 +20,6 @@ FADE_runMission_CAS = {
 
     // Friendly position first (200-400m from objective center); enemies spawn min 750m from friendlies
     private _ensureDry = missionNamespace getVariable ["FADE_ensureDryLandPos", {}];
-    private _spawnEnemyGrp = missionNamespace getVariable ["FADE_spawnEnemyGroupAt", BIS_fnc_spawnGroup];
     private _friendlyPos = [[_destPos, 200, 400, 5, 1, 0, 0, [], _destPos], _destPos] call FADE_findSafePosArray;
     if (!(_ensureDry isEqualTo {})) then { _friendlyPos = [_friendlyPos, _destPos] call _ensureDry };
     private _minEnemyDistFromFriendlies = 750;
@@ -41,8 +40,7 @@ FADE_runMission_CAS = {
         private _grpUnits = (_shuffled select [0, _grpSize min count _shuffled]);
         if (count _grpUnits == 0) then { _grpUnits = [_enemyUnits select 0] };
 
-        private _grp = [_grpPos, _sideEnemy, _grpUnits, _destPos] call _spawnEnemyGrp;
-        [_grp] call FAC_applyEnemyScenarioToGroup;
+        private _grp = [_grpPos, _sideEnemy, _grpUnits] call FADE_missionCreateInfantryGroupAt;
         if (!isNull _grp && { count units _grp > 0 }) then {
             _grp setBehaviour "AWARE";
             _grp setCombatMode "RED";

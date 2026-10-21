@@ -23,9 +23,9 @@ FADE_geoGuesser_computeScore = {
 FADE_geoGuesser_resolveTeleportBasePos = {
     params [["_ringIdx", 0]];
     private _o = missionNamespace getVariable ["teleportBase", objNull];
-    if (isNull _o) exitWith { [[], -1] };
-    private _anchor = getPosATL _o;
-    private _dir = getDir _o;
+    private _anchor = if (!isNull _o) then { getPosATL _o } else { [] call FADE_getPlayerBasePos };
+    private _dir = if (!isNull _o) then { getDir _o } else { 0 };
+    if (count _anchor < 2) exitWith { [[], -1] };
     private _dx = sin _dir * 5;
     private _dy = cos _dir * 5;
     private _tp = [(_anchor select 0) - _dx, (_anchor select 1) - _dy, _anchor select 2];

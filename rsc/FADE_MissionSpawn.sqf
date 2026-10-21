@@ -1,22 +1,9 @@
 // =============================================================================
 // FADE_MissionSpawn.sqf  -  shared mission spawn helpers (server, compile once)
+// Open-ground foot groups: FADE_missionCreateInfantryGroupAt
+// Men at known positions: FADE_spawnInfantryAtPositions
+// Crewed ground vehicles live in FADE_Common as FADE_spawnCrewedGroundVehicle
 // =============================================================================
-
-FADE_spawnEnemyGroupAt = {
-    params ["_pos", "_side", "_classes", ["_anchor", []]];
-    private _ensureDry = missionNamespace getVariable ["FADE_ensureDryLandPos", {}];
-    private _spawnPos = if (_ensureDry isEqualTo {}) then { [_pos] call FADE_normPos3 } else { [_pos, _anchor] call _ensureDry };
-    [_spawnPos, _side, _classes] call BIS_fnc_spawnGroup
-};
-
-FADE_createEnemyUnitAt = {
-    params ["_group", "_class", "_pos", ["_anchor", []]];
-    private _ensureDry = missionNamespace getVariable ["FADE_ensureDryLandPos", {}];
-    private _spawnPos = if (_ensureDry isEqualTo {}) then { [_pos] call FADE_normPos3 } else { [_pos, _anchor] call _ensureDry };
-    private _u = _group createUnit [_class, _spawnPos, [], 0, "NONE"];
-    if (!isNull _u) then { _u setPosATL _spawnPos };
-    _u
-};
 
 FADE_vg_registerMissionSite = {
     params [
@@ -98,7 +85,75 @@ FADE_missionCreateInfantryGroupAt = {
             };
         };
     } forEach _clsIn;
-    [_grp] call FADE_missionEnsureInfantryGroupLeader
+    private _grpOut = [_grp] call FADE_missionEnsureInfantryGroupLeader;
+    if (!isNull _grpOut) then {
+        private _apply = missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}];
+        if !(_apply isEqualTo {}) then { [_grpOut] call _apply };
+    };
+    _grpOut
+};
+
+// One infantry group, one man per ATL. _classPick: "random", "cycle", or "zip" (parallel to _positions).
+// Pass _existingGrp to add men to a group the caller already owns (hostage). Returns that group, or grpNull.
+FADE_spawnInfantryAtPositions = {
+    params [
+        "_positions",
+        "_side",
+        "_classes",
+        ["_unitPos", ""],
+        ["_ambientAnim", false],
+        ["_classPick", "random"],
+        ["_existingGrp", grpNull]
+    ];
+    if (!(_positions isEqualType []) || { _positions isEqualTo [] }) exitWith {
+        if (isNull _existingGrp) then { grpNull } else { _existingGrp }
+    };
+    if (!(_classes isEqualType []) || { _classes isEqualTo [] }) exitWith {
+        if (isNull _existingGrp) then { grpNull } else { _existingGrp }
+    };
+    private _pool = if (_classPick == "zip") then {
+        _classes
+    } else {
+        [_classes] call FADE_filterInfantryManClasses
+    };
+    if (_pool isEqualTo []) exitWith {
+        if (isNull _existingGrp) then { grpNull } else { _existingGrp }
+    };
+    private _ownsGrp = isNull _existingGrp;
+    private _grp = if (_ownsGrp) then { createGroup _side } else { _existingGrp };
+    private _p = [];
+    private _cls = "";
+    private _u = objNull;
+    private _n = 0;
+    {
+        _p = _x;
+        if (!(_p isEqualType []) || { count _p < 2 }) then { continue };
+        if (count _p < 3) then { _p = [(_p select 0), (_p select 1), 0] };
+        _cls = switch (_classPick) do {
+            case "zip": { _classes param [_forEachIndex, ""] };
+            case "cycle": { _pool select (_n mod count _pool) };
+            default { selectRandom _pool };
+        };
+        _n = _n + 1;
+        if !([_cls] call FADE_isInfantryManClass) then { continue };
+        _u = _grp createUnit [_cls, _p, [], 0, "NONE"];
+        if (isNull _u) then { continue };
+        if !(_u isKindOf "Man") then {
+            deleteVehicle _u;
+            continue
+        };
+        _u setPosATL _p;
+        if (_unitPos != "") then { _u setUnitPos _unitPos };
+        if (_ambientAnim) then { [_u] call FADE_tryAmbientCombatAnim };
+    } forEach _positions;
+    if (_ownsGrp) then {
+        _grp = [_grp] call FADE_missionEnsureInfantryGroupLeader;
+    };
+    if (!isNull _grp) then {
+        private _apply = missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}];
+        if !(_apply isEqualTo {}) then { [_grp] call _apply };
+    };
+    if (isNull _grp) then { grpNull } else { _grp }
 };
 
 // BLUFOR / friendly mission spawns: infantry-only classes + leader sanity check.
@@ -235,18 +290,11 @@ FADE_missionSpawnGuards = {
         };
         if (_guardPos isEqualType [] && { count _guardPos >= 2 }) then {
             if (count _guardPos < 3) then { _guardPos = [(_guardPos select 0), (_guardPos select 1), 0] };
-            private _guardGrp = createGroup _sideEnemy;
-            private _u = _guardGrp createUnit [selectRandom _enemyClasses, _guardPos, [], 0, "NONE"];
-            if (!isNull _u) then {
-                [_guardGrp] call FAC_applyEnemyScenarioToGroup;
-                _u setPosATL _guardPos;
-                _u setUnitPos "MIDDLE";
-                [_u] call FADE_tryAmbientCombatAnim;
+            private _guardGrp = [[_guardPos], _sideEnemy, _enemyClasses, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+            if (!isNull _guardGrp) then {
                 _groups pushBack _guardGrp;
                 if (_taskId != "") then { [_taskId, _guardGrp] call FADE_missionEnt_registerGroup };
                 _spawned = _spawned + 1;
-            } else {
-                deleteGroup _guardGrp;
             };
         };
     };
@@ -268,14 +316,12 @@ FADE_mission_spawnFieldContactEnemies = {
         ["_grpSizeMin", 3],
         ["_grpSizeRand", 5],
         ["_minDistFromBase", 1000],
-        ["_registerEach", false],
-        ["_useScenarioSpawn", false]
+        ["_registerEach", false]
     ];
     private _groups = [];
     if (count _enemyUnits == 0) exitWith { _groups };
     if (random 1 >= _contactChance) exitWith { _groups };
 
-    private _spawnEnemyGrp = missionNamespace getVariable ["FADE_spawnEnemyGroupAt", BIS_fnc_spawnGroup];
     private _ensureDry = missionNamespace getVariable ["FADE_ensureDryLandPos", {}];
     private _numEnemyGroups = [_groupsBase + floor random _groupsRand, 1] call _scaleOpforCount;
 
@@ -298,12 +344,8 @@ FADE_mission_spawnFieldContactEnemies = {
         private _grpUnits = (_shuffled select [0, _grpSize min count _shuffled]);
         if (count _grpUnits == 0) then { _grpUnits = [_enemyUnits select 0] };
 
-        private _grp = if (_useScenarioSpawn) then {
-            [_grpPos, _sideEnemy, _grpUnits, _atPos] call _spawnEnemyGrp
-        } else {
-            [_grpPos, _sideEnemy, _grpUnits] call BIS_fnc_spawnGroup
-        };
-        [_grp] call FAC_applyEnemyScenarioToGroup;
+        private _grp = [_grpPos, _sideEnemy, _grpUnits] call FADE_missionCreateInfantryGroupAt;
+        if (isNull _grp) then { continue };
         _grp setBehaviour "AWARE";
         _grp setCombatMode "RED";
         _grp addWaypoint [_atPos, 0];
@@ -564,10 +606,9 @@ FADE_cargo_cleanupSiteDeferred = {
 };
 
 missionNamespace setVariable ["FADE_vg_registerMissionSite", FADE_vg_registerMissionSite];
-missionNamespace setVariable ["FADE_spawnEnemyGroupAt", FADE_spawnEnemyGroupAt];
-missionNamespace setVariable ["FADE_createEnemyUnitAt", FADE_createEnemyUnitAt];
 missionNamespace setVariable ["FADE_missionEnsureInfantryGroupLeader", FADE_missionEnsureInfantryGroupLeader];
 missionNamespace setVariable ["FADE_missionCreateInfantryGroupAt", FADE_missionCreateInfantryGroupAt];
+missionNamespace setVariable ["FADE_spawnInfantryAtPositions", FADE_spawnInfantryAtPositions];
 missionNamespace setVariable ["FADE_spawnFriendlyInfantryGroupAt", FADE_spawnFriendlyInfantryGroupAt];
 missionNamespace setVariable ["FADE_tryAmbientCombatAnim", FADE_tryAmbientCombatAnim];
 missionNamespace setVariable ["FADE_missionApplyPatrolCycle", FADE_missionApplyPatrolCycle];

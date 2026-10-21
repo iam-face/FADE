@@ -183,6 +183,48 @@ FAC_missionTestSuite_runServer = {
         _fail = _fail + 1;
         diag_log "[FAC TestSuite] FAIL (server): FADE_mapMinX/MaxX/MinY/MaxY";
     };
+    _ok = _mapMinX == 0 && { _mapMinY == 0 } && { abs (_mapMaxX - worldSize) < 1 } && { abs (_mapMaxY - worldSize) < 1 };
+    if (_ok) then {
+        _pass = _pass + 1;
+        diag_log "[FAC TestSuite] PASS (server): map bounds are 0..worldSize";
+    } else {
+        _fail = _fail + 1;
+        diag_log format ["[FAC TestSuite] FAIL (server): map bounds are 0..worldSize (got %1..%2 / %3..%4, world %5)", _mapMinX, _mapMaxX, _mapMinY, _mapMaxY, worldSize];
+    };
+
+    if (!isNil "FADE_basePick_tally") then {
+        private _only = [["a", "b"], ["a"]] call FADE_basePick_tally;
+        private _tie = [["a", "b"], ["a", "b"]] call FADE_basePick_tally;
+        private _none = [[], []] call FADE_basePick_tally;
+        private _zero = [["a", "b"], []] call FADE_basePick_tally;
+        _ok = _only == "a" && { _tie in ["a", "b"] } && { _none == "" } && { _zero in ["a", "b"] };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log format ["[FAC TestSuite] PASS (server): FADE_basePick_tally only=%1 tie=%2", _only, _tie];
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): FADE_basePick_tally only=%1 tie=%2 none=%3 zero=%4", _only, _tie, _none, _zero];
+        };
+    } else {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): FADE_basePick_tally missing";
+    };
+
+    if (!isNil "FADE_basePick_ensureZoneMarker") then {
+        private _testName = "FADE_suite_basePick_mkr";
+        if (getMarkerColor _testName != "") then { deleteMarker _testName };
+        createMarker [_testName, [1, 2, 0]];
+        "FADE_suite_basePick_mkr" setMarkerType "mil_dot";
+        _ok = getMarkerColor _testName != "" && { (getMarkerPos _testName) distance2D [1, 2] < 1 };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): base-pick marker create";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): base-pick marker create";
+        };
+        if (getMarkerColor _testName != "") then { deleteMarker _testName };
+    };
 
     private _civT = missionNamespace getVariable ["FADE_civTriggerNames", []];
     _ok = _civT isEqualType [];
@@ -501,13 +543,11 @@ FAC_missionTestSuite_runServer = {
         "FADE_applyOpforLauncherPolicyToUnit",
         "FADE_filterEnemyUnitsByLauncherPolicy",
         "FADE_reapplyOpforLauncherPolicyToAliveEnemy",
-        "FADE_spawnHeli",
+        "FADE_spawnVehicleAtPos",
         "FADE_pylon_applyLocal",
-        "FADE_duplicateVehicleAtBase",
         "FADE_despawnVehicle",
         "FADE_serviceVehicle",
         "FADE_serviceVehiclePart",
-        "FADE_spawnLandVehicle",
         "FADE_requestVehiclesAtBase",
         "FADE_setTime",
         "FADE_setWeather",
@@ -560,7 +600,10 @@ FAC_missionTestSuite_runServer = {
         "FADE_recruit_requestFactionUnits",
         "FADE_recruit_requestRoster",
         "FADE_recruit_spawnUnit",
-        "FADE_recruit_dismissUnits"
+        "FADE_recruit_dismissUnits",
+        "FADE_build_place",
+        "FADE_build_remove",
+        "FADE_build_signSet"
     ];
     {
         private _n = _x;
@@ -595,6 +638,8 @@ FAC_missionTestSuite_runServer = {
         "rsc\FADE_MOTDBoard.sqf",
         "rsc\FADE_ClientCommon.sqf",
         "rsc\FAC_ClientBoardActions.sqf",
+        "rsc\TeleportGui.sqf",
+        "rsc\TeleportMapPick.sqf",
         "rsc\server\ServerGameplayCqb.sqf",
         "rsc\server\ServerGameplayCore.sqf",
         "rsc\server\ServerGameplayVehicles.sqf",
@@ -644,6 +689,11 @@ FAC_missionTestSuite_runServer = {
         "rsc\BaseNpcTalk.sqf",
         "rsc\CutsceneServer.sqf",
         "rsc\server\ServerGameplayRecruit.sqf",
+        "rsc\server\ServerGameplayBuild.sqf",
+        "rsc\BuildCatalog.sqf",
+        "rsc\BuildCommon.sqf",
+        "rsc\BuildGui.sqf",
+        "rsc\BuildSignGui.sqf",
         "rsc\server\ServerWorld.sqf",
         "rsc\server\ServerBootstrap.sqf"
     ];
@@ -1470,6 +1520,190 @@ FAC_missionTestSuite_runServer = {
         diag_log "[FAC TestSuite] PASS (server): RS_MH6V3 not loaded; pylon sync patch not required";
     };
 
+    diag_log "[FAC TestSuite] --- VEHICLE PLACEMENT ---";
+    {
+        private _fn = missionNamespace getVariable [_x, {}];
+        if (_fn isEqualType {}) then {
+            _pass = _pass + 1;
+            diag_log format ["[FAC TestSuite] PASS (server): %1 is code", _x];
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): %1 missing", _x];
+        };
+    } forEach ["FADE_vehiclePlacement_reason", "FADE_vehiclePlacement_createAt", "FADE_spawnVehicleAtPos"];
+
+    private _placeClass = "";
+    {
+        if (([_x] call FADE_vehiclePlacement_classReason) == "") exitWith { _placeClass = _x };
+    } forEach (missionNamespace getVariable ["FADE_landVehicleClasses", []]);
+    if (_placeClass == "") then {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): no placeable land class for placement checks";
+    } else {
+        private _soldierWhy = ["B_Soldier_F", [0, 0, 0], 0] call FADE_vehiclePlacement_reason;
+        private _unknownWhy = ["FADE_NotAVehicle", [0, 0, 0], 0] call FADE_vehiclePlacement_reason;
+        if (_soldierWhy != "" && { _unknownWhy != "" }) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): placement rejects infantry and unknown class";
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): placement class reject soldier=%1 unknown=%2", _soldierWhy, _unknownWhy];
+        };
+
+        private _base = [] call FADE_vehiclePlacement_basePos;
+        private _farWhy = [_placeClass, AGLToASL [(_base select 0) + 1500, (_base select 1), 1.5], 0] call FADE_vehiclePlacement_reason;
+        if (_farWhy != "") then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): placement rejects 1500 m from base";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): placement accepted a pose 1500 m from base";
+        };
+
+        // Same pose as the player ghost: model origin on the surface, no bounding-box lift.
+        private _poseAt = {
+            params ["_px", "_py"];
+            AGLToASL [_px, _py, 0]
+        };
+        private _clear = [];
+        for "_i" from 0 to 15 do {
+            private _dist = 25 + (_i * 8);
+            private _ang = _i * 47;
+            private _try = [(_base select 0) + (_dist * sin _ang), (_base select 1) + (_dist * cos _ang)] call _poseAt;
+            if (([_placeClass, _try, 90] call FADE_vehiclePlacement_reason) == "") exitWith { _clear = _try };
+        };
+        if (_clear isEqualTo []) then {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): no clear placement pose near base";
+        } else {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): clear placement pose near base";
+
+            private _before = count (nearestObjects [ASLToAGL _clear, ["LandVehicle", "Air"], 12]);
+            [_placeClass, objNull, _clear, 0] call FADE_spawnVehicleAtPos;
+            private _after = count (nearestObjects [ASLToAGL _clear, ["LandVehicle", "Air"], 12]);
+            if (_after == _before) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): spawn RPC with no player creates nothing";
+            } else {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): spawn RPC with no player created a vehicle";
+            };
+
+            private _placed = [_placeClass, _clear, 90] call FADE_vehiclePlacement_createAt;
+            if (isNull _placed) then {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): createAt returned null on a clear pose";
+            } else {
+                sleep 2;
+                private _dmg = damage _placed;
+                if (alive _placed && { _dmg < 0.2 }) then {
+                    _pass = _pass + 1;
+                    diag_log format ["[FAC TestSuite] PASS (server): placed %1 stayed intact (damage %2)", _placeClass, _dmg];
+                } else {
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): placed %1 exploded (alive=%2 damage=%3)", _placeClass, alive _placed, _dmg];
+                };
+                _placed enableSimulationGlobal false;
+                _placed setPosASL _clear;
+                _placed setDir 90;
+                private _posOk = ((getPosASL _placed) distance _clear) < 3;
+                private _dirNow = getDir _placed;
+                private _dirOk = abs (_dirNow - 90) < 5;
+                if (_posOk && { _dirOk }) then {
+                    _pass = _pass + 1;
+                    diag_log format ["[FAC TestSuite] PASS (server): placed %1 at requested pose", _placeClass];
+                } else {
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): placed pose posOk=%1 dir=%2", _posOk, _dirNow];
+                };
+
+                private _here = getPosASL _placed;
+                private _overlapWhy = [_placeClass, _here, getDir _placed] call FADE_vehiclePlacement_reason;
+                private _second = [_placeClass, _here, getDir _placed] call FADE_vehiclePlacement_createAt;
+                private _nearCount = count (nearestObjects [_placed, ["LandVehicle", "Air"], 8] select { typeOf _x == _placeClass });
+                if (_overlapWhy != "" && { isNull _second } && { _nearCount == 1 }) then {
+                    _pass = _pass + 1;
+                    diag_log "[FAC TestSuite] PASS (server): overlapping placement rejected";
+                } else {
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): overlap why=%1 secondNull=%2 near=%3", _overlapWhy, isNull _second, _nearCount];
+                };
+                if (!isNull _second) then {
+                    { if (!isNull _x) then { deleteVehicle _x } } forEach crew _second;
+                    deleteVehicle _second;
+                };
+
+                private _awayOk = false;
+                private _placedAgl = getPos _placed;
+                for "_k" from 0 to 7 do {
+                    private _ang = _k * 45;
+                    private _away = [(_placedAgl select 0) + (40 * sin _ang), (_placedAgl select 1) + (40 * cos _ang)] call _poseAt;
+                    if (([_placeClass, _away, 0] call FADE_vehiclePlacement_reason) == "") exitWith { _awayOk = true };
+                };
+                if (_awayOk) then {
+                    _pass = _pass + 1;
+                    diag_log "[FAC TestSuite] PASS (server): pose about 40 m away is clear";
+                } else {
+                    _fail = _fail + 1;
+                    diag_log "[FAC TestSuite] FAIL (server): no clear pose about 40 m from the placed vehicle";
+                };
+
+                { if (!isNull _x) then { deleteVehicle _x } } forEach crew _placed;
+                deleteVehicle _placed;
+            };
+
+            {
+                private _kind = _x;
+                private _pool = if (_kind == "Helicopter") then {
+                    missionNamespace getVariable ["FADE_heliClasses", []]
+                } else {
+                    missionNamespace getVariable ["FADE_landVehicleClasses", []]
+                };
+                private _class = "";
+                {
+                    if (([_x] call FADE_vehiclePlacement_classReason) == "" && { _x isKindOf _kind }) exitWith {
+                        _class = _x
+                    };
+                } forEach _pool;
+                if (_class == "") then {
+                    _pass = _pass + 1;
+                    diag_log format ["[FAC TestSuite] PASS (server): no %1 class to place", _kind];
+                } else {
+                    private _spot = [];
+                    for "_n" from 0 to 15 do {
+                        private _distN = 40 + (_n * 11);
+                        private _angN = 15 + (_n * 37);
+                        private _tryN = [(_base select 0) + (_distN * sin _angN), (_base select 1) + (_distN * cos _angN)] call _poseAt;
+                        if (([_class, _tryN, 0] call FADE_vehiclePlacement_reason) == "") exitWith { _spot = _tryN };
+                    };
+                    if (_spot isEqualTo []) then {
+                        _fail = _fail + 1;
+                        diag_log format ["[FAC TestSuite] FAIL (server): no clear pose for %1", _class];
+                    } else {
+                        private _spawned = [_class, _spot, 0] call FADE_vehiclePlacement_createAt;
+                        if (isNull _spawned) then {
+                            _fail = _fail + 1;
+                            diag_log format ["[FAC TestSuite] FAIL (server): createAt null for %1", _class];
+                        } else {
+                            sleep 2;
+                            private _dmgK = damage _spawned;
+                            if (alive _spawned && { _dmgK < 0.2 }) then {
+                                _pass = _pass + 1;
+                                diag_log format ["[FAC TestSuite] PASS (server): placed %1 stayed intact (damage %2)", _class, _dmgK];
+                            } else {
+                                _fail = _fail + 1;
+                                diag_log format ["[FAC TestSuite] FAIL (server): placed %1 exploded (alive=%2 damage=%3)", _class, alive _spawned, _dmgK];
+                            };
+                            { if (!isNull _x) then { deleteVehicle _x } } forEach crew _spawned;
+                            deleteVehicle _spawned;
+                        };
+                    };
+                };
+            } forEach ["Car", "Tank", "Helicopter"];
+        };
+    };
+
     // A non-string uid must not throw. A matching string uid despawns the FIRES drone.
     _ok = !isNil "FADE_onPlayerDisconnected";
     if (_ok) then {
@@ -1496,6 +1730,519 @@ FAC_missionTestSuite_runServer = {
     } else {
         _fail = _fail + 1;
         diag_log "[FAC TestSuite] FAIL (server): PlayerDisconnected uid match";
+    };
+
+    diag_log "[FAC TestSuite] --- BUILD ---";
+    private _buildSavedAccess = missionNamespace getVariable ["FAC_param_buildAccess", 1];
+    private _buildSavedLog = missionNamespace getVariable ["FAC_param_buildLogistics", 0];
+    private _buildSavedArea = missionNamespace getVariable ["FAC_param_buildArea", 0];
+    private _buildSavedSupply = missionNamespace getVariable ["FADE_buildSupply", 0];
+    private _buildCat = missionNamespace getVariable ["FADE_buildCatalog", []];
+    _ok = _buildCat isEqualType [] && { count _buildCat > 0 };
+    private _buildCatBad = "";
+    if (_ok) then {
+        {
+            _x params ["_c", "_name", "_cost", "_bt", "_un", ["_cat", ""], ["_sub", ""]];
+            if (!isClass (configFile >> "CfgVehicles" >> _c)) exitWith { _ok = false; _buildCatBad = _c };
+            if !(_bt isEqualTo 0) exitWith { _ok = false; _buildCatBad = _c + " buildTime" };
+            if !(_un isEqualTo "") exitWith { _ok = false; _buildCatBad = _c + " unlock" };
+            if !(_cost isEqualType 0) exitWith { _ok = false; _buildCatBad = _c + " cost" };
+            if !(_cat isEqualType "" && { _cat != "" }) exitWith { _ok = false; _buildCatBad = _c + " category" };
+            if !(_sub isEqualType "" && { _sub != "" }) exitWith { _ok = false; _buildCatBad = _c + " subcategory" };
+        } forEach _buildCat;
+        {
+            if (isClass (configFile >> "CfgVehicles" >> _x)) then {
+                private _hit = [_x] call FADE_build_findEntry;
+                if (_hit isEqualTo [] || { (_hit param [5, ""]) == "" }) exitWith {
+                    _ok = false;
+                    _buildCatBad = _x + " missing from eden list";
+                };
+            };
+        } forEach ["Land_BagFence_Long_F", "Land_WallSign_01_F"];
+    };
+    private _signTex = ["Hello\nWorld"] call FADE_build_signTexture;
+    private _signQuote = ["A""B"] call FADE_build_signTexture;
+    private _signPct = ["100%"] call FADE_build_signTexture;
+    private _signEmpty = [""] call FADE_build_signTexture;
+    private _signTexOk = (_signTex find "Caveat") >= 0
+        && { _signTex find "Hello\nWorld" >= 0 }
+        && { _signQuote find "A'B" >= 0 }
+        && { _signPct find "100%" >= 0 }
+        && { _signPct find "%%" < 0 }
+        && { _signEmpty == "" };
+    if (_signTexOk) then {
+        _pass = _pass + 1;
+        diag_log "[FAC TestSuite] PASS (server): build sign texture";
+    } else {
+        _fail = _fail + 1;
+        diag_log format ["[FAC TestSuite] FAIL (server): build sign texture plain=%1 quote=%2 pct=%3 empty=%4", _signTex, _signQuote, _signPct, _signEmpty];
+    };
+    if (_ok) then {
+        _pass = _pass + 1;
+        diag_log format ["[FAC TestSuite] PASS (server): build catalog (%1)", count _buildCat];
+    } else {
+        _fail = _fail + 1;
+        diag_log format ["[FAC TestSuite] FAIL (server): build catalog %1", _buildCatBad];
+    };
+
+    private _buildGrp = createGroup [west, true];
+    private _buildBase = missionNamespace getVariable ["FADE_basePos", [0, 0, 0]];
+    private _buildUnit = _buildGrp createUnit ["B_Soldier_F", _buildBase, [], 0, "NONE"];
+    if (isNull _buildUnit) then {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): build test unit";
+    } else {
+        _buildUnit setUnitTrait ["Engineer", false];
+        private _buildBeforeIds = [];
+        {
+            if (_x getVariable ["FADE_build_placed", false]) then { _buildBeforeIds pushBack (netId _x) };
+        } forEach nearestObjects [_buildBase, ["All"], 2500];
+        private _buildOverride = [_buildUnit] call FAC_playerHasLeaderOverrideAccess;
+        if (_buildOverride) then {
+            missionNamespace setVariable ["FAC_param_buildAccess", 2];
+            _ok = [_buildUnit] call FAC_playerCanBuild;
+            if (_ok) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): build admin/Zeus override allows No-one mode";
+            } else {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): build admin/Zeus override";
+            };
+            diag_log "[FAC TestSuite] SKIP (server): build access matrix (test unit counts as admin/Zeus)";
+        } else {
+            missionNamespace setVariable ["FAC_param_buildAccess", 1];
+            private _anyone = [_buildUnit] call FAC_playerCanBuild;
+            missionNamespace setVariable ["FAC_param_buildAccess", 0];
+            private _rifleDenied = !([_buildUnit] call FAC_playerCanBuild);
+            _buildUnit setUnitTrait ["Engineer", true];
+            private _engAllowed = [_buildUnit] call FAC_playerCanBuild;
+            missionNamespace setVariable ["FAC_param_buildAccess", 2];
+            private _noneDenied = !([_buildUnit] call FAC_playerCanBuild);
+            _ok = _anyone && { _rifleDenied } && { _engAllowed } && { _noneDenied };
+            if (_ok) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): build access Anyone / Engineers / No-one";
+            } else {
+                _fail = _fail + 1;
+                diag_log format ["[FAC TestSuite] FAIL (server): build access anyone=%1 rifleDenied=%2 eng=%3 noneDenied=%4", _anyone, _rifleDenied, _engAllowed, _noneDenied];
+            };
+        };
+
+        private _buildLogic = createGroup [sideLogic, true];
+        private _buildCur = _buildLogic createUnit ["ModuleCurator_F", _buildBase, [], 0, "NONE"];
+        if (!isNull _buildCur) then {
+            _buildUnit assignCurator _buildCur;
+            missionNamespace setVariable ["FAC_param_buildAccess", 2];
+            _ok = [_buildUnit] call FAC_playerCanBuild;
+            unassignCurator _buildCur;
+            deleteVehicle _buildCur;
+            if (_ok) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): build Zeus override";
+            } else {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): build Zeus override";
+            };
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): build Zeus module";
+        };
+        deleteGroup _buildLogic;
+
+        missionNamespace setVariable ["FAC_param_buildAccess", 1];
+        _buildUnit setUnitTrait ["Engineer", false];
+        private _buildEntry = ["Land_BagFence_Long_F"] call FADE_build_findEntry;
+        if (_buildEntry isEqualTo []) then { _buildEntry = _buildCat select 0 };
+        private _buildClass = _buildEntry select 0;
+        private _buildCost = _buildEntry select 2;
+        private _buildSpot = [];
+        for "_i" from 2 to 30 do {
+            private _try = [(_buildBase select 0) + (_i * 6), (_buildBase select 1) + 15, 0];
+            if (([_buildClass, _try, 0, objNull] call FADE_build_spotBlocked) == "") exitWith { _buildSpot = _try };
+        };
+        if (_buildSpot isEqualTo []) then {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): build no free spot near base";
+        } else {
+            missionNamespace setVariable ["FAC_param_buildLogistics", 0];
+            private _poolBefore = missionNamespace getVariable ["FADE_buildSupply", 0];
+            private _placedFree = [_buildUnit, _buildClass, _buildSpot, 0, [0, 0, 1], false] call FADE_build_place;
+            private _poolAfter = missionNamespace getVariable ["FADE_buildSupply", 0];
+            private _built = objNull;
+            {
+                if (_x getVariable ["FADE_build_placed", false] && { (_x distance2D _buildSpot) < 4 }) exitWith { _built = _x };
+            } forEach nearestObjects [_buildSpot, ["Static", "Thing"], 8];
+            private _builtId = if (isNull _built) then { "" } else { netId _built };
+            private _builtRec = FADE_build_registry getOrDefault [_builtId, createHashMap];
+            private _stillOpen = false;
+            if (!isNull _built) then {
+                _stillOpen = ([_buildClass, getPosATL _built, getDir _built, objNull] call FADE_build_spotBlocked) == "";
+            };
+            _ok = _placedFree && { _poolBefore == _poolAfter } && { (_builtRec getOrDefault ["state", ""]) == "complete" } && { _stillOpen };
+            if (_ok) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): build free place, registry complete, overlap not enforced";
+            } else {
+                _fail = _fail + 1;
+                diag_log format ["[FAC TestSuite] FAIL (server): build free place placed=%1 pool %2->%3 state=%4 open=%5", _placedFree, _poolBefore, _poolAfter, _builtRec getOrDefault ["state", ""], _stillOpen];
+            };
+            if (_builtId != "") then { [_buildUnit, _builtId] call FADE_build_remove };
+            _ok = FADE_build_registry getOrDefault [_builtId, ""] isEqualTo "";
+            if (_ok) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): build remove clears registry";
+            } else {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): build remove clears registry";
+            };
+
+            private _spot2 = [];
+            for "_i" from 2 to 30 do {
+                private _try2 = [(_buildBase select 0) + 15, (_buildBase select 1) + (_i * 6), 0];
+                if (([_buildClass, _try2, 0, objNull] call FADE_build_spotBlocked) == "") exitWith { _spot2 = _try2 };
+            };
+            missionNamespace setVariable ["FAC_param_buildLogistics", 1];
+            missionNamespace setVariable ["FADE_buildSupply", _buildCost];
+            if (_spot2 isEqualTo []) then {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): build no second spot for supply check";
+            } else {
+                private _paid = [_buildUnit, _buildClass, _spot2, 0, [0, 0, 1], false] call FADE_build_place;
+                private _poolPaid = missionNamespace getVariable ["FADE_buildSupply", -1];
+                private _paidObj = objNull;
+                {
+                    if (_x getVariable ["FADE_build_placed", false] && { (_x distance2D _spot2) < 4 }) exitWith { _paidObj = _x };
+                } forEach nearestObjects [_spot2, ["Static", "Thing"], 8];
+                private _broke = [_buildUnit, _buildClass, _buildSpot, 0, [0, 0, 1], false] call FADE_build_place;
+                private _poolBroke = missionNamespace getVariable ["FADE_buildSupply", -1];
+                _ok = _paid && { _poolPaid == 0 } && { !_broke } && { _poolBroke == 0 };
+                if (_ok) then {
+                    _pass = _pass + 1;
+                    diag_log "[FAC TestSuite] PASS (server): build supply debit and empty pool deny";
+                } else {
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): build supply paid=%1 pool=%2 second=%3 poolAfter=%4", _paid, _poolPaid, _broke, _poolBroke];
+                };
+                if (!isNull _paidObj) then {
+                    private _refundId = netId _paidObj;
+                    [_buildUnit, _refundId] call FADE_build_remove;
+                    _ok = (missionNamespace getVariable ["FADE_buildSupply", -1]) == _buildCost;
+                    if (_ok) then {
+                        _pass = _pass + 1;
+                        diag_log "[FAC TestSuite] PASS (server): build remove refunds supply";
+                    } else {
+                        _fail = _fail + 1;
+                        diag_log format ["[FAC TestSuite] FAIL (server): build refund pool=%1 expected=%2", missionNamespace getVariable ["FADE_buildSupply", -1], _buildCost];
+                    };
+                };
+            };
+
+            private _far = [(_buildBase select 0) + 2000, _buildBase select 1, 0];
+            missionNamespace setVariable ["FAC_param_buildArea", 0];
+            private _farWhy = [_buildClass, _far, 0, objNull] call FADE_build_spotBlocked;
+            private _farPlaced = [_buildUnit, _buildClass, _far, 0, [0, 0, 1], false] call FADE_build_place;
+            _ok = !_farPlaced && { _farWhy == "radius" || { _farWhy == "water" } };
+            if (_ok) then {
+                _pass = _pass + 1;
+                diag_log format ["[FAC TestSuite] PASS (server): build outside radius denied (%1)", _farWhy];
+            } else {
+                _fail = _fail + 1;
+                diag_log format ["[FAC TestSuite] FAIL (server): build outside radius placed=%1 why=%2", _farPlaced, _farWhy];
+            };
+
+            missionNamespace setVariable ["FAC_param_buildArea", 1];
+            private _farLand = [];
+            for "_k" from 0 to 6 do {
+                private _tryFar = [(_buildBase select 0) + 1400 + (_k * 80), (_buildBase select 1) + 40, 0];
+                if (([_buildClass, _tryFar, 0, objNull] call FADE_build_spotBlocked) == "") exitWith { _farLand = _tryFar };
+            };
+            if (_farLand isEqualTo []) then {
+                diag_log "[FAC TestSuite] SKIP (server): build anywhere (no dry spot outside the radius)";
+            } else {
+                private _anywherePlaced = [_buildUnit, _buildClass, _farLand, 0, [0, 0, 1], false] call FADE_build_place;
+                if (_anywherePlaced) then {
+                    _pass = _pass + 1;
+                    diag_log "[FAC TestSuite] PASS (server): build anywhere allows outside the radius";
+                } else {
+                    _fail = _fail + 1;
+                    diag_log "[FAC TestSuite] FAIL (server): build anywhere allows outside the radius";
+                };
+            };
+            missionNamespace setVariable ["FAC_param_buildArea", 0];
+
+            private _sea = [0, 0, 0];
+            if (surfaceIsWater _sea) then {
+                private _seaWhy = [_buildClass, _sea, 0, objNull] call FADE_build_spotBlocked;
+                _ok = _seaWhy == "water";
+                if (_ok) then {
+                    _pass = _pass + 1;
+                    diag_log "[FAC TestSuite] PASS (server): build water denied";
+                } else {
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): build water why=%1", _seaWhy];
+                };
+            } else {
+                diag_log "[FAC TestSuite] SKIP (server): build water (origin is not water)";
+            };
+        };
+
+        private _signClass = "Land_WallSign_01_F";
+        private _signEntry = [_signClass] call FADE_build_findEntry;
+        if (_signEntry isEqualTo []) then {
+            if (isClass (configFile >> "CfgVehicles" >> _signClass)) then {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): build sign class missing from catalog";
+            } else {
+                diag_log "[FAC TestSuite] SKIP (server): build sign (class not in config)";
+            };
+        } else {
+            missionNamespace setVariable ["FAC_param_buildLogistics", 0];
+            missionNamespace setVariable ["FAC_param_buildArea", 0];
+            private _signSpot = [];
+            for "_i" from 2 to 40 do {
+                private _tryS = [(_buildBase select 0) - (_i * 5), (_buildBase select 1) + 20, 0];
+                if (([_signClass, _tryS, 0, objNull] call FADE_build_spotBlocked) == "") exitWith { _signSpot = _tryS };
+            };
+            private _dummy = createVehicle ["Land_BagFence_Long_F", _buildBase, [], 0, "CAN_COLLIDE"];
+            private _dummyDenied = true;
+            if (!isNull _dummy) then {
+                _dummyDenied = [_buildUnit, netId _dummy, "nope"] call FADE_build_signSet;
+                deleteVehicle _dummy;
+            };
+            if (_signSpot isEqualTo []) then {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): build sign no spot";
+            } else {
+                private _signPlaced = [_buildUnit, _signClass, _signSpot, 0, [0, 0, 1], false] call FADE_build_place;
+                private _signObj = objNull;
+                {
+                    if (_x getVariable ["FADE_build_placed", false] && { (_x distance2D _signSpot) < 4 }) exitWith { _signObj = _x };
+                } forEach nearestObjects [_signSpot, ["All"], 8];
+                private _raw = "Hello\nWorld";
+                private _wrote = false;
+                private _cleared = false;
+                if (!isNull _signObj) then {
+                    _wrote = [_buildUnit, netId _signObj, _raw] call FADE_build_signSet;
+                    private _stored = _signObj getVariable ["FADE_build_signText", ""];
+                    private _slot = [_signObj] call FADE_build_writeSlot;
+                    private _textures = getObjectTextures _signObj;
+                    private _face = if (_slot >= 0 && { _slot < count _textures }) then { _textures select _slot } else { "" };
+                    private _materialKept = true;
+                    if (_slot > 0 && { count _textures > 0 }) then {
+                        private _mat = _textures select 0;
+                        _materialKept = !(_mat isEqualType "") || { _mat find "Hello" < 0 };
+                    };
+                    _wrote = _wrote && { _stored == _raw } && { _slot >= 0 } && { _materialKept } && { _face == "" || { _face find "Hello" >= 0 } };
+                    _cleared = [_buildUnit, netId _signObj, ""] call FADE_build_signSet;
+                    _cleared = _cleared && { (_signObj getVariable ["FADE_build_signText", "x"]) == "" };
+                };
+                _ok = _signPlaced && { _wrote } && { _cleared } && { !_dummyDenied };
+                if (_ok) then {
+                    _pass = _pass + 1;
+                    diag_log "[FAC TestSuite] PASS (server): build sign write and clear";
+                } else {
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): build sign placed=%1 wrote=%2 cleared=%3 dummyDenied=%4", _signPlaced, _wrote, _cleared, _dummyDenied];
+                };
+            };
+        };
+
+        private _chalkClass = "Land_WallSign_01_chalkboard_F";
+        private _chalkEntry = [_chalkClass] call FADE_build_findEntry;
+        if (_chalkEntry isEqualTo []) then {
+            if (isClass (configFile >> "CfgVehicles" >> _chalkClass)) then {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): build chalkboard missing from catalog";
+            } else {
+                diag_log "[FAC TestSuite] SKIP (server): build chalkboard (class not in config)";
+            };
+        } else {
+            private _chalkSpot = [];
+            for "_i" from 2 to 40 do {
+                private _tryC = [(_buildBase select 0) - (_i * 5), (_buildBase select 1) + 40, 0];
+                if (([_chalkClass, _tryC, 0, objNull] call FADE_build_spotBlocked) == "") exitWith { _chalkSpot = _tryC };
+            };
+            if (_chalkSpot isEqualTo []) then {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): build chalkboard no spot";
+            } else {
+                private _chalkPlaced = [_buildUnit, _chalkClass, _chalkSpot, 0, [0, 0, 1], false] call FADE_build_place;
+                private _chalkObj = objNull;
+                {
+                    if (_x getVariable ["FADE_build_placed", false] && { (_x distance2D _chalkSpot) < 4 }) exitWith { _chalkObj = _x };
+                } forEach nearestObjects [_chalkSpot, ["All"], 8];
+                private _chalkWrote = false;
+                if (!isNull _chalkObj) then {
+                    _chalkWrote = [_buildUnit, netId _chalkObj, "Hello\nWorld"] call FADE_build_signSet;
+                    private _slot = [_chalkObj] call FADE_build_writeSlot;
+                    private _textures = getObjectTextures _chalkObj;
+                    private _face = if (_slot >= 0 && { _slot < count _textures }) then { _textures select _slot } else { "" };
+                    private _lowerClean = true;
+                    {
+                        if (_forEachIndex < _slot && { _x isEqualType "" } && { _x find "Hello" >= 0 }) then { _lowerClean = false };
+                    } forEach _textures;
+                    _chalkWrote = _chalkWrote && { _slot >= 0 } && { _lowerClean } && { _face == "" || { _face find "Hello" >= 0 } };
+                };
+                if (_chalkPlaced && { _chalkWrote }) then {
+                    _pass = _pass + 1;
+                    diag_log "[FAC TestSuite] PASS (server): build chalkboard write";
+                } else {
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): build chalkboard placed=%1 wrote=%2", _chalkPlaced, _chalkWrote];
+                };
+            };
+        };
+
+        private _plainClass = "";
+        {
+            private _cls = _x param [0, ""];
+            if (_cls != "" && { ([objNull, _cls] call FADE_build_writeSlot) < 0 }) exitWith { _plainClass = _cls };
+        } forEach (missionNamespace getVariable ["FADE_buildCatalog", []]);
+        if (_plainClass == "") then {
+            diag_log "[FAC TestSuite] SKIP (server): build write denied (no catalog class without a texture)";
+        } else {
+            private _plainSpot = [];
+            for "_i" from 2 to 40 do {
+                private _tryP = [(_buildBase select 0) + (_i * 5), (_buildBase select 1) + 60, 0];
+                if (([_plainClass, _tryP, 0, objNull] call FADE_build_spotBlocked) == "") exitWith { _plainSpot = _tryP };
+            };
+            if (_plainSpot isEqualTo []) then {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): build plain write no spot";
+            } else {
+                private _plainPlaced = [_buildUnit, _plainClass, _plainSpot, 0, [0, 0, 1], false] call FADE_build_place;
+                private _plainObj = objNull;
+                {
+                    if (_x getVariable ["FADE_build_placed", false] && { (typeOf _x) == _plainClass } && { (_x distance2D _plainSpot) < 4 }) exitWith { _plainObj = _x };
+                } forEach nearestObjects [_plainSpot, ["All"], 8];
+                private _plainDenied = true;
+                if (!isNull _plainObj && { ([_plainObj] call FADE_build_writeSlot) >= 0 }) then {
+                    diag_log format ["[FAC TestSuite] SKIP (server): build write denied (%1 has a live texture)", _plainClass];
+                } else {
+                    if (!isNull _plainObj) then {
+                        _plainDenied = [_buildUnit, netId _plainObj, "nope"] call FADE_build_signSet;
+                    };
+                    if (_plainPlaced && { !_plainDenied }) then {
+                        _pass = _pass + 1;
+                        diag_log format ["[FAC TestSuite] PASS (server): build write denied on %1", _plainClass];
+                    } else {
+                        _fail = _fail + 1;
+                        diag_log format ["[FAC TestSuite] FAIL (server): build write denied class=%1 placed=%2 denied=%3", _plainClass, _plainPlaced, _plainDenied];
+                    };
+                };
+            };
+        };
+
+        private _clearSpot = [];
+        for "_i" from 2 to 40 do {
+            private _tryClear = [(_buildBase select 0) - (_i * 5), (_buildBase select 1) - 40, 0];
+            if (([_buildClass, _tryClear, 0, objNull] call FADE_build_spotBlocked) == "") exitWith { _clearSpot = _tryClear };
+        };
+        if (_clearSpot isEqualTo []) then {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): build clear-all no spot";
+        } else {
+            private _clearPlaced = [_buildUnit, _buildClass, _clearSpot, 0, [0, 0, 1], false] call FADE_build_place;
+            private _cleared = [] call FADE_build_clearAll;
+            private _left = objNull;
+            {
+                if (_x getVariable ["FADE_build_placed", false] && { (_x distance2D _clearSpot) < 8 }) exitWith { _left = _x };
+            } forEach nearestObjects [_clearSpot, ["All"], 12];
+            if (_clearPlaced && { _cleared >= 1 } && { isNull _left } && { (count FADE_build_registry) == 0 }) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): build clear-all";
+            } else {
+                _fail = _fail + 1;
+                diag_log format ["[FAC TestSuite] FAIL (server): build clear-all placed=%1 n=%2 left=%3 reg=%4", _clearPlaced, _cleared, !isNull _left, count FADE_build_registry];
+            };
+        };
+
+        private _flagSpot = [];
+        for "_i" from 2 to 40 do {
+            private _tryF = [(_buildBase select 0) + (_i * 5), (_buildBase select 1) - 20, 0];
+            if (([_buildClass, _tryF, 0, objNull] call FADE_build_spotBlocked) == "") exitWith { _flagSpot = _tryF };
+        };
+        if (_flagSpot isEqualTo []) then {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): build flags no spot";
+        } else {
+            private _simPlaced = [_buildUnit, _buildClass, _flagSpot, 0, [0, 0, 1], false, false, false, false] call FADE_build_place;
+            private _simObj = objNull;
+            {
+                if (_x getVariable ["FADE_build_placed", false] && { (_x distance2D _flagSpot) < 4 }) exitWith { _simObj = _x };
+            } forEach nearestObjects [_flagSpot, ["All"], 8];
+            private _simOff = (!isNull _simObj) && { !(simulationEnabled _simObj) };
+            if (_simPlaced && { _simOff }) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): build simulation off";
+            } else {
+                _fail = _fail + 1;
+                diag_log format ["[FAC TestSuite] FAIL (server): build simulation off placed=%1 obj=%2", _simPlaced, _simOff];
+            };
+            private _simpleSpot = [(_flagSpot select 0), (_flagSpot select 1) + 8, 0];
+            if (([_buildClass, _simpleSpot, 0, objNull] call FADE_build_spotBlocked) != "") then {
+                _simpleSpot = [];
+            };
+            if (_simpleSpot isEqualTo []) then {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): build simple no spot";
+            } else {
+                private _simplePlaced = [_buildUnit, _buildClass, _simpleSpot, 0, [0, 0, 1], false, false, false, true] call FADE_build_place;
+                private _simpleObj = objNull;
+                {
+                    private _cand = _x call BIS_fnc_objectFromNetId;
+                    if (!isNull _cand && { isSimpleObject _cand } && { _cand getVariable ["FADE_build_simple", false] }) exitWith { _simpleObj = _cand };
+                } forEach (keys FADE_build_registry);
+                if (_simplePlaced && { !isNull _simpleObj }) then {
+                    _pass = _pass + 1;
+                    diag_log "[FAC TestSuite] PASS (server): build simple object";
+                } else {
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): build simple placed=%1", _simplePlaced];
+                };
+            };
+        };
+        {
+            if (_x getVariable ["FADE_build_placed", false] && { !((netId _x) in _buildBeforeIds) }) then {
+                private _id = netId _x;
+                FADE_build_registry deleteAt _id;
+                deleteVehicle _x;
+            };
+        } forEach (nearestObjects [_buildBase, ["All"], 2500]) + (nearestObjects [[0, 0, 0], ["All"], 30]);
+        {
+            private _id = _x;
+            if !(_id in _buildBeforeIds) then {
+                private _left = _id call BIS_fnc_objectFromNetId;
+                if (!isNull _left) then { deleteVehicle _left };
+                FADE_build_registry deleteAt _id;
+            };
+        } forEach (+ (keys FADE_build_registry));
+        deleteVehicle _buildUnit;
+    };
+    deleteGroup _buildGrp;
+    missionNamespace setVariable ["FAC_param_buildAccess", _buildSavedAccess];
+    missionNamespace setVariable ["FAC_param_buildLogistics", _buildSavedLog];
+    missionNamespace setVariable ["FAC_param_buildArea", _buildSavedArea];
+    missionNamespace setVariable ["FADE_buildSupply", _buildSavedSupply];
+    publicVariable "FADE_buildSupply";
+
+    // Map teleport's onMapSingleClick string looks these up in missionNamespace after the click.
+    private _mapPickSrc = preprocessFileLineNumbers "rsc\TeleportMapPick.sqf";
+    if (isNil "FAC_ensureTeleportGui") then {
+        call compile preprocessFileLineNumbers "rsc\FAC_ClientGuiEnsure.sqf";
+    };
+    call FAC_ensureTeleportGui;
+    private _tpAdd = missionNamespace getVariable ["FAC_teleport_fnc_addReturnToBase", nil];
+    private _tpBack = missionNamespace getVariable ["FAC_teleport_fnc_returnToBase", nil];
+    _ok = (_mapPickSrc find "call FAC_ensureTeleportGui") >= 0
+        && { _tpAdd isEqualType {} }
+        && { _tpBack isEqualType {} };
+    if (_ok) then {
+        _pass = _pass + 1;
+        diag_log "[FAC TestSuite] PASS (server): map teleport return-to-base is in missionNamespace";
+    } else {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): map teleport return-to-base is in missionNamespace";
     };
 
     diag_log format ["[FAC TestSuite] ========== SERVER SUITE END: %1 passed, %2 failed ==========", _pass, _fail];
@@ -1527,7 +2274,8 @@ FAC_missionTestSuite_runClient = {
         "FAC_ensureSniperGui",
         "FAC_ensureCivTalkGui",
         "FAC_ensureMedicalTrainingGui",
-        "FAC_ensureRecruitGui"
+        "FAC_ensureRecruitGui",
+        "FAC_ensureBuildGui"
     ];
 
     private _fncNames = [
@@ -1581,6 +2329,8 @@ FAC_missionTestSuite_runClient = {
         "FAC_firesFoS_fnc_reImpactFeed",
         "FAC_firesFoS_fnc_startMapClickDrone",
         "FAC_teleportGui_fnc",
+        "FAC_teleport_fnc_addReturnToBase",
+        "FAC_teleport_fnc_returnToBase",
         "FAC_cqbLoudspeaker_clientPlay",
         "FAC_surrenderChallenge_fnc_activate",
         "FADE_cqbClient_forceTargetDown",
@@ -1635,7 +2385,12 @@ FAC_missionTestSuite_runClient = {
         "FAC_ensureSniperGui",
         "FAC_ensureCivTalkGui",
         "FAC_ensureMedicalTrainingGui",
-        "FAC_ensureRecruitGui"
+        "FAC_ensureRecruitGui",
+        "FAC_ensureBuildGui",
+        "FAC_buildGui_fnc",
+        "FAC_buildSignGui_fnc",
+        "FAC_build_clientAddRemove",
+        "FAC_build_clientScan"
     ];
     private _ok = false;
     {
@@ -1665,10 +2420,15 @@ FAC_missionTestSuite_runClient = {
         "rsc\CQBGui.sqf",
         "rsc\FiresGui.sqf",
         "rsc\TeleportGui.sqf",
+        "rsc\TeleportMapPick.sqf",
         "rsc\RangeGui.sqf",
         "rsc\SniperGui.sqf",
         "rsc\CivTalkGui.sqf",
         "rsc\MedicalTrainingGui.sqf",
+        "rsc\BuildGui.sqf",
+        "rsc\BuildSignGui.sqf",
+        "rsc\BuildCatalog.sqf",
+        "rsc\BuildCommon.sqf",
         "rsc\MissionLocationPickGui.sqf",
         "rsc\MissionMapPick.sqf",
         "rsc\MissionMapPick_exec.sqf",

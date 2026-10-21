@@ -1,12 +1,12 @@
 // =============================================================================
 // VehicleGui.sqf - Vehicles: single dialog (60001), header tabs + main content
 // =============================================================================
-// Spawn: aircraft on HP_* (optional pad index); land vehicles use VEH_* slot selection (auto by default).
-// Manage: list at base, repair/refuel/rearm, despawn. Server RPCs in initServer.
+// Spawn: 3D placement inside 1000 m of base (rsc/VehiclePlacement.sqf). No pad slots.
+// Manage: list at base, repair/refuel/rearm, despawn. Server RPC FADE_spawnVehicleAtPos.
 // =============================================================================
 
 FAC_vehicleGui_IDD = 60001;
-FAC_vehicleGui_spawnContentIdcs = [61101, 61102, 61103, 61104, 61105, 61106, 61107, 61112, 61113, 61114, 61115, 61116, 61117, 61118];
+FAC_vehicleGui_spawnContentIdcs = [61101, 61102, 61103, 61104, 61105, 61107, 61112, 61113, 61115, 61116, 61117, 61118, 61119];
 FAC_vehicleGui_manageContentIdcs = [61200, 61201, 61202, 61205, 61206, 61210, 61211, 61220, 61221, 61222, 61223, 61224, 61225, 61226, 61227, 61228, 61229, 61230, 61232, 61240, 61241, 61242];
 
 FAC_vehicleGui_syncHeaderTabs = {
@@ -67,6 +67,16 @@ FAC_vehicleGui_syncWhitelistSpawnControl = {
         private _on = missionNamespace getVariable ["FAC_vehicleGui_whitelistAircraft", true];
         _b ctrlSetText format ["Aircraft whitelist: %1", if (_on) then {"ON"} else {"OFF"}];
     };
+};
+
+FAC_vehicleGui_syncPlaceMultiple = {
+    private _d = findDisplay FAC_vehicleGui_IDD;
+    if (isNull _d) exitWith {};
+    private _b = _d displayCtrl 61119;
+    if (isNull _b) exitWith {};
+    private _on = missionNamespace getVariable ["FAC_vehicleGui_placeMultiple", false];
+    _b ctrlSetText format ["Place multiple: %1", if (_on) then { "On" } else { "Off" }];
+    _b ctrlSetBackgroundColor ([if (_on) then { "primary" } else { "idle" }] call FAC_gui_styleColor);
 };
 
 // Pylon/loadout UI: vanilla player action names (VehicleCustomization, OpenPylonLoadout) are not valid on all clients.
@@ -321,33 +331,16 @@ FAC_vehicleGui_rebuildManageAmmoList = {
     };
 };
 
-FAC_vehicleGui_isHelipadOccupied = {
-    params ["_padObj", ["_r", 10]];
-    private _pos = getPosATL _padObj;
-    count (nearestObjects [_pos, ["Air", "LandVehicle"], _r] select { alive _x }) > 0
-};
-
-// Eden varName (e.g. HP_1) -> UI label (e.g. "Pad 1"). Empty varName uses 1-based pad index when provided.
-FAC_vehicleGui_spawnLocationDisplayName = {
-    params ["_eden", ["_padIndex", -1]];
-    if (_eden == "") exitWith {
-        if (_padIndex >= 0) then { format ["Pad %1", _padIndex + 1] } else { "Pad" }
+FAC_vehicleGui_selectSpawnClass = {
+    params ["_class"];
+    private _d = findDisplay FAC_vehicleGui_IDD;
+    if (isNull _d || { !(_class isEqualType "") || { _class == "" } }) exitWith {};
+    private _lb = _d displayCtrl 61103;
+    private _found = -1;
+    for "_i" from 0 to ((lbSize _lb) - 1) do {
+        if ((_lb lbData _i) == _class) exitWith { _found = _i };
     };
-    if ((_eden find "HP_") == 0) then {
-        private _s = _eden select [3];
-        if (_s != "") then {
-            private _n = parseNumber _s;
-            if (_s isEqualTo "0" || {_n > 0}) exitWith { format ["Pad %1", _n] };
-        };
-    };
-    if ((_eden find "VEH_") == 0) then {
-        private _s = _eden select [4];
-        if (_s != "") then {
-            private _n = parseNumber _s;
-            if (_s isEqualTo "0" || {_n > 0}) exitWith { format ["Vehicle spawn %1", _n] };
-        };
-    };
-    _eden
+    if (_found >= 0) then { _lb lbSetCurSel _found };
 };
 
 FAC_vehicleGui_fnc = {
@@ -378,16 +371,34 @@ FAC_vehicleGui_fnc = {
             };
             if (isNull _display) then { _display = findDisplay FAC_vehicleGui_IDD };
             if (isNull _display) exitWith {};
+            [_display, FAC_gui_spec_vehicle] call FAC_gui_build;
             missionNamespace setVariable ["FAC_vehicleGui_deleteWreckPending", -99];
             missionNamespace setVariable ["FAC_vehicleGui_deleteWreckConfirmGen", 0];
             [] call FAC_vehicleGui_resetDeleteWreckButton;
             if (isNil { missionNamespace getVariable "FAC_vehicleGui_whitelistAircraft" }) then {
                 missionNamespace setVariable ["FAC_vehicleGui_whitelistAircraft", true];
             };
+            if (isNil { missionNamespace getVariable "FAC_vehicleGui_placeMultiple" }) then {
+                missionNamespace setVariable ["FAC_vehicleGui_placeMultiple", false];
+            };
             // Tab visibility first (config has manage controls show=0; setTab enforces spawn vs manage).
-            missionNamespace setVariable ["FAC_vehicleGui_spawnCategory", "aircraft"];
-            ["setTab", ["new"]] call FAC_vehicleGui_fnc;
-            ["spawnCategoryChanged", []] call FAC_vehicleGui_fnc;
+            private _restore = missionNamespace getVariable ["FAC_vehicleGui_restore", []];
+            missionNamespace setVariable ["FAC_vehicleGui_restore", nil];
+            if (_restore isEqualType [] && { count _restore >= 3 }) then {
+                _restore params ["_tab", "_cat", "_class"];
+                if !(_tab in ["new", "existing"]) then { _tab = "new" };
+                if !(_cat in ["aircraft", "land"]) then { _cat = "aircraft" };
+                missionNamespace setVariable ["FAC_vehicleGui_spawnCategory", _cat];
+                ["setTab", [_tab]] call FAC_vehicleGui_fnc;
+                if (_tab == "new") then {
+                    ["spawnCategoryChanged", []] call FAC_vehicleGui_fnc;
+                    [_class] call FAC_vehicleGui_selectSpawnClass;
+                };
+            } else {
+                missionNamespace setVariable ["FAC_vehicleGui_spawnCategory", "aircraft"];
+                ["setTab", ["new"]] call FAC_vehicleGui_fnc;
+                ["spawnCategoryChanged", []] call FAC_vehicleGui_fnc;
+            };
             ["refreshSpawned", []] call FAC_vehicleGui_fnc;
         };
 
@@ -428,7 +439,7 @@ FAC_vehicleGui_fnc = {
         case "headerRefresh": {
             private _tab = missionNamespace getVariable ["FAC_vehicleGui_tab", "new"];
             if (_tab == "new") then {
-                ["spawnRefreshPads", []] call FAC_vehicleGui_fnc;
+                ["spawnUpdateSpawnButton", []] call FAC_vehicleGui_fnc;
             } else {
                 ["refreshSpawned", []] call FAC_vehicleGui_fnc;
                 ["manageVehicleSel", []] call FAC_vehicleGui_fnc;
@@ -441,21 +452,26 @@ FAC_vehicleGui_fnc = {
             private _d = findDisplay FAC_vehicleGui_IDD;
             if (isNull _d) exitWith {};
             private _isNew = (_tab == "new");
-            {
-                private _c = _d displayCtrl _x;
-                if (!isNull _c) then { _c ctrlShow _isNew };
-            } forEach FAC_vehicleGui_spawnContentIdcs;
-            {
-                private _c = _d displayCtrl _x;
-                if (!isNull _c) then { _c ctrlShow (!_isNew) };
-            } forEach FAC_vehicleGui_manageContentIdcs;
-            private _panel = _d displayCtrl 61901;
-            if (!isNull _panel) then { _panel ctrlShow true };
+            if (isNull (_d displayCtrl 59900)) then {
+                {
+                    private _c = _d displayCtrl _x;
+                    if (!isNull _c) then { _c ctrlShow _isNew };
+                } forEach FAC_vehicleGui_spawnContentIdcs;
+                {
+                    private _c = _d displayCtrl _x;
+                    if (!isNull _c) then { _c ctrlShow (!_isNew) };
+                } forEach FAC_vehicleGui_manageContentIdcs;
+                private _panel = _d displayCtrl 61901;
+                if (!isNull _panel) then { _panel ctrlShow true };
+            } else {
+                [_d, if (_isNew) then { "new" } else { "existing" }] call FAC_gui_showPage;
+            };
             [] call FAC_vehicleGui_syncHeaderTabs;
             if (_isNew) then {
                 [] call FAC_vehicleGui_syncSpawnCategoryButtons;
                 [] call FAC_vehicleGui_syncWhitelistSpawnControl;
-                ["spawnRefreshPads", []] call FAC_vehicleGui_fnc;
+                [] call FAC_vehicleGui_syncPlaceMultiple;
+                ["spawnUpdateSpawnButton", []] call FAC_vehicleGui_fnc;
             } else {
                 ["refreshSpawned", []] call FAC_vehicleGui_fnc;
                 ["manageVehicleSel", []] call FAC_vehicleGui_fnc;
@@ -474,6 +490,12 @@ FAC_vehicleGui_fnc = {
             private _cur = missionNamespace getVariable ["FAC_vehicleGui_whitelistAircraft", true];
             missionNamespace setVariable ["FAC_vehicleGui_whitelistAircraft", !_cur];
             ["spawnCategoryChanged", []] call FAC_vehicleGui_fnc;
+        };
+
+        case "placeMultipleClick": {
+            private _cur = missionNamespace getVariable ["FAC_vehicleGui_placeMultiple", false];
+            missionNamespace setVariable ["FAC_vehicleGui_placeMultiple", !_cur];
+            [] call FAC_vehicleGui_syncPlaceMultiple;
         };
 
         case "manageRefreshDetailsOnly": {
@@ -882,96 +904,17 @@ FAC_vehicleGui_fnc = {
             if (_texture == "") then { _texture = getText (_cfgVeh >> "icon") };
             if (_texture != "") then { _pic ctrlSetText _texture } else { _pic ctrlSetText "" };
             [_details, [_class] call FAC_vehicleGui_buildVehicleDetailsPlain] call FAC_vehicleGui_setDetailsList;
-            ["spawnRefreshPads", []] call FAC_vehicleGui_fnc;
-        };
-
-        case "spawnPadSel": {
             ["spawnUpdateSpawnButton", []] call FAC_vehicleGui_fnc;
         };
 
-        case "spawnRefreshPads": {
-            private _display = findDisplay FAC_vehicleGui_IDD;
-            if (isNull _display) exitWith {};
-            private _cat = missionNamespace getVariable ["FAC_vehicleGui_spawnCategory", "aircraft"];
-            private _lbVeh = _display displayCtrl 61103;
-            private _idxV = lbCurSel _lbVeh;
-            private _class = if (_idxV >= 0) then { _lbVeh lbData _idxV } else { "" };
-            private _isPlane = _class != "" && { _class isKindOf "Plane" };
-            private _forbidden = missionNamespace getVariable ["FADE_planeForbiddenPads", []];
-            private _padLb = _display displayCtrl 61106;
-            private _prevSel = lbCurSel _padLb;
-            private _prevData = if (_prevSel >= 0) then { _padLb lbData _prevSel } else { "-1" };
-            lbClear _padLb;
-
-            if (_cat == "aircraft") then {
-                private _helipads = missionNamespace getVariable ["FADE_helipads", []];
-                private _iAuto = _padLb lbAdd "Auto  -  first available pad";
-                _padLb lbSetData [_iAuto, "-1"];
-                {
-                    private _padObj = _x;
-                    private _eden = vehicleVarName _padObj;
-                    private _disp = [_eden, _forEachIndex] call FAC_vehicleGui_spawnLocationDisplayName;
-                    private _occ = [_padObj, 10] call FAC_vehicleGui_isHelipadOccupied;
-                    private _badPlane = _isPlane && { _eden in _forbidden };
-                    private _suffix = if (_badPlane) then {
-                        "  -  NO PLANES"
-                    } else {
-                        if (_occ) then { "  -  OCCUPIED" } else { "  -  empty" }
-                    };
-                    private _row = _padLb lbAdd (_disp + _suffix);
-                    _padLb lbSetData [_row, str _forEachIndex];
-                } forEach _helipads;
-            } else {
-                private _iAuto = _padLb lbAdd "Auto  -  first clear VEH slot";
-                _padLb lbSetData [_iAuto, "-1"];
-                private _vehPts = missionNamespace getVariable ["FADE_vehiclePoints", []];
-                {
-                    private _ptObj = _x;
-                    private _eden = vehicleVarName _ptObj;
-                    private _disp = [_eden, _forEachIndex] call FAC_vehicleGui_spawnLocationDisplayName;
-                    private _occ = [_ptObj, 9] call FAC_vehicleGui_isHelipadOccupied;
-                    private _suffix = if (_occ) then { "  -  OCCUPIED" } else { "  -  empty" };
-                    private _row = _padLb lbAdd (_disp + _suffix);
-                    _padLb lbSetData [_row, str _forEachIndex];
-                } forEach _vehPts;
-            };
-
-            private _match = -1;
-            if (_prevData != "") then {
-                for "_k" from 0 to (lbSize _padLb - 1) do {
-                    if ((_padLb lbData _k) == _prevData) exitWith { _match = _k };
-                };
-            };
-            if (_match >= 0) then {
-                _padLb lbSetCurSel _match;
-            } else {
-                if (lbSize _padLb > 0) then { _padLb lbSetCurSel 0 };
-            };
-            ["spawnUpdateSpawnButton", []] call FAC_vehicleGui_fnc;
-        };
 
         case "spawnUpdateSpawnButton": {
             private _display = findDisplay FAC_vehicleGui_IDD;
             if (isNull _display) exitWith {};
             private _spawnBtn = _display displayCtrl 61107;
             private _lbVeh = _display displayCtrl 61103;
-            private _padLb = _display displayCtrl 61106;
             private _okVeh = lbSize _lbVeh > 0 && { lbCurSel _lbVeh >= 0 };
-            private _cat = missionNamespace getVariable ["FAC_vehicleGui_spawnCategory", "aircraft"];
-            private _block = false;
-            if (_okVeh && { _cat == "aircraft" }) then {
-                private _cls = _lbVeh lbData (lbCurSel _lbVeh);
-                if (_cls isKindOf "Plane" && { lbCurSel _padLb >= 0 }) then {
-                    private _pIdx = parseNumber (_padLb lbData (lbCurSel _padLb));
-                    private _forbidden = missionNamespace getVariable ["FADE_planeForbiddenPads", []];
-                    private _helipads = missionNamespace getVariable ["FADE_helipads", []];
-                    if (_pIdx >= 0 && {_pIdx < count _helipads}) then {
-                        private _eden = vehicleVarName (_helipads select _pIdx);
-                        if (_eden in _forbidden) then { _block = true };
-                    };
-                };
-            };
-            _spawnBtn ctrlEnable (_okVeh && { !_block });
+            _spawnBtn ctrlEnable _okVeh;
         };
 
         case "spawn": {
@@ -985,33 +928,8 @@ FAC_vehicleGui_fnc = {
             private _idx = lbCurSel _lb;
             if (_idx < 0) exitWith { systemChat "Select a vehicle." };
             private _class = _lb lbData _idx;
-            private _padLb = _display displayCtrl 61106;
-            private _padSel = lbCurSel _padLb;
-            if (_padSel < 0) exitWith { systemChat "Select a spawn location." };
-            private _padData = _padLb lbData _padSel;
-            private _slotIdx = parseNumber _padData;
-
-            private _displayName = getText (configFile >> "CfgVehicles" >> _class >> "displayName");
-            if (_displayName == "") then { _displayName = _class };
-
-            if (_cat == "aircraft") then {
-                private _forbidden = missionNamespace getVariable ["FADE_planeForbiddenPads", []];
-                if (_class isKindOf "Plane" && {_slotIdx >= 0}) then {
-                    private _helipads = missionNamespace getVariable ["FADE_helipads", []];
-                    if (_slotIdx < count _helipads) then {
-                        private _eden = vehicleVarName (_helipads select _slotIdx);
-                        if (_eden in _forbidden) exitWith {
-                            systemChat "Planes cannot spawn at this pad. Choose another pad or Auto.";
-                        };
-                    };
-                };
-                [_class, player, _slotIdx] remoteExec ["FADE_spawnHeli", 2];
-                systemChat format ["Requesting spawn: %1...", _displayName];
-            } else {
-                [_class, player, _slotIdx] remoteExec ["FADE_spawnLandVehicle", 2];
-                systemChat format ["Requesting spawn: %1...", _displayName];
-            };
-            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+            if (_class == "") exitWith { systemChat "Select a vehicle." };
+            [_class, "new", _cat] call FAC_vehiclePlacement_start;
         };
 
         case "despawn": {
@@ -1034,11 +952,9 @@ FAC_vehicleGui_fnc = {
         case "duplicate": {
             private _veh = call FAC_vehicleGui_getManageSelectedVehicle;
             if (isNull _veh || {!alive _veh}) exitWith { systemChat "Select a vehicle to duplicate." };
-            private _nid = [_veh] call FAC_vehicleGui_vehicleRpcId;
-            if (_nid == "") exitWith { systemChat "Vehicle reference lost - refresh the list and try again."; };
-            [_nid, player] remoteExec ["FADE_duplicateVehicleAtBase", 2];
-            systemChat "Requesting duplicate spawn...";
-            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+            private _class = typeOf _veh;
+            private _cat = if (_veh isKindOf "Air") then { "aircraft" } else { "land" };
+            [_class, "existing", _cat] call FAC_vehiclePlacement_start;
         };
 
         case "servicePart": {

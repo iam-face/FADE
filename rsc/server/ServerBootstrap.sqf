@@ -14,21 +14,23 @@ missionNamespace setVariable ["FADE_counterAttackFootSpawnDistMax", FADE_counter
 missionNamespace setVariable ["FADE_counterAttackFootSquadSizeMin", FADE_counterAttackFootSquadSizeMin];
 missionNamespace setVariable ["FADE_counterAttackFootSquadSizeMax", FADE_counterAttackFootSquadSizeMax];
 
-// Preferred startup factions by display name (if present). Falls back to config defaults.
-// Second pass: case-insensitive substring match on displayName (exact string in mod configs can drift).
+// Preferred startup factions by display name (if present). Falls back to the vanilla class.
+// Exact match walks the preferred list in order, then a case-insensitive substring pass.
 FADE_pickFactionByDisplayName = {
     params ["_sideNum", "_preferredDisplayNames", "_fallbackFaction"];
     private _picked = _fallbackFaction;
     private _allFc = "true" configClasses (configFile >> "CfgFactionClasses");
     {
-        private _cfg = _x;
-        if (getNumber (_cfg >> "side") != _sideNum) then { continue };
-        private _dn = getText (_cfg >> "displayName");
-        if (_dn == "") then { continue };
-        if (_dn in _preferredDisplayNames) exitWith { _picked = configName _cfg };
-    } forEach _allFc;
+        private _prefExact = _x;
+        if (_prefExact == "") then { continue };
+        {
+            private _cfg = _x;
+            if (getNumber (_cfg >> "side") != _sideNum) then { continue };
+            if (getText (_cfg >> "displayName") == _prefExact) exitWith { _picked = configName _cfg };
+        } forEach _allFc;
+        if (_picked != _fallbackFaction) exitWith {};
+    } forEach _preferredDisplayNames;
     if (_picked == _fallbackFaction) then {
-        // Prefer earlier entries in _preferredDisplayNames (e.g. "USA (USMC - D)" before bare "Marine").
         {
             private _pref = toLower _x;
             if (_pref == "") then { continue };
@@ -45,13 +47,30 @@ FADE_pickFactionByDisplayName = {
     _picked
 };
 
-// Display-name hints (exact match first, then substring). Add aliases if 3CB/RHS renames factions.
-private _prefFriendly = ["USA (USMC - D)", "USMC", "Marines", "Marine"];
-private _prefEnemy = ["3CB African Desert Extremists", "African Desert Extremists", "ADA", "3CB"];
-private _prefCiv = ["3CB African Desert Civilians", "African Desert Civilians", "3CB"];
-FADE_scenarioFriendlyFaction = [1, _prefFriendly, FADE_scenarioFriendlyFaction] call FADE_pickFactionByDisplayName;
-FADE_scenarioEnemyFaction = [0, _prefEnemy, FADE_scenarioEnemyFaction] call FADE_pickFactionByDisplayName;
-FADE_scenarioCivFaction = [3, _prefCiv, FADE_scenarioCivFaction] call FADE_pickFactionByDisplayName;
+// Class names first (ConfigDefaults lists). Display names cover a rename that keeps the label.
+FADE_pickStartupFaction = {
+    params ["_sideNum", "_classNames", "_displayNames", "_fallbackFaction"];
+    private _picked = "";
+    {
+        private _name = _x;
+        if (_name == "") then { continue };
+        private _cfg = configFile >> "CfgFactionClasses" >> _name;
+        if (isClass _cfg && { getNumber (_cfg >> "side") == _sideNum }) exitWith { _picked = _name };
+    } forEach _classNames;
+    if (_picked != "") exitWith { _picked };
+    [_sideNum, _displayNames, _fallbackFaction] call FADE_pickFactionByDisplayName
+};
+
+// RHS 0.5.6 labels. US Army infantry lives on the desert and woodland classes, not the empty parent.
+private _namesBlufor = ["USA (Army - D)", "USA (Army - W)", "USA (Army)"];
+private _namesRedfor = ["Russia (MSV)", "Russian Armed Forces"];
+private _namesIndep = ["CDF (Ground Forces)", "SAF (KOV)"];
+FADE_scenarioBluforFaction = [1, FADE_startupFactionBluforClasses, _namesBlufor, "BLU_F"] call FADE_pickStartupFaction;
+FADE_scenarioRedforFaction = [0, FADE_startupFactionRedforClasses, _namesRedfor, "OPF_F"] call FADE_pickStartupFaction;
+FADE_scenarioIndepFaction = [2, FADE_startupFactionIndepClasses, _namesIndep, "IND_F"] call FADE_pickStartupFaction;
+FADE_scenarioFriendlyFaction = FADE_scenarioBluforFaction;
+FADE_scenarioEnemyFaction = FADE_scenarioRedforFaction;
+FADE_scenarioCivFaction = "CIV_F";
 if (FADE_startupFactionFriendly != "" && { isClass (configFile >> "CfgFactionClasses" >> FADE_startupFactionFriendly) } && { getNumber (configFile >> "CfgFactionClasses" >> FADE_startupFactionFriendly >> "side") == 1 }) then {
     FADE_scenarioFriendlyFaction = FADE_startupFactionFriendly;
 };
@@ -61,6 +80,9 @@ if (FADE_startupFactionEnemy != "" && { isClass (configFile >> "CfgFactionClasse
 if (FADE_startupFactionCiv != "" && { isClass (configFile >> "CfgFactionClasses" >> FADE_startupFactionCiv) } && { getNumber (configFile >> "CfgFactionClasses" >> FADE_startupFactionCiv >> "side") == 3 }) then {
     FADE_scenarioCivFaction = FADE_startupFactionCiv;
 };
+missionNamespace setVariable ["FADE_scenarioBluforFaction", FADE_scenarioBluforFaction, true];
+missionNamespace setVariable ["FADE_scenarioRedforFaction", FADE_scenarioRedforFaction, true];
+missionNamespace setVariable ["FADE_scenarioIndepFaction", FADE_scenarioIndepFaction, true];
 missionNamespace setVariable ["FADE_scenarioFriendlyFaction", FADE_scenarioFriendlyFaction, true];
 missionNamespace setVariable ["FADE_scenarioEnemyFaction", FADE_scenarioEnemyFaction, true];
 missionNamespace setVariable ["FADE_scenarioCivFaction", FADE_scenarioCivFaction, true];

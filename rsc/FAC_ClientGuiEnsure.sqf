@@ -43,6 +43,7 @@ FAC_ensureLoadoutGui = {
 FAC_ensureVehicleGui = {
     call FAC_ensureLobbyParams;
     if (missionNamespace getVariable ["FAC_clientGui_vehicle", false]) exitWith {};
+    call compile preprocessFileLineNumbers "rsc\VehiclePlacement.sqf";
     call compile preprocessFileLineNumbers "rsc\VehicleGui.sqf";
     missionNamespace setVariable ["FAC_vehicleGui_fnc", FAC_vehicleGui_fnc];
     missionNamespace setVariable ["FAC_clientGui_vehicle", true];
@@ -227,6 +228,17 @@ FAC_ensureRecruitGui = {
     missionNamespace setVariable ["FAC_clientGui_recruit", true];
 };
 
+FAC_ensureBuildGui = {
+    call FAC_ensureLobbyParams;
+    if (isNil "FAC_buildGui_fnc") then {
+        call compile preprocessFileLineNumbers "rsc\BuildGui.sqf";
+    };
+    if (isNil "FAC_buildSignGui_fnc") then {
+        call compile preprocessFileLineNumbers "rsc\BuildSignGui.sqf";
+    };
+    missionNamespace setVariable ["FAC_clientGui_build", true];
+};
+
 missionNamespace setVariable ["FAC_ensureLoadoutGui", FAC_ensureLoadoutGui];
 missionNamespace setVariable ["FAC_ensureVehicleGui", FAC_ensureVehicleGui];
 missionNamespace setVariable ["FAC_ensureFiresGui", FAC_ensureFiresGui];
@@ -240,3 +252,4 @@ missionNamespace setVariable ["FAC_ensureSniperGui", FAC_ensureSniperGui];
 missionNamespace setVariable ["FAC_ensureRangeGui", FAC_ensureRangeGui];
 missionNamespace setVariable ["FAC_ensureTeleportGui", FAC_ensureTeleportGui];
 missionNamespace setVariable ["FAC_ensureRecruitGui", FAC_ensureRecruitGui];
+missionNamespace setVariable ["FAC_ensureBuildGui", FAC_ensureBuildGui];

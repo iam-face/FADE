@@ -60,8 +60,8 @@ FAC_missionsGui_wrapParagraph = {
     _lines
 };
 
-// Matches DescText width in description.ext (RscDisplayMissions).
-FAC_missionsGui_descListW = 0.63;
+// Marker for FAC_ensureMissionsGui. Line length now follows the description list width.
+FAC_missionsGui_descListW = 0;
 
 // Scrollable read-only description (one lbAdd per wrapped line; RscEdit does not scroll when disabled).
 FAC_missionsGui_setDescList = {
@@ -72,7 +72,9 @@ FAC_missionsGui_setDescList = {
     if (!(_text isEqualType "")) then { _text = str _text };
     private _flat = (_text splitString (toString [13])) joinString "";
     private _nl = toString [10];
-    private _maxChars = ((round (FAC_missionsGui_descListW * 105)) max 42) min 88;
+    private _boxW = ((ctrlPosition _lb) select 2) - 0.03;
+    if (_boxW < 0.2) then { _boxW = 0.2 };
+    private _maxChars = ((round (_boxW * 90)) max 24) min 110;
     private _outLines = [];
     private _paras = _flat splitString _nl;
     private _pi = 0;
@@ -124,6 +126,13 @@ FAC_missionsGui_syncTabs = {
     private _d = findDisplay 60002;
     if (isNull _d) exitWith {};
     private _tab = missionNamespace getVariable ["FAC_missionsGui_tab", "browse"];
+    if (!isNull (_d displayCtrl 59900)) exitWith {
+        {
+            private _c = _d displayCtrl _x;
+            if (!isNull _c) then { _c ctrlShow true };
+        } forEach [59900, 59901, 59902, 59903, 59904, 59905, 60160, 60161];
+        [_d, _tab] call FAC_gui_showPage;
+    };
     {
         private _c = _d displayCtrl _x;
         if (!isNull _c) then { _c ctrlShow (_tab == "browse") };
@@ -132,7 +141,6 @@ FAC_missionsGui_syncTabs = {
         private _c = _d displayCtrl _x;
         if (!isNull _c) then { _c ctrlShow (_tab == "active") };
     } forEach FAC_missionsGui_tabActiveIdcs;
-    // Header chrome always visible when dialog is open (overlay hide may have turned these off).
     { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow true } } forEach [60101, 60160, 60161, 60141, 60142];
     [_d displayCtrl 60160, _tab == "browse"] call FAC_theme_applyTab;
     [_d displayCtrl 60161, _tab == "active"] call FAC_theme_applyTab;
@@ -162,6 +170,7 @@ FAC_missionsGui_fnc = {
             disableSerialization;
             private _display = findDisplay 60002;
             if (isNull _display) exitWith {};
+            [_display, FAC_gui_spec_missions] call FAC_gui_build;
             if (!isNil "FAC_ensureMissionsGui_overlay") then { call FAC_ensureMissionsGui_overlay };
             if (!isNil "FAC_escapeEvasionPickGui_fnc_destroyOverlay" && { !isNil "FAC_missionPickOverlay_destroy" }) then {
                 [] call FAC_escapeEvasionPickGui_fnc_destroyOverlay;
@@ -187,9 +196,9 @@ FAC_missionsGui_fnc = {
             if (!isNull _rulesCtrl) then {
                 private _nl = toString [10];
                 _rulesCtrl ctrlSetText (
-                    "Global [G]: one shared mission for the whole server. Only one at a time." + _nl +
-                    "Single [S]: smaller personal tasks. Up to three at once, each started by a different player." + _nl +
-                    "You may only run one mission yourself at a time ([G] or [S]). Abort or finish before starting another."
+                    "[G] One shared mission for the server. Only one at a time." + _nl +
+                    "[S] A personal task. Up to three at once." + _nl +
+                    "Run one mission. Finish or abort it before you start another."
                 );
                 _rulesCtrl ctrlEnable false;
             };
@@ -395,6 +404,7 @@ FAC_missionsGui_fnc = {
         };
         case "missionSelChanged": {
             ["refreshDescription", []] call FAC_missionsGui_fnc;
+            ["updateButtons", []] call FAC_missionsGui_fnc;
         };
         // Description: shows *your* FADE_myMissionBrief (short grid + intent + “see Tasks”) while active; otherwise
         // the list-row preview blurb. Does not merge multiple active missions.

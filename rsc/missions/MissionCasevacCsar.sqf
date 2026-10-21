@@ -126,9 +126,9 @@ FADE_runMission_CSAR = {
         _kiaPos = [[_kiaPos, 0, 4, 1, 1, 0.3, 0, [], _kiaPos], _kiaPos] call FADE_findSafePosArray;
         if (!(_kiaPos isEqualType []) || { count _kiaPos < 2 }) then { _kiaPos = _crashCenter getPos [2 + random 8, random 360] };
         _kiaPos = [_kiaPos] call FADE_mission_groundAtlPos;
-        private _kiaGroup = createGroup [_sideFriendly, true];
-        private _kiaUnit = _kiaGroup createUnit [_kiaClass, _kiaPos, [], 0, "NONE"];
-        _kiaUnit setPosATL _kiaPos;
+        private _kiaGroup = [[_kiaPos], _sideFriendly, [_kiaClass]] call FADE_spawnInfantryAtPositions;
+        if (isNull _kiaGroup) then { continue };
+        private _kiaUnit = leader _kiaGroup;
         _kiaUnit setDir (random 360);
         _kiaUnit setDamage 1;
         _kiaUnit disableAI "ALL";
@@ -188,8 +188,8 @@ FADE_runMission_CSAR = {
             private _shuffled = _enemyUnits call BIS_fnc_arrayShuffle;
             private _grpUnits = (_shuffled select [0, _grpSize min count _shuffled]);
             if (count _grpUnits == 0) then { _grpUnits = [_enemyUnits select 0] };
-            private _grp = [_grpPos, _sideEnemy, _grpUnits] call BIS_fnc_spawnGroup;
-            [_grp] call FAC_applyEnemyScenarioToGroup;
+            private _grp = [_grpPos, _sideEnemy, _grpUnits] call FADE_missionCreateInfantryGroupAt;
+            if (isNull _grp) then { continue };
             _grp setBehaviour "SAFE";
             _grp setCombatMode "GREEN";
             _grp setSpeedMode "FULL";

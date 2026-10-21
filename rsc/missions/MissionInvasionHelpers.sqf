@@ -118,9 +118,8 @@ FADE_invasion_spawnGroundSquad = {
     private _shuf = _enemyUnits call BIS_fnc_arrayShuffle;
     private _classes = _shuf select [0, _ps min count _shuf];
     if (count _classes == 0) then { _classes = [_enemyUnits select 0] };
-    private _grp = [_spawnPos, _sideEnemy, _classes] call BIS_fnc_spawnGroup;
+    private _grp = [_spawnPos, _sideEnemy, _classes] call FADE_missionCreateInfantryGroupAt;
     if (isNull _grp || { count units _grp == 0 }) exitWith { grpNull };
-    if (!(_facApply isEqualTo {})) then { [_grp] call _facApply };
     [_grp, _targetCenter, _zoneRadius] call FADE_invasion_assignPushWp;
     [_taskId, _grp] call FADE_missionEnt_registerGroup;
     private _pushGroups = missionNamespace getVariable ["FADE_invasionPushGroups_" + _taskId, []];
@@ -153,35 +152,15 @@ FADE_invasion_makePushVeh = {
     if (count _pick == 0) then { _pick = _land };
     if (count _pick == 0) exitWith { [objNull, grpNull, grpNull] };
     private _vClass = selectRandom _pick;
-    private _veh = createVehicle [_vClass, _roadSp, [], 0, "NONE"];
+    private _crewPack = [
+        _vClass, _roadSp, _vehDir, _enemyUnits, _sideE,
+        ["driver", "gunner", "cargo"], "random", true, -1, 0, -1, 1
+    ] call FADE_spawnCrewedGroundVehicle;
+    _crewPack params ["_veh", "_vehGrp", "_cargoGrp"];
     if (isNull _veh) exitWith { [objNull, grpNull, grpNull] };
-    _veh setPosATL _roadSp;
-    _veh setDir _vehDir;
-    _veh setVectorUp surfaceNormal _roadSp;
-    private _vehGrp = createGroup _sideE;
-    private _driver = _vehGrp createUnit [selectRandom _enemyUnits, _roadSp, [], 0, "NONE"];
-    if (!isNull _driver) then {
-        _driver moveInDriver _veh;
-        _vehGrp selectLeader _driver;
-    };
-    if (_veh emptyPositions "gunner" > 0) then {
-        private _g = _vehGrp createUnit [selectRandom _enemyUnits, _roadSp, [], 0, "NONE"];
-        if (!isNull _g) then { _g moveInGunner _veh };
-    };
-    if (!(_facApply isEqualTo {})) then { [_vehGrp] call _facApply };
+    if (isNull _vehGrp) then { _vehGrp = createGroup _sideE };
     _vehGrp setBehaviour "AWARE";
     _vehGrp setCombatMode "RED";
-    private _cargoGrp = grpNull;
-    private _seats = (_veh emptyPositions "cargo") max 0;
-    if (_seats > 0) then {
-        _cargoGrp = createGroup _sideE;
-        for "_c" from 0 to (_seats - 1) do {
-            private _u = _cargoGrp createUnit [selectRandom _enemyUnits, _roadSp, [], 0, "NONE"];
-            if (!isNull _u) then { _u moveInCargo _veh };
-        };
-        if (!(_facApply isEqualTo {})) then { [_cargoGrp] call _facApply };
-    };
-    [_veh, _enemyUnits] call FADE_ensureEnemyVehicleGunner;
     _veh setVariable ["FADE_invPushVeh", true, false];
     while { count waypoints _vehGrp > 0 } do { deleteWaypoint [_vehGrp, 0] };
     private _wpM = _vehGrp addWaypoint [_targetCenter, 0];
@@ -206,6 +185,8 @@ FADE_invasion_spawnBeachheadTurrets = {
     private _numT = _tMin + floor random (_tSpan + 1);
     private _face = if (count _facePos >= 2) then { [_facePos] call FADE_normPos3 } else { _center };
     private _baseDir = random 360;
+    private _crewPack = [];
+    private _grp = grpNull;
     for "_t" from 0 to (_numT - 1) do {
         private _bearing = _baseDir + ((_t / (_numT max 1)) * 360) + ((random 36) - 18);
         private _dist = 40 + random ((_zoneRadius * 0.8 - 40) max 30);
@@ -218,14 +199,14 @@ FADE_invasion_spawnBeachheadTurrets = {
         _turret setPosATL _turretPos;
         _turret setDir ((getPosATL _turret) getDir _face);
         [_taskId, _turret] call FADE_missionEnt_registerObject;
-        private _grp = createGroup _sideEnemy;
-        private _gunner = _grp createUnit [selectRandom _enemyUnits, _turretPos, [], 0, "NONE"];
-        if (isNull _gunner) then {
-            deleteVehicle _turret;
-            deleteGroup _grp;
+        _crewPack = [
+            "", _turretPos, 0, _enemyUnits, _sideEnemy,
+            ["gunner"], "random", true, -1, 0, -1, -1, "", false, false, _turret, true
+        ] call FADE_spawnCrewedGroundVehicle;
+        _grp = _crewPack select 1;
+        if (isNull _grp) then {
+            // deleteVehIfNoCrew already removed the turret
         } else {
-            _gunner moveInGunner _turret;
-            if (!(_facApply isEqualTo {})) then { [_grp] call _facApply };
             _grp setBehaviour "COMBAT";
             _grp setCombatMode "RED";
             [_taskId, _grp] call FADE_missionEnt_registerGroup;
@@ -271,25 +252,12 @@ FADE_invasion_spawnBeachheadVehicle = {
     if (count _pick == 0) then { _pick = _land };
     if (count _pick == 0) exitWith {};
     private _vClass = selectRandom _pick;
-    private _veh = createVehicle [_vClass, _roadSp, [], 0, "NONE"];
-    if (isNull _veh) exitWith {};
-    _veh setPosATL _roadSp;
-    _veh setDir _vehDir;
-    _veh setVectorUp surfaceNormal _roadSp;
-    private _vehGrp = createGroup _sideE;
-    private _driver = _vehGrp createUnit [selectRandom _enemyUnits, _roadSp, [], 0, "NONE"];
-    if (isNull _driver) then {
-        deleteVehicle _veh;
-        deleteGroup _vehGrp;
-    } else {
-        _driver moveInDriver _veh;
-        _vehGrp selectLeader _driver;
-        if (_veh emptyPositions "gunner" > 0) then {
-            private _g = _vehGrp createUnit [selectRandom _enemyUnits, _roadSp, [], 0, "NONE"];
-            if (!isNull _g) then { _g moveInGunner _veh };
-        };
-        if (!(_facApply isEqualTo {})) then { [_vehGrp] call _facApply };
-        [_veh, _enemyUnits] call FADE_ensureEnemyVehicleGunner;
+    private _crewPack = [
+        _vClass, _roadSp, _vehDir, _enemyUnits, _sideE,
+        ["driver", "gunner"], "random", true, -1, 0, -1, -1, "", true, true
+    ] call FADE_spawnCrewedGroundVehicle;
+    _crewPack params ["_veh", "_vehGrp"];
+    if (!isNull _veh && { !isNull _vehGrp }) then {
         _vehGrp setBehaviour "COMBAT";
         _vehGrp setCombatMode "RED";
         private _wp = _vehGrp addWaypoint [_center, 0];

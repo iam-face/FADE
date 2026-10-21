@@ -205,13 +205,11 @@ FADE_medTrain_deleteAll = {
     [] call FADE_medTrain_publishList;
 };
 
-publicVariable "FADE_spawnHeli";
-publicVariable "FADE_duplicateVehicleAtBase";
+publicVariable "FADE_spawnVehicleAtPos";
 publicVariable "FADE_despawnVehicle";
 publicVariable "FADE_deleteWrecksNearVehicleTerminal";
 publicVariable "FADE_serviceVehicle";
 publicVariable "FADE_serviceVehiclePart";
-publicVariable "FADE_spawnLandVehicle";
 publicVariable "FADE_requestVehiclesAtBase";
 publicVariable "FADE_setTime";
 publicVariable "FADE_setWeather";

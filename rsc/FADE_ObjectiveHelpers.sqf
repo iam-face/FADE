@@ -188,24 +188,18 @@ FADE_objective_findBuildingForMission = {
 FADE_objective_garrisonBuilding = {
     params ["_building", "_skipIdx", "_count", "_sideEnemy", "_enemyUnits"];
     private _bps = _building buildingPos -1;
-    private _grp = createGroup _sideEnemy;
     private _slotIdx = [];
     for "_i" from 0 to (count _bps - 1) do { if (_i != _skipIdx) then { _slotIdx pushBack _i } };
     _slotIdx = _slotIdx call BIS_fnc_arrayShuffle;
     private _n = _count min count _slotIdx;
+    private _positions = [];
+    private _p = [];
     for "_i" from 0 to (_n - 1) do {
-        private _p = _bps select (_slotIdx select _i);
+        _p = _bps select (_slotIdx select _i);
         if (count _p < 3) then { _p = [(_p select 0), (_p select 1), (_p param [2, 0])] };
-        private _cls = _enemyUnits select (_i mod count _enemyUnits);
-        private _u = _grp createUnit [_cls, _p, [], 0, "NONE"];
-        if (!isNull _u) then {
-            _u setPosATL _p;
-            _u setUnitPos "MIDDLE";
-            [_u] call FADE_tryAmbientCombatAnim;
-        };
+        _positions pushBack _p;
     };
-    [_grp] call FAC_applyEnemyScenarioToGroup;
-    _grp
+    [_positions, _sideEnemy, _enemyUnits, "MIDDLE", true, "cycle"] call FADE_spawnInfantryAtPositions
 };
 
 FADE_objective_spawnPatrols = {
@@ -226,14 +220,12 @@ FADE_objective_spawnPatrols = {
         if (_sp isEqualType [] && { count _sp >= 2 }) then {
             _sp = [(_sp select 0), (_sp select 1), (_sp param [2, 0])];
             private _size = [5 + floor random 4, _diffMul, 2] call FADE_raid_applyScale;
-            private _grp = createGroup _sideEnemy;
+            private _classes = [];
             for "_k" from 0 to (_size - 1) do {
-                private _cls = _enemyUnits select (_k mod count _enemyUnits);
-                private _u = _grp createUnit [_cls, _sp, [], 0, "NONE"];
-                if (!isNull _u) then { _u setPosATL _sp };
+                _classes pushBack (_enemyUnits select (_k mod count _enemyUnits));
             };
-            if (count units _grp > 0) then {
-                [_grp] call FAC_applyEnemyScenarioToGroup;
+            private _grp = [_sp, _sideEnemy, _classes] call FADE_missionCreateInfantryGroupAt;
+            if (!isNull _grp) then {
                 _grp setBehaviour "SAFE";
                 for "_w" from 0 to 2 do {
                     private _wp = [];
@@ -255,7 +247,7 @@ FADE_objective_spawnPatrols = {
                     };
                 };
                 _out pushBack _grp;
-            } else { deleteGroup _grp };
+            };
         };
     };
     _out
@@ -273,12 +265,9 @@ FADE_objective_spawnHVTInBuilding = {
     } else {
         if (count _enemyUnits > 0) then { selectRandom _enemyUnits } else { "O_Soldier_F" }
     };
-    private _hvtGrp = createGroup _sideEnemy;
-    private _hvt = _hvtGrp createUnit [_hvtClass, getPosATL _building, [], 0, "NONE"];
-    if (isNull _hvt) exitWith {
-        deleteGroup _hvtGrp;
-        [objNull, grpNull, "", ""]
-    };
+    private _hvtGrp = [[_hvtPos], _sideEnemy, [_hvtClass]] call FADE_spawnInfantryAtPositions;
+    if (isNull _hvtGrp) exitWith { [objNull, grpNull, "", ""] };
+    private _hvt = leader _hvtGrp;
     _hvt disableAI "PATH";
     _hvt disableAI "MOVE";
     _hvt allowDamage false;
@@ -313,12 +302,9 @@ FADE_objective_spawnHostageInBuilding = {
     private _civClasses = +(missionNamespace getVariable ["FADE_civUnitClasses", ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"]]);
     if (_civClasses isEqualTo []) then { _civClasses = ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"] };
     private _hostageIdPool = +(missionNamespace getVariable ["FADE_hostageIdentities", ["FADE_hostage_PhilCassidy", "FADE_hostage_WarrenWazzaDriscoll"]]);
-    private _hostageGrp = createGroup CIVILIAN;
-    private _hostage = _hostageGrp createUnit [selectRandom _civClasses, _hPos, [], 0, "NONE"];
-    if (isNull _hostage) exitWith {
-        deleteGroup _hostageGrp;
-        [objNull, grpNull]
-    };
+    private _hostageGrp = [[_hPos], civilian, [selectRandom _civClasses]] call FADE_spawnInfantryAtPositions;
+    if (isNull _hostageGrp) exitWith { [objNull, grpNull] };
+    private _hostage = leader _hostageGrp;
     if (_identityKey isEqualTo "" && { count _hostageIdPool > 0 }) then { _identityKey = selectRandom _hostageIdPool };
     if !(_identityKey isEqualTo "") then { _hostage setIdentity _identityKey };
     removeAllWeapons _hostage;
@@ -356,7 +342,10 @@ FADE_objective_addHostageToGroup = {
     if (count _hPos < 3) then { _hPos = [(_hPos select 0), (_hPos select 1), (_hPos param [2, 0])] };
     private _civClasses = +(missionNamespace getVariable ["FADE_civUnitClasses", ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"]]);
     if (_civClasses isEqualTo []) then { _civClasses = ["C_man_1", "C_man_1_1_F", "C_man_polo_1_F"] };
-    private _hostage = _hostageGroup createUnit [selectRandom _civClasses, _hPos, [], 0, "NONE"];
+    private _hostageBefore = units _hostageGroup;
+    [[_hPos], civilian, [selectRandom _civClasses], "MIDDLE", false, "random", _hostageGroup] call FADE_spawnInfantryAtPositions;
+    private _hostage = objNull;
+    { if !(_x in _hostageBefore) exitWith { _hostage = _x } } forEach units _hostageGroup;
     if (isNull _hostage) exitWith { [objNull, ""] };
     if !(_identityKey isEqualTo "") then { _hostage setIdentity _identityKey };
     removeAllWeapons _hostage;
@@ -450,22 +439,14 @@ FADE_objective_registerHostageFreeHold = {
 FADE_objective_garrisonBuildingSlots = {
     params ["_building", "_slotIndices", "_sideEnemy", "_enemyUnits"];
     private _bps = _building buildingPos -1;
-    private _grp = createGroup _sideEnemy;
+    private _positions = [];
+    private _p = [];
     {
-        private _p = _bps select _x;
+        _p = _bps select _x;
         if (count _p < 3) then { _p = [(_p select 0), (_p select 1), (_p param [2, 0])] };
-        private _cls = _enemyUnits select (_forEachIndex mod count _enemyUnits);
-        private _u = _grp createUnit [_cls, _p, [], 0, "NONE"];
-        _u setUnitPos "MIDDLE";
-        [_u] call FADE_tryAmbientCombatAnim;
+        _positions pushBack _p;
     } forEach _slotIndices;
-    if (count units _grp > 0) then {
-        [_grp] call FAC_applyEnemyScenarioToGroup;
-        _grp
-    } else {
-        deleteGroup _grp;
-        grpNull
-    };
+    [_positions, _sideEnemy, _enemyUnits, "MIDDLE", true, "cycle"] call FADE_spawnInfantryAtPositions
 };
 
 // Find N+ buildings with min interior slots (map-click or random urban retry).
@@ -617,19 +598,8 @@ FADE_objective_spawnImmediateAreaGarrison = {
         } forEach _bps;
 
         if (count _slots > 0) then {
-            private _grp = createGroup _sideEnemy;
-            {
-                private _u = _grp createUnit [selectRandom _enemyUnits, _x, [], 0, "NONE"];
-                if (!isNull _u) then {
-                    _u setPosATL _x;
-                    _u setUnitPos "MIDDLE";
-                    [_u] call FADE_tryAmbientCombatAnim;
-                };
-            } forEach _slots;
-            if (count units _grp > 0) then {
-                [_grp] call FAC_applyEnemyScenarioToGroup;
-                _groupsRef pushBack _grp;
-            } else { deleteGroup _grp };
+            private _grp = [_slots, _sideEnemy, _enemyUnits, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+            if (!isNull _grp) then { _groupsRef pushBack _grp };
         };
     } forEach _candidates;
 
@@ -641,15 +611,11 @@ FADE_objective_spawnImmediateAreaGarrison = {
         _sp = [[_sp, 0, 25, 4, 1, 0.4, 0, [], _center], _sp] call FADE_findSafePosArray;
         if (_sp isEqualType [] && { count _sp >= 2 } && { !surfaceIsWater _sp }) then {
             if (count _sp < 3) then { _sp = [(_sp select 0), (_sp select 1), 0] };
-            private _grp = createGroup _sideEnemy;
-            private _u = _grp createUnit [selectRandom _enemyUnits, _sp, [], 0, "NONE"];
-            if (!isNull _u) then {
-                _u setPosATL _sp;
-                _u setUnitPos "MIDDLE";
-                [_grp] call FAC_applyEnemyScenarioToGroup;
+            private _grp = [[_sp], _sideEnemy, _enemyUnits, "MIDDLE"] call FADE_spawnInfantryAtPositions;
+            if (!isNull _grp) then {
                 _groupsRef pushBack _grp;
                 _spawned = _spawned + 1;
-            } else { deleteGroup _grp };
+            };
         };
     };
     _groupsRef
@@ -749,7 +715,8 @@ FADE_objective_spawnRecoverObject = {
     _objCase setDir (getDir _bld);
 
     private _guardCount = [3 + floor random 2, _diffMul, 1] call FADE_raid_applyScale;
-    private _zoneGroups = [[_bld, _objIdx, _guardCount, _sideEnemy, _enemyUnits] call FADE_objective_garrisonBuilding];
+    private _guardGrp = [_bld, _objIdx, _guardCount, _sideEnemy, _enemyUnits] call FADE_objective_garrisonBuilding;
+    private _zoneGroups = if (isNull _guardGrp) then { [] } else { [_guardGrp] };
     _zoneGroups append ([_zoneCenter, _patrolRadius, ([1 + floor random 3, _diffMul, 1] call FADE_raid_applyScale), _sideEnemy, _enemyUnits, _diffMul] call FADE_objective_spawnPatrols);
     [true, _zoneGroups, [_objCase], getPosATL _bld, [], _bld]
 };
@@ -769,7 +736,9 @@ FADE_objective_spawnKillHVT = {
     };
 
     private _guardCount = [3 + floor random 2, _diffMul, 1] call FADE_raid_applyScale;
-    private _zoneGroups = [_hvtGrp, [_bld, _hvtIdx, _guardCount, _sideEnemy, _enemyUnits] call FADE_objective_garrisonBuilding];
+    private _guardGrp = [_bld, _hvtIdx, _guardCount, _sideEnemy, _enemyUnits] call FADE_objective_garrisonBuilding;
+    private _zoneGroups = [_hvtGrp];
+    if (!isNull _guardGrp) then { _zoneGroups pushBack _guardGrp };
     _zoneGroups append ([_zoneCenter, _patrolRadius, ([1 + floor random 3, _diffMul, 1] call FADE_raid_applyScale), _sideEnemy, _enemyUnits, _diffMul] call FADE_objective_spawnPatrols);
     [true, _zoneGroups, [], getPosATL _bld, [_hvt], _bld]
 };
@@ -786,7 +755,9 @@ FADE_objective_spawnRecoverHostage = {
     if (isNull _hostage || { isNull _hostageGrp }) exitWith { [false, [], [], [0, 0, 0], [], objNull] };
 
     private _guardCount = [2 + floor random 2, _diffMul, 1] call FADE_raid_applyScale;
-    private _zoneGroups = [_hostageGrp, [_bld, _hIdx, _guardCount, _sideEnemy, _enemyUnits] call FADE_objective_garrisonBuilding];
+    private _guardGrp = [_bld, _hIdx, _guardCount, _sideEnemy, _enemyUnits] call FADE_objective_garrisonBuilding;
+    private _zoneGroups = [_hostageGrp];
+    if (!isNull _guardGrp) then { _zoneGroups pushBack _guardGrp };
     _zoneGroups append ([_zoneCenter, _patrolRadius, ([1 + floor random 3, _diffMul, 1] call FADE_raid_applyScale), _sideEnemy, _enemyUnits, _diffMul] call FADE_objective_spawnPatrols);
     if (!alive _hostage) exitWith {
         { if (!isNull _x) then { { deleteVehicle _x } forEach units _x; deleteGroup _x } } forEach (_zoneGroups select { _x isEqualType grpNull });

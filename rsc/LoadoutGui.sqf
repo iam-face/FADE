@@ -475,6 +475,18 @@ FAC_loadoutGui_saveRespawnLoadoutSnapshot = {
     ];
 };
 
+// Patch the respawn trait snapshot so a role change survives death without a new gear save.
+FAC_loadoutGui_rememberEngineerTrait = {
+    params [["_u", player], ["_on", false]];
+    if (isNull _u || { !isPlayer _u }) exitWith {};
+    private _uid = getPlayerUID _u;
+    if (_uid == "") exitWith {};
+    private _traits = missionNamespace getVariable ["FAC_savedLoadoutTraits_" + _uid, []];
+    if (count _traits < 2) exitWith {};
+    _traits set [1, _on];
+    missionNamespace setVariable ["FAC_savedLoadoutTraits_" + _uid, _traits];
+};
+
 // Capture mission slot / JIP spawn gear once; skipped if player already saved (loadout box)  -  same keys as saveRespawnLoadoutSnapshot.
 FAC_loadoutGui_trySaveInitialRespawnLoadoutIfMissing = {
     params [["_u", player]];
@@ -570,15 +582,11 @@ FAC_loadoutGui_populateWorker = {
 
     if (_forceStd) then {
         _btnPreset ctrlShow false;
-        _btnStd ctrlSetPosition [0.24, 0.036, 0.40, 0.046];
-        _btnStd ctrlCommit 0;
         missionNamespace setVariable ["FAC_loadoutGui_listMode", "std"];
         [_display] call FAC_loadoutGui_loadStdMode;
     } else {
         if (_forcePreset) then {
             _btnStd ctrlShow false;
-            _btnPreset ctrlSetPosition [0.24, 0.036, 0.40, 0.046];
-            _btnPreset ctrlCommit 0;
         };
         missionNamespace setVariable ["FAC_loadoutGui_listMode", "preset"];
         if (!([] call FAC_loadoutGui_ensurePresetData)) then {
@@ -615,6 +623,7 @@ FAC_loadoutGui_fnc = {
         case "onLoad": {
             _display = findDisplay 60200;
             if (isNull _display) exitWith {};
+            [_display, FAC_gui_spec_loadout] call FAC_gui_build;
             missionNamespace setVariable ["FAC_loadoutGui_fnc", FAC_loadoutGui_fnc];
             uinamespace setVariable ["FAC_loadoutGui_fnc", FAC_loadoutGui_fnc];
 
@@ -852,6 +861,7 @@ FAC_loadoutGui_fnc = {
                             } forEach (missionNamespace getVariable ["FAC_loadoutGui_allUnits", []]);
                             private _tr = [_roleDn] call FAC_loadoutGui_getPresetRoleTraits;
                             [player, _tr select 0, _tr select 1, _tr select 2] call FAC_loadoutGui_syncRoleTraitsLocal;
+                            [player, _tr select 1] call FAC_loadoutGui_rememberEngineerTrait;
                             systemChat format ["My preset loadout applied: %1", _msgLine];
                         } else {
                             private _n = [_load] call FAC_loadoutGui_resolvePresetLoadoutArray;
@@ -874,6 +884,7 @@ FAC_loadoutGui_fnc = {
                 };
                 private _cfgTr = [_class] call FAC_loadoutGui_getCfgRoleTraits;
                 [player, _cfgTr select 0, _cfgTr select 1, _cfgTr select 2] call FAC_loadoutGui_syncRoleTraitsLocal;
+                [player, _cfgTr select 1] call FAC_loadoutGui_rememberEngineerTrait;
                 systemChat format ["My loadout applied: %1", _unitLb lbText _idx];
             };
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
@@ -946,6 +957,26 @@ FAC_loadoutGui_fnc = {
             if (isNull player) exitWith {};
             player setVariable ["FADE_intelSpecialist", false, true];
             systemChat "Intel specialist flag removed.";
+            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+        };
+
+        case "setEngineer": {
+            if (isNull player || {!alive player} || {!local player}) exitWith {};
+            private _medic = player getUnitTrait "Medic";
+            private _exp = player getUnitTrait "explosiveSpecialist";
+            [player, _medic, true, _exp] call FAC_loadoutGui_syncRoleTraitsLocal;
+            [player, true] call FAC_loadoutGui_rememberEngineerTrait;
+            systemChat "Engineer role on.";
+            [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+        };
+
+        case "clearEngineer": {
+            if (isNull player || {!local player}) exitWith {};
+            private _medic = player getUnitTrait "Medic";
+            private _exp = player getUnitTrait "explosiveSpecialist";
+            [player, _medic, false, _exp] call FAC_loadoutGui_syncRoleTraitsLocal;
+            [player, false] call FAC_loadoutGui_rememberEngineerTrait;
+            systemChat "Engineer role removed.";
             [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
         };
 

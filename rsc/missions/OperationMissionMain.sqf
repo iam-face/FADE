@@ -190,37 +190,16 @@ private _fnc_opMakeVeh = {
     };
     if (count _pick == 0) exitWith { [objNull, grpNull, grpNull] };
     private _vClass = selectRandom _pick;
-    private _veh = createVehicle [_vClass, _sp, [], 0, "NONE"];
+    // No sleep here: _fnc_opMakeVeh runs via call from unscheduled Missions.sqf (sleep would error / abort).
+    private _crewPack = [
+        _vClass, _sp, _vehDir, _enemyUnits, _sideE,
+        ["driver", "gunner", "cargo"], "random", true, -1, 0, -1, -1
+    ] call FADE_spawnCrewedGroundVehicle;
+    _crewPack params ["_veh", "_vehGrp", "_cargoGrp"];
     if (isNull _veh) exitWith { [objNull, grpNull, grpNull] };
-    _veh setPosATL _sp;
-    _veh setDir _vehDir;
-    _veh setVectorUp surfaceNormal _sp;
-    private _vehGrp = createGroup _sideE;
-    private _driver = _vehGrp createUnit [selectRandom _enemyUnits, _sp, [], 0, "NONE"];
-    if (!isNull _driver) then {
-        _driver moveInDriver _veh;
-        _vehGrp selectLeader _driver;
-    };
-    if (_veh emptyPositions "gunner" > 0) then {
-        private _g = _vehGrp createUnit [selectRandom _enemyUnits, _sp, [], 0, "NONE"];
-        if (!isNull _g) then { _g moveInGunner _veh };
-    };
-    if (!(_facApply isEqualTo {})) then { [_vehGrp] call _facApply };
+    if (isNull _vehGrp) then { _vehGrp = createGroup _sideE };
     _vehGrp setBehaviour "AWARE";
     _vehGrp setCombatMode "RED";
-    private _cargoGrp = grpNull;
-    private _seats = (_veh emptyPositions "cargo") max 0;
-    if (_seats > 0) then {
-        _cargoGrp = createGroup _sideE;
-        // No sleep here: _fnc_opMakeVeh runs via call from unscheduled Missions.sqf (sleep would error / abort).
-        for "_c" from 0 to (_seats - 1) do {
-            private _u = _cargoGrp createUnit [selectRandom _enemyUnits, _sp, [], 0, "NONE"];
-            if (!isNull _u) then { _u moveInCargo _veh };
-        };
-        if (!(_facApply isEqualTo {})) then { [_cargoGrp] call _facApply };
-    };
-    [_veh, _enemyUnits] call FADE_ensureEnemyVehicleGunner;
-    if (!(_facApply isEqualTo {})) then { [_vehGrp] call _facApply };
     _veh setVariable ["FADE_opCargoGrp", _cargoGrp, false];
     [_veh, _vehGrp, _cargoGrp]
 };
@@ -294,19 +273,8 @@ private _fnc_opMakeVeh = {
             [_building, _slotATL, [], _st] call _vgOp;
         } else {
             if (count _slotATL > 0) then {
-                private _grpG = createGroup _sideEnemy;
-                {
-                    private _pos = +_x;
-                    private _cls = selectRandom _enemyUnits;
-                    private _u = _grpG createUnit [_cls, _pos, [], 0, "NONE"];
-                    if (!isNull _u) then {
-                        if (!(_facApply isEqualTo {})) then { [_grpG] call _facApply };
-                        _u setPos _pos;
-                        _u setUnitPos "MIDDLE";
-                        [_u] call FADE_tryAmbientCombatAnim;
-                    };
-                } forEach _slotATL;
-                if (count units _grpG > 0) then {
+                private _grpG = [_slotATL, _sideEnemy, _enemyUnits, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+                if (!isNull _grpG) then {
                     _grpG setBehaviour "AWARE";
                     _grpG setCombatMode "RED";
                     _opAllGroups pushBack _grpG;
@@ -322,8 +290,6 @@ private _fnc_opMakeVeh = {
                             };
                         };
                     };
-                } else {
-                    deleteGroup _grpG;
                 };
             };
         };

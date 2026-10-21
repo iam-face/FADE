@@ -208,17 +208,6 @@ FAC_recruitGui_onRoster = {
 
 FAC_recruitGui_layoutSourceButtons = {
     params ["_display", ["_bothVisible", true]];
-    private _btnPreset = _display displayCtrl 60943;
-    private _btnStd = _display displayCtrl 60944;
-    if (_bothVisible) then {
-        _btnPreset ctrlSetPosition [0.04, 0.102, 0.45, 0.042];
-        _btnStd ctrlSetPosition [0.51, 0.102, 0.45, 0.042];
-    } else {
-        _btnPreset ctrlSetPosition [0.04, 0.102, 0.92, 0.042];
-        _btnStd ctrlSetPosition [0.04, 0.102, 0.92, 0.042];
-    };
-    _btnPreset ctrlCommit 0;
-    _btnStd ctrlCommit 0;
 };
 
 FAC_recruitGui_populateWorker = {
@@ -275,12 +264,16 @@ FAC_recruitGui_fnc = {
         case "onLoad": {
             _display = findDisplay FAC_recruitGui_IDD;
             if (isNull _display) exitWith {};
+            [_display, FAC_gui_spec_recruit] call FAC_gui_build;
             missionNamespace setVariable ["FAC_recruitGui_fnc", FAC_recruitGui_fnc];
             uinamespace setVariable ["FAC_recruitGui_fnc", FAC_recruitGui_fnc];
             missionNamespace setVariable ["FAC_recruitGui_tab", "recruit"];
-
-            [_display, FAC_recruitGui_recruitIdcs, true] call FAC_recruitGui_setCtrlShow;
-            [_display, FAC_recruitGui_rosterIdcs, false] call FAC_recruitGui_setCtrlShow;
+            if (isNull (_display displayCtrl 59900)) then {
+                [_display, FAC_recruitGui_recruitIdcs, true] call FAC_recruitGui_setCtrlShow;
+                [_display, FAC_recruitGui_rosterIdcs, false] call FAC_recruitGui_setCtrlShow;
+            } else {
+                [_display, "recruit"] call FAC_gui_showPage;
+            };
             [_display] call FAC_recruitGui_updateTabButtons;
 
             private _unitLb = _display displayCtrl 60948;
@@ -298,10 +291,14 @@ FAC_recruitGui_fnc = {
             _params params [["_tab", "recruit"]];
             missionNamespace setVariable ["FAC_recruitGui_tab", _tab];
             [_display] call FAC_recruitGui_updateTabButtons;
-            private _isRecruit = _tab == "recruit";
-            [_display, FAC_recruitGui_recruitIdcs, _isRecruit] call FAC_recruitGui_setCtrlShow;
-            [_display, FAC_recruitGui_rosterIdcs, !_isRecruit] call FAC_recruitGui_setCtrlShow;
-            if (!_isRecruit) then {
+            if (isNull (_display displayCtrl 59900)) then {
+                private _isRecruit = _tab == "recruit";
+                [_display, FAC_recruitGui_recruitIdcs, _isRecruit] call FAC_recruitGui_setCtrlShow;
+                [_display, FAC_recruitGui_rosterIdcs, !_isRecruit] call FAC_recruitGui_setCtrlShow;
+            } else {
+                [_display, _tab] call FAC_gui_showPage;
+            };
+            if (_tab != "recruit") then {
                 [player] remoteExec ["FADE_recruit_requestRoster", 2];
             };
         };

@@ -73,18 +73,8 @@ FADE_runMission_EscapeEvasion = {
                 _st set ["barrelsRef", _eeVgFireObjs];
                 [_bldEe, _slotEe, +_enemyUnitsEe, _st] call _vgEe;
             } else {
-                private _bldGrp = createGroup _sideEnemy;
-                {
-                    private _pos = +_x;
-                    private _u = _bldGrp createUnit [selectRandom _enemyUnitsEe, _pos, [], 0, "NONE"];
-                    if (!isNull _u) then {
-                        _u setPosATL _pos;
-                        _u setUnitPos "MIDDLE";
-                        [_u] call FADE_tryAmbientCombatAnim;
-                    };
-                } forEach _slotEe;
-                [_bldGrp] call _applyGrpEe;
-                _allGroupsEe pushBack _bldGrp;
+                private _bldGrp = [_slotEe, _sideEnemy, _enemyUnitsEe, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+                if (!isNull _bldGrp) then { _allGroupsEe pushBack _bldGrp };
             };
         };
     } forEach _bldsEe;
@@ -102,17 +92,10 @@ FADE_runMission_EscapeEvasion = {
         };
         if (_gp isEqualType [] && { count _gp >= 2 }) then {
             _gp = [(_gp select 0), (_gp select 1), (_gp param [2, 0])];
-            private _gg = createGroup _sideEnemy;
-            private _ug = _gg createUnit [selectRandom _enemyUnitsEe, _gp, [], 0, "NONE"];
-            if (!isNull _ug) then {
-                [_gg] call _applyGrpEe;
-                _ug setPosATL _gp;
-                _ug setUnitPos "MIDDLE";
-                [_ug] call FADE_tryAmbientCombatAnim;
+            private _gg = [[_gp], _sideEnemy, _enemyUnitsEe, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+            if (!isNull _gg) then {
                 _allGroupsEe pushBack _gg;
                 _gd = _gd + 1;
-            } else {
-                deleteGroup _gg;
             };
         };
     };
@@ -149,18 +132,12 @@ FADE_runMission_EscapeEvasion = {
         if (isNull _x) then { } else {
         private _sp = [_zoneCenter, _evadeePlayers, 500, 1000] call _findPatrolSpawnEe;
         private _psz = 4 + (floor random 5);
-        private _hGrp = createGroup _sideEnemy;
+        private _huntClasses = [];
         for "_k" from 0 to (_psz - 1) do {
-            private _cls = if (_k < count _enemyUnitsEe) then { _enemyUnitsEe select _k } else { _enemyUnitsEe select 0 };
-            private _hu = _hGrp createUnit [_cls, _sp, [], 0, "NONE"];
-            if (!isNull _hu) then { _hu setPosATL _sp };
+            _huntClasses pushBack (if (_k < count _enemyUnitsEe) then { _enemyUnitsEe select _k } else { _enemyUnitsEe select 0 });
         };
-        if (count units _hGrp > 0) then {
-            [_hGrp] call _applyGrpEe;
-            _allGroupsEe pushBack _hGrp;
-        } else {
-            deleteGroup _hGrp;
-        };
+        private _hGrp = [_sp, _sideEnemy, _huntClasses] call FADE_missionCreateInfantryGroupAt;
+        if (!isNull _hGrp) then { _allGroupsEe pushBack _hGrp };
         };
     } forEach _evadeePlayers;
 
@@ -480,37 +457,15 @@ FADE_runMission_EscapeEvasion = {
         };
         if (count _vehPick == 0) exitWith {};
         private _vClass = selectRandom _vehPick;
-        private _vehGrp = createGroup _sideEn;
-        private _veh = createVehicle [_vClass, _roadPos, [], 0, "NONE"];
-        if (isNull _veh) exitWith { deleteGroup _vehGrp };
-        _veh setPosATL _roadPos;
-        _veh setDir _dir;
-        _veh setVectorUp surfaceNormal _roadPos;
-        _veh engineOn true;
-        private _driver = _vehGrp createUnit [selectRandom _enemyUnitsLoc, _roadPos, [], 0, "NONE"];
-        if (!isNull _driver) then {
-            _driver moveInDriver _veh;
-            _vehGrp selectLeader _driver;
-        };
-        if (_veh emptyPositions "gunner" > 0) then {
-            private _gn = _vehGrp createUnit [selectRandom _enemyUnitsLoc, _roadPos, [], 0, "NONE"];
-            if (!isNull _gn) then { _gn moveInGunner _veh };
-        };
-        [_vehGrp] call _applyLoc;
+        private _crewPack = [
+            _vClass, _roadPos, _dir, _enemyUnitsLoc, _sideEn,
+            ["driver", "gunner", "cargo"], "random", true, 6, 0, -1, 1
+        ] call FADE_spawnCrewedGroundVehicle;
+        _crewPack params ["_veh", "_vehGrp", "_cargoGrp"];
+        if (isNull _veh) exitWith {};
+        if (isNull _vehGrp) then { _vehGrp = createGroup _sideEn };
         _vehGrp setBehaviour "AWARE";
         _vehGrp setCombatMode "RED";
-        private _cargoGrp = grpNull;
-        private _seats = (_veh emptyPositions "cargo") max 0;
-        if (_seats > 0) then {
-            _cargoGrp = createGroup _sideEn;
-            for "_c" from 0 to ((_seats min 6) - 1) do {
-                private _u = _cargoGrp createUnit [selectRandom _enemyUnitsLoc, _roadPos, [], 0, "NONE"];
-                if (!isNull _u) then { _u moveInCargo _veh };
-            };
-            if (count units _cargoGrp > 0) then { [_cargoGrp] call _applyLoc };
-        };
-        [_veh, _enemyUnitsLoc] call FADE_ensureEnemyVehicleGunner;
-        [_vehGrp] call _applyLoc;
         _veh setVariable ["FADE_eeQrfCargoGrp", _cargoGrp];
         private _tgtPos = getPosATL _detP;
         private _wp1 = _vehGrp addWaypoint [_tgtPos, 80];

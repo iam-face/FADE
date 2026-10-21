@@ -85,6 +85,8 @@ FADE_pd_spawnFlavourConvoy = {
     };
     private _count = 2 + floor random 2;
     private _existing = [];
+    private _crewPack = [];
+    private _crewGrp = grpNull;
     for "_i" from 0 to (_count - 1) do {
         if (count _land == 0) exitWith {};
         private _cls = selectRandom _land;
@@ -100,16 +102,11 @@ FADE_pd_spawnFlavourConvoy = {
         _objs pushBack _veh;
         _existing pushBack _veh;
         if (count _friendlyUnits > 0) then {
-            private _crewGrp = createGroup _sideFriendly;
-            private _driver = _crewGrp createUnit [selectRandom _friendlyUnits, _offset, [], 0, "NONE"];
-            if (!isNull _driver) then {
-                _driver moveInDriver _veh;
-                _crewGrp selectLeader _driver;
-            };
-            if (_veh emptyPositions "gunner" > 0) then {
-                private _g = _crewGrp createUnit [selectRandom _friendlyUnits, _offset, [], 0, "NONE"];
-                if (!isNull _g) then { _g moveInGunner _veh };
-            };
+            _crewPack = [
+                "", _offset, _vehDir, _friendlyUnits, _sideFriendly,
+                ["driver", "gunner"], "random", true, -1, 0, -1, -1, "", false, false, _veh
+            ] call FADE_spawnCrewedGroundVehicle;
+            _crewGrp = _crewPack select 1;
             if (!isNull _crewGrp && { count units _crewGrp > 0 }) then {
                 _crewGrp setBehaviour "COMBAT";
                 _crewGrp setCombatMode "YELLOW";
@@ -154,9 +151,8 @@ FADE_pd_spawnInfWave = {
     private _shuf = _enemyUnits call BIS_fnc_arrayShuffle;
     private _classes = _shuf select [0, _ps min count _shuf];
     if (count _classes == 0) then { _classes = [_enemyUnits select 0] };
-    private _grp = [_sp, _sideEnemy, _classes] call BIS_fnc_spawnGroup;
+    private _grp = [_sp, _sideEnemy, _classes] call FADE_missionCreateInfantryGroupAt;
     if (isNull _grp || { count units _grp == 0 }) exitWith { [] };
-    [_grp] call FAC_applyEnemyScenarioToGroup;
     [_grp, _center, _zoneRadius] call FADE_invasion_assignPushWp;
     [_taskId, _grp] call FADE_missionEnt_registerGroup;
     private _units = units _grp;

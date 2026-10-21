@@ -1,8 +1,7 @@
 // ServerWorldPlacementConsts.sqf - map bounds and LZ/troop distance tunables
-// Map playable rectangle: prefer Eden logics FADE_Corner_1..4 (AABB); else 0..worldSize.
-// Independent X/Y (FADE_mapMinX/MaxX/MinY/MaxY). FADE_mapMin/Max = envelope for legacy readers.
-
-FADE_mapCornerNames = ["FADE_Corner_1", "FADE_Corner_2", "FADE_Corner_3", "FADE_Corner_4"];
+// Playable rectangle is the terrain square, 0..worldSize on X and Y.
+// Eden FADE_Corner_* logics are not read. Delete them from the mission.
+// FADE_mapMin/Max = envelope for legacy readers.
 
 FADE_resolveMapBounds = {
     private _ws = worldSize;
@@ -10,38 +9,6 @@ FADE_resolveMapBounds = {
     private _maxX = _ws;
     private _minY = 0;
     private _maxY = _ws;
-    private _names = missionNamespace getVariable ["FADE_mapCornerNames", FADE_mapCornerNames];
-    private _xs = [];
-    private _ys = [];
-    {
-        private _o = missionNamespace getVariable [_x, objNull];
-        if (!isNull _o) then {
-            private _p = getPosATL _o;
-            _xs pushBack (_p select 0);
-            _ys pushBack (_p select 1);
-        };
-    } forEach _names;
-
-    private _src = "worldSize";
-    if (count _xs >= 2) then {
-        private _cMinX = selectMin _xs;
-        private _cMaxX = selectMax _xs;
-        private _cMinY = selectMin _ys;
-        private _cMaxY = selectMax _ys;
-        if (_cMaxX > _cMinX && { _cMaxY > _cMinY }) then {
-            _minX = _cMinX;
-            _maxX = _cMaxX;
-            _minY = _cMinY;
-            _maxY = _cMaxY;
-            _src = format ["FADE_Corner_* (%1)", count _xs];
-        } else {
-            diag_log format ["[FADE] Map corners degenerate (%1 pts); using 0..worldSize (%2).", count _xs, _ws];
-        };
-    } else {
-        if (count _xs > 0) then {
-            diag_log format ["[FADE] Need >=2 FADE_Corner_* logics (found %1); using 0..worldSize (%2).", count _xs, _ws];
-        };
-    };
 
     FADE_mapMinX = _minX;
     FADE_mapMaxX = _maxX;
@@ -59,8 +26,8 @@ FADE_resolveMapBounds = {
     missionNamespace setVariable ["FADE_mapMax", FADE_mapMax];
 
     diag_log format [
-        "[FADE] Map bounds from %1: X %2..%3, Y %4..%5 (legacy envelope %6..%7).",
-        _src, FADE_mapMinX, FADE_mapMaxX, FADE_mapMinY, FADE_mapMaxY, FADE_mapMin, FADE_mapMax
+        "[FADE] Map bounds from worldSize: X %1..%2, Y %3..%4 (legacy envelope %5..%6).",
+        FADE_mapMinX, FADE_mapMaxX, FADE_mapMinY, FADE_mapMaxY, FADE_mapMin, FADE_mapMax
     ];
 };
 

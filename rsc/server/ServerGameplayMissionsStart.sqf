@@ -311,6 +311,7 @@ FADE_startTroopInsert = {
     params ["_participantUids", "_waveCount", "_player", ["_mapAnchor", []]];
     if (!isServer) exitWith {};
     if (isNull _player) exitWith {};
+    if ([_player] call FADE_base_denyUntilDefined) exitWith {};
     private _opened = [
         _participantUids,
         _waveCount,
@@ -358,6 +359,7 @@ FADE_startTroopExtract = {
     params ["_participantUids", "_waveCount", "_player", ["_mapAnchor", []]];
     if (!isServer) exitWith {};
     if (isNull _player) exitWith {};
+    if ([_player] call FADE_base_denyUntilDefined) exitWith {};
     private _opened = [
         _participantUids,
         _waveCount,

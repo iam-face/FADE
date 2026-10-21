@@ -95,14 +95,14 @@ if (hasInterface) then {
                 private _controls = [_display, format ["%1 - CHOOSE LOCATION", toUpper _titleName], _helpText, 60340, _layout] call FAC_missionPickOverlay_createShell;
                 private _innerX = _bgX + _padX;
                 private _btnY = _bgY + _titleH + _helpH + 0.028;
-                private _bRandom = _display ctrlCreate ["RscButton", 60343];
+                private _bRandom = _display ctrlCreate ["FACRscPrimaryBtn", 60343];
                 _bRandom ctrlSetPosition [_innerX, _btnY, _innerW, _btnH];
                 _bRandom ctrlSetText "Random location";
                 [_bRandom] call FAC_missionPick_stylePrimary;
                 _bRandom ctrlCommit 0;
                 _bRandom ctrlAddEventHandler ["ButtonClick", { ["random", []] call (missionNamespace getVariable ["FAC_missionLocationPickGui_fnc", {}]) }];
                 _controls pushBack _bRandom;
-                private _bMap = _display ctrlCreate ["RscButton", 60344];
+                private _bMap = _display ctrlCreate ["FACRscPrimaryBtn", 60344];
                 _bMap ctrlSetPosition [_innerX, _btnY + _btnH + _btnGap, _innerW, _btnH];
                 _bMap ctrlSetText (
                     switch (_missionType) do {
@@ -115,7 +115,7 @@ if (hasInterface) then {
                 _bMap ctrlCommit 0;
                 _bMap ctrlAddEventHandler ["ButtonClick", { ["mapClick", []] call (missionNamespace getVariable ["FAC_missionLocationPickGui_fnc", {}]) }];
                 _controls pushBack _bMap;
-                private _bCancel = _display ctrlCreate ["RscButton", 60345];
+                private _bCancel = _display ctrlCreate ["FACRscPrimaryBtn", 60345];
                 _bCancel ctrlSetPosition [_innerX, _btnY + (_btnH + _btnGap) * 2, _innerW, _btnH];
                 _bCancel ctrlSetText "Cancel";
                 [_bCancel] call FAC_missionPick_styleDanger;
