@@ -122,7 +122,7 @@ missionNamespace setVariable ["FADE_formatSituationIntelHtml", {
     private _droneLine = if (_droneSet isEqualTo "Off") then {
         "Enemy UAV patrols are unlikely."
     } else {
-        format ["Enemy UAVs may patrol and call truck QRF onto spotted foot mobile (%1).", toLower _droneSet]
+        format ["Enemy UAVs may patrol. A spot inside the objective can start that mission's QRF (%1).", toLower _droneSet]
     };
     private _commsLine = if (_missionType in ["HVT", "Hostage", "ClearArea", "SearchDestroy", "CASEVAC", "CSAR", "Operation", "AreaOfOperations", "AssetRetrieval", "AssetRetrievalVeh", "InterceptConvoy", "EscapeEvasion", "Raid", "Invasion", "PointDefense"]) then {
         "Enemy may call reinforcements after sustained or reported contact."

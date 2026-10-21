@@ -254,7 +254,7 @@ FADE_runMission_CSAR = {
     [_player, "CSAR"] call FADE_notifyOthersMissionStarted;
 
     [_taskId, _enemyGroups] call FADE_missionEnt_bindGroups;
-    [_taskId, _crashCenter, _basePos, _enemyUnits, _enemyGroups, 500] call FADE_counterAttackStart;
+    [_taskId, _crashCenter, _basePos, _enemyUnits, _enemyGroups] call FADE_counterAttackStart;
 
     // 1 km: survivor sideChat + grid; 500 m: green smoke.
     // After smoke the survivor freezes in place, drops patrol waypoints, and tries to board nearby player vehicles.

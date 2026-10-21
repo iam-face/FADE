@@ -1,6 +1,14 @@
 // BuildGui.sqf - catalog dialog and local placement camera.
-// The camera and the preview are local. The preview is a simple object, so it has no collision.
-// The server creates the real object. Camera movement follows the vehicle placement camera.
+// The camera and the preview are local. The server creates the real object.
+// A simple object has no PhysX body, but its Geometry LOD is still a solid shape.
+// A placed piece hits that shape. setPhysicsCollisionFlag false drops PhysX and geometry collision.
+// Roadway stays. The command is local, and the preview is local.
+// The command string stays compiled because the SQF-VM command list predates Arma 2.18.
+// https://community.bistudio.com/wiki/createSimpleObject
+// https://community.bistudio.com/wiki/setPhysicsCollisionFlag
+// Camera movement follows the vehicle placement camera.
+
+FAC_build_clearGhostCollision = compile "_this setPhysicsCollisionFlag false";
 
 if (isNil "FADE_build_spotBlocked") then {
     call compile preprocessFileLineNumbers "rsc\BuildCommon.sqf";
@@ -17,7 +25,7 @@ FAC_build_placeStatus = {
     private _state = if (_clear) then { "Clear" } else { "Blocked" };
     titleText [
         format [
-            "%1. WASD moves the camera. Mouse looks. Wheel sets distance. Q and E turn the piece. Page Up raises it. Page Down lowers it. T follows the slope. Space places. Esc cancels.",
+            "%1. WASD moves the camera. Mouse looks. Wheel sets distance. Q and E turn the piece. Page Up raises it. Page Down lowers it. T follows the slope. Space places. Esc cancels. Ctrl+Z undoes the last piece you placed.",
             _state
         ],
         "PLAIN DOWN",
@@ -175,13 +183,18 @@ FAC_build_bindInput = {
     private _down = _disp displayAddEventHandler ["KeyDown", {
         params ["_d", "_key"];
         if !(missionNamespace getVariable ["FAC_build_active", false]) exitWith { false };
-        private _used = _key in [1, 16, 17, 18, 20, 30, 31, 32, 42, 54, 57, 201, 209];
+        private _held = missionNamespace getVariable ["FAC_build_held", []];
+        private _undo = _key == 44 && { (29 in _held) || { 157 in _held } };
+        private _used = _undo || { _key in [1, 16, 17, 18, 20, 29, 30, 31, 32, 42, 54, 57, 157, 201, 209] };
         if (_used) then {
             private _held = missionNamespace getVariable ["FAC_build_held", []];
             private _fresh = !(_key in _held);
             if (_fresh) then {
                 _held pushBack _key;
                 missionNamespace setVariable ["FAC_build_held", _held];
+            };
+            if (_undo && { _fresh }) then {
+                [player] remoteExec ["FADE_build_undo", 2];
             };
             if (_key == 1) then { missionNamespace setVariable ["FAC_build_cancel", true] };
             if (_key == 57 && { !(missionNamespace getVariable ["FAC_build_spaceDown", false]) }) then {
@@ -319,8 +332,7 @@ FAC_build_ghostStart = {
                     _ghost = createSimpleObject [_model, eyePos player, true];
                 };
             };
-            // A normal local object keeps its collision shape. The placed piece, and the world, hit that shape.
-            // A local simple object is the preview only. It has no collision.
+            if (!isNull _ghost) then { _ghost call FAC_build_clearGhostCollision };
             missionNamespace setVariable ["FAC_build_class", _class];
             missionNamespace setVariable ["FAC_build_ghostObj", _ghost];
             if (isNull _ghost) then { _failed = true };
@@ -576,6 +588,38 @@ FAC_buildGui_fnc = {
             closeDialog 0;
             [_class] call FAC_build_ghostStart;
         };
+        case "setTab": {
+            _params params [["_tab", "build"]];
+            private _d = findDisplay FAC_buildGui_IDD;
+            if (isNull _d) exitWith {};
+            [_d, _tab] call FAC_gui_showPage;
+            if (_tab == "placed") then { [player] remoteExec ["FADE_build_sendList", 2] };
+        };
+        case "headerRefresh": {
+            private _d = findDisplay FAC_buildGui_IDD;
+            if (isNull _d) exitWith {};
+            if ((_d getVariable ["FAC_gui_page", "build"]) == "placed") then {
+                [player] remoteExec ["FADE_build_sendList", 2];
+            } else {
+                [] call FAC_buildGui_fillCats;
+            };
+        };
+        case "deletePlaced": {
+            private _d = findDisplay FAC_buildGui_IDD;
+            if (isNull _d) exitWith {};
+            private _list = _d displayCtrl 60964;
+            if (isNull _list) exitWith {};
+            private _idx = lbCurSel _list;
+            if (_idx < 0) exitWith { systemChat "Select a piece first." };
+            private _id = _list lbData _idx;
+            if (_id == "") exitWith { systemChat "Select a piece first." };
+            [player, _id] remoteExec ["FADE_build_remove", 2];
+            [] spawn {
+                sleep 0.2;
+                if (isNull (findDisplay 60950)) exitWith {};
+                [player] remoteExec ["FADE_build_sendList", 2];
+            };
+        };
         case "toggleOpt": {
             _params params [["_which", ""]];
             switch _which do {
@@ -613,7 +657,23 @@ FAC_buildGui_syncOpts = {
     [60983, missionNamespace getVariable ["FAC_build_optMulti", false], "Place multiple"] call _paint;
 };
 
+FAC_buildGui_applyPlaced = {
+    params [["_rows", []]];
+    private _d = findDisplay FAC_buildGui_IDD;
+    if (isNull _d) exitWith {};
+    private _list = _d displayCtrl 60964;
+    if (isNull _list) exitWith {};
+    lbClear _list;
+    {
+        _x params ["_id", "_label"];
+        private _i = _list lbAdd _label;
+        _list lbSetData [_i, _id];
+    } forEach _rows;
+    if ((lbSize _list) > 0) then { _list lbSetCurSel 0 };
+};
+
 missionNamespace setVariable ["FAC_buildGui_fnc", FAC_buildGui_fnc];
+missionNamespace setVariable ["FAC_buildGui_applyPlaced", FAC_buildGui_applyPlaced];
 missionNamespace setVariable ["FAC_build_ghostStop", FAC_build_ghostStop];
 missionNamespace setVariable ["FAC_build_ghostStart", FAC_build_ghostStart];
 missionNamespace setVariable ["FAC_build_placeOne", FAC_build_placeOne];

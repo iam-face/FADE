@@ -3,16 +3,23 @@ call compile preprocessFileLineNumbers "rsc\MissionLore.sqf";
 missionNamespace setVariable ["FADE_convoyMinRouteM", FADE_convoyMinRouteM];
 FADE_interceptConvoyRoadRoute = compile preprocessFileLineNumbers "rsc\fn_FADE_interceptConvoyRoadRoute.sqf";
 FADE_interceptConvoyRouteWaypoints = compile preprocessFileLineNumbers "rsc\fn_FADE_interceptConvoyRouteWaypoints.sqf";
-missionNamespace setVariable ["FADE_counterAttackFirstDelayMin", FADE_counterAttackFirstDelayMin];
-missionNamespace setVariable ["FADE_counterAttackFirstDelayMax", FADE_counterAttackFirstDelayMax];
-missionNamespace setVariable ["FADE_counterAttackMinDistFromBase", FADE_counterAttackMinDistFromBase];
-missionNamespace setVariable ["FADE_counterAttackCargoStaggerSec", FADE_counterAttackCargoStaggerSec];
-missionNamespace setVariable ["FADE_counterAttackFootSquadsMin", FADE_counterAttackFootSquadsMin];
-missionNamespace setVariable ["FADE_counterAttackFootSquadsMax", FADE_counterAttackFootSquadsMax];
-missionNamespace setVariable ["FADE_counterAttackFootSpawnDistMin", FADE_counterAttackFootSpawnDistMin];
-missionNamespace setVariable ["FADE_counterAttackFootSpawnDistMax", FADE_counterAttackFootSpawnDistMax];
-missionNamespace setVariable ["FADE_counterAttackFootSquadSizeMin", FADE_counterAttackFootSquadSizeMin];
-missionNamespace setVariable ["FADE_counterAttackFootSquadSizeMax", FADE_counterAttackFootSquadSizeMax];
+missionNamespace setVariable ["FADE_qrfKnowsAboutThreshold", FADE_qrfKnowsAboutThreshold];
+missionNamespace setVariable ["FADE_qrfDetectionRadius", FADE_qrfDetectionRadius];
+missionNamespace setVariable ["FADE_qrfFirstDelayMin", FADE_qrfFirstDelayMin];
+missionNamespace setVariable ["FADE_qrfFirstDelayMax", FADE_qrfFirstDelayMax];
+missionNamespace setVariable ["FADE_qrfBetweenMin", FADE_qrfBetweenMin];
+missionNamespace setVariable ["FADE_qrfBetweenMax", FADE_qrfBetweenMax];
+missionNamespace setVariable ["FADE_qrfWaveCount", FADE_qrfWaveCount];
+missionNamespace setVariable ["FADE_qrfPollInterval", FADE_qrfPollInterval];
+missionNamespace setVariable ["FADE_qrfFootDistMin", FADE_qrfFootDistMin];
+missionNamespace setVariable ["FADE_qrfFootDistMax", FADE_qrfFootDistMax];
+missionNamespace setVariable ["FADE_qrfFootMinFromPlayers", FADE_qrfFootMinFromPlayers];
+missionNamespace setVariable ["FADE_qrfFootBuildingChance", FADE_qrfFootBuildingChance];
+missionNamespace setVariable ["FADE_qrfMinCargoSeats", FADE_qrfMinCargoSeats];
+missionNamespace setVariable ["FADE_qrfMinDistFromBase", FADE_qrfMinDistFromBase];
+missionNamespace setVariable ["FADE_qrfCargoStaggerSec", FADE_qrfCargoStaggerSec];
+missionNamespace setVariable ["FADE_qrfFollowIntervalS", FADE_qrfFollowIntervalS];
+missionNamespace setVariable ["FADE_qrfDebug", FADE_qrfDebug];
 
 // Preferred startup factions by display name (if present). Falls back to the vanilla class.
 // Exact match walks the preferred list in order, then a case-insensitive substring pass.

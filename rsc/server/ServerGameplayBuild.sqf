@@ -8,6 +8,9 @@ call compile preprocessFileLineNumbers "rsc\BuildCommon.sqf";
 if (isNil "FADE_build_registry") then {
     FADE_build_registry = createHashMap;
 };
+if (isNil "FADE_build_undoStack") then {
+    FADE_build_undoStack = createHashMap;
+};
 
 FADE_build_publishPool = {
     if (isNil "FADE_buildSupply") then {
@@ -128,14 +131,55 @@ FADE_build_place = {
     _rec set ["cost", _cost];
     _rec set ["state", "complete"];
     _rec set ["owner", getPlayerUID _player];
+    _rec set ["name", _display];
     _rec set ["unlock", _unlock];
     _rec set ["buildTime", _buildTime];
     FADE_build_registry set [_id, _rec];
+    private _uid = getPlayerUID _player;
+    private _stack = FADE_build_undoStack getOrDefault [_uid, []];
+    _stack pushBack _id;
+    if ((count _stack) > 40) then { _stack deleteAt 0 };
+    FADE_build_undoStack set [_uid, _stack];
     [_obj] remoteExec ["FAC_build_clientAddRemove", 0, _obj];
     [_player, format ["Placed %1.", _display]] call FADE_build_chat;
     true
 };
 publicVariable "FADE_build_place";
+
+FADE_build_forgetUndo = {
+    params ["_id"];
+    if (isNil "FADE_build_undoStack" || { _id == "" }) exitWith {};
+    {
+        private _stack = FADE_build_undoStack getOrDefault [_x, []];
+        private _next = _stack - [_id];
+        if ((count _next) != (count _stack)) then {
+            FADE_build_undoStack set [_x, _next];
+        };
+    } forEach (+ (keys FADE_build_undoStack));
+};
+
+FADE_build_drop = {
+    params ["_netId"];
+    if (_netId == "") exitWith { "" };
+    private _obj = _netId call BIS_fnc_objectFromNetId;
+    private _rec = FADE_build_registry getOrDefault [_netId, createHashMap];
+    if (isNull _obj || { !(_obj getVariable ["FADE_build_placed", false]) }) exitWith {
+        FADE_build_registry deleteAt _netId;
+        [_netId] call FADE_build_forgetUndo;
+        ""
+    };
+    private _name = _rec getOrDefault ["name", ""];
+    if (_name == "") then { _name = _obj getVariable ["FADE_build_class", "piece"] };
+    private _cost = _rec getOrDefault ["cost", _obj getVariable ["FADE_build_cost", 0]];
+    if ([] call FADE_build_logisticsOn) then {
+        missionNamespace setVariable ["FADE_buildSupply", (missionNamespace getVariable ["FADE_buildSupply", 0]) + _cost];
+        publicVariable "FADE_buildSupply";
+    };
+    FADE_build_registry deleteAt _netId;
+    [_netId] call FADE_build_forgetUndo;
+    deleteVehicle _obj;
+    _name
+};
 
 FADE_build_remove = {
     if (!isServer) exitWith { false };
@@ -145,20 +189,67 @@ FADE_build_remove = {
         [_player, "You can't remove structures with the current lobby settings."] call FADE_build_chat;
         false
     };
-    private _obj = _netId call BIS_fnc_objectFromNetId;
-    if (isNull _obj || { !(_obj getVariable ["FADE_build_placed", false]) }) exitWith { false };
-    private _rec = FADE_build_registry getOrDefault [_netId, createHashMap];
-    private _cost = _rec getOrDefault ["cost", _obj getVariable ["FADE_build_cost", 0]];
-    if ([] call FADE_build_logisticsOn) then {
-        missionNamespace setVariable ["FADE_buildSupply", (missionNamespace getVariable ["FADE_buildSupply", 0]) + _cost];
-        publicVariable "FADE_buildSupply";
-    };
-    FADE_build_registry deleteAt _netId;
-    deleteVehicle _obj;
+    private _name = [_netId] call FADE_build_drop;
+    if (_name == "") exitWith { false };
     [_player, "Structure destroyed."] call FADE_build_chat;
     true
 };
 publicVariable "FADE_build_remove";
+
+FADE_build_undo = {
+    if (!isServer) exitWith { false };
+    params [["_player", objNull]];
+    if (isNull _player) exitWith { false };
+    if !([_player] call FAC_playerCanBuild) exitWith {
+        [_player, "You can't remove structures with the current lobby settings."] call FADE_build_chat;
+        false
+    };
+    private _uid = getPlayerUID _player;
+    private _stack = + (FADE_build_undoStack getOrDefault [_uid, []]);
+    private _name = "";
+    private _removed = false;
+    while { (count _stack) > 0 && { !_removed } } do {
+        private _id = _stack deleteAt ((count _stack) - 1);
+        _name = [_id] call FADE_build_drop;
+        _removed = _name != "";
+    };
+    FADE_build_undoStack set [_uid, _stack];
+    if (!_removed) exitWith {
+        [_player, "Nothing to undo."] call FADE_build_chat;
+        false
+    };
+    [_player, format ["Removed %1.", _name]] call FADE_build_chat;
+    true
+};
+publicVariable "FADE_build_undo";
+
+FADE_build_sendList = {
+    if (!isServer) exitWith {};
+    params [["_player", objNull]];
+    if (isNull _player) exitWith {};
+    if !([_player] call FAC_playerCanBuild) exitWith {};
+    private _rows = [];
+    {
+        private _id = _x;
+        private _rec = FADE_build_registry get _id;
+        if (_rec isEqualType createHashMap) then {
+            private _name = _rec getOrDefault ["name", _rec getOrDefault ["class", "Piece"]];
+            private _pos = _rec getOrDefault ["pos", []];
+            private _where = if (count _pos >= 2) then {
+                format ["%1, %2", round (_pos select 0), round (_pos select 1)]
+            } else {
+                ""
+            };
+            private _label = if (_where == "") then { _name } else { format ["%1 (%2)", _name, _where] };
+            _rows pushBack [_name, [_id, _label]];
+        };
+    } forEach (keys FADE_build_registry);
+    _rows sort true;
+    private _out = [];
+    { _out pushBack (_x select 1) } forEach _rows;
+    [_out] remoteExec ["FAC_buildGui_applyPlaced", _player];
+};
+publicVariable "FADE_build_sendList";
 
 FADE_build_clearAll = {
     if (!isServer) exitWith { 0 };
@@ -189,6 +280,7 @@ FADE_build_clearAll = {
         missionNamespace setVariable ["FADE_buildSupply", (missionNamespace getVariable ["FADE_buildSupply", 0]) + _refund];
         publicVariable "FADE_buildSupply";
     };
+    FADE_build_undoStack = createHashMap;
     _n
 };
 

@@ -49,6 +49,8 @@ FADE_vehiclePlacement_classReason = {
 FADE_vehiclePlacement_ignored = {
     params ["_obj"];
     if (isNull _obj) exitWith { false };
+    // The preview is local. On a listen server it still occupies the pose, so the real create would see it as a hit.
+    if (_obj getVariable ["FAC_vehiclePlacement_isGhost", false]) exitWith { true };
     if (_obj isKindOf "Logic" || { _obj isKindOf "Helper_Base_F" }) exitWith { true };
     if (
         _obj isKindOf "WeaponHolder"
@@ -118,7 +120,11 @@ FADE_vehiclePlacement_poseReason = {
     if ((_agl distance2D _base) > 1000) exitWith { "OUTSIDE BASE AREA." };
     private _aglZ = _agl select 2;
     if (_aglZ < -1 || { _aglZ > 80 }) exitWith { "HEIGHT OUT OF RANGE." };
-    if (_probe isKindOf "LandVehicle" && { surfaceIsWater _agl }) exitWith { "CANNOT PLACE ON WATER." };
+    private _probeClass = typeOf _probe;
+    if (_probeClass == "") then {
+        _probeClass = _probe getVariable ["FAC_vehiclePlacement_ghostClass", ""];
+    };
+    if (_probeClass isKindOf "LandVehicle" && { surfaceIsWater _agl }) exitWith { "CANNOT PLACE ON WATER." };
 
     private _blocked = false;
     private _mine = [_probe] call FADE_vehiclePlacement_worldAabb;
@@ -213,7 +219,7 @@ FADE_vehiclePlacement_reason = {
     };
     if (isNull _probe) exitWith { "SPAWN FAILED." };
     _probe setPosASL _posASL;
-    _probe setDir _dir;
+    _probe setVectorDirAndUp [[sin _dir, cos _dir, 0], [0, 0, 1]];
     private _why = [_probe] call FADE_vehiclePlacement_poseReason;
     if (_madeProbe) then {
         // Move it away before delete. A probe deleted in place still occupies the hull for the real create.
@@ -417,11 +423,17 @@ FAC_vehiclePlacement_onFrame = {
         private _dir = (missionNamespace getVariable ["FAC_vehiclePlacement_camYaw", 0]) + (missionNamespace getVariable ["FAC_vehiclePlacement_yaw", 0]);
         _ghost setPosASL _surface;
         _ghost setVectorDirAndUp [[sin _dir, cos _dir, 0], [0, 0, 1]];
+        // Moving the preview can restore the geometry shape. Keep PhysX collision off.
+        _ghost call FAC_vehiclePlacement_clearGhostCollision;
     };
 
     if (_now >= (missionNamespace getVariable ["FAC_vehiclePlacement_nextCheck", 0])) then {
         missionNamespace setVariable ["FAC_vehiclePlacement_nextCheck", _now + 0.1];
-        private _why = [typeOf _ghost, getPosASL _ghost, getDir _ghost, _ghost] call FADE_vehiclePlacement_reason;
+        private _ghostClass = typeOf _ghost;
+        if (_ghostClass == "") then {
+            _ghostClass = _ghost getVariable ["FAC_vehiclePlacement_ghostClass", ""];
+        };
+        private _why = [_ghostClass, getPosASL _ghost, getDir _ghost, _ghost] call FADE_vehiclePlacement_reason;
         private _clear = _why == "";
         missionNamespace setVariable ["FAC_vehiclePlacement_blocked", !_clear];
         private _was = missionNamespace getVariable ["FAC_vehiclePlacement_wasClear", true];
@@ -493,6 +505,32 @@ FAC_vehiclePlacement_bindInput = {
     missionNamespace setVariable ["FAC_vehiclePlacement_frameEh", _frame];
 };
 
+// Local preview only. A simple object has no PhysX body of its own, but its Geometry LOD
+// is still a solid shape, and a real vehicle hits that shape. false drops PhysX and geometry
+// collision. Roadway (walk-on) LOD stays. Local effect, and the preview is local.
+// The command strings stay compiled because the SQF-VM command list predates Arma 2.18.
+// https://community.bistudio.com/wiki/createSimpleObject
+// https://community.bistudio.com/wiki/setPhysicsCollisionFlag
+// https://community.bistudio.com/wiki/getPhysicsCollisionFlag
+FAC_vehiclePlacement_clearGhostCollision = compile "_this setPhysicsCollisionFlag false";
+FAC_vehiclePlacement_ghostCollisionFlag = compile "getPhysicsCollisionFlag _this";
+FAC_vehiclePlacement_createGhost = {
+    params ["_class", "_posASL"];
+    private _ghost = createSimpleObject [_class, _posASL, true];
+    if (isNull _ghost) then {
+        private _model = getText (configFile >> "CfgVehicles" >> _class >> "model");
+        if (_model != "") then {
+            _ghost = createSimpleObject [_model, _posASL, true];
+        };
+    };
+    if (!isNull _ghost) then {
+        _ghost call FAC_vehiclePlacement_clearGhostCollision;
+        _ghost setVariable ["FAC_vehiclePlacement_isGhost", true];
+        _ghost setVariable ["FAC_vehiclePlacement_ghostClass", _class];
+    };
+    _ghost
+};
+
 FAC_vehiclePlacement_returnToGui = {
     params ["_returnTab", "_category", "_class"];
     if (!alive player) exitWith {};
@@ -548,14 +586,7 @@ FAC_vehiclePlacement_start = {
             sin _pitch0
         ], [0, 0, 1]];
 
-        private _ghost = _class createVehicleLocal (ASLToAGL (eyePos player));
-        if (!isNull _ghost) then {
-            _ghost allowDamage false;
-            // disableCollisionWith does not affect PhysX. Simulation off keeps the preview from shoving anything.
-            _ghost enableSimulation false;
-            _ghost disableCollisionWith player;
-            { _ghost deleteVehicleCrew _x } forEach crew _ghost;
-        };
+        private _ghost = [_class, eyePos player] call FAC_vehiclePlacement_createGhost;
         missionNamespace setVariable ["FAC_vehiclePlacement_ghost", _ghost];
         if (isNull _ghost) exitWith {
             [] call FAC_vehiclePlacement_teardown;
@@ -579,7 +610,16 @@ FAC_vehiclePlacement_start = {
                 if !(missionNamespace getVariable ["FAC_vehiclePlacement_blocked", true]) then {
                     private _ghostNow = missionNamespace getVariable ["FAC_vehiclePlacement_ghost", objNull];
                     if (!isNull _ghostNow) then {
-                        [_class, player, getPosASL _ghostNow, getDir _ghostNow] remoteExec ["FADE_spawnVehicleAtPos", 2];
+                        private _pos = getPosASL _ghostNow;
+                        private _dirNow = getDir _ghostNow;
+                        // Park the preview off the pose before the server create. The next frame puts it back.
+                        // On a listen server the create must run now, while the preview is still parked.
+                        _ghostNow setPosASL [0, 0, 1500];
+                        if (isServer) then {
+                            [_class, player, _pos, _dirNow] call FADE_spawnVehicleAtPos;
+                        } else {
+                            [_class, player, _pos, _dirNow] remoteExec ["FADE_spawnVehicleAtPos", 2];
+                        };
                         private _displayName = getText (configFile >> "CfgVehicles" >> _class >> "displayName");
                         if (_displayName == "") then { _displayName = _class };
                         systemChat format ["Requesting spawn: %1...", _displayName];

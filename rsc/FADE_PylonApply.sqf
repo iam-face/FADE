@@ -60,10 +60,13 @@ FADE_pylon_applyLocal = {
             };
         };
         if (!_ok) then {
-            _veh setPylonLoadout [_pylonIndex, "", true, _turret];
+            private _cleared = _veh setPylonLoadout [_pylonIndex, "", true, _turret];
+            if (!_cleared && {!(_curTurret isEqualTo _turret)}) then {
+                _cleared = _veh setPylonLoadout [_pylonIndex, "", true, _curTurret];
+            };
             diag_log format [
-                "[FADE] Pylon %1 on %2 rejected %3; slot cleared (not retried).",
-                _pylonIndex, typeOf _veh, _magazine
+                "[FADE] Pylon %1 on %2 rejected %3; slot clear %4 (not retried).",
+                _pylonIndex, typeOf _veh, _magazine, _cleared
             ];
         };
     };

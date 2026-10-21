@@ -14,6 +14,21 @@ FADE_surfaceIsDry = {
     !surfaceIsWater [_p select 0, _p select 1]
 };
 
+// True when _pos and a ring around it are clear of the sea. surfaceIsWater is false on the shoreline band where units still stand in the water.
+FADE_posClearOfWater = {
+    params ["_pos", ["_pad", 15]];
+    private _p = [_pos] call FADE_normPos3;
+    if !([_p] call FADE_surfaceIsDry) exitWith { false };
+    private _ok = true;
+    private _sample = [0, 0, 0];
+    private _i = 0;
+    for "_i" from 0 to 7 do {
+        _sample = [_p, _pad, _i * 45] call BIS_fnc_relPos;
+        if !([_sample] call FADE_surfaceIsDry) exitWith { _ok = false };
+    };
+    _ok
+};
+
 // Empty until the player base is committed. Altis sets the flag during Eden init.
 FADE_getPlayerBasePos = {
     if !(missionNamespace getVariable ["FADE_baseDefined", false]) exitWith { [] };

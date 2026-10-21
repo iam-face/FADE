@@ -45,53 +45,15 @@ FADE_runMission_ClearArea = {
         // BIS_fnc_findSafePos returns scalar 0 on failure  -  do not use count on that
         if (!(_center isEqualType []) || { count _center < 2 }) then { _center = _destPos };
         if (count _center < 3) then { _center = [(_center select 0), (_center select 1), 0] };
-        // Multiple camp compositions to choose from randomly for variety
-        private _campVariants = [
-            // Variant A: patrol forward base
-            [
-                ["Land_TentA_F", 12, 0], ["Land_TentDome_F", 15, 180], ["Land_CampingTable_F", 8, 90],
-                ["Campfire_burning_F", 6, 270], ["Box_NATO_Ammo_F", 18, 45], ["Box_NATO_Support_F", 18, 315]
-            ],
-            // Variant B: dug-in position with sandbags
-            [
-                ["Land_BagFence_Round_F", 5, 0], ["Land_BagFence_Round_F", 5, 90], ["Land_BagFence_Round_F", 5, 180],
-                ["Land_TentA_F", 16, 225], ["Campfire_burning_F", 4, 315], ["Box_NATO_Ammo_F", 20, 60]
-            ],
-            // Variant C: roadside checkpoint
-            [
-                ["Land_Barrier_01_wide_F", 8, 0], ["Land_Barrier_01_wide_F", 8, 180],
-                ["Land_CampingTable_F", 6, 90], ["Campfire_burning_F", 5, 270],
-                ["Land_TentDome_F", 14, 45], ["Box_NATO_Ammo_F", 16, 135]
-            ],
-            // Variant D: logistics camp
-            [
-                ["Land_TentA_F", 10, 30], ["Land_TentA_F", 10, 150], ["Land_TentDome_F", 14, 270],
-                ["Land_CampingTable_F", 7, 60], ["Land_CampingChair_V2_F", 8, 100],
-                ["Box_NATO_Ammo_F", 20, 0], ["Box_NATO_Support_F", 20, 180], ["Campfire_burning_F", 5, 230]
-            ],
-            // Variant E: minimal hide
-            [
-                ["Land_TentDome_F", 8, 0], ["Campfire_burning_F", 5, 180],
-                ["Box_NATO_Ammo_F", 12, 90], ["Land_CampingTable_F", 10, 270]
-            ]
-        ];
-        private _campComp = selectRandom _campVariants;
-        {
-            _x params ["_cls", "_dist", "_angle"];
-            private _p = [(_center select 0) + _dist * (cos _angle), (_center select 1) + _dist * (sin _angle), 0];
-            _p = [[_p, 0, 2, 0, 1, 0.3, 0, [], _p], _p] call FADE_findSafePosArray;
-            if (_p isEqualType [] && { count _p >= 2 }) then {
-                _p = [(_p select 0), (_p select 1), (_p param [2, 0])];
-                private _obj = createVehicle [_cls, _p, [], 0, "NONE"];
-                _obj setPosATL _p;
-                _campObjects pushBack _obj;
-                [_taskId, _obj] call FADE_missionEnt_registerObject;
-            };
-        } forEach _campComp;
+        _campObjects = [selectRandom FADE_comp_ids, _center, _taskId] call FADE_comp_spawn;
+        private _guardPos = _center;
+        if (count _campObjects > 0) then {
+            _guardPos = (_campObjects select 0) getVariable ["FADE_comp_anchor", _center];
+        };
 
         // Stationary enemies at the camp itself (ambient combat anims like HVT/Hostage guards)
         private _stationaryCount = [3 + floor random 5, 1] call _scaleOpforCount;
-        _allGroups append ([_center, _stationaryCount, _enemyUnitsCA, _sideEnemy, _taskId, 3, 12, 20] call FADE_missionSpawnGuards);
+        _allGroups append ([_guardPos, _stationaryCount, _enemyUnitsCA, _sideEnemy, _taskId, 3, 12, 20] call FADE_missionSpawnGuards);
     };
     if (count _center >= 2 && { count _center < 3 }) then { _center = [(_center select 0), (_center select 1), 0] };
     private _areaRadius = if (_useTown) then {

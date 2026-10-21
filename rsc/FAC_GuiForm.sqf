@@ -11,23 +11,24 @@
 
 FAC_GUI_GAP = 0.010;
 FAC_GUI_LABEL_H = 0.030;
-FAC_GUI_HINT_H = 0.024;
+FAC_GUI_HINT_H = 0.032;
 FAC_GUI_BTN_H = 0.042;
 FAC_GUI_INPUT_H = 0.040;
 FAC_GUI_SLIDER_H = 0.030;
 FAC_GUI_SECTION_H = 0.036;
 FAC_GUI_PAD = 0.006;
 
-// One line at FAC_GUI_HINT_H. Extra lines when the sentence is wider than the row.
+// One line at FAC_GUI_HINT_H, plus a little pad so the structured-text line is not clipped.
+// Char width is conservative so a long sentence gets a second line instead of running out of the box.
 FAC_gui_hintH = {
     params ["_hint", "_width"];
     if (_hint isEqualTo "") exitWith { 0 };
-    private _chars = floor (_width / 0.011);
-    if (_chars < 24) then { _chars = 24 };
+    private _chars = floor (_width / 0.0125);
+    if (_chars < 18) then { _chars = 18 };
     private _lines = ceil ((count _hint) / _chars);
     if (_lines < 1) then { _lines = 1 };
-    if (_lines > 3) then { _lines = 3 };
-    FAC_GUI_HINT_H * _lines
+    if (_lines > 4) then { _lines = 4 };
+    (FAC_GUI_HINT_H * _lines) + 0.008
 };
 
 // Editor preview images are 16:9. pixelW / pixelH are one pixel in GUI units, so the
@@ -110,8 +111,41 @@ FAC_gui_bind = {
     _ctrl ctrlAddEventHandler [_event, _code];
 };
 
+// A fill list keeps its caption above the box. A picture beside it starts at the
+// same y and has no caption, so the box ends short of the picture. Stretch the
+// box so the caption top through the box bottom matches the picture.
+// ctrlPosition is relative to the controls group, the same space as ctrlSetPosition.
+// https://community.bistudio.com/wiki/ctrlPosition
+FAC_gui_besideAlign = {
+    params ["_display", "_row"];
+    private _picIdc = -1;
+    private _listIdc = -1;
+    {
+        {
+            if (_x isEqualType [] && { count _x > 0 }) then {
+                if ((_x select 0) isEqualTo "picture") then { _picIdc = _x param [1, -1] };
+                if ((_x select 0) isEqualTo "list") then { _listIdc = _x param [5, -1] };
+            };
+        } forEach _x;
+    } forEach [_row param [1, []], _row param [2, []]];
+    if (_picIdc < 0 || { _listIdc < 0 }) exitWith {};
+    private _pic = _display displayCtrl _picIdc;
+    private _list = _display displayCtrl _listIdc;
+    if (isNull _pic || { isNull _list }) exitWith {};
+    private _pp = ctrlPosition _pic;
+    private _lp = ctrlPosition _list;
+    private _bottom = (_pp select 1) + (_pp select 3);
+    private _newH = _bottom - (_lp select 1);
+    if (_newH < 0.12) then { _newH = 0.12 };
+    _list ctrlSetPosition [_lp select 0, _lp select 1, _lp select 2, _newH];
+    _list ctrlCommit 0;
+};
+
 FAC_gui_put = {
     params ["_display", "_parent", "_class", "_idc", "_x", "_y", "_w", "_h", ["_text", ""]];
+    // FACRscFormHint is a static line and clips. Draw the hint as structured text so it wraps.
+    private _hint = _class isEqualTo "FACRscFormHint";
+    if (_hint) then { _class = "FACRscFormStructured"; };
     private _ctrl = if (isNull _parent) then {
         _display ctrlCreate [_class, _idc]
     } else {
@@ -119,9 +153,35 @@ FAC_gui_put = {
     };
     if (isNull _ctrl) exitWith { controlNull };
     _ctrl ctrlSetPosition [_x, _y, _w, _h];
-    if (_text != "") then { _ctrl ctrlSetText _text };
+    if (_hint) then {
+        _ctrl ctrlSetBackgroundColor [0, 0, 0, 0];
+        if (_text != "") then {
+            // ctrlSetStructuredText: https://community.bistudio.com/wiki/ctrlSetStructuredText
+            _ctrl ctrlSetStructuredText parseText ("<t color='#9ea3ad' size='0.9'>" + _text + "</t>");
+        };
+    } else {
+        if (_text != "") then { _ctrl ctrlSetText _text };
+    };
     _ctrl ctrlCommit 0;
     _ctrl
+};
+
+// Side-by-side columns inside the current scroll. Height is the taller column.
+FAC_gui_colsH = {
+    params ["_row", "_width"];
+    private _cols = _row param [1, []];
+    private _n = count _cols;
+    if (_n < 1) exitWith { 0 };
+    private _gap = 0.012;
+    private _cw = if (_n <= 1) then { _width } else { (_width - _gap * (_n - 1)) / _n };
+    private _maxH = 0;
+    {
+        private _m = [_x, _cw] call FAC_gui_measureRows;
+        private _h = (_m select 1) - FAC_GUI_GAP;
+        if (_h < 0) then { _h = 0 };
+        if (_h > _maxH) then { _maxH = _h };
+    } forEach _cols;
+    _maxH
 };
 
 // Height of one row, not counting the gap after it. Width matters for wrapping.
@@ -152,6 +212,9 @@ FAC_gui_rowHeight = {
         case "slider": {
             FAC_GUI_LABEL_H + ([_row param [2, ""], _width] call FAC_gui_hintH) + FAC_GUI_PAD + FAC_GUI_SLIDER_H
         };
+        case "sliderApply": {
+            ([_row param [2, ""], _width] call FAC_gui_hintH) + FAC_GUI_BTN_H
+        };
         case "edit";
         case "combo": {
             FAC_GUI_LABEL_H + ([_row param [2, ""], _width] call FAC_gui_hintH) + FAC_GUI_PAD + FAC_GUI_INPUT_H
@@ -176,6 +239,8 @@ FAC_gui_rowHeight = {
         case "beside": {
             ([_row, _width] call FAC_gui_besideBox) select 3
         };
+        case "cols": { [_row, _width] call FAC_gui_colsH };
+        case "band": { FAC_GUI_LABEL_H + FAC_GUI_PAD + 0.32 };
         case "button": {
             if !(_row param [7, true]) exitWith { 0 };
             ([_row param [2, ""], _width] call FAC_gui_hintH) + FAC_GUI_BTN_H
@@ -264,6 +329,9 @@ FAC_gui_placeCaption = {
 FAC_gui_placeRows = {
     params ["_display", "_parent", "_left", "_y0", "_w", "_maxH", "_rows", "_handler", ["_mode", "flow"]];
     private _fillH = 0.22;
+    // A band keeps a real block of the page. The other rows continue in the same scroll.
+    private _bandBox = (_maxH * 0.46) max 0.28;
+    if (_bandBox > 0.42) then { _bandBox = 0.42 };
     if (_mode isEqualTo "fit") then {
         private _used = 0;
         private _fills = 0;
@@ -273,7 +341,12 @@ FAC_gui_placeRows = {
                 private _hintExtra = [_x param [2, ""], _w] call FAC_gui_hintH;
                 _used = _used + FAC_GUI_LABEL_H + _hintExtra + FAC_GUI_PAD + FAC_GUI_GAP;
             } else {
-                _used = _used + ([_x, _w] call FAC_gui_rowHeight) + FAC_GUI_GAP;
+                if ((_x select 0) isEqualTo "band") then {
+                    _fills = _fills + 1;
+                    _used = _used + FAC_GUI_LABEL_H + FAC_GUI_PAD + FAC_GUI_GAP;
+                } else {
+                    _used = _used + ([_x, _w] call FAC_gui_rowHeight) + FAC_GUI_GAP;
+                };
             };
         } forEach _rows;
         if (_fills > 0) then {
@@ -325,6 +398,38 @@ FAC_gui_placeRows = {
                 _yy = _yy + FAC_GUI_PAD;
                 private _sl = [_display, _parent, "RscXSliderH", _row param [5, -1], _left, _yy, _w, FAC_GUI_SLIDER_H, ""] call FAC_gui_put;
                 [_sl, "SliderPosChanged", _handler, _row param [6, ""], _row param [7, "this"], []] call FAC_gui_bind;
+            };
+            case "sliderApply": {
+                // caption, hint, captionIdc, sliderIdc, action, mode, [button text, idc, action, args, style]
+                _hint = _row param [2, ""];
+                private _yy = _y;
+                if (_hint != "") then {
+                    private _hh = [_hint, _w] call FAC_gui_hintH;
+                    [_display, _parent, "FACRscFormHint", -1, _left, _yy, _w, _hh, _hint] call FAC_gui_put;
+                    _yy = _yy + _hh;
+                };
+                private _btnSpec = _row param [7, []];
+                private _btnW = 0.18;
+                private _labW = 0.32;
+                private _gap = 0.008;
+                private _slW = _w - _labW - _btnW - (2 * _gap);
+                if (_slW < 0.16) then {
+                    _labW = 0.22;
+                    _btnW = 0.16;
+                    _slW = (_w - _labW - _btnW - (2 * _gap)) max 0.10;
+                };
+                private _rowH = FAC_GUI_BTN_H;
+                private _labY = _yy + ((_rowH - FAC_GUI_LABEL_H) * 0.5);
+                private _slY = _yy + ((_rowH - FAC_GUI_SLIDER_H) * 0.5);
+                [_display, _parent, "FACRscFormLabel", _row param [3, -1], _left, _labY, _labW, FAC_GUI_LABEL_H, _row param [1, ""]] call FAC_gui_put;
+                private _slApply = [_display, _parent, "RscXSliderH", _row param [4, -1], _left + _labW + _gap, _slY, _slW, FAC_GUI_SLIDER_H, ""] call FAC_gui_put;
+                [_slApply, "SliderPosChanged", _handler, _row param [5, ""], _row param [6, "args"], []] call FAC_gui_bind;
+                private _applyBtn = [_display, _parent, "FACRscPrimaryBtn", _btnSpec param [1, -1], _left + _w - _btnW, _yy, _btnW, _rowH, _btnSpec param [0, ""]] call FAC_gui_put;
+                if (!isNull _applyBtn) then {
+                    _applyBtn ctrlSetBackgroundColor ([_btnSpec param [4, "primary"]] call FAC_gui_styleColor);
+                    _applyBtn ctrlCommit 0;
+                    [_applyBtn, "ButtonClick", _handler, _btnSpec param [2, ""], "args", _btnSpec param [3, []]] call FAC_gui_bind;
+                };
             };
             case "edit": {
                 [_display, _parent, _row param [1, ""], _row param [3, -1], _left, _y, _w, -1, ""] call FAC_gui_placeCaption;
@@ -402,6 +507,32 @@ FAC_gui_placeRows = {
                 _box params ["_lw", "_rw", "_colGap", "_bh"];
                 [_display, _parent, _left, _y, _lw, _bh, _row param [1, []], _handler, "fit"] call FAC_gui_placeRows;
                 [_display, _parent, _left + _lw + _colGap, _y, _rw, _bh, _row param [2, []], _handler, "fit"] call FAC_gui_placeRows;
+                [_display, _row] call FAC_gui_besideAlign;
+            };
+            case "cols": {
+                private _colList = _row param [1, []];
+                private _nCols = count _colList;
+                private _colGap = 0.012;
+                private _cw = if (_nCols <= 1) then { _w } else { (_w - _colGap * (_nCols - 1)) / _nCols };
+                private _ci = 0;
+                while { _ci < _nCols } do {
+                    [_display, _parent, _left + _ci * (_cw + _colGap), _y, _cw, 1, _colList select _ci, _handler, "flow"] call FAC_gui_placeRows;
+                    _ci = _ci + 1;
+                };
+            };
+            case "band": {
+                private _items = _row param [1, []];
+                private _nBand = count _items;
+                private _bandGap = 0.012;
+                private _bw = if (_nBand <= 1) then { _w } else { (_w - _bandGap * (_nBand - 1)) / _nBand };
+                private _bandH = _bandBox;
+                private _bi = 0;
+                while { _bi < _nBand } do {
+                    private _item = +(_items select _bi);
+                    if ((_item select 0) isEqualTo "list") then { _item set [4, _bandH] };
+                    [_display, _parent, _left + _bi * (_bw + _bandGap), _y, _bw, _bandH + 0.2, [_item], _handler, "flow"] call FAC_gui_placeRows;
+                    _bi = _bi + 1;
+                };
             };
             case "button": {
                 if !(_row param [7, true]) then {
@@ -446,6 +577,9 @@ FAC_gui_placeRows = {
         if ((_row select 0) isEqualTo "list" && { (_row param [4, 0]) isEqualTo "fill" }) then {
             private _hintExtra = [_row param [2, ""], _w] call FAC_gui_hintH;
             _adv = FAC_GUI_LABEL_H + _hintExtra + FAC_GUI_PAD + _fillH;
+        };
+        if ((_row select 0) isEqualTo "band") then {
+            _adv = FAC_GUI_LABEL_H + FAC_GUI_PAD + _bandBox;
         };
         if (_adv > 0) then {
             _y = _y + _adv + FAC_GUI_GAP;
@@ -771,7 +905,7 @@ FAC_gui_auditSpec = {
                 _errors pushBack format ["row is not an array at %1", _where];
             } else {
                 private _type = _x select 0;
-                private _known = ["section", "hint", "spacer", "segments", "buttonRow", "slider", "edit", "combo", "list", "text", "structured", "picture", "beside", "button", "stepper"];
+                private _known = ["section", "hint", "spacer", "segments", "buttonRow", "slider", "sliderApply", "edit", "combo", "list", "text", "structured", "picture", "beside", "cols", "band", "button", "stepper"];
                 if !(_type in _known) then {
                     _errors pushBack format ["unknown row %1 at %2", _type, _where];
                 };
@@ -786,6 +920,11 @@ FAC_gui_auditSpec = {
                         [_x param [3, -1], _where] call _noteIdc;
                         [_x param [4, -1], _where] call _noteIdc;
                         [_x param [5, -1], _where] call _noteIdc;
+                    };
+                    case "sliderApply": {
+                        [_x param [3, -1], _where] call _noteIdc;
+                        [_x param [4, -1], _where] call _noteIdc;
+                        [(_x param [7, []]) param [1, -1], _where] call _noteIdc;
                     };
                     case "edit";
                     case "combo": {
@@ -804,6 +943,12 @@ FAC_gui_auditSpec = {
                     case "beside": {
                         [_x param [1, []], _where + "/left"] call _walkRows;
                         [_x param [2, []], _where + "/right"] call _walkRows;
+                    };
+                    case "cols": {
+                        { [_x, _where + "/col"] call _walkRows } forEach (_x param [1, []]);
+                    };
+                    case "band": {
+                        [_x param [1, []], _where + "/band"] call _walkRows;
                     };
                     case "button": {
                         [_x param [3, -1], _where] call _noteIdc;
@@ -895,9 +1040,11 @@ FAC_gui_selfTest = {
     private _wide = [_rows, 0.90] call FAC_gui_measureRows;
     private _narrow = [_rows, 0.40] call FAC_gui_measureRows;
     private _sectionH = [[["section", "A"]], 0.9] call FAC_gui_measureRows;
+    private _slideH = [[["sliderApply", "Fuel: 0%", "", 1, 2, "go", "args", ["Apply", 3, "apply", [], "primary"]]], 0.9] call FAC_gui_measureRows;
     private _ok = (_wide select 1) > 0.05;
     _ok = _ok && { (_narrow select 1) > (_wide select 1) };
     _ok = _ok && { abs ((_sectionH select 1) - (FAC_GUI_SECTION_H + FAC_GUI_GAP)) < 0.0001 };
+    _ok = _ok && { abs ((_slideH select 1) - (FAC_GUI_BTN_H + FAC_GUI_GAP)) < 0.0001 };
     private _bad = [[["nope", "x"]]] call FAC_gui_auditSpec;
     _ok = _ok && { count _bad > 0 };
     private _dup = [[

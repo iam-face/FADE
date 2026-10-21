@@ -8,6 +8,7 @@ FADE_missionModuleList = [
     "rsc\FADE_AoSurvey.sqf",
     "rsc\FADE_FieldIntel.sqf",
     "rsc\FADE_MissionCommon.sqf",
+    "rsc\CompositionCommon.sqf",
     "rsc\FADE_RaidHelpers.sqf",
     "rsc\FADE_ObjectiveHelpers.sqf",
     "rsc\FADE_ZoneCaptureHelpers.sqf",

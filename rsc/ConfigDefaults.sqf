@@ -28,11 +28,6 @@ FADE_operationZoneCount = 6;
 // Legacy: random pool if ever needed  -  Operation uses FADE_operationZoneCount from scenario
 FADE_operationZoneCountChoices = [4, 6, 10];
 // Raid (global multi-objective) — FADE_raidObjectiveCount in ConfigClient.sqf
-FADE_raidQrfSkipDetectionWait = false;  // false = QRF waits until BLUFOR enters zone (recommended)
-FADE_raidQrfFirstDelayMin = 0;
-FADE_raidQrfFirstDelayMax = 30;
-FADE_raidQrfDetectionRadiusM = 350;      // QRF player-in-zone check (separate from intel refine below)
-FADE_raidQrfFootWave = true;             // Raid: foot squads spawn on QRF trigger before vehicle wave
 FADE_raidTimeoutSec = 0;                  // 0 = no time limit
 // Shared map search-zone circle (Asset Retrieval, Search & Destroy, Raid); was 220 / 250 / 150 then 110
 FADE_missionApproxZoneRadiusM = 55;
@@ -113,9 +108,7 @@ FADE_convoyMinRouteM = 5000;
 // Operation: enemy-held zone spawns an extra patrol vehicle every (min..max) seconds (randomized per tick)
 FADE_operationVehicleResupplyMin = 240;
 FADE_operationVehicleResupplyMax = 360;
-// Operation: minimum seconds between QRF waves (contested zone under attack)
-FADE_operationQrfCooldown = 180;
-// Operation: max fleet land vehicles (alive+canMove; QRF & aircraft excluded from count)
+// Operation: max fleet land vehicles (alive+canMove; QRF trucks are excluded from the count)
 FADE_operationMaxFleetVehicles = 10;
 // Operation: spawn position must be at least this far from all human players (m)
 FADE_operationSpawnMinDistPlayers = 1000;
@@ -158,7 +151,7 @@ FADE_civTalkRumoursPositiveQrf = [
     "Hear a firefight? Expect more soon."
 ];
 // Global mission types that use truck/zone QRF (excludes e.g. Intercept Convoy). Used for rumour hints only.
-FADE_globalMissionTypesWithQrf = ["AreaOfOperations", "Hostage", "HVT", "ClearArea", "CAS", "SearchDestroy", "Operation", "Raid", "AssetRetrieval", "CSAR", "EscapeEvasion"];
+FADE_globalMissionTypesWithQrf = ["Hostage", "HVT", "ClearArea", "CAS", "SearchDestroy", "Operation", "Raid", "AssetRetrieval", "CSAR", "EscapeEvasion", "CASEVAC"];
 FADE_civTalkRumoursNegative = ["I do not listen to gossip.", "I have nothing to tell you.", "Why ask me?", "You should not be here asking questions.", "I keep to myself."];
 FADE_civTalkGestureAway = ["Fine, I am leaving.", "All right, all right.", "Okay, okay."];
 FADE_civTalkGestureStay = ["I will stay.", "Okay, I will not move.", "Understood."];
@@ -681,24 +674,24 @@ FADE_hostageIdentities = [
 FADE_hostageFreeHoldSec = 5;
 FADE_hostageFreeDistM = 3;
 
-// Counter-attack QRF (HVT / Hostage / Clear Area): seconds to wait after first player-in-zone before wave 1 (random between min..max).
-// Testing: short delay. Production: e.g. min 120, max 360.
-FADE_counterAttackFirstDelayMin = 120;
-FADE_counterAttackFirstDelayMax = 360;
-FADE_counterAttackFootSquadsMin = 2;
-FADE_counterAttackFootSquadsMax = 3;
-FADE_counterAttackFootSpawnDistMin = 80;   // foot QRF tier: spawn near objective (often inside buildings)
-FADE_counterAttackFootSpawnDistMax = 220;
-FADE_counterAttackFootSquadSizeMin = 4;
-FADE_counterAttackFootSquadSizeMax = 6;
-FADE_counterAttackFootBuildingChance = 0.65; // prefer interior spawn so players do not see QRF pop-in
-// QRF spawn must be farther than this from FADE_basePos (road/safe pos). Cargo loads into trucks after drivers move (stagger sec).
-FADE_counterAttackMinDistFromBase = 1000;
-FADE_counterAttackCargoStaggerSec = 0.35;
-// When QRF spawns with no players left in the objective / contested zone, driver waypoints retarget this often (friendly player centroid).
-FADE_qrfHuntWaypointIntervalS = 60;
-// RPT QRF lifecycle logs (detection, foot wave, vehicle staging, cargo unload, hunt mode). Grep H21 QRF.
-FADE_qrfDebug = true;
+// QRF. One budget per mission. Delays are seconds. Foot distance is metres from the objective.
+FADE_qrfKnowsAboutThreshold = 1.5;
+FADE_qrfDetectionRadius = 450;
+FADE_qrfFirstDelayMin = 120;
+FADE_qrfFirstDelayMax = 360;
+FADE_qrfBetweenMin = 540;
+FADE_qrfBetweenMax = 660;
+FADE_qrfWaveCount = 2;
+FADE_qrfPollInterval = 10;
+FADE_qrfFootDistMin = 280;
+FADE_qrfFootDistMax = 450;
+FADE_qrfFootMinFromPlayers = 200;
+FADE_qrfFootBuildingChance = 0.4;
+FADE_qrfMinCargoSeats = 4;
+FADE_qrfMinDistFromBase = 1000;
+FADE_qrfCargoStaggerSec = 0.35;
+FADE_qrfFollowIntervalS = 60;
+FADE_qrfDebug = false;
 
 FADE_vgPollEmptyIntervalS = 30;
 // Ambient civ: skip zone ticks when nearest player farther than this (defaults to activate dist).

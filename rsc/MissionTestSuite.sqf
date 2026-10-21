@@ -603,6 +603,8 @@ FAC_missionTestSuite_runServer = {
         "FADE_recruit_dismissUnits",
         "FADE_build_place",
         "FADE_build_remove",
+        "FADE_build_undo",
+        "FADE_build_sendList",
         "FADE_build_signSet"
     ];
     {
@@ -780,6 +782,21 @@ FAC_missionTestSuite_runServer = {
         private _safePos = [[_bpSafe, 0, 80, 8, 1, 0.3, 0, [], _bpSafe], _bpSafe] call FADE_findSafePosArray;
         _ok = _safePos isEqualType [] && { count _safePos >= 2 };
         if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_findSafePosArray %1", _safePos select [0, 2]]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_findSafePosArray"; };
+        private _wetProbe = [];
+        private _wetTry = [0, 0, 0];
+        private _wetI = 0;
+        for "_wetI" from 0 to 16 do {
+            if (count _wetProbe < 2) then {
+                _wetTry = [200 + (_wetI * 400), 200, 0];
+                if !([_wetTry] call FADE_surfaceIsDry) then { _wetProbe = _wetTry };
+            };
+        };
+        if (count _wetProbe < 2 || { isNil "FADE_posClearOfWater" }) then {
+            diag_log "[FAC TestSuite] SKIP (server): FADE_posClearOfWater (no wet point)";
+        } else {
+            _ok = !([_wetProbe, 15] call FADE_posClearOfWater);
+            if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_posClearOfWater rejects sea"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_posClearOfWater rejects sea"; };
+        };
     } else {
         _fail = _fail + 1;
         diag_log "[FAC TestSuite] FAIL (server): FADE_findSafePosArray missing";
@@ -801,8 +818,17 @@ FAC_missionTestSuite_runServer = {
         _ok = _lore isEqualType [] && { count _lore >= 3 } && { (_lore select 0) isEqualType "" } && { (_lore select 1) isEqualType "" } && { (_lore select 2) isEqualType "" } && { (_lore select 0) != "" } && { (_lore select 2) find "BACKGROUND" >= 0 } && { (_lore select 2) find "Threat assessment:" >= 0 } && { (_lore select 2) find "Commander's intent:" >= 0 } && { (_lore select 1) find "SITUATION:" < 0 } && { count (_lore select 2) > 120 };
         if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_lore_generate"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_lore_generate"; };
         private _loreRaid = ["Raid", FADE_basePos, "Operation Test"] call FADE_lore_generate;
-        _ok = (_loreRaid select 2) find "is reported to have" >= 0 || { (_loreRaid select 2) find "is active near" >= 0 };
-        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_lore_generate enemy lore line"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_lore_generate enemy lore line"; };
+        private _raidSmeac = _loreRaid select 2;
+        _ok = false;
+        {
+            if (_raidSmeac find _x >= 0) exitWith { _ok = true };
+        } forEach [
+            "seized several sites",
+            "split its force between nearby towns",
+            "fortified several towns",
+            "is active near"
+        ];
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_lore_generate enemy lore line"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_lore_generate enemy lore line: %1", _raidSmeac select [0, 240]]; };
         private _lore2 = ["HVT", FADE_basePos, "Operation Test"] call FADE_lore_generate;
         _ok = _lore isEqualTo _lore2;
         if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_lore_generate seeded"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_lore_generate seeded"; };
@@ -885,6 +911,7 @@ FAC_missionTestSuite_runServer = {
         "FADE_mission_createRadiusMarker", "FADE_mission_createObjectiveMarker",
         "FADE_mission_computeSearchZone", "FADE_mission_positionsCentroid",
         "FADE_mission_spawnFieldContactEnemies", "FADE_missionSpawnGuards", "FADE_cargo_cleanupSiteDeferred",
+        "FADE_comp_spawn", "FADE_comp_siteOk", "FADE_comp_findAnchor", "FADE_comp_pieceCount",
         "FADE_mission_findPickupSpawnPos", "FADE_mission_spawnFriendlyPickupGroup", "FADE_mission_spawnCasualtyHeliWreck", "FADE_mission_groundAtlPos",
         "FADE_mission_applyPickupGroupPosture", "FADE_mission_casevacCasualtyPrep", "FADE_mission_csarPilotWoundPrep",
         "FADE_zone_createCaptureMarkerPair", "FADE_zone_tickOperationCapture", "FADE_zone_tickInvasionHold",
@@ -896,6 +923,106 @@ FAC_missionTestSuite_runServer = {
         "FADE_aoSurvey_build", "FADE_fieldIntel_startForMission", "FADE_fieldIntel_endMission", "FADE_fieldIntel_endRaidZones",
         "FADE_map_gridOriginOffset"
     ];
+
+    if (!isNil "FADE_comp_defs" && { !isNil "FADE_comp_ids" }) then {
+        _ok = (count FADE_comp_ids) == 3 && { FADE_comp_ids isEqualTo ["camp", "mortarPit", "commsRelay"] };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_comp_ids"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_comp_ids %1", FADE_comp_ids]; };
+        private _campPieces = ((FADE_comp_defs getOrDefault ["camp", []]) param [1, []]);
+        private _campTents = { (_x select 0) in ["Land_TentA_F", "Land_TentDome_F"] } count _campPieces;
+        _ok = _campTents == 3;
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): camp composition has 3 tents"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): camp composition tents %1", _campTents]; };
+        private _mortarPieces = ((FADE_comp_defs getOrDefault ["mortarPit", []]) param [1, []]);
+        _ok = ({ (_x select 0) find "Mortar" >= 0 } count _mortarPieces) == 0 && { count _mortarPieces >= 5 };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): mortar pit is scenery"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): mortar pit is scenery"; };
+        private _commsPieces = ((FADE_comp_defs getOrDefault ["commsRelay", []]) param [1, []]);
+        _ok = ({ (_x select 0) == "Land_Communication_F" } count _commsPieces) == 1;
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): comms relay has a mast"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): comms relay has a mast"; };
+        _ok = (["no-such-comp", [0, 0, 0], ""] call FADE_comp_spawn) isEqualTo [];
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_comp_spawn unknown id"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_comp_spawn unknown id"; };
+
+        private _compOrigin = missionNamespace getVariable ["FADE_basePos", [15000, 15000, 0]];
+        if (!(_compOrigin isEqualType []) || { count _compOrigin < 2 }) then { _compOrigin = [15000, 15000, 0] };
+        private _compAnchor = [];
+        private _compProbe = [0, 0, 0];
+        private _compI = 0;
+        for "_compI" from 0 to 24 do {
+            if (count _compAnchor < 2) then {
+                _compProbe = [
+                    (_compOrigin select 0) + ((200 + (_compI * 80)) * (cos (_compI * 36))),
+                    (_compOrigin select 1) + ((200 + (_compI * 80)) * (sin (_compI * 36))),
+                    0
+                ];
+                _compAnchor = [_compProbe, 12] call FADE_comp_findAnchor;
+            };
+        };
+        if (count _compAnchor < 2) then {
+            diag_log "[FAC TestSuite] SKIP (server): composition spawn (no flat site near base)";
+        } else {
+            private _compId = "";
+            private _compTid = "";
+            private _compObjs = [];
+            private _compPlaced = _compAnchor;
+            private _compRadius = 0;
+            private _compFar = false;
+            private _compReg = [];
+            private _compFires = 0;
+            private _compTentN = 0;
+            private _compMasts = 0;
+            private _compStill = [];
+            {
+                _compId = _x;
+                _compTid = "FADE_test_comp_" + _compId;
+                _compObjs = [_compId, _compAnchor, _compTid, 0] call FADE_comp_spawn;
+                _compRadius = ((FADE_comp_defs get _compId) select 0);
+                _ok = (count _compObjs) == ([_compId] call FADE_comp_pieceCount) && { count _compObjs > 0 };
+                if (_ok && { count _compObjs > 0 }) then {
+                    _compPlaced = (_compObjs select 0) getVariable ["FADE_comp_anchor", _compAnchor];
+                    _compFar = false;
+                    {
+                        if ((_x distance2D _compPlaced) > (_compRadius + 1)) then { _compFar = true };
+                    } forEach _compObjs;
+                    _ok = !_compFar;
+                };
+                if (_ok && { _compId == "camp" }) then {
+                    _compFires = { typeOf _x == "Campfire_burning_F" && { (_x distance2D _compPlaced) < 1.5 } } count _compObjs;
+                    _compTentN = { typeOf _x in ["Land_TentA_F", "Land_TentDome_F"] } count _compObjs;
+                    _ok = _compFires == 1 && { _compTentN == 3 };
+                };
+                if (_ok && { _compId == "commsRelay" }) then {
+                    _compMasts = { typeOf _x == "Land_Communication_F" && { (_x distance2D _compPlaced) < 1.5 } } count _compObjs;
+                    _ok = _compMasts == 1;
+                };
+                _compReg = (missionNamespace getVariable [format ["FADE_missionEnt_%1", _compTid], createHashMap]) getOrDefault ["objects", []];
+                if (_ok) then { _ok = count _compReg == count _compObjs };
+                if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_comp_spawn %1 (%2)", _compId, count _compObjs]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_comp_spawn %1 count=%2 reg=%3", _compId, count _compObjs, count _compReg]; };
+                [_compTid, "", false] call FADE_cleanupMissionEntities;
+                _compStill = nearestObjects [_compPlaced, ["All"], _compRadius + 2] select {
+                    (_x getVariable ["FADE_comp_id", ""]) == _compId
+                };
+                _ok = (count _compStill) == 0 && { missionNamespace getVariable [format ["FADE_missionEnt_cleaned_%1", _compTid], false] };
+                if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): composition cleanup %1", _compId]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): composition cleanup %1 still=%2", _compId, count _compStill]; };
+            } forEach FADE_comp_ids;
+        };
+
+        private _compWet = [];
+        private _compWetTry = [0, 0, 0];
+        private _compW = 0;
+        for "_compW" from 0 to 12 do {
+            if (count _compWet < 2) then {
+                _compWetTry = [400 + (_compW * 350), 400, 0];
+                if !([_compWetTry] call FADE_surfaceIsDry) then { _compWet = _compWetTry };
+            };
+        };
+        if (count _compWet < 2) then {
+            diag_log "[FAC TestSuite] SKIP (server): composition water reject (no wet point)";
+        } else {
+            _ok = !([_compWet, 12] call FADE_comp_siteOk);
+            private _compWetObjs = ["camp", _compWet, "FADE_test_comp_wet", 0] call FADE_comp_spawn;
+            _ok = _ok && { count _compWetObjs == 0 };
+            if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): composition rejects water"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): composition rejects water spawned=%1", count _compWetObjs]; };
+            if (count _compWetObjs > 0) then { ["FADE_test_comp_wet", "", false] call FADE_cleanupMissionEntities };
+        };
+    };
 
     diag_log "[FAC TestSuite] --- MARKERS / GRID / FIELD INTEL ---";
 
@@ -944,19 +1071,48 @@ FAC_missionTestSuite_runServer = {
         if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_aoSurvey_build"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_aoSurvey_build"; };
     };
 
-    if (!isNil "FADE_fieldIntel_applyGeometry") then {
-        private _fiAnchor = [13000, 16000, 0];
-        private _fiTrue = [13090, 15910, 0];
+    if (!isNil "FADE_fieldIntel_applyGeometry" && { !isNil "FADE_fieldIntel_addPoints" }) then {
+        private _fiTask = "FADE_test_fieldIntel";
+        private _fiA = [13000, 16000, 0];
+        private _fiB = [13160, 16000, 0];
+        private _fiAnchor = [13080, 16000, 0];
+        private _fiZone = "FADE_test_fieldIntel_grid";
         private _fiState = [
-            "FADE_test_fieldIntel", "HVT", _fiTrue, _fiAnchor, [_fiTrue],
-            "ellipse", "", "FADE_test_fieldIntel_zone", [], 200,
-            75, 50, "ColorEAST", "FADE_test_fieldIntel"
+            _fiTask, "Hostage", _fiAnchor, _fiAnchor, [_fiA, _fiB],
+            "grid", "", _fiZone, [], 200,
+            0, 0, "ColorEAST", _fiTask,
+            objNull, _fiAnchor, [200, 200]
         ];
-        private _applied = [_fiState, 75, false] call FADE_fieldIntel_applyGeometry;
-        private _zoneR = _applied select 9;
-        private _zonePos = _applied select 3;
-        _ok = (_fiTrue distance2D _zonePos) <= (_zoneR + 1);
-        if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_fieldIntel_applyGeometry contains true pos (r=%1)", _zoneR]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_fieldIntel_applyGeometry contains true pos"; };
+        missionNamespace setVariable ["FADE_fieldIntel_" + _fiTask, _fiState];
+        private _fiInside = {
+            params ["_p"];
+            private _c = getMarkerPos _fiZone;
+            private _hs = getMarkerSize _fiZone;
+            (markerShape _fiZone == "RECTANGLE")
+            && { abs ((_p select 0) - (_c select 0)) <= ((_hs select 0) + 1) }
+            && { abs ((_p select 1) - (_c select 1)) <= ((_hs select 1) + 1) }
+        };
+        [_fiTask, 18, "Body search"] call FADE_fieldIntel_addPoints;
+        _ok = getMarkerColor _fiZone == "";
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): field intel below 25 does not redraw"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): field intel below 25 redrew the zone"; };
+        [_fiTask, 12, "Body search"] call FADE_fieldIntel_addPoints;
+        _ok = ([_fiA] call _fiInside) && { [_fiB] call _fiInside };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): field intel 30pt grid contains both objectives"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): field intel 30pt grid missed an objective shape=%1 pos=%2 size=%3", markerShape _fiZone, getMarkerPos _fiZone, getMarkerSize _fiZone]; };
+        [_fiTask, 70, "Body search"] call FADE_fieldIntel_addPoints;
+        _ok = ([_fiA] call _fiInside) && { [_fiB] call _fiInside };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): field intel 100pt grid contains both objectives"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): field intel 100pt grid missed an objective shape=%1 pos=%2 size=%3", markerShape _fiZone, getMarkerPos _fiZone, getMarkerSize _fiZone]; };
+        [_fiTask] call FADE_fieldIntel_endMission;
+        private _fiPartial = [[_fiA, _fiB], false, 2] call FADE_fieldIntel_diaryBody;
+        private _fiGridA = mapGridPosition _fiA;
+        _ok = (_fiPartial find "grid") < 0 && { (_fiPartial find _fiGridA) < 0 };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): field intel partial diary has no grid"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): field intel partial diary leaked a grid: %1", _fiPartial]; };
+        private _fiFull = [[_fiA, _fiB], true, 2] call FADE_fieldIntel_diaryBody;
+        _ok = (_fiFull find _fiGridA) >= 0 && { (_fiFull find (mapGridPosition _fiB)) >= 0 };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): field intel confirmed diary lists objective grids"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): field intel confirmed diary: %1", _fiFull]; };
+        private _fiHint = [25, 2] call FADE_fieldIntel_hintText;
+        private _fiHintFull = [100, 2] call FADE_fieldIntel_hintText;
+        _ok = (_fiHint find "grid") < 0 && { (_fiHint find "objectives") >= 0 } && { (_fiHintFull find "refined") < 0 } && { (_fiHintFull find "objectives") >= 0 };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): field intel hints name the objectives and omit the grid"; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): field intel hints partial=%1 full=%2", _fiHint, _fiHintFull]; };
     };
 
     if (!isNil "FADE_missionRun_getContext") then {
@@ -1425,6 +1581,51 @@ FAC_missionTestSuite_runServer = {
         };
     };
 
+    // Empty FLY + a forward shove leaves the engine off and the helicopter nose-dives.
+    if (!isNil "FADE_opforAir_placeAirborne" && { !isNil "FADE_opforAir_keepAirborne" }) then {
+        private _heliClass = "O_Heli_Light_02_unarmed_F";
+        if !(isClass (configFile >> "CfgVehicles" >> _heliClass)) then { _heliClass = "O_Heli_Light_02_dynamicLoadout_F" };
+        private _pilotClass = "O_helipilot_F";
+        if !(isClass (configFile >> "CfgVehicles" >> _pilotClass)) then { _pilotClass = "O_Soldier_F" };
+        private _xy = [4000, 4000];
+        private _base = missionNamespace getVariable ["FADE_basePos", []];
+        if (_base isEqualType [] && { count _base >= 2 }) then {
+            _xy = [(_base select 0) + 3500, (_base select 1) + 500];
+        };
+        if (!isNil "FADE_mapClampPos2D") then { _xy = [_xy, 300] call FADE_mapClampPos2D };
+        private _atl = [_xy select 0, _xy select 1, 300];
+        private _heli = createVehicle [_heliClass, _atl, [], 0, "CAN_COLLIDE"];
+        if (isNull _heli) then {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): OPFOR air test heli was not created";
+        } else {
+            _heli allowDamage false;
+            private _sideE = missionNamespace getVariable ["FADE_sideEnemy", east];
+            private _airGrp = createGroup _sideE;
+            private _pilot = _airGrp createUnit [_pilotClass, _atl, [], 0, "NONE"];
+            if (!isNull _pilot) then { _pilot moveInDriver _heli };
+            private _flew = [_heli, _atl, 0, 200] call FADE_opforAir_placeAirborne;
+            [_heli, 200] call FADE_opforAir_keepAirborne;
+            sleep 1.5;
+            private _aglNow = (getPosATL _heli) select 2;
+            private _engine = isEngineOn _heli;
+            _ok = _flew && { alive _heli } && { _engine } && { !(isTouchingGround _heli) } && { _aglNow > 40 };
+            if (_ok) then {
+                _pass = _pass + 1;
+                diag_log format ["[FAC TestSuite] PASS (server): OPFOR heli stayed airborne engine=%1 agl=%2", _engine, _aglNow];
+            } else {
+                _fail = _fail + 1;
+                diag_log format [
+                    "[FAC TestSuite] FAIL (server): OPFOR heli dive engine=%1 agl=%2 flew=%3 touching=%4",
+                    _engine, _aglNow, _flew, isTouchingGround _heli
+                ];
+            };
+            { if (!isNull _x) then { deleteVehicle _x } } forEach units _airGrp;
+            if (!isNull _heli) then { deleteVehicle _heli };
+            if (!isNull _airGrp) then { deleteGroup _airGrp };
+        };
+    };
+
     if (!isNil "FADE_recruit_buildFactionList") then {
         private _rflTry = [{ [] call FADE_recruit_buildFactionList }] call FAC_missionTestSuite__tryCall;
         _rflTry params ["_rflOk", "_rflRes", "_rflErr"];
@@ -1468,7 +1669,8 @@ FAC_missionTestSuite_runServer = {
     _ok = !isNull _vehicleGuiAnchor;
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): Eden vehicle GUI anchor (%1)", _vehicleGuiLabel]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): Eden vehicle GUI anchor missing (terminalVeh or vehicleBoard)"; };
 
-    // A magazine the pylon does not list is not applied. Pilot turret [-1] normalizes to [].
+    // A magazine the pylon does not list is not applied. Pilot path [-1] normalizes to [] above.
+    // Attack-heli pylon 1 is a gunner hardpoint and stays on turret [0].
     _ok = (!isNil "FADE_pylon_normalizeTurret")
         && { ([[-1]] call FADE_pylon_normalizeTurret) isEqualTo [] }
         && { ([[0]] call FADE_pylon_normalizeTurret) isEqualTo [0] };
@@ -1489,7 +1691,7 @@ FAC_missionTestSuite_runServer = {
                 private _rejected = [_pylonVeh, 1, "FADE_NotARealPylonMag", [-1], -1] call FADE_pylon_applyLocal;
                 private _slotMag = (getPylonMagazines _pylonVeh) param [0, ""];
                 private _slotTurret = [((getAllPylonsInfo _pylonVeh) param [0, []]) param [2, []]] call FADE_pylon_normalizeTurret;
-                _ok = (!_rejected) && {_slotMag != "FADE_NotARealPylonMag"} && {_slotTurret isEqualTo []};
+                _ok = (!_rejected) && {_slotMag != "FADE_NotARealPylonMag"} && {_slotTurret isEqualTo [] || {_slotTurret isEqualTo [0]}};
                 if (_ok) then {
                     _pass = _pass + 1;
                     diag_log format ["[FAC TestSuite] PASS (server): rejected pylon magazine cleared on %1", _pylonClass];
@@ -1588,6 +1790,48 @@ FAC_missionTestSuite_runServer = {
             } else {
                 _fail = _fail + 1;
                 diag_log "[FAC TestSuite] FAIL (server): spawn RPC with no player created a vehicle";
+            };
+
+            private _preview = [_placeClass, [0, 0, 1000]] call FAC_vehiclePlacement_createGhost;
+            if (!isNull _preview && { isSimpleObject _preview }) then {
+                _pass = _pass + 1;
+                diag_log format ["[FAC TestSuite] PASS (server): placement preview for %1 is a simple object", _placeClass];
+                // getPhysicsCollisionFlag returns one boolean in an array.
+                // https://community.bistudio.com/wiki/getPhysicsCollisionFlag
+                private _colFlag = _preview call FAC_vehiclePlacement_ghostCollisionFlag;
+                if (_colFlag isEqualType [] && { (_colFlag param [0, true]) isEqualTo false }) then {
+                    _pass = _pass + 1;
+                    diag_log format ["[FAC TestSuite] PASS (server): placement preview for %1 has no PhysX collision", _placeClass];
+                } else {
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): placement preview for %1 collision flag %2", _placeClass, _colFlag];
+                };
+            } else {
+                _fail = _fail + 1;
+                diag_log format ["[FAC TestSuite] FAIL (server): placement preview for %1 is not a simple object", _placeClass];
+            };
+            if (!isNull _preview) then { deleteVehicle _preview };
+
+            private _decoy = _placeClass createVehicleLocal [0, 0, 1000];
+            if (isNull _decoy) then {
+                _fail = _fail + 1;
+                diag_log "[FAC TestSuite] FAIL (server): placement ghost decoy was not created";
+            } else {
+                _decoy allowDamage false;
+                _decoy enableSimulation false;
+                _decoy setVariable ["FAC_vehiclePlacement_isGhost", true];
+                deleteVehicleCrew _decoy;
+                _decoy setPosASL _clear;
+                _decoy setDir 90;
+                private _ghostWhy = [_placeClass, _clear, 90] call FADE_vehiclePlacement_reason;
+                if (_ghostWhy == "") then {
+                    _pass = _pass + 1;
+                    diag_log "[FAC TestSuite] PASS (server): placement ghost does not block the pose";
+                } else {
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): placement ghost blocked the pose (%1)", _ghostWhy];
+                };
+                deleteVehicle _decoy;
             };
 
             private _placed = [_placeClass, _clear, 90] call FADE_vehiclePlacement_createAt;
@@ -2133,6 +2377,36 @@ FAC_missionTestSuite_runServer = {
             };
         };
 
+        private _undoSpot = [];
+        for "_i" from 2 to 40 do {
+            private _tryU = [(_buildBase select 0) + (_i * 5), (_buildBase select 1) - 40, 0];
+            if (([_buildClass, _tryU, 0, objNull] call FADE_build_spotBlocked) == "") exitWith { _undoSpot = _tryU };
+        };
+        if (_undoSpot isEqualTo []) then {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): build undo no spot";
+        } else {
+            private _undoPlaced = [_buildUnit, _buildClass, _undoSpot, 0, [0, 0, 1], false] call FADE_build_place;
+            private _undoObj = objNull;
+            {
+                if (_x getVariable ["FADE_build_placed", false] && { (_x distance2D _undoSpot) < 4 }) exitWith { _undoObj = _x };
+            } forEach nearestObjects [_undoSpot, ["All"], 8];
+            private _undoId = if (isNull _undoObj) then { "" } else { netId _undoObj };
+            private _undoOk = [_buildUnit] call FADE_build_undo;
+            private _undoLeft = objNull;
+            {
+                if (_x getVariable ["FADE_build_placed", false] && { (_x distance2D _undoSpot) < 4 }) exitWith { _undoLeft = _x };
+            } forEach nearestObjects [_undoSpot, ["All"], 8];
+            private _undoStack = FADE_build_undoStack getOrDefault [getPlayerUID _buildUnit, []];
+            if (_undoPlaced && { _undoOk } && { _undoId != "" } && { isNull _undoLeft } && { !(_undoId in _undoStack) } && { !(_undoId in (keys FADE_build_registry)) }) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): build undo last piece";
+            } else {
+                _fail = _fail + 1;
+                diag_log format ["[FAC TestSuite] FAIL (server): build undo placed=%1 ok=%2 id=%3 left=%4", _undoPlaced, _undoOk, _undoId, !isNull _undoLeft];
+            };
+        };
+
         private _clearSpot = [];
         for "_i" from 2 to 40 do {
             private _tryClear = [(_buildBase select 0) - (_i * 5), (_buildBase select 1) - 40, 0];
@@ -2154,6 +2428,17 @@ FAC_missionTestSuite_runServer = {
             } else {
                 _fail = _fail + 1;
                 diag_log format ["[FAC TestSuite] FAIL (server): build clear-all placed=%1 n=%2 left=%3 reg=%4", _clearPlaced, _cleared, !isNull _left, count FADE_build_registry];
+            };
+        };
+
+        if !(_clearSpot isEqualTo []) then {
+            private _undoNone = [_buildUnit] call FADE_build_undo;
+            if (!_undoNone && { (count FADE_build_undoStack) == 0 }) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): build undo empty";
+            } else {
+                _fail = _fail + 1;
+                diag_log format ["[FAC TestSuite] FAIL (server): build undo empty returned=%1 stacks=%2", _undoNone, count FADE_build_undoStack];
             };
         };
 

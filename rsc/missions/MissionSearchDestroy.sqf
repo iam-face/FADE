@@ -312,7 +312,15 @@ FADE_runMission_SearchDestroy = {
     private _sdMarkerOut = [_taskId, _markerName, _sdAnchor, _areaRadius, _markerEnemy, "objective", _operationName, -1, -1, _sdBldPos] call FADE_mission_createObjectiveMarker;
     private _displayRadius = _sdMarkerOut param [3, _areaRadius];
 
-    [_taskId, "SearchDestroy", _sdAnchor, _sdMarkerOut, _allGroups, _markerEnemy] call FADE_fieldIntel_startForMission;
+    private _sdObjectivePos = if (count _sdAmmoObjs > 0) then {
+        _sdAmmoObjs apply {
+            private _p = getPosATL _x;
+            if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
+        }
+    } else {
+        +_sdBldPos
+    };
+    [_taskId, "SearchDestroy", _sdAnchor, _sdMarkerOut, _allGroups, _markerEnemy, "", _sdObjectivePos] call FADE_fieldIntel_startForMission;
 
     private _grid = mapGridPosition _center;
     private _cacheCount = count _sdAmmoObjs;

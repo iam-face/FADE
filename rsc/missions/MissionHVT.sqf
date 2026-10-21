@@ -115,7 +115,7 @@ FADE_runMission_HVT = {
     private _allGroups = ([_hvtGroup, _guardGroup] + _areaGroups + _patrolGroups) select { !isNull _x };
     [([_guardGroup] + _patrolGroups) select { !isNull _x }, _basePos] call FADE_registerEnemyRetreat;
 
-    [_taskId, "HVT", _hvtObjectivePos, _markerOut, _allGroups, _markerEnemy] call FADE_fieldIntel_startForMission;
+    [_taskId, "HVT", _hvtObjectivePos, _markerOut, _allGroups, _markerEnemy, "", [_hvtObjectivePos], _hvt] call FADE_fieldIntel_startForMission;
 
     [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
     if (!isNull _hvtBarrel) then { [_taskId, _hvtBarrel] call FADE_missionEnt_registerObject };
