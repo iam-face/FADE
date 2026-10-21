@@ -5,6 +5,9 @@ FADE_scenarioWeather = "Clear";
 if (isNil "FADE_scenarioEnemyFaction") then { FADE_scenarioEnemyFaction = "OPF_F"; };
 if (isNil "FADE_scenarioFriendlyFaction") then { FADE_scenarioFriendlyFaction = "BLU_F"; };
 if (isNil "FADE_scenarioCivFaction") then { FADE_scenarioCivFaction = "CIV_F"; };
+if (isNil "FADE_scenarioBluforFaction") then { FADE_scenarioBluforFaction = "BLU_F"; };
+if (isNil "FADE_scenarioRedforFaction") then { FADE_scenarioRedforFaction = "OPF_F"; };
+if (isNil "FADE_scenarioIndepFaction") then { FADE_scenarioIndepFaction = "IND_F"; };
 
 // Mission types hidden from Missions GUI and blocked on start (server uses same list from Config.sqf).
 FADE_disabledMissionTypes = ["InterceptConvoy"];

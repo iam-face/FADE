@@ -98,7 +98,7 @@ FADE_opforDroneIntensity = {
 // -----------------------------------------------------------------------------
 FADE_cqbPosNames = [];
 private _cqbI = 1;
-while { _cqbI <= 49 } do {
+while { _cqbI <= 52 } do {
     FADE_cqbPosNames pushBack format ["CQB_POS_%1", _cqbI];
     _cqbI = _cqbI + 1;
 };

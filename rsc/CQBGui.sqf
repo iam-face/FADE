@@ -13,6 +13,9 @@ FAC_cqbGui_syncTabs = {
     private _d = findDisplay 60500;
     if (isNull _d) exitWith {};
     private _tab = missionNamespace getVariable ["FAC_cqbGui_tab", "setup"];
+    if (!isNull (_d displayCtrl 59900)) exitWith {
+        [_d, _tab] call FAC_gui_showPage;
+    };
     { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow (_tab == "setup") } } forEach FAC_cqbGui_tabSetupIdcs;
     { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow (_tab == "info") } } forEach FAC_cqbGui_tabInfoIdcs;
     [_d displayCtrl 60520, _tab == "setup"] call FAC_theme_applyTab;
@@ -83,6 +86,7 @@ FAC_cqbGui_fnc = {
         case "onLoad": {
             _display = findDisplay 60500;
             if (isNull _display) exitWith {};
+            [_display, FAC_gui_spec_cqb] call FAC_gui_build;
             uinamespace setVariable ["FAC_cqbGui_fnc", FAC_cqbGui_fnc];
 
             uinamespace setVariable ["FAC_cqbGui_enemyType", "targets"];

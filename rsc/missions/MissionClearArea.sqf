@@ -140,21 +140,8 @@ FADE_runMission_ClearArea = {
                 _st set ["barrelsRef", _campObjects];
                 [_bld, _slotATL, +_enemyUnitsCA, _st] call _vgCa;
             } else {
-                private _grp = createGroup _sideEnemy;
-                {
-                    private _pos = +_x;
-                    private _cls = selectRandom _enemyUnitsCA;
-                    private _u = _grp createUnit [_cls, _pos, [], 0, "NONE"];
-                    if (!isNull _u) then {
-                        _u setPos _pos;
-                        _u setUnitPos "MIDDLE";
-                        [_u] call FADE_tryAmbientCombatAnim;
-                    };
-                } forEach _slotATL;
-                if (count units _grp > 0) then {
-                    [_grp] call FAC_applyEnemyScenarioToGroup;
-                    _allGroups pushBack _grp;
-                } else { deleteGroup _grp };
+                private _grp = [_slotATL, _sideEnemy, _enemyUnitsCA, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+                if (!isNull _grp) then { _allGroups pushBack _grp };
             };
         };
         if (count _usedPositions >= _maxGarrisonTotal) exitWith {};
@@ -165,6 +152,7 @@ FADE_runMission_ClearArea = {
     private _sp = [0, 0, 0];
     private _patrolSize = 0;
     private _patrolGrp = grpNull;
+    private _patrolClasses = [];
     private _pk = 0;
     private _pCls = "";
     private _pU = objNull;
@@ -180,14 +168,12 @@ FADE_runMission_ClearArea = {
         if (_sp isEqualType [] && { count _sp >= 2 }) then {
             _sp = [(_sp select 0), (_sp select 1), (_sp param [2, 0])];
             _patrolSize = [3 + floor random 5, 1] call _scaleOpforCount;
-            _patrolGrp = createGroup _sideEnemy;
+            _patrolClasses = [];
             for "_k" from 0 to (_patrolSize - 1) do {
-                _pCls = if (_k < count _enemyUnitsCA) then { _enemyUnitsCA select _k } else { _baseClassCA };
-                _pU = _patrolGrp createUnit [_pCls, _sp, [], 0, "NONE"];
-                if (!isNull _pU) then { _pU setPos _sp };
+                _patrolClasses pushBack (if (_k < count _enemyUnitsCA) then { _enemyUnitsCA select _k } else { _baseClassCA });
             };
-            if (count units _patrolGrp > 0) then {
-                [_patrolGrp] call FAC_applyEnemyScenarioToGroup;
+            _patrolGrp = [_sp, _sideEnemy, _patrolClasses] call FADE_missionCreateInfantryGroupAt;
+            if (!isNull _patrolGrp) then {
                 _patrolGrp setBehaviour "SAFE";
                 for "_w" from 0 to 3 do {
                     _pa = _w * 90 + (random 30);
@@ -199,7 +185,7 @@ FADE_runMission_ClearArea = {
                     if (_w == 3) then { _wp setWaypointType "CYCLE" };
                 };
                 _allGroups pushBack _patrolGrp;
-            } else { deleteGroup _patrolGrp };
+            };
         };
     };
     private _areaVehicles = [];

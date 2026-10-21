@@ -89,6 +89,9 @@ publicVariable "FAC_playthroughSuite_abortServer";
 
 // Retry base NPC spawn if postInit / spawn failed; re-anchor if Eden logic was late.
 [] spawn {
+    if (worldName != "Altis") then {
+        waitUntil { sleep 1; missionNamespace getVariable ["FADE_baseDefined", false] };
+    };
     private _delays = [2, 6, 15, 30];
     {
         sleep _x;

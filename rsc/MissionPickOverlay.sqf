@@ -12,7 +12,17 @@ FAC_missionPickOverlay_setBaseVisible = {
     {
         private _c = _d displayCtrl _x;
         if (!isNull _c) then { _c ctrlShow _show };
-    } forEach FAC_missionPickOverlay_baseIdcs;
+    } forEach [59900, 59901, 59902, 59903, 59904, 59905, 60160, 60161];
+    if (_show) exitWith {
+        private _sync = missionNamespace getVariable ["FAC_missionsGui_syncTabs", {}];
+        if (_sync isEqualType {}) then { [] call _sync };
+    };
+    {
+        _x params ["", "_group"];
+        if (!isNull _group) then { _group ctrlShow false };
+        private _pair = _d getVariable [format ["FAC_gui_pair_%1", ctrlIDC _group], controlNull];
+        if (!isNull _pair) then { _pair ctrlShow false };
+    } forEach (_d getVariable ["FAC_gui_pages", []]);
 };
 
 FAC_missionPickOverlay_destroy = {
@@ -70,19 +80,19 @@ FAC_missionPickOverlay_createShell = {
     private _padX = 0.04;
     private _innerX = _bgX + _padX;
     private _innerW = _bgW - (_padX * 2);
-    private _bg = _display ctrlCreate ["RscText", _idcBase];
+    private _bg = _display ctrlCreate ["FACRscDialogBackground", _idcBase];
     _bg ctrlSetPosition [_bgX, _bgY, _bgW, _bgH];
     _bg ctrlSetBackgroundColor FAC_theme_bgOverlay;
     _bg ctrlCommit 0;
     _controls pushBack _bg;
-    private _title = _display ctrlCreate ["RscText", _idcBase + 1];
+    private _title = _display ctrlCreate ["FACRscDialogTitle", _idcBase + 1];
     _title ctrlSetPosition [_bgX, _bgY, _bgW, _titleH];
     _title ctrlSetText _titleText;
     _title ctrlSetBackgroundColor FAC_theme_bgOverlayTitle;
     _title ctrlCommit 0;
     _controls pushBack _title;
     if (_helpText != "") then {
-        private _help = _display ctrlCreate ["RscStructuredText", _idcBase + 2];
+        private _help = _display ctrlCreate ["FACRscFormStructured", _idcBase + 2];
         _help ctrlSetPosition [_innerX, _bgY + _titleH + 0.012, _innerW, _helpH];
         private _body = (_helpText splitString (toString [10, 10])) joinString "<br/>";
         _help ctrlSetStructuredText parseText format ["<t size='0.85' color='%1'>%2</t>", FAC_theme_htmlBody, _body];
@@ -118,28 +128,28 @@ FAC_missionPick_createParticipantFooter = {
     params ["_display", "_idcBase", "_y", "_nsPickFn"];
     private _pickFn = missionNamespace getVariable [_nsPickFn, {}];
     private _controls = [];
-    private _ba = _display ctrlCreate ["RscButton", _idcBase];
+    private _ba = _display ctrlCreate ["FACRscPrimaryBtn", _idcBase];
     _ba ctrlSetPosition [0.04, _y, 0.20, 0.045];
     _ba ctrlSetText "Add →";
     [_ba] call FAC_missionPick_styleNeutral;
     _ba ctrlAddEventHandler ["ButtonClick", { ["add", []] call _pickFn }];
     _ba ctrlCommit 0;
     _controls pushBack _ba;
-    private _br = _display ctrlCreate ["RscButton", _idcBase + 1];
+    private _br = _display ctrlCreate ["FACRscPrimaryBtn", _idcBase + 1];
     _br ctrlSetPosition [0.26, _y, 0.20, 0.045];
     _br ctrlSetText "← Remove";
     [_br] call FAC_missionPick_styleNeutral;
     _br ctrlAddEventHandler ["ButtonClick", { ["remove", []] call _pickFn }];
     _br ctrlCommit 0;
     _controls pushBack _br;
-    private _bs = _display ctrlCreate ["RscButton", _idcBase + 2];
+    private _bs = _display ctrlCreate ["FACRscPrimaryBtn", _idcBase + 2];
     _bs ctrlSetPosition [0.52, _y, 0.22, 0.045];
     _bs ctrlSetText "Start";
     [_bs] call FAC_missionPick_styleStart;
     _bs ctrlAddEventHandler ["ButtonClick", { ["confirm", []] call _pickFn }];
     _bs ctrlCommit 0;
     _controls pushBack _bs;
-    private _bc = _display ctrlCreate ["RscButton", _idcBase + 3];
+    private _bc = _display ctrlCreate ["FACRscPrimaryBtn", _idcBase + 3];
     _bc ctrlSetPosition [0.76, _y, 0.20, 0.045];
     _bc ctrlSetText "Cancel";
     [_bc] call FAC_missionPick_styleDanger;

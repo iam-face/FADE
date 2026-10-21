@@ -276,16 +276,9 @@ FADE_counterAttack_spawnFootWave = {
         if (_unitPositions isEqualTo []) then { continue };
         private _cls = [];
         for "_u" from 1 to (count _unitPositions) do { _cls pushBack (selectRandom _enemyUnits) };
-        private _grp = createGroup _sideEnemy;
-        {
-            private _u = _grp createUnit [_cls select _forEachIndex, _x, [], 0, "NONE"];
-            if (!isNull _u) then {
-                _u setPosATL _x;
-                if (_usedBuilding) then { _u setUnitPos "MIDDLE" };
-            };
-        } forEach _unitPositions;
+        private _unitPos = if (_usedBuilding) then { "MIDDLE" } else { "" };
+        private _grp = [_unitPositions, _sideEnemy, _cls, _unitPos, false, "zip"] call FADE_spawnInfantryAtPositions;
         if (isNull _grp || { count units _grp == 0 }) then { continue };
-        [_grp] call _applyGrp;
         _grp setBehaviour "COMBAT";
         _grp setCombatMode "RED";
         _grp setSpeedMode "FULL";
@@ -571,9 +564,8 @@ FADE_counterAttackStart = {
                 private _sz = [4 + floor random 4, 1] call FADE_scaleOpforCount;
                 private _cls = (_enemyUnits select [0, _sz min count _enemyUnits]);
                 for "_k" from (count _cls) to (_sz - 1) do { _cls pushBack (_enemyUnits select 0) };
-                private _grp = [_roadPos, _sideEnemy, _cls] call BIS_fnc_spawnGroup;
+                private _grp = [_roadPos, _sideEnemy, _cls] call FADE_missionCreateInfantryGroupAt;
                 if (!isNull _grp && { count units _grp > 0 }) then {
-                    [_grp] call _applyGrp;
                     _grp setBehaviour "COMBAT";
                     _grp setCombatMode "RED";
                     private _wp = _grp addWaypoint [_tgtMove, 0];
@@ -618,6 +610,7 @@ FADE_counterAttackStart = {
             private _fbHit = [];
             private _rp = [0, 0, 0];
             private _gapOk = true;
+            private _crewPack = [];
             // Staging already resolved a clear road with relaxed terrainClear; reuse it for truck 0.
             // Re-running FADE_findOpforGroundVehicleRoadSpawn with default terrClear=10 often returns []
             // on the same scrub/town roads that staging accepted (RPT: skipTruck noRoadNear).
@@ -675,30 +668,18 @@ FADE_counterAttackStart = {
                     ["vehicleWave skipTruck task=%1 idx=%2 tooNearBase dist=%3 min=%4", _taskId, _vi, _spawnPos distance2D _baseQ, _minBase] call FADE_qrfDbgLog;
                     continue
                 };
-                _vehGrp = createGroup _sideEnemy;
-                _veh = createVehicle [_vClass, _spawnPos, [], 0, "NONE"];
+                _crewPack = [
+                    _vClass, _spawnPos, _spawnDir, _enemyUnits, _sideEnemy,
+                    ["driver", "gunner"], "random", true, -1, 2, _dir, 1, _taskId
+                ] call FADE_spawnCrewedGroundVehicle;
+                _veh = _crewPack select 0;
+                _vehGrp = _crewPack select 1;
                 if (isNull _veh) then {
                     ["vehicleWave skipTruck task=%1 idx=%2 createFailed class=%3", _taskId, _vi, _vClass] call FADE_qrfDbgLog;
-                    deleteGroup _vehGrp;
                     continue
                 };
-                _veh setPosATL _spawnPos;
-                _veh setDir _spawnDir;
-                _veh setVectorUp surfaceNormal _spawnPos;
-                _veh setVelocity [(sin _dir) * 2, (cos _dir) * 2, 0];
-                _veh engineOn true;
                 _spawnedVehs pushBack _veh;
-                [_taskId, _veh] call FADE_missionEnt_registerVehicle;
-                _driver = _vehGrp createUnit [selectRandom _enemyUnits, _spawnPos, [], 0, "NONE"];
-                if (!isNull _driver) then {
-                    _driver moveInDriver _veh;
-                    _vehGrp selectLeader _driver;
-                };
-                if (_veh emptyPositions "gunner" > 0) then {
-                    _g = _vehGrp createUnit [selectRandom _enemyUnits, _spawnPos, [], 0, "NONE"];
-                    if (!isNull _g) then { _g moveInGunner _veh };
-                };
-                [_vehGrp] call _applyGrp;
+                if (isNull _vehGrp) then { _vehGrp = createGroup _sideEnemy };
                 _vehGrp setBehaviour "AWARE";
                 _vehGrp setCombatMode "RED";
                 _vehGrp setSpeedMode "NORMAL";
@@ -733,6 +714,7 @@ FADE_counterAttackStart = {
                     private _cf = missionNamespace getVariable ["FADE_qrfFriendlyCentroidATL", {}];
                     private _seats = (_veh emptyPositions "cargo") max 0;
                     if (_seats <= 0) exitWith {};
+                    // Cargo is staggered with sleep, which this spawned script can do. The crew function fills seats immediately.
                     private _cargoGrp = createGroup _sideEnemy;
                     for "_c" from 0 to (_seats - 1) do {
                         sleep _cargoStagger;

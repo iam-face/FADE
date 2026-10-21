@@ -9,6 +9,7 @@ FADE_startMission = {
         ["_civFaction", ""], ["_convoyEndPos", []], ["_raidZoneClicks", []]
     ];
     if (isNull _player) exitWith {};
+    if ([_player] call FADE_base_denyUntilDefined) exitWith {};
     private _bypassDisabled = missionNamespace getVariable ["FADE_startMission_bypassDisabled", false];
     if (!_bypassDisabled && { _missionType in (missionNamespace getVariable ["FADE_disabledMissionTypes", []]) }) exitWith {
         private _lbl = [_missionType] call (missionNamespace getVariable ["FADE_missionTypeDisplayName", { _this select 0 }]);

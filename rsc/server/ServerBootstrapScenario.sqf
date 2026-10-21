@@ -113,6 +113,7 @@ FADE_applyScenarioSettings = {
     missionNamespace setVariable ["FADE_sideFriendly", [_friendlySideNum] call FADE_sideNumToSide, true];
     missionNamespace setVariable ["FADE_markerColorEnemy", ([_enemySideNum] call FADE_markerColorForSideNum), true];
     missionNamespace setVariable ["FADE_markerColorFriendly", ([_friendlySideNum] call FADE_markerColorForSideNum), true];
+    if (!isNil "FADE_basePick_refreshRespawnMarker") then { [] call FADE_basePick_refreshRespawnMarker };
     // #region agent log
     diag_log format [
         "[FAC DbgBrowser 62d308] H17 scenario opforAir=%1 opforDrone=%2 enemySide=%3 friendlySide=%4",
@@ -174,6 +175,7 @@ FADE_applyScenarioSettings = {
             missionNamespace setVariable ["FADE_scenarioFriendlySideNum", _friendlySideNum, true];
             missionNamespace setVariable ["FADE_sideFriendly", [_friendlySideNum] call FADE_sideNumToSide, true];
             missionNamespace setVariable ["FADE_markerColorFriendly", ([_friendlySideNum] call FADE_markerColorForSideNum), true];
+            if (!isNil "FADE_basePick_refreshRespawnMarker") then { [] call FADE_basePick_refreshRespawnMarker };
             _factionReverted = true;
         };
         if (_enemyUnits isEqualTo [] && { _enemyFaction != _prevAppliedEnemy }) then {
@@ -377,7 +379,7 @@ publicVariable "FADE_requestScenarioFriendlySideSync";
 publicVariable "FADE_despawnScenarioWorldUnits";
 
 // Initial build: scenario unit/vehicle lists on missionNamespace (server). Scenario GUI Apply overwrites these; all mission spawns read from here.
-// Default to globals from FADE_pickFactionByDisplayName (above) + Config  -  missionNamespace keys are not set until here, so plain "OPF_F"/"BLU_F" defaults ignore startup faction picks.
+// Default to globals from FADE_pickStartupFaction (ServerBootstrap) + Config. missionNamespace keys are not set until here, so plain "OPF_F"/"BLU_F" defaults ignore startup faction picks.
 private _enemyF = missionNamespace getVariable ["FADE_scenarioEnemyFaction", FADE_scenarioEnemyFaction];
 private _friendlyF = missionNamespace getVariable ["FADE_scenarioFriendlyFaction", FADE_scenarioFriendlyFaction];
 private _civF = missionNamespace getVariable ["FADE_scenarioCivFaction", FADE_scenarioCivFaction];
@@ -467,8 +469,10 @@ call FADE_applyScenarioFactionSideSync;
 missionNamespace setVariable ["FADE_scenarioAppliedFriendlyFaction", _friendlyF, true];
 missionNamespace setVariable ["FADE_scenarioAppliedEnemyFaction", _enemyF, true];
 diag_log format [
-    "[FAC] Startup factions: friendly=%1 (%2 units), enemy=%3 (%4 units), civ=%5",
-    _friendlyF, count _defFriendly, _enemyF, count _defEnemy, _civF
+    "[FAC] Startup factions: friendly=%1 (%2 units), enemy=%3 (%4 units), indep=%5, civ=%6",
+    _friendlyF, count _defFriendly, _enemyF, count _defEnemy,
+    missionNamespace getVariable ["FADE_scenarioIndepFaction", "IND_F"],
+    _civF
 ];
 [] call FADE_missionSlots_publish;
 

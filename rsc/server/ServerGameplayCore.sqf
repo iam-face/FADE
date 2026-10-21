@@ -5,7 +5,6 @@
 publicVariable "FADE_heliClasses";
 publicVariable "FADE_landVehicleClasses";
 publicVariable "FADE_aircraftSpawnWhitelist";
-publicVariable "FADE_planeForbiddenPads";
 publicVariable "FADE_friendlyUnits";
 publicVariable "FADE_enemyUnits";
 publicVariable "FADE_friendlyVehicleClasses";

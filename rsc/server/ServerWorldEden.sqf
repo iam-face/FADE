@@ -5,7 +5,7 @@ FADE_collectEdenNames = {
     _names apply { missionNamespace getVariable [_x, objNull] } select { !isNull _x }
 };
 
-// Pads: array of [object, padName] for spawn logic (planes excluded from FADE_planeForbiddenPads)
+// Pads: Eden helipad objects for base layout and map markers. Player spawn no longer uses them as slots.
 FADE_helipadList = [];
 {
     private _obj = missionNamespace getVariable [_x, objNull];
@@ -322,7 +322,7 @@ FADE_cqbLoudspeakerBroadcast = {
 FADE_cqbPositions = (missionNamespace getVariable ["FADE_cqbPosNames", call {
     private _a = [];
     private _i = 1;
-    while { _i <= 49 } do {
+    while { _i <= 52 } do {
         _a pushBack format ["CQB_POS_%1", _i];
         _i = _i + 1;
     };
@@ -483,29 +483,43 @@ FADE_padMarkerOriginalText = [];
     };
 } forEach FADE_helipadList;
 
-// Base position - from BASE_1 (centre of map), fallback to helipad or B_SP
-private _baseObj = missionNamespace getVariable ["BASE_1", objNull];
-if (!isNull _baseObj) then {
-    FADE_basePos = getPosATL _baseObj;
-} else {
-    if (count FADE_helipads > 0) then {
-        FADE_basePos = getPosATL (FADE_helipads select 0);
-    } else {
-        if (count FADE_bSpPoints > 0) then {
-            FADE_basePos = position (FADE_bSpPoints select 0);
-        } else {
-            FADE_basePos = [5000, 5000, 0];
-        };
-    };
+// Civ zones, ambient life, and AAA start once the player base position is final.
+call compile preprocessFileLineNumbers "rsc\FADE_civZonesFromLocations.sqf";
+call compile preprocessFileLineNumbers "rsc\EnemyAAA.sqf";
+
+FADE_world_startBaseDependent = {
+    if (missionNamespace getVariable ["FADE_world_baseDependentStarted", false]) exitWith {};
+    missionNamespace setVariable ["FADE_world_baseDependentStarted", true];
+    call FADE_civZonesFromLocations_build;
+    0 spawn { execVM "rsc\AmbientCivilians.sqf"; };
+    0 spawn { waitUntil { !isNil "FADE_aaa_applyLevel" }; call FADE_aaa_applyLevel; };
 };
 
-// Civ zone anchors from map named locations (CIV_T_1..n in missionNamespace; replaces Eden CIV_T_* triggers)
-call compile preprocessFileLineNumbers "rsc\FADE_civZonesFromLocations.sqf";
-call FADE_civZonesFromLocations_build;
-
-// Ambient civilians (scans CIV_T_* refs into FADE_civTriggerNames; road traffic uses active zones  -  ROAD_SP_* only for Intercept Convoy)
-0 spawn { execVM "rsc\AmbientCivilians.sqf"; };
-
-// Enemy AAA (dynamic around airborne player aircraft; Off/AAA/AAA+MANPADS)
-call compile preprocessFileLineNumbers "rsc\EnemyAAA.sqf";
-0 spawn { waitUntil { !isNil "FADE_aaa_applyLevel" }; call FADE_aaa_applyLevel; };
+if (worldName == "Altis") then {
+    private _baseObj = missionNamespace getVariable ["BASE_1", objNull];
+    if (!isNull _baseObj) then {
+        FADE_basePos = getPosATL _baseObj;
+    } else {
+        if (count FADE_helipads > 0) then {
+            FADE_basePos = getPosATL (FADE_helipads select 0);
+        } else {
+            if (count FADE_bSpPoints > 0) then {
+                FADE_basePos = position (FADE_bSpPoints select 0);
+            } else {
+                FADE_basePos = [5000, 5000, 0];
+            };
+        };
+    };
+    publicVariable "FADE_basePos";
+    missionNamespace setVariable ["FADE_baseDefined", true, true];
+    missionNamespace setVariable ["FADE_basePickPhase", "done", true];
+    [] call FADE_world_startBaseDependent;
+    [] call FADE_basePick_refreshRespawnMarker;
+} else {
+    FADE_basePos = [];
+    publicVariable "FADE_basePos";
+    missionNamespace setVariable ["FADE_baseDefined", false, true];
+    missionNamespace setVariable ["FADE_basePickPhase", "waiting", true];
+    missionNamespace setVariable ["FADE_basePick_choices", createHashMap];
+    [] spawn FADE_basePick_orchestrate;
+};

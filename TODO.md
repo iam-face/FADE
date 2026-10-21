@@ -26,6 +26,7 @@ Backlog for upcoming systems and fixes. Shipped behaviour is summarised in **REA
 | 16 | Field intel + grid search + AoSurvey | Shipped (Beta 7) |
 | 17 | HQ recruit board | Shipped (Beta 6) |
 | 18 | Player-facing copy (Humanizer pass) | Shipped (Beta 7) |
+| 19 | Player construction | Shipped |
 
 ---
 
@@ -188,7 +189,7 @@ No mass replace in v1: migrate the ~10 highest-traffic lines only; leave remaind
 
 - Infantry: headless list from **`FADE_friendlyUnits`** (scenario); count slider; spawn at **`B_SP_1`** (or nearest free **`B_SP_*`**) via server.
 - Vehicle: list from **`FADE_getFriendlyVehicleClasses`**; land → **`VEH_1`/`VEH_2`** + **`BIS_fnc_findSafePos`**; air → pad picker like **VehicleGui** (reuse **`FADE_padNames`**).
-- Aircraft: **`FADE_spawnHeli`** reuse. Do not duplicate spawn logic; commander RPC wraps existing func with ownership tag.
+- Aircraft: **`FADE_spawnVehicleAtPos`** reuse. Do not duplicate spawn logic; commander RPC wraps that func with an ownership tag.
 
 **Roster tab**
 
@@ -207,7 +208,7 @@ Compiled from **ServerGameplay.sqf** shell like other submodules.
 |-----|-----------|
 | `FADE_commander_requestRoster` | Return tagged groups |
 | `FADE_commander_spawnSquad` | Validate cap → `BIS_fnc_spawnGroup` at B_SP → `FADE_commander_tagGroup` |
-| `FADE_commander_spawnVehicle` | Validate cap → call **`FADE_spawnHeli`** / land spawn |
+| `FADE_commander_spawnVehicle` | Validate cap → call **`FADE_spawnVehicleAtPos`** |
 | `FADE_commander_dismiss` | Delete group/vehicle if `FADE_commanderOwned` |
 | `FADE_commander_setWaypoint` | Server: clear WPs, add move / synchronised **`BIS_fnc_wpLand`** if helo |
 
@@ -330,6 +331,7 @@ All RPCs **`publicVariable`** in **initServer** after compile.
 - Base spawn is lean: key terminals / boards only; system auto-finds nearby vehicle and friendly-AI spawn points.
 - System auto-discovers civ zones, reads configs, and bootstraps the rest of the FADE stack.
 - Mission may only need thin glue (`initServer`, `description.ext` hooks) plus optional map-specific props.
+- A mission that is not Altis has playable soldiers only. Players pick the base in game (logged-in admin, or a 60 second suggestion window and a 60 second vote). Ranges stay unavailable. ACE self-interact and the build GUI are the interface. Map bounds are `0..worldSize` on every world, including Altis, so `FADE_Corner_*` can be deleted.
 
 ### Expected approach (high level)
 
@@ -369,6 +371,29 @@ All RPCs **`publicVariable`** in **initServer** after compile.
 
 - [ ] Keep map-click start/end or return to fully random road pairs?
 - [ ] Minimum escort composition for Low / Normal / High OPFOR threat?
+
+---
+
+## 19. Player construction
+
+**Goal:** Players build cosmetic structures at the player base. Placement follows GRAD Fortifications (menu, ghost, rotate, height, collision) and the WARDOGS loop of a shared base stockpile inside a build radius. FADE owns the code. The server records every object so a later pass can unlock functions (vehicle maintenance and similar) from specific structures.
+
+### Lobby
+
+- **Who can build:** Engineers / Anyone / No-one. Engineers means `getUnitTrait "Engineer"`, which the Loadout GUI already sets (Engineer and Combat Engineer presets, Breacher, and faction classes with `engineer = 1`). Server checks the trait when placing and when removing. Admin and Zeus override, same as other ACCESS locks.
+- **Logistics:** Required / Not required. Default Not required. Each catalog item has a supply cost. The server debits a shared base pool only when Required. The menu shows Free when the charge is off. No income loop in this pass: the pool is a config starting value.
+
+### This pass
+
+- Build menu and ghost placement inside the existing base radius. Server creates the object and stores class, position, owner, cost, and state.
+- Remove refunds the cost when logistics is Required, so a practice base can be rearranged.
+- `buildTime` on each item defaults to 0, and confirm places the finished object. A later interaction (hold action or animation on a blueprint) can use that field without a new data shape. Functional unlocks key off the finished state.
+- One supply number only. Ammo, fuel, and parts stay out until a structure actually consumes them.
+- The catalog is the Eden prop list from `CfgVehicles` (category, then type, then name), with a search box. Cost is 10 for every piece. Write puts text on the highest texture slot. Lower slots stay as the material. Clear erases the written slot. Place uses a camera. Space places. Esc cancels. Toggles: simulation, damage, simple object, place multiple.
+
+### Out of scope
+
+Hammer items, vendor prices, personal carry inventory, deployable FOBs, and gating the vehicle terminal.
 
 ---
 

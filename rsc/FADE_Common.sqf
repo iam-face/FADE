@@ -14,6 +14,24 @@ FADE_surfaceIsDry = {
     !surfaceIsWater [_p select 0, _p select 1]
 };
 
+// Empty until the player base is committed. Altis sets the flag during Eden init.
+FADE_getPlayerBasePos = {
+    if !(missionNamespace getVariable ["FADE_baseDefined", false]) exitWith { [] };
+    private _p = missionNamespace getVariable ["FADE_basePos", []];
+    if (!(_p isEqualType []) || { count _p < 2 }) exitWith { [] };
+    _p
+};
+
+// true when the caller should stop. Chats the player if the base is not committed yet.
+FADE_base_denyUntilDefined = {
+    params [["_player", objNull]];
+    if (missionNamespace getVariable ["FADE_baseDefined", false]) exitWith { false };
+    if (!isNull _player && { isPlayer _player }) then {
+        ["Player base is not set yet."] remoteExec ["systemChat", _player];
+    };
+    true
+};
+
 // Single BIS_fnc_findSafePos attempt; returns [] if result is missing or on water.
 FADE_findLandPosWithArgs = {
     params ["_landArgs"];
@@ -321,6 +339,158 @@ FADE_findOpforGroundVehicleRoadSpawn = {
     _result
 };
 
+// Create or crew a ground vehicle. Returns [vehicle, crewGroup, cargoGroup].
+// _roles: "driver", "gunner", "commander", "cargo".
+// _classPick: "random" or "ordered" (driver, gunner, commander, then cargo, in list order).
+// _cargoLimit -1 fills every empty cargo seat. _velocityHeading -1 uses _spawnDir.
+// _engineOn: -1 leave, 0 off, 1 on. _existingVeh crews that vehicle instead of creating one.
+// Does not set behaviour or waypoints. Applies enemy scenario skill to crew groups.
+FADE_spawnCrewedGroundVehicle = {
+    params [
+        "_className",
+        "_spawnPos",
+        "_spawnDir",
+        "_unitClasses",
+        "_side",
+        ["_roles", ["driver", "gunner", "commander"]],
+        ["_classPick", "random"],
+        ["_cargoOwnGroup", true],
+        ["_cargoLimit", -1],
+        ["_velocity", 0],
+        ["_velocityHeading", -1],
+        ["_engineOn", -1],
+        ["_registerTaskId", ""],
+        ["_requireDriver", false],
+        ["_ensureGunner", true],
+        ["_existingVeh", objNull],
+        ["_deleteVehIfNoCrew", false]
+    ];
+    if (!(_unitClasses isEqualType [])) then { _unitClasses = [] };
+    if (!(_roles isEqualType [])) then { _roles = ["driver", "gunner", "commander"] };
+    if (isNull _existingVeh && { !(_className isEqualType "") || { _className == "" } }) exitWith { [objNull, grpNull, grpNull] };
+    if (count _spawnPos < 2) exitWith { [objNull, grpNull, grpNull] };
+    if (count _spawnPos < 3) then { _spawnPos = [(_spawnPos select 0), (_spawnPos select 1), 0] };
+
+    private _veh = _existingVeh;
+    private _created = false;
+    if (isNull _veh) then {
+        _veh = createVehicle [_className, _spawnPos, [], 0, "NONE"];
+        _created = true;
+    };
+    if (isNull _veh) exitWith { [objNull, grpNull, grpNull] };
+    if (_created) then {
+        _veh setPosATL _spawnPos;
+        _veh setDir _spawnDir;
+        _veh setVectorUp surfaceNormal _spawnPos;
+        if (_velocity != 0) then {
+            private _heading = if (_velocityHeading >= 0) then { _velocityHeading } else { _spawnDir };
+            _veh setVelocity [(sin _heading) * _velocity, (cos _heading) * _velocity, 0];
+        };
+        if (_engineOn == 0) then { _veh engineOn false };
+        if (_engineOn == 1) then { _veh engineOn true };
+    };
+
+    private _ord = 0;
+    private _pool = [_unitClasses] call FADE_filterInfantryManClasses;
+    private _nextClass = {
+        if (_classPick == "ordered") then {
+            if (_unitClasses isEqualTo []) exitWith { "" };
+            private _raw = _unitClasses select (_ord min ((count _unitClasses) - 1));
+            _ord = _ord + 1;
+            if ([_raw] call FADE_isInfantryManClass) then { _raw } else { "" }
+        } else {
+            if (_pool isEqualTo []) exitWith { "" };
+            selectRandom _pool
+        };
+    };
+    private _seatMan = {
+        params ["_grp", "_role"];
+        private _cls = [] call _nextClass;
+        if (_cls == "") exitWith { objNull };
+        private _man = _grp createUnit [_cls, _spawnPos, [], 0, "NONE"];
+        if (isNull _man) exitWith { objNull };
+        switch (_role) do {
+            case "driver": {
+                _man assignAsDriver _veh;
+                _man moveInDriver _veh;
+                _grp selectLeader _man;
+            };
+            case "gunner": {
+                _man assignAsGunner _veh;
+                _man moveInGunner _veh;
+            };
+            case "commander": { _man moveInCommander _veh };
+            case "cargo": { _man moveInCargo _veh };
+        };
+        _man
+    };
+
+    private _crewGrp = createGroup _side;
+    private _cargoGrp = grpNull;
+    private _man = objNull;
+    if ("driver" in _roles && { _veh emptyPositions "driver" > 0 }) then {
+        _man = [_crewGrp, "driver"] call _seatMan;
+    };
+    if ("gunner" in _roles && { _veh emptyPositions "gunner" > 0 }) then {
+        _man = [_crewGrp, "gunner"] call _seatMan;
+    };
+    if ("commander" in _roles && { _veh emptyPositions "commander" > 0 }) then {
+        _man = [_crewGrp, "commander"] call _seatMan;
+    };
+    if ("cargo" in _roles) then {
+        private _seats = (_veh emptyPositions "cargo") max 0;
+        if (_cargoLimit >= 0) then { _seats = _seats min _cargoLimit };
+        if (_seats > 0) then {
+            private _cargoHost = _crewGrp;
+            if (_cargoOwnGroup) then {
+                _cargoGrp = createGroup _side;
+                _cargoHost = _cargoGrp;
+            };
+            for "_c" from 0 to (_seats - 1) do {
+                _man = [_cargoHost, "cargo"] call _seatMan;
+            };
+        };
+    };
+
+    private _wipeGrp = {
+        params ["_grp"];
+        if (isNull _grp) exitWith {};
+        { if (!isNull _x) then { deleteVehicle _x } } forEach units _grp;
+        deleteGroup _grp;
+    };
+    if (_requireDriver && { "driver" in _roles } && { isNull driver _veh }) exitWith {
+        [_crewGrp] call _wipeGrp;
+        [_cargoGrp] call _wipeGrp;
+        deleteVehicle _veh;
+        [objNull, grpNull, grpNull]
+    };
+
+    if (_ensureGunner && { !isNil "FADE_ensureEnemyVehicleGunner" }) then {
+        [_veh, _unitClasses] call FADE_ensureEnemyVehicleGunner;
+    };
+    private _apply = missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}];
+    if !(_apply isEqualTo {}) then {
+        if (!isNull _crewGrp && { count units _crewGrp > 0 }) then { [_crewGrp] call _apply };
+        if (!isNull _cargoGrp && { count units _cargoGrp > 0 }) then { [_cargoGrp] call _apply };
+    };
+    if (!isNull _crewGrp && { count units _crewGrp == 0 }) then {
+        deleteGroup _crewGrp;
+        _crewGrp = grpNull;
+    };
+    if (!isNull _cargoGrp && { count units _cargoGrp == 0 }) then {
+        deleteGroup _cargoGrp;
+        _cargoGrp = grpNull;
+    };
+    if (_deleteVehIfNoCrew && { isNull _crewGrp } && { isNull _cargoGrp }) exitWith {
+        deleteVehicle _veh;
+        [objNull, grpNull, grpNull]
+    };
+    if (_registerTaskId != "" && { !isNil "FADE_missionEnt_registerVehicle" }) then {
+        [_registerTaskId, _veh] call FADE_missionEnt_registerVehicle;
+    };
+    [_veh, _crewGrp, _cargoGrp]
+};
+
 // Spawn one crewed OPFOR ground vehicle on a clear road near _center.
 // _existingVehs is updated in place. Returns [vehicle, group] or [objNull, grpNull].
 // Compiled in FADE_Common (initServer) — safe to call repeatedly from mission while/for loops.
@@ -347,28 +517,15 @@ FADE_missionSpawnOpforRoadVehicleCrewed = {
     private _roadDir = _roadSpawnOut select 1;
     if (count _roadPos < 3) then { _roadPos = [(_roadPos select 0), (_roadPos select 1), 0] };
     private _vClass = selectRandom _vehClasses;
-    private _veh = createVehicle [_vClass, _roadPos, [], 0, "NONE"];
+    private _crewPack = [
+        _vClass, _roadPos, _roadDir, _enemyUnits, _sideEnemy,
+        ["driver", "gunner", "commander"], "random", true, -1, 0, -1, -1, _taskId
+    ] call FADE_spawnCrewedGroundVehicle;
+    private _veh = _crewPack select 0;
+    private _vehGrp = _crewPack select 1;
     if (isNull _veh) exitWith { [objNull, grpNull] };
-    _veh setPosATL _roadPos;
-    _veh setDir _roadDir;
-    _veh setVectorUp surfaceNormal _roadPos;
     _existingVehs pushBack _veh;
-    if (_taskId != "") then { [_taskId, _veh] call FADE_missionEnt_registerVehicle };
-    private _vehGrp = createGroup _sideEnemy;
-    private _driver = _vehGrp createUnit [selectRandom _enemyUnits, _roadPos, [], 0, "NONE"];
-    if (!isNull _driver) then { _driver moveInDriver _veh };
-    if (_veh emptyPositions "gunner" > 0) then {
-        private _gun = _vehGrp createUnit [selectRandom _enemyUnits, _roadPos, [], 0, "NONE"];
-        if (!isNull _gun) then { _gun moveInGunner _veh };
-    };
-    if (_veh emptyPositions "commander" > 0) then {
-        private _cmd = _vehGrp createUnit [selectRandom _enemyUnits, _roadPos, [], 0, "NONE"];
-        if (!isNull _cmd) then { _cmd moveInCommander _veh };
-    };
-    private _ensureGunner = missionNamespace getVariable ["FADE_ensureEnemyVehicleGunner", {}];
-    if !(_ensureGunner isEqualTo {}) then { [_veh, _enemyUnits] call _ensureGunner };
-    private _applyScenario = missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}];
-    if !(_applyScenario isEqualTo {}) then { [_vehGrp] call _applyScenario };
+    if (isNull _vehGrp) then { _vehGrp = createGroup _sideEnemy };
     _vehGrp setBehaviour "SAFE";
     _vehGrp setSpeedMode "LIMITED";
     if (_addWaypoint && { count _wpRef >= 2 }) then {
@@ -439,5 +596,6 @@ missionNamespace setVariable ["FADE_textureText_wrap", FADE_textureText_wrap];
 missionNamespace setVariable ["FADE_missionSlotGateHint", FADE_missionSlotGateHint];
 missionNamespace setVariable ["FADE_opforGroundVehicleRoadDirAt", FADE_opforGroundVehicleRoadDirAt];
 missionNamespace setVariable ["FADE_findOpforGroundVehicleRoadSpawn", FADE_findOpforGroundVehicleRoadSpawn];
+missionNamespace setVariable ["FADE_spawnCrewedGroundVehicle", FADE_spawnCrewedGroundVehicle];
 missionNamespace setVariable ["FADE_missionSpawnOpforRoadVehicleCrewed", FADE_missionSpawnOpforRoadVehicleCrewed];
 missionNamespace setVariable ["FADE_buildingRoofPos", FADE_buildingRoofPos];

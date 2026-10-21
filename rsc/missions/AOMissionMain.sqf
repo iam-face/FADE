@@ -33,8 +33,7 @@ private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount",
 if (!(_destPos isEqualType []) || { count _destPos < 2 }) then { _destPos = [0, 0, 0] };
 _destPos = [(_destPos param [0, 0]), (_destPos param [1, 0]), (_destPos param [2, 0])];
 if (!(_basePos isEqualType []) || { count _basePos < 2 }) then {
-    private _baseObj = missionNamespace getVariable ["BASE_1", objNull];
-    _basePos = if (!isNull _baseObj) then { getPosATL _baseObj } else { [0, 0, 0] };
+    _basePos = [] call FADE_getPlayerBasePos;
     if (!(_basePos isEqualType []) || { count _basePos < 2 }) then { _basePos = [0, 0, 0] };
 };
 _basePos = [(_basePos param [0, 0]), (_basePos param [1, 0]), (_basePos param [2, 0])];
@@ -503,29 +502,15 @@ private _fnc_spawnAoOpforVehicle = {
     };
     if (!(_roadHit isEqualType []) || { count _roadHit < 2 }) exitWith { [] };
     _roadHit params ["_vehPos", "_vehDir"];
-    private _veh = createVehicle [_vehClass, _vehPos, [], 0, "NONE"];
-    if (isNull _veh) exitWith { [] };
-    _veh setPosATL _vehPos;
-    _veh setDir _vehDir;
-    _veh setVectorUp surfaceNormal _vehPos;
-    private _crewGrp = createGroup _sideEnemy;
-    private _driver = _crewGrp createUnit [(_enemyUnits select 0), _vehPos, [], 0, "NONE"];
-    if (isNull _driver) then {
-        deleteVehicle _veh;
-        deleteGroup _crewGrp;
-    } else {
-        _driver assignAsDriver _veh;
-        _driver moveInDriver _veh;
-        if (_enemyCount > 1) then {
-            private _gunner = _crewGrp createUnit [(_enemyUnits select 1), _vehPos, [], 0, "NONE"];
-            if (!isNull _gunner) then {
-                _gunner assignAsGunner _veh;
-                _gunner moveInGunner _veh;
-            };
-        };
-        [_veh, _enemyUnits] call FADE_ensureEnemyVehicleGunner;
-        [_crewGrp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
-        _crewGrp setBehaviour "COMBAT";
+    private _crewRoles = ["driver"];
+    if (_enemyCount > 1) then { _crewRoles pushBack "gunner" };
+    private _crewPack = [
+        _vehClass, _vehPos, _vehDir, _enemyUnits, _sideEnemy,
+        _crewRoles, "ordered", true, -1, 0, -1, -1, "", true, true
+    ] call FADE_spawnCrewedGroundVehicle;
+    _crewPack params ["_veh", "_crewGrp"];
+    if (isNull _veh || { isNull _crewGrp }) exitWith { [] };
+    _crewGrp setBehaviour "COMBAT";
         _crewGrp setCombatMode "RED";
         private _wp = _crewGrp addWaypoint [_holdPos, 0];
         _wp setWaypointType "HOLD";
@@ -535,7 +520,6 @@ private _fnc_spawnAoOpforVehicle = {
         [_tid, _veh] call FADE_aoRegisterVehicle;
         [_tid, _crewGrp] call FADE_aoRegisterGroup;
         [_veh, _crewGrp]
-    };
 };
 
 missionNamespace setVariable ["FADE_aoSpawnVehFn_" + _taskId, _fnc_spawnAoOpforVehicle];
@@ -647,23 +631,17 @@ _bluEdgeCenter = +_bluSpawn;
     private _objGuardsSpawned = 0;
     for "_g" from 0 to (_numGuard - 1) do {
         private _nGuard = [_guardMin + floor random ((_guardMax - _guardMin) + 1), 1] call _scaleOpforCount;
-        private _staticGrp = createGroup _sideEnemy;
+        private _guardPositions = [];
+        private _guardClasses = [];
         for "_i" from 0 to (_nGuard - 1) do {
             private _staticPos = [_objPos, _destPos] call _fnc_pickAoGuardPos;
             if (_staticPos isEqualTo []) then { continue };
-            private _cls = _enemyUnits select (_i % _enemyCount);
-            private _u = _staticGrp createUnit [_cls, _staticPos, [], 0, "NONE"];
-            if (!isNull _u) then {
-                _u setPosATL _staticPos;
-                _u setUnitPos "UP";
-                if (!(_tryAmbientAnim isEqualTo {})) then { [_u] call _tryAmbientAnim };
-                _objGuardsSpawned = _objGuardsSpawned + 1;
-            };
+            _guardPositions pushBack _staticPos;
+            _guardClasses pushBack (_enemyUnits select (_i % _enemyCount));
         };
-        if (count units _staticGrp == 0) then {
-            deleteGroup _staticGrp;
-        } else {
-            [_staticGrp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
+        private _staticGrp = [_guardPositions, _sideEnemy, _guardClasses, "UP", true, "zip"] call FADE_spawnInfantryAtPositions;
+        _objGuardsSpawned = _objGuardsSpawned + (if (isNull _staticGrp) then { 0 } else { count units _staticGrp });
+        if (!isNull _staticGrp) then {
             _staticGrp setBehaviour "COMBAT";
             _staticGrp setCombatMode "RED";
             _opforGroups pushBack _staticGrp;
@@ -724,14 +702,15 @@ _bluEdgeCenter = +_bluSpawn;
             _aoCompositionObjects pushBack _turret;
             [_taskId, _turret] call FADE_aoRegisterObject;
             private _gunnerClass = _enemyUnits select 0;
-            private _grp = createGroup _sideEnemy;
-            private _gunner = _grp createUnit [_gunnerClass, _turretPos, [], 0, "NONE"];
-            if (!isNull _gunner) then {
-                _gunner moveInGunner _turret;
-                [_grp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
+            private _crewPack = [
+                "", _turretPos, _faceAssault, [_gunnerClass], _sideEnemy,
+                ["gunner"], "ordered", true, -1, 0, -1, -1, "", false, false, _turret
+            ] call FADE_spawnCrewedGroundVehicle;
+            private _grp = _crewPack select 1;
+            if (!isNull _grp) then {
                 _opforGroups pushBack _grp;
                 [_taskId, _grp] call FADE_aoRegisterGroup;
-            } else { deleteGroup _grp };
+            };
             [(_turret), _taskId] spawn {
                 params ["_turret", "_taskId"];
                 private _sideFriendly = missionNamespace getVariable ["FADE_sideFriendly", west];

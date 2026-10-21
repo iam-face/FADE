@@ -11,7 +11,12 @@ private _dlyRand = missionNamespace getVariable ["FADE_lockerSoundDelayRand", 3]
 private _fNextAt = { time + _dlyMin + random _dlyRand };
 
 private _roomVar = missionNamespace getVariable ["FADE_lockerRoomCenterVar", "posLockerRoom"];
-waitUntil { sleep 0.5; !isNull (missionNamespace getVariable [_roomVar, objNull]) };
+private _lockerWait = time + 8;
+waitUntil {
+    sleep 0.5;
+    !isNull (missionNamespace getVariable [_roomVar, objNull]) || { time > _lockerWait }
+};
+if (isNull (missionNamespace getVariable [_roomVar, objNull])) exitWith {};
 private _roomCenter = missionNamespace getVariable _roomVar;
 
 private _roomR = missionNamespace getVariable ["FADE_lockerRoomRadius", 5];

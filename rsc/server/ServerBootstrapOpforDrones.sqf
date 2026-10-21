@@ -80,9 +80,8 @@ FADE_opforDrone_isGroundPlayer = {
 
 FADE_opforDrone_allFriendliesAtHq = {
     params ["_hqR"];
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (isNull _base) exitWith { false };
-    private _bp = getPosATL _base;
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp < 2) exitWith { true };
     private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _hasPl = false;
     private _allInside = true;
@@ -114,8 +113,8 @@ FADE_opforDrone_patrolCenter = {
         private _tr = missionNamespace getVariable [_pick, objNull];
         if (!isNull _tr) exitWith { getPosATL _tr };
     };
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (!isNull _base) exitWith { getPosATL _base };
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp >= 2) exitWith { _bp };
     [worldSize / 2, worldSize / 2, 0]
 };
 

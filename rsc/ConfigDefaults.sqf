@@ -1,8 +1,16 @@
 // ConfigDefaults.sqf - scenario/mission tuning data (no functions)
-// Optional exact CfgFactionClasses names  -  if non-empty and the class exists and side matches, wins over display-name pick in initServer (use when mod display strings drift). initServer also prefers USMC / 3CB African factions by display name when these stay empty.
+// Optional exact CfgFactionClasses names. If non-empty and the class exists and side matches, that pin wins over the lists below.
 FADE_startupFactionFriendly = "";
 FADE_startupFactionEnemy = "";
 FADE_startupFactionCiv = "";
+// First class that exists on the right side is the startup faction. Later entries are fallbacks.
+// BLUFOR: RHS US Army desert, then woodland (RHS has no single army class with infantry). Vanilla NATO if neither exists.
+// REDFOR: RHS Russia (MSV), the motor-rifle ground force. Vanilla CSAT if absent.
+// INDFOR: CDF ground forces (GREF), else Serbian army (SAF). Vanilla AAF if neither exists.
+// Civilians are not in these lists; startup stays CIV_F unless FADE_startupFactionCiv pins another civilian class.
+FADE_startupFactionBluforClasses = ["rhs_faction_usarmy_d", "rhs_faction_usarmy_wd"];
+FADE_startupFactionRedforClasses = ["rhs_faction_msv"];
+FADE_startupFactionIndepClasses = ["rhsgref_faction_cdf_ground", "rhssaf_faction_army"];
 FADE_civiliansEnabled = true;  // When false, no ambient civilians (zones, road vehicles, civ aircraft)
 // Legacy upper bound for Eden CIV_T_* cleanup; runtime count is set by FADE_civZonesFromLocations_build (initServer).
 FADE_civTriggerIndexMax = 109;
@@ -328,8 +336,6 @@ FADE_firesImpactRttAspect = 1;
 FADE_firesProjectileTrackSleep = 0.1;
 // Camera height (m) above impact for PiP (local anchor = impact point).
 FADE_firesImpactCamHeightM = 90;
-// Pads where planes cannot spawn (helicopters can use any pad)
-FADE_planeForbiddenPads = ["HP_1", "HP_2", "HP_8"];
 // Vehicle GUI (aircraft): when whitelist is ON, list is restricted to these CfgVehicles classnames (exact match).
 FADE_aircraftSpawnWhitelist = [
     "RHS_AH64D_wd",
@@ -700,4 +706,9 @@ FADE_civZoneActivationDist = 900;
 
 // Mission load profiling (RPT): CfgVehicles scan, client GUI compile, waitUntil. Set true temporarily to measure; leave false in production.
 FADE_profileMissionLoad = false;
+
+// Player construction. Radius matches the ACE FADE menu bubble (FAC_aceSelf_nearPlayerBase).
+// Supply start is charged only when BUILD: Logistics is Required.
+FADE_buildRadius = 1000;
+FADE_buildSupplyStart = 2000;
 

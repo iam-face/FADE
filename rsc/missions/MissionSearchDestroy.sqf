@@ -130,22 +130,9 @@ FADE_runMission_SearchDestroy = {
                 private _vgId = [_building, _slotATL, +_enemyUnitsSd, _st] call _vgSd;
                 _garrisonedForCache = _vgId >= 0;
             } else {
-                private _spawnedUnits = 0;
-                {
-                    private _pos = +_x;
-                    private _cls = selectRandom _enemyUnitsSd;
-                    private _grp = createGroup _sideEnemy;
-                    private _u = _grp createUnit [_cls, _pos, [], 0, "NONE"];
-                    if (!isNull _u) then {
-                        [_grp] call FAC_applyEnemyScenarioToGroup;
-                        _u setPos _pos;
-                        _u setUnitPos "MIDDLE";
-                        [_u] call FADE_tryAmbientCombatAnim;
-                        _allGroups pushBack _grp;
-                        _spawnedUnits = _spawnedUnits + 1;
-                    } else { deleteGroup _grp };
-                } forEach _slotATL;
-                _garrisonedForCache = _spawnedUnits > 0;
+                private _grp = [_slotATL, _sideEnemy, _enemyUnitsSd, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+                if (!isNull _grp) then { _allGroups pushBack _grp };
+                _garrisonedForCache = !isNull _grp;
             };
             if (_garrisonedForCache) then { _sdCacheBuildings pushBackUnique _building };
         };
@@ -213,18 +200,8 @@ FADE_runMission_SearchDestroy = {
                 _st set ["barrelsRef", _sdVgHintObjs];
                 [_bld, _slotATL, +_enemyUnitsSd, _st] call _vgSd;
             } else {
-                private _bldGrp = createGroup _sideEnemy;
-                {
-                    private _pos = +_x;
-                    private _u = _bldGrp createUnit [selectRandom _enemyUnitsSd, _pos, [], 0, "NONE"];
-                    if (!isNull _u) then {
-                        _u setPosATL _pos;
-                        _u setUnitPos "MIDDLE";
-                        [_u] call FADE_tryAmbientCombatAnim;
-                    };
-                } forEach _slotATL;
-                [_bldGrp] call FAC_applyEnemyScenarioToGroup;
-                _allGroups pushBack _bldGrp;
+                private _bldGrp = [_slotATL, _sideEnemy, _enemyUnitsSd, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+                if (!isNull _bldGrp) then { _allGroups pushBack _bldGrp };
             };
             _garrisonCount = _garrisonCount + _spawnedInBld;
         };
@@ -237,17 +214,10 @@ FADE_runMission_SearchDestroy = {
         private _guardPos = [[_center, 12, 100, 3, 1, 0.3, 0, [], _center], _center] call FADE_findSafePosArray;
         if (_guardPos isEqualType [] && { count _guardPos >= 2 }) then {
             if (count _guardPos < 3) then { _guardPos = [(_guardPos select 0), (_guardPos select 1), 0] };
-            private _guardGrp = createGroup _sideEnemy;
-            private _u = _guardGrp createUnit [selectRandom _enemyUnitsSd, _guardPos, [], 0, "NONE"];
-            if (!isNull _u) then {
-                [_guardGrp] call FAC_applyEnemyScenarioToGroup;
-                _u setPosATL _guardPos;
-                _u setUnitPos "MIDDLE";
-                [_u] call FADE_tryAmbientCombatAnim;
+            private _guardGrp = [[_guardPos], _sideEnemy, _enemyUnitsSd, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+            if (!isNull _guardGrp) then {
                 _allGroups pushBack _guardGrp;
                 _guardCountSpawned = _guardCountSpawned + 1;
-            } else {
-                deleteGroup _guardGrp;
             };
         };
     };
@@ -294,14 +264,12 @@ FADE_runMission_SearchDestroy = {
         if (_sp isEqualType [] && { count _sp >= 2 }) then {
             _sp = [(_sp select 0), (_sp select 1), (_sp param [2, 0])];
             private _size = [3 + floor random 3, 2] call _scaleOpforCount;
-            private _grp = createGroup _sideEnemy;
+            private _patrolClasses = [];
             for "_k" from 0 to (_size - 1) do {
-                private _cls = if (_k < count _enemyUnitsSd) then { _enemyUnitsSd select _k } else { _baseClassSd };
-                private _u = _grp createUnit [_cls, _sp, [], 0, "NONE"];
-                if (!isNull _u) then { _u setPos _sp };
+                _patrolClasses pushBack (if (_k < count _enemyUnitsSd) then { _enemyUnitsSd select _k } else { _baseClassSd });
             };
-            if (count units _grp > 0) then {
-                [_grp] call FAC_applyEnemyScenarioToGroup;
+            private _grp = [_sp, _sideEnemy, _patrolClasses] call FADE_missionCreateInfantryGroupAt;
+            if (!isNull _grp) then {
                 _grp setBehaviour "SAFE";
                 for "_w" from 0 to 2 do {
                     private _a = _w * 120 + (random 40);
@@ -313,7 +281,7 @@ FADE_runMission_SearchDestroy = {
                     if (_w == 2) then { _wp setWaypointType "CYCLE" };
                 };
                 _allGroups pushBack _grp;
-            } else { deleteGroup _grp };
+            };
         };
     };
 

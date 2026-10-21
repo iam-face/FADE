@@ -35,7 +35,8 @@ FAC_scenarioGui_scenarioContentIdcs = [
     60844, 60845, 60846, 60847, 60848,
     60850, 60851, 60852, 60853, 60854, 60855, 60856, 60857, 60858, 60859, 60860, 60861, 60862,
     60950, 60951, 60650, 60651, 60652, 60653,
-    60340, 60341, 60342, 60343, 60344, 60345
+    60340, 60341, 60342, 60343, 60344, 60345,
+    60986, 60987, 60988, 60989, 60991, 60992
 ];
 
 FAC_scenarioGui_weatherContentIdcs = [
@@ -48,13 +49,12 @@ FAC_scenarioGui_factionsContentIdcs = [
     60910, 60911, 60912, 60913, 60914, 60915, 60916, 60917, 60918, 60919, 60920, 60921,
     60870, 60871, 60872, 60873, 60874, 60875, 60876, 60877, 60878, 60879, 60880,
     60881, 60882, 60883, 60884, 60886, 60887, 60888, 60889, 60890, 60891, 60892, 60893, 60894, 60957,
-    60985, 60986, 60987, 60988, 60989, 60990, 60991, 60992,
     60958, 60959, 60960, 60961, 60962,
     60980, 60981, 60982, 60983, 60984,
     60310, 60311, 60312
 ];
 
-FAC_scenarioGui_adminContentIdcs = [60930, 60943, 60895, 60896, 60897, 60899, 60900, 60901];
+FAC_scenarioGui_adminContentIdcs = [60930, 60943, 60895, 60896, 60897, 60898, 60899, 60900, 60901];
 
 FAC_scenarioGui_getFactionDisplayName = {
     params ["_faction"];
@@ -103,7 +103,8 @@ FAC_scenarioGui_adminCleanupButtonDefs = [
     ["teleportAllToBase", 60897, "Teleport all players to HQ (teleportBase)"],
     ["abortAllMissions", 60899, "Abort all missions"],
     ["despawnCivilians", 60900, "Despawn civilians"],
-    ["despawnOpfor", 60901, "Despawn OPFOR"]
+    ["despawnOpfor", 60901, "Despawn OPFOR"],
+    ["clearPlaced", 60898, "Remove placed objects"]
 ];
 
 FAC_scenarioGui_adminResetCleanupButtons = {
@@ -149,6 +150,9 @@ FAC_scenarioGui_setTabVisibility = {
     params ["_tab"];
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
+    if (!isNull (_d displayCtrl 59900)) exitWith {
+        [_d, _tab] call FAC_gui_showPage;
+    };
     private _showS = (_tab == "scenario");
     private _showW = (_tab == "weather");
     private _showF = (_tab == "factions");
@@ -704,6 +708,7 @@ FAC_scenarioGui_fnc = {
             private _d = _params param [0, displayNull];
             if (isNull _d) then { _d = findDisplay FAC_scenarioGui_IDD };
             if (isNull _d) exitWith {};
+            [_d, FAC_gui_spec_scenario] call FAC_gui_build;
             uinamespace setVariable ["FAC_scenarioGui_fnc", FAC_scenarioGui_fnc];
 
             missionNamespace setVariable ["FAC_scenarioGui_hour", missionNamespace getVariable ["FADE_scenarioTime", 18]];

@@ -34,10 +34,12 @@ FAC_rangeGui_syncMainTabs = {
     (_d displayCtrl 60978) ctrlSetBackgroundColor (if (_tab == "equipment") then { _act } else { _inact });
 };
 
-// Reposition controls when RangeDialog.hpp cannot be hot-reloaded (Arma locks the file).
 FAC_rangeGui_applyLayout = {
     private _d = findDisplay FAC_rangeGui_IDD;
     if (isNull _d) exitWith {};
+    private _tab = missionNamespace getVariable ["FAC_rangeGui_tab", "range"];
+    private _info = _d displayCtrl 60948;
+    if (!isNull (_d displayCtrl 59900)) exitWith {};
     private _set = {
         params ["_idc", "_x", "_y", "_w", "_h"];
         private _c = _d displayCtrl _idc;
@@ -49,8 +51,6 @@ FAC_rangeGui_applyLayout = {
     [60950, 0.46, 0.526, 0.48, 0.228] call _set;
     [60951, 0.04, 0.778, 0.40, 0.040] call _set;
     [60952, 0.46, 0.778, 0.48, 0.040] call _set;
-    private _tab = missionNamespace getVariable ["FAC_rangeGui_tab", "range"];
-    private _info = _d displayCtrl 60948;
     if (!isNull _info) then {
         if (_tab == "range") then {
             _info ctrlSetPosition [0.04, 0.56, 0.92, 0.21];
@@ -245,6 +245,8 @@ FAC_rangeGui_fnc = {
 
     switch _action do {
         case "onLoad": {
+            private _built = findDisplay FAC_rangeGui_IDD;
+            if (!isNull _built) then { [_built, FAC_gui_spec_range] call FAC_gui_build };
             uinamespace setVariable ["FAC_rangeGui_fnc", FAC_rangeGui_fnc];
             missionNamespace setVariable ["FAC_rangeGui_fnc", FAC_rangeGui_fnc];
             uinamespace setVariable ["FAC_rangeGui_enemyType", "targets"];
@@ -289,28 +291,24 @@ FAC_rangeGui_fnc = {
             missionNamespace setVariable ["FAC_rangeGui_tab", _tab];
             private _d = findDisplay FAC_rangeGui_IDD;
             if (isNull _d) exitWith {};
-            private _isR = (_tab == "range");
-            private _isE = (_tab == "equipment");
-            {
-                private _c = _d displayCtrl _x;
-                if (!isNull _c) then { _c ctrlShow _isR };
-            } forEach FAC_rangeGui_tabRangeIdcs;
-            {
-                private _c = _d displayCtrl _x;
-                if (!isNull _c) then { _c ctrlShow _isE };
-            } forEach FAC_rangeGui_tabEquipmentIdcs;
-            private _info = _d displayCtrl 60948;
-            if (!isNull _info) then {
-                if (_isR) then {
-                    _info ctrlSetPosition [0.04, 0.56, 0.92, 0.21];
-                } else {
-                    _info ctrlSetPosition [0.04, 0.828, 0.92, 0.048];
-                };
-                _info ctrlCommit 0;
+            if (isNull (_d displayCtrl 59900)) then {
+                private _isR = (_tab == "range");
+                private _isE = (_tab == "equipment");
+                {
+                    private _c = _d displayCtrl _x;
+                    if (!isNull _c) then { _c ctrlShow _isR };
+                } forEach FAC_rangeGui_tabRangeIdcs;
+                {
+                    private _c = _d displayCtrl _x;
+                    if (!isNull _c) then { _c ctrlShow _isE };
+                } forEach FAC_rangeGui_tabEquipmentIdcs;
+            } else {
+                [_d, _tab] call FAC_gui_showPage;
             };
             [] call FAC_rangeGui_applyLayout;
             [] call FAC_rangeGui_syncMainTabs;
             [] call _refreshSessionBtn;
+            private _isE = _tab == "equipment";
             if (_isE) then {
                 [] call _refreshFriendlyPanel;
                 [] call _refreshInfo;

@@ -47,9 +47,8 @@ FADE_opforAir_opforDetectsBlufor = {
 
 FADE_opforAir_allFriendliesAtHq = {
     params [["_hqR", 1000]];
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (isNull _base) exitWith { false };
-    private _bp = getPosATL _base;
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp < 2) exitWith { true };
     private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _hasPl = false;
     private _allInside = true;
@@ -64,9 +63,8 @@ FADE_opforAir_allFriendliesAtHq = {
 
 FADE_opforAir_anyPlayerFarFromHq = {
     params [["_hqR", 900]];
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (isNull _base) exitWith { true };
-    private _bp = getPosATL _base;
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp < 2) exitWith { false };
     private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _found = false;
     {
@@ -108,8 +106,8 @@ FADE_opforAir_getTargetASL = {
         };
     } forEach playableUnits;
     if (_n > 0) exitWith { _acc vectorMultiply (1 / _n) };
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (!isNull _base) exitWith { getPosASL _base };
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp >= 2) exitWith { ATLToASL _bp };
     private _minX = missionNamespace getVariable ["FADE_mapMinX", missionNamespace getVariable ["FADE_mapMin", 0]];
     private _maxX = missionNamespace getVariable ["FADE_mapMaxX", missionNamespace getVariable ["FADE_mapMax", worldSize]];
     private _minY = missionNamespace getVariable ["FADE_mapMinY", missionNamespace getVariable ["FADE_mapMin", 0]];
@@ -171,9 +169,8 @@ FADE_opforAir_fallbackHeliClasses = [
 FADE_opforAir_adjustTargetAwayFromBase = {
     params ["_target2", ["_minDist", 1000]];
     if (count _target2 < 2) exitWith { _target2 };
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (isNull _base) exitWith { _target2 };
-    private _bp = getPosATL _base;
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp < 2) exitWith { _target2 };
     if ((_target2 distance2D _bp) >= _minDist) exitWith { _target2 };
     private _dir = _bp getDir _target2;
     private _p = _bp getPos [_minDist + 150, _dir];

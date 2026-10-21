@@ -17,6 +17,7 @@ FAC_surrenderChallenge_debugKeys = false;
 
 // Config (client subset) so FADE_* flags e.g. FADE_debugBIScp apply before optional BIS CP stubs
 call compile preprocessFileLineNumbers "rsc\ConfigClient.sqf";
+call compile preprocessFileLineNumbers "rsc\BuildCommon.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_FactionScenario.sqf";
 call compile preprocessFileLineNumbers "rsc\FAC_MissionTypeLabels.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_ClientCommon.sqf";
@@ -328,6 +329,8 @@ FAC_surrenderChallenge_fnc_activate = {
 // Lazy GUI loaders — compile dialogs on first open (rsc\FAC_ClientGuiEnsure.sqf) for faster lobby → map.
 private _iplEnsureT = if (missionNamespace getVariable ["FADE_profileMissionLoad", false]) then { diag_tickTime } else { -1 };
 call compile preprocessFileLineNumbers "rsc\FAC_Theme.sqf";
+call compile preprocessFileLineNumbers "rsc\FAC_GuiForm.sqf";
+call compile preprocessFileLineNumbers "rsc\FAC_GuiSpecs.sqf";
 call compile preprocessFileLineNumbers "rsc\FAC_ClientGuiEnsure.sqf";
 call compile preprocessFileLineNumbers "rsc\FADE_MapClickPick.sqf";
 call compile preprocessFileLineNumbers "rsc\GeoGuesserClient.sqf";
@@ -406,6 +409,9 @@ if (_iplT0 >= 0) then {
     diag_log format ["[FAC profile] client waitUntil FADE_clientInitReady: %1 s", diag_tickTime - _iplT0];
 };
 
+call compile preprocessFileLineNumbers "rsc\FAC_BasePick.sqf";
+[] call FAC_basePick_clientStart;
+
 private _initPack = missionNamespace getVariable ["FADE_scenarioClientSync", []];
 if (count _initPack > 0) then { [_initPack] call FADE_applyScenarioClientSync };
 "FADE_scenarioClientSync" addPublicVariableEventHandler {
@@ -428,10 +434,13 @@ call compile preprocessFileLineNumbers "rsc\FAC_CivCarRadio.sqf";
 call compile preprocessFileLineNumbers "rsc\CqbLoudspeaker.sqf";
 call compile preprocessFileLineNumbers "rsc\CutsceneClient.sqf";
 call compile preprocessFileLineNumbers "rsc\FAC_ClientBoardActions.sqf";
+call compile preprocessFileLineNumbers "rsc\BuildGui.sqf";
+call compile preprocessFileLineNumbers "rsc\BuildSignGui.sqf";
 // #region agent log
 diag_log "[FAC DbgBrowser 62d308] H1 initPlayerLocal post-FAC_ClientBoardActions (client init complete)";
 // #endregion
 [] call FAC_clientInstallBoardActions;
+[] spawn { sleep 1; [] call FAC_build_clientScan };
 
 // Dev: scroll-wheel entry for test suites (lobby param debug tools / Zeus).
 FAC_installDevScrollActions = {

@@ -405,9 +405,9 @@ FADE_smeac_formatBackgroundFallback = {
     params [["_enemyFactionName", "Hostile forces"]];
     format [
         "<t align='left' color='#FFD166'>BACKGROUND</t><br/>" +
-        "<t align='left' color='#8BA4BE'>- %1 operating in the objective area.</t><br/>" +
-        "<t align='left' color='#B0B0B0'>- Threat assessment: Local picture is thin; treat unknown contacts as hostile until identified.</t><br/>" +
-        "<t align='left' color='#B0B0B0'>- Commander's intent: Complete the assigned objectives per the task.</t>",
+        "<t align='left' color='#8BA4BE'>- %1 are in the objective area.</t><br/>" +
+        "<t align='left' color='#B0B0B0'>- Threat assessment: Contacts are not identified.</t><br/>" +
+        "<t align='left' color='#B0B0B0'>- Commander's intent: Treat unidentified contacts as hostile.</t>",
         _enemyFactionName
     ]
 };

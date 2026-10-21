@@ -93,6 +93,11 @@ FAC_firesGui_getSlotDisplayName = {
 FAC_firesGui_applyPage = {
     params ["_display", "_page"];
     if (isNull _display) exitWith {};
+    if (!isNull (_display displayCtrl 59900)) exitWith {
+        private _name = if (_page isEqualTo 0 || { _page isEqualTo "range" }) then { "range" } else { "drill" };
+        missionNamespace setVariable ["FAC_firesGui_page", if (_name isEqualTo "range") then { 0 } else { 1 }];
+        [_display, _name] call FAC_gui_showPage;
+    };
     missionNamespace setVariable ["FAC_firesGui_page", _page];
 
     private _d = _display;
@@ -232,6 +237,8 @@ FAC_firesGui_fnc = {
         };
 
         case "onLoad": {
+            private _built = findDisplay 60700;
+            if (!isNull _built) then { [_built, FAC_gui_spec_fires] call FAC_gui_build };
             uinamespace setVariable ["FAC_firesGui_fnc", FAC_firesGui_fnc];
             missionNamespace setVariable ["FAC_firesGui_lastStateSig", ""];
             [player] remoteExec ["FADE_fires_requestState", 2];

@@ -9,7 +9,14 @@ FADE_recruit_maxGroupSize = 12;
 FADE_recruit_pickBSpPos = {
     params [["_ref", objNull]];
     private _pool = +(missionNamespace getVariable ["FADE_bSpPoints", []]);
-    if (_pool isEqualTo []) exitWith { if (isNull _ref) then { [0, 0, 0] } else { getPosATL _ref } };
+    if (_pool isEqualTo []) exitWith {
+        private _bp = [] call FADE_getPlayerBasePos;
+        if (count _bp >= 2) then {
+            _bp
+        } else {
+            if (isNull _ref) then { [] } else { getPosATL _ref }
+        }
+    };
     private _refPos = if (isNull _ref) then { getPosATL player } else { getPosATL _ref };
     private _best = _pool select 0;
     private _bestD = 1e9;
@@ -251,6 +258,9 @@ FADE_recruit_spawnUnit = {
     };
 
     private _spawnPos = [_requester] call FADE_recruit_pickBSpPos;
+    if (count _spawnPos < 2) exitWith {
+        ["Player base is not set yet."] remoteExec ["systemChat", _requester];
+    };
     private _unit = _grp createUnit [_spawnClass, _spawnPos, [], 0, "NONE"];
     if (isNull _unit) exitWith {
         ["Recruit: spawn failed."] remoteExec ["systemChat", _requester];
