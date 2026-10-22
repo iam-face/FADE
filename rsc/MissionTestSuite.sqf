@@ -1512,6 +1512,48 @@ FAC_missionTestSuite_runServer = {
         diag_log "[FAC TestSuite] SKIP (server): zone picker tests (no civ zone positions)";
     };
 
+    // Operation cleanup used to delete the civ-zone id list, so the deferred unpin released nothing.
+    // Skip the cleanup call while an operation vehicle is live: that path deletes every FADE_opHomeIdx vehicle.
+    if (!isNil "FADE_civ_pinZones" && { !isNil "FADE_cleanupMissionEntities" } && { !isNil "FADE_mission_unpinCivZonesForTask" } && { !isNil "FADE_civ_isZonePinned" }) then {
+        private _pinTid = "FADE_suite_opCivPin";
+        private _pinIds = ["FADE_suite_civPin_a", "FADE_suite_civPin_b", "FADE_suite_civPin_c"];
+        private _liveOpVeh = vehicles findIf { _x getVariable ["FADE_opHomeIdx", -1] >= 0 };
+        missionNamespace setVariable ["FADE_operationCivZoneIds_" + _pinTid, +_pinIds];
+        [_pinIds] call FADE_civ_pinZones;
+        if (_liveOpVeh >= 0) then {
+            diag_log "[FAC TestSuite] SKIP (server): Operation cleanup keeps civ-zone pins (live operation vehicle present)";
+        } else {
+            missionNamespace setVariable ["FADE_operationEntities_" + _pinTid, [[], [], [], 250, [], []]];
+            missionNamespace setVariable [format ["FADE_missionEnt_cleaned_%1", _pinTid], false];
+            [_pinTid, "Operation", false] call FADE_cleanupMissionEntities;
+            private _idsAfter = missionNamespace getVariable ["FADE_operationCivZoneIds_" + _pinTid, []];
+            private _stillPinned = [_pinIds select 0] call FADE_civ_isZonePinned;
+            _ok = _idsAfter isEqualTo _pinIds && { _stillPinned };
+            if (_ok) then {
+                _pass = _pass + 1;
+                diag_log "[FAC TestSuite] PASS (server): Operation cleanup keeps civ-zone pins for deferred unpin";
+            } else {
+                _fail = _fail + 1;
+                diag_log format ["[FAC TestSuite] FAIL (server): Operation cleanup dropped civ-zone pins (ids %1 pinned %2)", _idsAfter, _stillPinned];
+            };
+        };
+        [_pinTid] call FADE_mission_unpinCivZonesForTask;
+        private _idsGone = missionNamespace getVariable ["FADE_operationCivZoneIds_" + _pinTid, []];
+        private _released = !([_pinIds select 0] call FADE_civ_isZonePinned);
+        _ok = _idsGone isEqualTo [] && { _released };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): Operation unpin releases civ-zone pins";
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): Operation unpin left civ-zone pins (ids %1 released %2)", _idsGone, _released];
+        };
+        missionNamespace setVariable [format ["FADE_missionEnt_cleaned_%1", _pinTid], nil];
+        missionNamespace setVariable ["FADE_operationAborted_" + _pinTid, nil];
+        missionNamespace setVariable ["FADE_operationEntities_" + _pinTid, nil];
+        missionNamespace setVariable ["FADE_operationCivZoneIds_" + _pinTid, nil];
+    };
+
     // ----- SMEAC / intel formatters (runtime errors often only show here) -----
     diag_log "[FAC TestSuite] --- SMEAC / INTEL ---";
     private _intelPos = if (count _mpos >= 2) then { +_mpos } else { +FADE_basePos };
@@ -2505,11 +2547,7 @@ FAC_missionTestSuite_runServer = {
 
         missionNamespace setVariable ["FAC_param_buildCatalog", 1];
         private _realRow = ["Land_BagFence_Long_F"] call FADE_build_findEntry;
-        private _signRow = ["Land_WallSign_01_F"] call FADE_build_findEntry;
         private _realOk = !(_realRow isEqualTo []) && { (_realRow select 2) == 15 };
-        if (isClass (configFile >> "CfgVehicles" >> "Land_WallSign_01_F") && { !(_signRow isEqualTo []) }) then {
-            _realOk = false;
-        };
         {
             if (isClass (configFile >> "CfgVehicles" >> _x)) then {
                 private _row = [_x] call FADE_build_findEntry;
@@ -2520,6 +2558,29 @@ FAC_missionTestSuite_runServer = {
             "Land_HBarrier_1_F", "Land_HBarrier_5_F", "Land_Razorwire_F",
             "Land_CncBarrierMedium4_F", "Land_BagBunker_Small_F",
             "Land_CamoNet_BIG_F", "Land_PortableLight_single_F"
+        ];
+        {
+            if (isClass (configFile >> "CfgVehicles" >> _x)) then {
+                private _row = [_x] call FADE_build_findEntry;
+                if (_row isEqualTo []) then { _realOk = false };
+            };
+        } forEach [
+            "Land_HBarrierTower_lxWS", "CamoNet_OPFOR_open_F",
+            "Land_CampingChair_V2_white_F", "Land_CampingTable_white_F",
+            "Land_PowerGenerator_F", "WaterPump_01_sand_F",
+            "Land_MapBoard_01_Wall_F", "Land_MapBoard_F", "Land_WallSign_01_F",
+            "Land_PaperBox_closed_F", "Land_Net_Fence_8m_F", "Land_Net_Fence_4m_F",
+            "Land_Net_Fence_Gate_F", "CargoNet_01_box_F", "Box_Cargo_Science_RF",
+            "Box_Cargo_Green_RF", "Land_FoodSacks_01_cargo_brown_F",
+            "CargoNet_01_barrels_F", "Land_WaterBarrel_F", "Land_TTowerSmall_2_F",
+            "Land_BarrelTrash_grey_F", "Land_CampingChair_V1_F", "Metal_Locker_F",
+            "Land_Sofa_01_F", "Fridge_01_closed_F", "Land_WaterCooler_01_new_F",
+            "Land_FlowerPot_01_Flower_F", "Land_ToiletBox_F", "Land_WaterTank_F",
+            "Land_Shoot_House_Wall_Long_F", "Land_Shoot_House_Wall_F",
+            "Land_MetalBarrel_F", "Land_MetalBarrel_empty_F",
+            "Land_MedicalTent_01_NATO_generic_closed_F", "Land_TentA_F",
+            "Land_TentDome_F", "Land_TentSolar_01_folded_olive_F",
+            "Land_TentSolar_01_folded_sand_F", "gm_gc_tent_5x5m"
         ];
         missionNamespace setVariable ["FAC_param_buildCatalog", 0];
         if (isClass (configFile >> "CfgVehicles" >> "Land_WallSign_01_F")) then {

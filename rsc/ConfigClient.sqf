@@ -1,5 +1,5 @@
 // =============================================================================
-// ConfigClient.sqf  -  client JIP subset (map picks, debug stubs, locker room)
+// ConfigClient.sqf  -  client JIP subset (map picks, debug stubs)
 // Included by Config.sqf on server boot; initPlayerLocal compiles this directly.
 // =============================================================================
 

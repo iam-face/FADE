@@ -29,11 +29,3 @@ FADE_missionMapPickTimeoutSec = 20;
 // Trace bis_fnc_cp_getQueueDelay / bis_fnc_cp_main callers (installs stubs in DebugBIScpStub.sqf).
 FADE_debugBIScp = false;
 FADE_bisCpStubReapplyInterval = 2;
-
-// Locker Room ambient (client: rsc\LockerRoomAmbient.sqf)
-FADE_lockerRoomCenterVar = "posLockerRoom";
-FADE_lockerRoomRadius = 5;
-FADE_lockerNearLockerDist = 2;
-FADE_lockerPosVarMax = 64;
-FADE_lockerSoundDelayMin = 3;
-FADE_lockerSoundDelayRand = 3;

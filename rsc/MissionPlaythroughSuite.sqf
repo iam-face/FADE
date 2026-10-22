@@ -2,7 +2,7 @@
 // MissionPlaythroughSuite.sqf  -  sequential mission init + mechanic smoke tests.
 // Complements MissionTestSuite.sqf (static smoke). Mutates live mission state.
 //
-// RECOMMENDED (debug-tools lobby param adds scroll-wheel action):
+// RECOMMENDED (debug console or the dev scroll-wheel action). The entry spawns; do not call the runner directly.
 //   [] call FAC_playthroughSuite_execAll
 //
 // Server only (debug console, dedicated host):
@@ -310,14 +310,14 @@ FAC_playthroughSuite__purgeTaskId = {
         if (markerShape _bluM != "") then { [_bluM] call FADE_deleteMarkerSafe };
     };
 
+    if (!isNil "FADE_mission_unpinCivZonesForTask") then {
+        [_taskId] call FADE_mission_unpinCivZonesForTask;
+    };
     if (!isNil "FADE_cleanupMissionEntities") then {
         [_taskId, _mType, true] call FADE_cleanupMissionEntities;
     };
     if (!isNil "FADE_cleanupMissionMarkers") then {
         [_taskId, _player] call FADE_cleanupMissionMarkers;
-    };
-    if (!isNil "FADE_mission_unpinCivZonesForTask") then {
-        [_taskId] call FADE_mission_unpinCivZonesForTask;
     };
     if (!isNil "FADE_missionEnt_scheduledCleanup") then {
         [_taskId, 0, _player] spawn FADE_missionEnt_scheduledCleanup;

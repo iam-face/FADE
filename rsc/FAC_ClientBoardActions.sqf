@@ -457,9 +457,6 @@ if (!isNull _nesk) then {
     ];
 };
 
-// Locker Room -- locker slaps (posLockerRoom + posLockers_1/2); see rsc\Config.sqf
-[] execVM "rsc\LockerRoomAmbient.sqf";
-
 };
 
 // ACE self-interact while within 1000 m of FADE_basePos. Statements call the same

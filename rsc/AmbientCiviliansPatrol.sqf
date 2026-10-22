@@ -193,6 +193,20 @@ FADE_civ_unpinZones = {
             private _n = (FADE_civPinnedZones get _id) - 1;
             if (_n <= 0) then {
                 FADE_civPinnedZones deleteAt _id;
+                // Towns the player has already left should go quiet with the pin.
+                // A player still inside the deactivate radius keeps the zone.
+                if (!isNil "FADE_civ_despawnZone") then {
+                    private _trigger = missionNamespace getVariable [_id, objNull];
+                    if (!isNull _trigger) then {
+                        private _center = getPosATL _trigger;
+                        private _deactivateDist = missionNamespace getVariable ["FADE_civPlayerDeactivateDist", 1150];
+                        private _near = false;
+                        {
+                            if (alive _x && { isPlayer _x } && { (_x distance2D _center) <= _deactivateDist }) exitWith { _near = true };
+                        } forEach allPlayers;
+                        if (!_near) then { [_id] call FADE_civ_despawnZone };
+                    };
+                };
             } else {
                 FADE_civPinnedZones set [_id, _n];
             };

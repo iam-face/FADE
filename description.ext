@@ -376,10 +376,6 @@ class CfgSounds
     class FAC_apprehend006 { name = "FAC_apprehend006"; sound[] = {"\Sounds\fac_apprehend-006.ogg", 2.5, 1, 500}; titles[] = {}; };
     class FAC_apprehend011 { name = "FAC_apprehend011"; sound[] = {"\Sounds\fac_apprehend-011.ogg", 2.5, 1, 500}; titles[] = {}; };
     // Troop transport: add FADE_embarkStart / FADE_embarkDone / FADE_disembarkStart / FADE_disembarkDone here when the matching OGGs exist in Sounds\ (TroopTransport.sqf skips playSound if absent)
-    // Locker Room slaps (rsc\LockerRoomAmbient.sqf) -- CfgSounds maxDistance 250 m; say3D also passes 250
-    class FAC_sig_lockerslap_001 { name = "FAC_sig_lockerslap_001"; sound[] = {"\Sounds\sig_lockerslap-001.ogg", 1, 1, 250}; titles[] = {}; };
-    class FAC_sig_lockerslap_002 { name = "FAC_sig_lockerslap_002"; sound[] = {"\Sounds\sig_lockerslap-002.ogg", 1, 1, 250}; titles[] = {}; };
-    class FAC_sig_lockerslap_003 { name = "FAC_sig_lockerslap_003"; sound[] = {"\Sounds\sig_lockerslap-003.ogg", 1, 1, 250}; titles[] = {}; };
     // CQB killhouse loudspeaker (Eden object cqbLoudspeaker; 3D origin +5 m above object in script)
     // Audio file from Sig_CTB_MSL_SFX_Amb (must be loaded on server/clients)
     class FAC_cqbLoudspeakerHorn
