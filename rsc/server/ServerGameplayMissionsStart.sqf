@@ -68,10 +68,15 @@ FADE_mission_playersFromUids = {
     private _missing = false;
     {
         private _uid = _x;
-        if (_rejectBlankUid && { !(_uid isEqualType "") || { _uid == "" } }) then { _missing = true };
+        private _headless = missionNamespace getVariable ["FADE_headlessOwnerUnit", objNull];
+        private _blankOk = _uid isEqualType "" && { _uid == "" } && { !isNull _headless } && { _headless getVariable ["FADE_headlessOwner", false] };
+        if (_rejectBlankUid && { !(_uid isEqualType "") || { _uid == "" } } && { !_blankOk }) then { _missing = true };
         private _p = objNull;
-        { if (getPlayerUID _x == _uid) exitWith { _p = _x } } forEach allPlayers;
-        if (isNull _p || { !alive _p } || { !isPlayer _p } || { side group _p != _sideFriendly }) then {
+        { if (getPlayerUID _x == _uid && { isPlayer _x }) exitWith { _p = _x } } forEach allPlayers;
+        if (isNull _p && { _blankOk || { !isNull _headless && { getPlayerUID _headless == _uid } } }) then {
+            _p = _headless;
+        };
+        if (isNull _p || { !alive _p } || { !([_p] call FADE_unitIsMissionPlayer) } || { side group _p != _sideFriendly }) then {
             _missing = true;
         } else {
             _players pushBack _p;
@@ -311,6 +316,7 @@ FADE_startTroopInsert = {
     params ["_participantUids", "_waveCount", "_player", ["_mapAnchor", []]];
     if (!isServer) exitWith {};
     if (isNull _player) exitWith {};
+    if ([_player] call FADE_base_denyUntilDefined) exitWith {};
     private _opened = [
         _participantUids,
         _waveCount,
@@ -358,6 +364,7 @@ FADE_startTroopExtract = {
     params ["_participantUids", "_waveCount", "_player", ["_mapAnchor", []]];
     if (!isServer) exitWith {};
     if (isNull _player) exitWith {};
+    if ([_player] call FADE_base_denyUntilDefined) exitWith {};
     private _opened = [
         _participantUids,
         _waveCount,

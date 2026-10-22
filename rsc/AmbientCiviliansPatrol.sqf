@@ -193,6 +193,20 @@ FADE_civ_unpinZones = {
             private _n = (FADE_civPinnedZones get _id) - 1;
             if (_n <= 0) then {
                 FADE_civPinnedZones deleteAt _id;
+                // Towns the player has already left should go quiet with the pin.
+                // A player still inside the deactivate radius keeps the zone.
+                if (!isNil "FADE_civ_despawnZone") then {
+                    private _trigger = missionNamespace getVariable [_id, objNull];
+                    if (!isNull _trigger) then {
+                        private _center = getPosATL _trigger;
+                        private _deactivateDist = missionNamespace getVariable ["FADE_civPlayerDeactivateDist", 1150];
+                        private _near = false;
+                        {
+                            if (alive _x && { isPlayer _x } && { (_x distance2D _center) <= _deactivateDist }) exitWith { _near = true };
+                        } forEach allPlayers;
+                        if (!_near) then { [_id] call FADE_civ_despawnZone };
+                    };
+                };
             } else {
                 FADE_civPinnedZones set [_id, _n];
             };
@@ -391,10 +405,19 @@ FADE_enemyPatrol_spawnForZone = {
             private _angle = random 360;
             private _dist = _spawnMinD + random ((_spawnMaxD - _spawnMinD) max 1);
             private _rough = _center getPos [_dist, _angle];
-            _sp = [[_rough, 0, 15, 3, 1, 0.4, 0, [], _rough], _rough] call FADE_findSafePosArray;
-            if (!(_sp isEqualType []) || { count _sp < 2 }) then { _sp = +_rough };
-            if (count _sp < 3) then { _sp set [2, 0] };
-            if ([_sp] call _dryFn && { [_sp, _patrolPlClearM] call _patrolFarFromPlayers }) exitWith {};
+            _sp = [[_rough, 0, 20, 2, 0, 0.5, 0, [], _rough]] call FADE_findLandPosWithArgs;
+            if (count _sp >= 2) then {
+                _sp = [_sp] call FADE_normPos3;
+            } else {
+                _sp = [];
+            };
+            if (
+                count _sp >= 2 &&
+                { [_sp, 15] call FADE_posClearOfWater } &&
+                { (_sp distance2D _center) <= (_spawnMaxD + 25) } &&
+                { (_sp distance2D _center) >= ((_spawnMinD * 0.6) min _spawnMaxD) } &&
+                { [_sp, _patrolPlClearM] call _patrolFarFromPlayers }
+            ) exitWith {};
             _sp = [];
         };
         if (count _sp < 2) then { continue };
@@ -482,6 +505,7 @@ FADE_enemyPatrol_spawnForZone = {
     private _garScanR = missionNamespace getVariable ["FADE_garrisonAmbientScanRadiusM", 380];
     private _ambBChance = missionNamespace getVariable ["FADE_garrisonAmbientBuildingChance", 0.55];
     private _buildings = nearestObjects [_center, ["House", "Building"], _garScanR];
+    _buildings = [_buildings, 40] call FADE_samplePlacementList;
     private _buildingsWithPos = _buildings select {
         count (_x buildingPos -1) >= 2 && { [getPosATL _x] call _dryFn }
     };

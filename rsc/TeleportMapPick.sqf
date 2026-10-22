@@ -7,6 +7,10 @@ if (missionNamespace getVariable ["FAC_teleport_mapPickActive", false]) exitWith
     systemChat "Map teleport already active.";
 };
 
+// onMapSingleClick runs in missionNamespace. Return-to-base lives in TeleportGui.sqf,
+// which is not loaded until Fast Travel opens. Load it before the click can fire.
+call FAC_ensureTeleportGui;
+
 missionNamespace setVariable ["FAC_teleport_mapPickActive", true];
 
 private _mapClick = "missionNamespace setVariable [""FAC_teleport_mapPickActive"", false]; player setPos _pos; [format [""%1 teleported to map grid %2"", name player, mapGridPosition player]] remoteExec [""systemChat"", 0]; onMapSingleClick ''; openMap false; [] spawn { sleep 0.55; [] call FAC_teleport_fnc_addReturnToBase }; hint 'Teleported successfully.'; true;";

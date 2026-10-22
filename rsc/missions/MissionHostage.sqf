@@ -137,7 +137,11 @@ FADE_runMission_Hostage = {
     private _allGroups = [_hostageGroup] + _guardGroups + _areaGroups + _patrolGroups;
     [_guardGroups + _patrolGroups, _basePos] call FADE_registerEnemyRetreat;
 
-    [_taskId, "Hostage", _hoAnchor, _markerOut, _guardGroups + _patrolGroups + _areaGroups, "ColorCIV"] call FADE_fieldIntel_startForMission;
+    private _hoPositions = _hostages apply {
+        private _p = getPosATL _x;
+        if (count _p < 3) then { [(_p select 0), (_p select 1), 0] } else { _p }
+    };
+    [_taskId, "Hostage", _hoAnchor, _markerOut, _guardGroups + _patrolGroups + _areaGroups, "ColorCIV", "", _hoPositions] call FADE_fieldIntel_startForMission;
 
     [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
     [_taskId, _missionCenter, _basePos, _enemyUnits, _allGroups, -1] call FADE_counterAttackStart;
@@ -159,6 +163,7 @@ FADE_runMission_Hostage = {
             if (!_done && _aliveCount > 0) then {
                 private _allAtBase = (_alive findIf { (_x distance _basePos) >= _baseDistForComplete }) == -1;
                 if (_allAtBase) then {
+                    [_alive select 0] call FADE_hostage_playReturnCue;
                     [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;
                     _done = true;
                 };

@@ -32,38 +32,15 @@ FADE_runMission_Cargo = {
     _cargo setPosATL _cargoPos;
     _cargo enableRopeAttach true;
 
-    // Small camp composition at destination (BIS-style: createVehicle at relative positions)
-    private _campObjects = [];
-    // [classname, distance from center, angle, object rotation offset]
-    private _campComposition = [
-        ["Land_TentA_F", 8, 0, 0],
-        ["Land_TentDome_F", 10, 180, 0],
-        ["Land_CampingTable_F", 5, 90, 0],
-        ["Land_CampingChair_V2_F", 6, 120, 0],
-        ["Land_CampingChair_V2_F", 6, 60, 0],
-        ["Campfire_burning_F", 4, 270, 0],
-        ["Box_NATO_Ammo_F", 12, 45, 0],
-        ["Box_NATO_Support_F", 12, 315, 0]
-    ];
-    {
-        _x params ["_class", "_dist", "_angle", "_dirObj"];
-        private _pos = [(_destPos select 0) + _dist * (cos _angle), (_destPos select 1) + _dist * (sin _angle), (_destPos param [2, 0])];
-        _pos = [[_pos, 0, 2, 0, 1, 0.3, 0, [], _pos], _pos] call FADE_findSafePosArray;
-        if (_pos isEqualType [] && { count _pos >= 2 }) then {
-            _pos = [(_pos select 0), (_pos select 1), (_pos param [2, 0])];
-            private _obj = createVehicle [_class, _pos, [], 0, "NONE"];
-            _obj setDir (_angle + _dirObj);
-            _obj setPosATL _pos;
-            if (surfaceIsWater _pos) then { _obj setPosATL [_pos select 0, _pos select 1, 0] } else { _obj setVectorUp surfaceNormal _pos };
-            _campObjects pushBack _obj;
-            [_taskId, _obj] call FADE_missionEnt_registerObject;
-        };
-    } forEach _campComposition;
-
+    private _campObjects = ["camp", _destPos, _taskId] call FADE_comp_spawn;
+    private _campAnchor = _destPos;
+    if (count _campObjects > 0) then {
+        _campAnchor = (_campObjects select 0) getVariable ["FADE_comp_anchor", _destPos];
+    };
     // Single receiving unit (the one who walks to the helicopter and confirms unload)
     private _receiverClass = _friendlyUnits select 0;
-    private _garrisonPos = [[_destPos, 0, 8, 2, 1, 0.3, 0, [], _destPos], _destPos] call FADE_findSafePosArray;
-    if (count _garrisonPos < 2) then { _garrisonPos = _destPos };
+    private _garrisonPos = [[_campAnchor, 0, 8, 2, 1, 0.3, 0, [], _campAnchor], _campAnchor] call FADE_findSafePosArray;
+    if (count _garrisonPos < 2) then { _garrisonPos = _campAnchor };
     private _garrisonGroup = [_garrisonPos, _sideFriendly, [_receiverClass]] call FADE_spawnFriendlyInfantryGroupAt;
     [_taskId, _garrisonGroup] call FADE_missionEnt_registerGroup;
     [_garrisonGroup] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
@@ -83,9 +60,9 @@ FADE_runMission_Cargo = {
         for "_k" from (count _patrolClasses) to (_patrolSize - 1) do { _patrolClasses pushBack (_friendlyUnits select 0) };
         private _patrolAngle = _pg * 180 + (random 60);
         private _patrolDist = 30 + random 80;
-        private _psp = [(_destPos select 0) + _patrolDist * (cos _patrolAngle), (_destPos select 1) + _patrolDist * (sin _patrolAngle), 0];
+        private _psp = [(_campAnchor select 0) + _patrolDist * (cos _patrolAngle), (_campAnchor select 1) + _patrolDist * (sin _patrolAngle), 0];
         _psp = [[_psp, 0, 15, 3, 1, 0.3, 0, [], _psp], _psp] call FADE_findSafePosArray;
-        if (count _psp < 2) then { _psp = _destPos };
+        if (count _psp < 2) then { _psp = _campAnchor };
         private _pg_grp = [_psp, _sideFriendly, _patrolClasses] call FADE_spawnFriendlyInfantryGroupAt;
         [_pg_grp] call (missionNamespace getVariable ["FADE_assignGroupCallsign", {}]);
         _pg_grp setBehaviour "SAFE";
@@ -93,7 +70,7 @@ FADE_runMission_Cargo = {
         for "_w" from 0 to 3 do {
             private _wa = _w * 90 + (random 30);
             private _wd = 80 + random 120;
-            private _wpPos = [(_destPos select 0) + _wd * (cos _wa), (_destPos select 1) + _wd * (sin _wa), 0];
+            private _wpPos = [(_campAnchor select 0) + _wd * (cos _wa), (_campAnchor select 1) + _wd * (sin _wa), 0];
             _wpPos = [[_wpPos, 0, 10, 2, 1, 0.3, 0, [], _wpPos], _wpPos] call FADE_findSafePosArray;
             if (_wpPos isEqualType [] && { count _wpPos >= 2 }) then {
                 _wpPos = [(_wpPos select 0), (_wpPos select 1), (_wpPos param [2, 0])];

@@ -78,13 +78,13 @@ if (hasInterface) then {
                 private _innerX = _bgX + _padX;
                 private _sliderY = _bgY + _titleH + _helpH + 0.01;
 
-                private _durLbl = _display ctrlCreate ["RscText", 60370];
+                private _durLbl = _display ctrlCreate ["FACRscFormLabel", 60370];
                 _durLbl ctrlSetPosition [_innerX, _sliderY, _innerW * 0.45, 0.026];
                 _durLbl ctrlSetText "Defend duration";
                 _durLbl ctrlCommit 0;
                 _controls pushBack _durLbl;
 
-                private _durVal = _display ctrlCreate ["RscText", 60371];
+                private _durVal = _display ctrlCreate ["FACRscFormLabel", 60371];
                 _durVal ctrlSetPosition [_innerX + (_innerW * 0.45), _sliderY, _innerW * 0.55, 0.026];
                 _durVal ctrlSetText ([_defS] call FAC_pointDefensePickGui_fnc_formatDuration);
                 _durVal ctrlSetTextColor [0.75, 0.78, 0.82, 1];
@@ -103,7 +103,7 @@ if (hasInterface) then {
                 _controls pushBack _durSl;
 
                 private _btnY = _sliderY + _sliderBlock + 0.008;
-                private _bRandom = _display ctrlCreate ["RscButton", 60373];
+                private _bRandom = _display ctrlCreate ["FACRscPrimaryBtn", 60373];
                 _bRandom ctrlSetPosition [_innerX, _btnY, _innerW, _btnH];
                 _bRandom ctrlSetText "Random location";
                 [_bRandom] call FAC_missionPick_stylePrimary;
@@ -111,7 +111,7 @@ if (hasInterface) then {
                 _bRandom ctrlAddEventHandler ["ButtonClick", { ["random", []] call (missionNamespace getVariable ["FAC_pointDefensePickGui_fnc", {}]) }];
                 _controls pushBack _bRandom;
 
-                private _bMap = _display ctrlCreate ["RscButton", 60374];
+                private _bMap = _display ctrlCreate ["FACRscPrimaryBtn", 60374];
                 _bMap ctrlSetPosition [_innerX, _btnY + _btnH + _btnGap, _innerW, _btnH];
                 _bMap ctrlSetText "Map click (choose area on map)";
                 [_bMap] call FAC_missionPick_styleStart;
@@ -119,7 +119,7 @@ if (hasInterface) then {
                 _bMap ctrlAddEventHandler ["ButtonClick", { ["mapClick", []] call (missionNamespace getVariable ["FAC_pointDefensePickGui_fnc", {}]) }];
                 _controls pushBack _bMap;
 
-                private _bCancel = _display ctrlCreate ["RscButton", 60375];
+                private _bCancel = _display ctrlCreate ["FACRscPrimaryBtn", 60375];
                 _bCancel ctrlSetPosition [_innerX, _btnY + (_btnH + _btnGap) * 2, _innerW, _btnH];
                 _bCancel ctrlSetText "Cancel";
                 [_bCancel] call FAC_missionPick_styleDanger;

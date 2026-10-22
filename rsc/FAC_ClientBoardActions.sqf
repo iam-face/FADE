@@ -107,6 +107,7 @@ if (!isNull _vehicleGuiObj) then {
             if !(["FAC_playerCanUseVehicleGui"] call FAC_lobbyParams_callAccess) exitWith {
                 systemChat "Vehicle GUI access denied by lobby settings.";
             };
+            if (!isNil "FAC_build_denyService" && { [player, "vehicles"] call FAC_build_denyService }) exitWith {};
             [] spawn { call FAC_ensureVehicleGui; sleep 0.2; ["open", []] call FAC_vehicleGui_fnc };
         },
         [],
@@ -114,7 +115,7 @@ if (!isNull _vehicleGuiObj) then {
         false,
         true,
         "",
-        "",
+        "isNil 'FAC_build_serviceUp' || { ['vehicles'] call FAC_build_serviceUp }",
         3
     ];
 };
@@ -158,13 +159,16 @@ if (!isNull _firesTerm) then {
         if ((missionNamespace getVariable ["FAC_param_enableAceArsenalActions", 1]) > 0) then {
             _firesTerm addAction [
                 "<t color='#FF8C00'>Open ACE Arsenal</t>",
-                { [(_this select 0), (_this select 1)] call ace_arsenal_fnc_openBox },
+                {
+                    if (!isNil "FAC_build_denyService" && { [player, "gear"] call FAC_build_denyService }) exitWith {};
+                    [(_this select 0), (_this select 1)] call ace_arsenal_fnc_openBox
+                },
                 [],
                 4.5,
                 false,
                 true,
                 "",
-                "",
+                "isNil 'FAC_build_serviceUp' || { ['gear'] call FAC_build_serviceUp }",
                 3
             ];
         };
@@ -339,6 +343,7 @@ private _teleportBoardMap = [
                     if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
                         systemChat "Loadout GUI access denied by lobby settings.";
                     };
+                    if (!isNil "FAC_build_denyService" && { [player, "gear"] call FAC_build_denyService }) exitWith {};
                     [] spawn { call FAC_ensureLoadoutGui; sleep 0.2; ["open", []] call FAC_loadoutGui_fnc };
                 },
                 [],
@@ -346,7 +351,7 @@ private _teleportBoardMap = [
                 false,
                 true,
                 "",
-                "",
+                "isNil 'FAC_build_serviceUp' || { ['gear'] call FAC_build_serviceUp }",
                 3
             ];
         };
@@ -356,6 +361,7 @@ private _teleportBoardMap = [
                 if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
                     systemChat "Loadout GUI access denied by lobby settings.";
                 };
+                if (!isNil "FAC_build_denyService" && { [player, "gear"] call FAC_build_denyService }) exitWith {};
                 call FAC_ensureLoadoutGui;
                 [player] call FAC_loadoutGui_saveRespawnLoadoutSnapshot;
                 systemChat "Loadout saved - will be restored on respawn.";
@@ -365,20 +371,23 @@ private _teleportBoardMap = [
             false,
             true,
             "",
-            "",
+            "isNil 'FAC_build_serviceUp' || { ['gear'] call FAC_build_serviceUp }",
             3
         ];
         if (isClass (configFile >> "CfgPatches" >> "ace_arsenal")) then {
             if ((missionNamespace getVariable ["FAC_param_enableAceArsenalActions", 1]) > 0 && { ["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess }) then {
                 _box addAction [
                     if (_isWorkbench) then { "<t color='#FF8C00'>Use Crusty's Workbench</t>" } else { "<t color='#FF8C00'>Open ACE Arsenal</t>" },
-                    { [(_this select 0), (_this select 1)] call ace_arsenal_fnc_openBox },  // target, caller
+                    {
+                        if (!isNil "FAC_build_denyService" && { [player, "gear"] call FAC_build_denyService }) exitWith {};
+                        [(_this select 0), (_this select 1)] call ace_arsenal_fnc_openBox
+                    },
                     [],
                     5,
                     false,
                     true,
                     "",
-                    "",
+                    "isNil 'FAC_build_serviceUp' || { ['gear'] call FAC_build_serviceUp }",
                     3
                 ];
             };
@@ -399,6 +408,7 @@ private _teleportBoardMap = [
             if !(["FAC_playerCanUseRecruitGui"] call FAC_lobbyParams_callAccess) exitWith {
                 systemChat "Recruit GUI access denied by lobby settings.";
             };
+            if (!isNil "FAC_build_denyService" && { [player, "barracks"] call FAC_build_denyService }) exitWith {};
             [] spawn { call FAC_ensureRecruitGui; sleep 0.2; ["open", []] call FAC_recruitGui_fnc };
         },
         [],
@@ -406,7 +416,7 @@ private _teleportBoardMap = [
         false,
         true,
         "",
-        "",
+        "isNil 'FAC_build_serviceUp' || { ['barracks'] call FAC_build_serviceUp }",
         3
     ];
 };
@@ -447,9 +457,6 @@ if (!isNull _nesk) then {
     ];
 };
 
-// Locker Room -- hostage VO + locker slaps (posLockerRoom + posLockers_1/2); see rsc\Config.sqf
-[] execVM "rsc\LockerRoomAmbient.sqf";
-
 };
 
 // ACE self-interact while within 1000 m of FADE_basePos. Statements call the same
@@ -462,7 +469,7 @@ FAC_aceSelf_nearPlayerBase = {
 
 // Vehicle the player is in, or the Air/Land vehicle they are looking at.
 // Look distance matches ace_pylons_searchDistance (cba_settings.sqf, 50 m) so
-// Open Pylon Editor uses the same reach as the existing pylon dialog.
+// Open pylon menu uses the same reach as the existing pylon dialog.
 FAC_aceSelf_myVehicle = {
     private _veh = vehicle player;
     if (!(_veh isEqualTo player) && { _veh isKindOf "Air" || { _veh isKindOf "LandVehicle" } }) exitWith { _veh };
@@ -506,6 +513,7 @@ FAC_aceSelf_requestVehicleService = {
     if !(["FAC_playerCanUseVehicleGui"] call FAC_lobbyParams_callAccess) exitWith {
         systemChat "Vehicle GUI access denied by lobby settings.";
     };
+    if (!isNil "FAC_build_denyService" && { [player, "vehicles"] call FAC_build_denyService }) exitWith {};
     private _veh = [] call FAC_aceSelf_myVehicle;
     if (isNull _veh || {!alive _veh}) exitWith { systemChat "Select a vehicle first."; };
     call FAC_ensureVehicleGui;
@@ -533,72 +541,111 @@ FAC_aceSelf_install = {
         [player, 1, _parent, _act] call ace_interact_menu_fnc_addActionToObject
     };
 
-    // ["", "#FF0000"] tints ACE's default dot. The label keeps the menu text color.
-    private _fade = [["ACE_SelfActions"], "FAC_aceSelf_fade", "FADE...", {}, { [] call FAC_aceSelf_nearPlayerBase }, ["", "#FF0000"]] call _add;
-    private _gear = [_fade, "FAC_aceSelf_gear", "Gear and Units...", {}] call _add;
-    private _veh = [_fade, "FAC_aceSelf_veh", "Vehicles...", {}] call _add;
-    private _scn = [_fade, "FAC_aceSelf_scn", "Scenario...", {}] call _add;
+    // White task glyphs. ACE tints the image; the label keeps the menu text color.
+    private _taskIcon = {
+        params ["_file", ["_color", "#FFFFFF"]];
+        ["\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\" + _file, _color]
+    };
+    private _icoFade = ["interact_ca.paa", "#FF0000"] call _taskIcon;
+    private _icoGear = ["backpack_ca.paa"] call _taskIcon;
+    private _icoVeh = ["armor_ca.paa"] call _taskIcon;
+    private _icoScn = ["whiteboard_ca.paa"] call _taskIcon;
+    private _icoArsenal = ["box_ca.paa"] call _taskIcon;
+    private _icoLoadout = ["rifle_ca.paa"] call _taskIcon;
+    private _icoSave = ["download_ca.paa"] call _taskIcon;
+    private _icoReload = ["upload_ca.paa"] call _taskIcon;
+    private _icoRecruit = ["meet_ca.paa"] call _taskIcon;
+    private _icoHeal = ["heal_ca.paa"] call _taskIcon;
+    private _icoVehGui = ["getin_ca.paa"] call _taskIcon;
+    private _icoRearm = ["rearm_ca.paa"] call _taskIcon;
+    private _icoRepair = ["repair_ca.paa"] call _taskIcon;
+    private _icoRefuel = ["refuel_ca.paa"] call _taskIcon;
+    private _icoPylon = ["target_ca.paa"] call _taskIcon;
+    private _icoMissions = ["attack_ca.paa"] call _taskIcon;
+    private _icoScenario = ["documents_ca.paa"] call _taskIcon;
+    private _icoTravel = ["navigate_ca.paa"] call _taskIcon;
+    private _icoMap = ["map_ca.paa"] call _taskIcon;
+    private _icoBase = ["defend_ca.paa"] call _taskIcon;
+    private _icoBuild = ["use_ca.paa"] call _taskIcon;
+    private _fade = [["ACE_SelfActions"], "FAC_aceSelf_fade", "FADE...", {}, { [] call FAC_aceSelf_nearPlayerBase }, _icoFade] call _add;
+    private _gear = [_fade, "FAC_aceSelf_gear", "Gear and Units...", {}, { true }, _icoGear] call _add;
+    private _veh = [_fade, "FAC_aceSelf_veh", "Vehicles...", {}, { true }, _icoVeh] call _add;
+    private _scn = [_fade, "FAC_aceSelf_scn", "Scenario...", {}, { true }, _icoScn] call _add;
 
     [_gear, "FAC_aceSelf_arsenal", "ACE Arsenal", {
         if !(isNull objectParent player) exitWith {
             systemChat "Leave the vehicle before opening ACE Arsenal.";
         };
         private _box = [] call FAC_aceSelf_arsenalBox;
-        if (isNull _box) exitWith {};
-        [_box, player] call ace_arsenal_fnc_openBox;
+        if (!isNil "FAC_build_denyService" && { [player, "gear"] call FAC_build_denyService }) exitWith {};
+        if (isNull _box) then {
+            // Mode true fills the arsenal from config. No box object, and initBox is not used, so ACE does not add a second Arsenal action.
+            [player, player, true] call ace_arsenal_fnc_openBox;
+        } else {
+            [_box, player] call ace_arsenal_fnc_openBox;
+        };
     }, {
         isClass (configFile >> "CfgPatches" >> "ace_arsenal")
         && { (missionNamespace getVariable ["FAC_param_enableAceArsenalActions", 1]) > 0 }
         && { ["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess }
-        && { !isNull ([] call FAC_aceSelf_arsenalBox) }
-    }] call _add;
+        && { isNil "FAC_build_serviceUp" || { ["gear"] call FAC_build_serviceUp } }
+    }, _icoArsenal] call _add;
 
     [_gear, "FAC_aceSelf_presets", "Loadout GUI", {
         if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
             systemChat "Loadout GUI access denied by lobby settings.";
         };
+        if (!isNil "FAC_build_denyService" && { [player, "gear"] call FAC_build_denyService }) exitWith {};
         [] spawn { call FAC_ensureLoadoutGui; sleep 0.2; ["open", []] call FAC_loadoutGui_fnc };
-    }] call _add;
+    }, { isNil "FAC_build_serviceUp" || { ["gear"] call FAC_build_serviceUp } }, _icoLoadout] call _add;
 
     [_gear, "FAC_aceSelf_saveLoadout", "Save my Loadout", {
         if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
             systemChat "Loadout GUI access denied by lobby settings.";
         };
+        if (!isNil "FAC_build_denyService" && { [player, "gear"] call FAC_build_denyService }) exitWith {};
         call FAC_ensureLoadoutGui;
         ["saveLoadout", []] call FAC_loadoutGui_fnc;
-    }] call _add;
+    }, { isNil "FAC_build_serviceUp" || { ["gear"] call FAC_build_serviceUp } }, _icoSave] call _add;
 
     [_gear, "FAC_aceSelf_reloadLoadout", "Reload my Saved Loadout", {
         if !(["FAC_playerCanUseLoadoutGui"] call FAC_lobbyParams_callAccess) exitWith {
             systemChat "Loadout GUI access denied by lobby settings.";
         };
+        if (!isNil "FAC_build_denyService" && { [player, "gear"] call FAC_build_denyService }) exitWith {};
         call FAC_ensureLoadoutGui;
         ["restoreLoadout", []] call FAC_loadoutGui_fnc;
-    }] call _add;
+    }, { isNil "FAC_build_serviceUp" || { ["gear"] call FAC_build_serviceUp } }, _icoReload] call _add;
 
     [_gear, "FAC_aceSelf_recruit", "Recruit AI", {
         if !(["FAC_playerCanUseRecruitGui"] call FAC_lobbyParams_callAccess) exitWith {
             systemChat "Recruit GUI access denied by lobby settings.";
         };
+        if (!isNil "FAC_build_denyService" && { [player, "barracks"] call FAC_build_denyService }) exitWith {};
         [] spawn { call FAC_ensureRecruitGui; sleep 0.2; ["open", []] call FAC_recruitGui_fnc };
-    }] call _add;
+    }, { isNil "FAC_build_serviceUp" || { ["barracks"] call FAC_build_serviceUp } }, _icoRecruit] call _add;
 
     [_gear, "FAC_aceSelf_heal", "Heal Me", {
+        if (!isNil "FAC_build_denyService" && { [player, "medical"] call FAC_build_denyService }) exitWith {};
         [player] call FAC_hqHeal_applyLocal;
-    }] call _add;
+    }, { isNil "FAC_build_serviceUp" || { ["medical"] call FAC_build_serviceUp } }, _icoHeal] call _add;
 
     [_veh, "FAC_aceSelf_vehicleGui", "Open Vehicle GUI", {
         if !(["FAC_playerCanUseVehicleGui"] call FAC_lobbyParams_callAccess) exitWith {
             systemChat "Vehicle GUI access denied by lobby settings.";
         };
+        if (!isNil "FAC_build_denyService" && { [player, "vehicles"] call FAC_build_denyService }) exitWith {};
         [] spawn { call FAC_ensureVehicleGui; sleep 0.2; ["open", []] call FAC_vehicleGui_fnc };
-    }] call _add;
+    }, { isNil "FAC_build_serviceUp" || { ["vehicles"] call FAC_build_serviceUp } }, _icoVehGui] call _add;
 
-    private _vehReady = { !isNull ([] call FAC_aceSelf_myVehicle) };
-    [_veh, "FAC_aceSelf_rearm", "Rearm my Vehicle", { ["rearm"] call FAC_aceSelf_requestVehicleService }, _vehReady] call _add;
-    [_veh, "FAC_aceSelf_repair", "Repair my Vehicle", { ["repair"] call FAC_aceSelf_requestVehicleService }, _vehReady] call _add;
-    [_veh, "FAC_aceSelf_refuel", "Refuel my Vehicle", { ["refuel"] call FAC_aceSelf_requestVehicleService }, _vehReady] call _add;
-    [_veh, "FAC_aceSelf_pylons", "Open Pylon Editor", {
+    private _vehReady = {
+        !isNull ([] call FAC_aceSelf_myVehicle)
+        && { isNil "FAC_build_serviceUp" || { ["vehicles"] call FAC_build_serviceUp } }
+    };
+    [_veh, "FAC_aceSelf_rearm", "Rearm my Vehicle", { ["rearm"] call FAC_aceSelf_requestVehicleService }, _vehReady, _icoRearm] call _add;
+    [_veh, "FAC_aceSelf_repair", "Repair my Vehicle", { ["repair"] call FAC_aceSelf_requestVehicleService }, _vehReady, _icoRepair] call _add;
+    [_veh, "FAC_aceSelf_refuel", "Refuel my Vehicle", { ["refuel"] call FAC_aceSelf_requestVehicleService }, _vehReady, _icoRefuel] call _add;
+    [_veh, "FAC_aceSelf_pylons", "Open pylon menu", {
         call FAC_ensureVehicleGui;
         private _pylonVeh = [] call FAC_aceSelf_myVehicle;
         if (isNull _pylonVeh) exitWith {};
@@ -606,25 +653,53 @@ FAC_aceSelf_install = {
     }, {
         private _pylonVeh = [] call FAC_aceSelf_myVehicle;
         !isNull _pylonVeh && { count getAllPylonsInfo _pylonVeh > 0 }
-    }] call _add;
+        && { isNil "FAC_build_serviceUp" || { ["vehicles"] call FAC_build_serviceUp } }
+    }, _icoPylon] call _add;
 
     [_scn, "FAC_aceSelf_missions", "Open Missions GUI", {
         if !(["FAC_playerCanUseMissionsGui"] call FAC_lobbyParams_callAccess) exitWith {
             systemChat "Missions GUI is restricted to group leaders (admin/Zeus override).";
         };
         [] spawn { call FAC_ensureMissionsGui; sleep 0.2; ["open", []] call FAC_missionsGui_fnc };
-    }] call _add;
+    }, { true }, _icoMissions] call _add;
 
     [_scn, "FAC_aceSelf_scenario", "Open Scenario GUI", {
         if !(["FAC_playerCanUseScenarioGui"] call FAC_lobbyParams_callAccess) exitWith {
             systemChat "Scenario GUI is restricted to group leaders (admin/Zeus override).";
         };
         [] spawn { call FAC_ensureScenarioGui; sleep 0.2; ["open", []] call FAC_scenarioGui_fnc };
-    }] call _add;
+    }, { true }, _icoScenario] call _add;
 
     [_scn, "FAC_aceSelf_fastTravel", "Fast Travel", {
         [] spawn { call FAC_ensureTeleportGui; sleep 0.2; ["open", []] call FAC_teleportGui_fnc };
-    }] call _add;
+    }, { true }, _icoTravel] call _add;
+
+    [_scn, "FAC_aceSelf_mapTeleport", "Teleport to Map Location", {
+        execVM "rsc\TeleportMapPick.sqf";
+    }, { true }, _icoMap] call _add;
+
+    private _base = [_fade, "FAC_aceSelf_base", "Base...", {}, {
+        ["FAC_playerCanBuild"] call FAC_lobbyParams_callAccess
+    }, _icoBase] call _add;
+
+    [_base, "FAC_aceSelf_build", "Build", {
+        [] spawn {
+            call FAC_ensureBuildGui;
+            ["open", []] call FAC_buildGui_fnc;
+        };
+    }, { true }, _icoBuild] call _add;
+
+    // FADE... stays inside the base bubble. Anywhere mode adds Build on self-interact itself, and only while outside that bubble.
+    [["ACE_SelfActions"], "FAC_aceSelf_buildField", "Build", {
+        [] spawn {
+            call FAC_ensureBuildGui;
+            ["open", []] call FAC_buildGui_fnc;
+        };
+    }, {
+        ([] call FADE_build_anywhere)
+        && { !( [] call FAC_aceSelf_nearPlayerBase ) }
+        && { ["FAC_playerCanBuild"] call FAC_lobbyParams_callAccess }
+    }, _icoBuild] call _add;
 
     player setVariable ["FAC_aceSelf_added", true, false];
 };

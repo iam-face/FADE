@@ -89,9 +89,10 @@ FADE_intel_clientAppendIntelDiary = {
     [_headerName, _whenStr, _bodyRaw, _kind] call FADE_client_appendIntelDiary;
 };
 
-// Shared BIS_fnc_holdActionAdd tail: duplicate icon, empty start/progress/interrupt, priority 0.
+// Shared BIS_fnc_holdActionAdd tail: duplicate icon, empty progress/interrupt, priority 0.
+// Optional 8th arg is codeStart (params ["_target", "_caller", "_actionId", "_arguments"]).
 FADE_client_addHoldAction = {
-    params ["_obj", "_title", "_icon", "_condShow", "_condProgress", "_onComplete", "_duration"];
+    params ["_obj", "_title", "_icon", "_condShow", "_condProgress", "_onComplete", "_duration", ["_onStart", {}]];
     [
         _obj,
         _title,
@@ -99,7 +100,7 @@ FADE_client_addHoldAction = {
         _icon,
         _condShow,
         _condProgress,
-        {},
+        _onStart,
         {},
         _onComplete,
         {},

@@ -52,26 +52,26 @@ if (hasInterface) then {
                 _labels params ["_titleShort", "_titleBar", "_modeBlurb"];
                 private _controls = [];
 
-                private _bg = _display ctrlCreate ["RscText", 60310];
+                private _bg = _display ctrlCreate ["FACRscFormLabel", 60310];
                 _bg ctrlSetPosition [0.02, 0.09, 0.96, 0.78];
                 _bg ctrlSetBackgroundColor FAC_theme_bgOverlay;
                 _bg ctrlCommit 0;
                 _controls pushBack _bg;
 
-                private _title = _display ctrlCreate ["RscText", 60311];
+                private _title = _display ctrlCreate ["FACRscFormLabel", 60311];
                 _title ctrlSetPosition [0.02, 0.09, 0.96, 0.048];
                 _title ctrlSetText format ["%1  -  PARTICIPATING TRANSPORTS", _titleBar];
                 _title ctrlSetBackgroundColor FAC_theme_bgOverlayTitle;
                 _title ctrlCommit 0;
                 _controls pushBack _title;
 
-                private _helpPanel = _display ctrlCreate ["RscText", 60326];
+                private _helpPanel = _display ctrlCreate ["FACRscFormLabel", 60326];
                 _helpPanel ctrlSetPosition [0.04, 0.145, 0.92, 0.078];
                 _helpPanel ctrlSetBackgroundColor FAC_tiPick_clr_panel;
                 _helpPanel ctrlCommit 0;
                 _controls pushBack _helpPanel;
 
-                private _help = _display ctrlCreate ["RscStructuredText", 60312];
+                private _help = _display ctrlCreate ["FACRscFormStructured", 60312];
                 _help ctrlSetPosition [0.05, 0.152, 0.90, 0.064];
                 _help ctrlSetBackgroundColor [0, 0, 0, 0];
                 _help ctrlSetStructuredText parseText (
@@ -81,46 +81,46 @@ if (hasInterface) then {
                 _help ctrlCommit 0;
                 _controls pushBack _help;
 
-                private _wavePanel = _display ctrlCreate ["RscText", 60327];
+                private _wavePanel = _display ctrlCreate ["FACRscFormLabel", 60327];
                 _wavePanel ctrlSetPosition [0.04, 0.232, 0.92, 0.108];
                 _wavePanel ctrlSetBackgroundColor FAC_tiPick_clr_panel;
                 _wavePanel ctrlCommit 0;
                 _controls pushBack _wavePanel;
 
-                private _waveHdr = _display ctrlCreate ["RscText", 60328];
+                private _waveHdr = _display ctrlCreate ["FACRscFormLabel", 60328];
                 _waveHdr ctrlSetPosition [0.05, 0.238, 0.90, 0.026];
                 _waveHdr ctrlSetText "WAVES";
                 _waveHdr ctrlSetTextColor FAC_tiPick_clr_hdr;
                 _waveHdr ctrlCommit 0;
                 _controls pushBack _waveHdr;
 
-                private _waveLbl = _display ctrlCreate ["RscText", 60313];
+                private _waveLbl = _display ctrlCreate ["FACRscFormLabel", 60313];
                 _waveLbl ctrlSetPosition [0.05, 0.268, 0.34, 0.026];
                 _waveLbl ctrlSetText "Number of waves";
                 _waveLbl ctrlCommit 0;
                 _controls pushBack _waveLbl;
 
-                private _waveVal = _display ctrlCreate ["RscText", 60324];
+                private _waveVal = _display ctrlCreate ["FACRscFormLabel", 60324];
                 _waveVal ctrlSetPosition [0.40, 0.268, 0.54, 0.026];
                 _waveVal ctrlSetText "1 wave (single mission)";
                 _waveVal ctrlSetTextColor FAC_tiPick_clr_val;
                 _waveVal ctrlCommit 0;
                 _controls pushBack _waveVal;
 
-                private _waveMin = _display ctrlCreate ["RscText", 60330];
+                private _waveMin = _display ctrlCreate ["FACRscFormLabel", 60330];
                 _waveMin ctrlSetPosition [0.08, 0.302, 0.04, 0.028];
                 _waveMin ctrlSetText "1";
                 _waveMin ctrlSetTextColor FAC_tiPick_clr_val;
                 _waveMin ctrlCommit 0;
                 _controls pushBack _waveMin;
 
-                private _waveTrack = _display ctrlCreate ["RscText", 60329];
+                private _waveTrack = _display ctrlCreate ["FACRscFormLabel", 60329];
                 _waveTrack ctrlSetPosition [0.12, 0.306, 0.68, 0.022];
                 _waveTrack ctrlSetBackgroundColor FAC_tiPick_clr_track;
                 _waveTrack ctrlCommit 0;
                 _controls pushBack _waveTrack;
 
-                private _waveMax = _display ctrlCreate ["RscText", 60331];
+                private _waveMax = _display ctrlCreate ["FACRscFormLabel", 60331];
                 _waveMax ctrlSetPosition [0.82, 0.302, 0.04, 0.028];
                 _waveMax ctrlSetText "10";
                 _waveMax ctrlSetTextColor FAC_tiPick_clr_val;
@@ -139,7 +139,7 @@ if (hasInterface) then {
                 }];
                 _controls pushBack _waveSlider;
 
-                private _waveDown = _display ctrlCreate ["RscButton", 60332];
+                private _waveDown = _display ctrlCreate ["FACRscPrimaryBtn", 60332];
                 _waveDown ctrlSetPosition [0.05, 0.298, 0.028, 0.032];
                 _waveDown ctrlSetText "<";
                 _waveDown ctrlSetBackgroundColor FAC_tiPick_clr_btn;
@@ -147,7 +147,7 @@ if (hasInterface) then {
                 _waveDown ctrlAddEventHandler ["ButtonClick", { ["waveStep", [-1]] call (missionNamespace getVariable ["FAC_troopInsertPickGui_fnc", {}]) }];
                 _controls pushBack _waveDown;
 
-                private _waveUp = _display ctrlCreate ["RscButton", 60333];
+                private _waveUp = _display ctrlCreate ["FACRscPrimaryBtn", 60333];
                 _waveUp ctrlSetPosition [0.87, 0.298, 0.028, 0.032];
                 _waveUp ctrlSetText ">";
                 _waveUp ctrlSetBackgroundColor FAC_tiPick_clr_btn;
@@ -155,38 +155,38 @@ if (hasInterface) then {
                 _waveUp ctrlAddEventHandler ["ButtonClick", { ["waveStep", [1]] call (missionNamespace getVariable ["FAC_troopInsertPickGui_fnc", {}]) }];
                 _controls pushBack _waveUp;
 
-                private _partPanel = _display ctrlCreate ["RscText", 60334];
+                private _partPanel = _display ctrlCreate ["FACRscFormLabel", 60334];
                 _partPanel ctrlSetPosition [0.04, 0.348, 0.92, 0.395];
                 _partPanel ctrlSetBackgroundColor FAC_tiPick_clr_panel;
                 _partPanel ctrlCommit 0;
                 _controls pushBack _partPanel;
 
-                private _partHdr = _display ctrlCreate ["RscText", 60335];
+                private _partHdr = _display ctrlCreate ["FACRscFormLabel", 60335];
                 _partHdr ctrlSetPosition [0.05, 0.354, 0.90, 0.026];
                 _partHdr ctrlSetText "PARTICIPATING TRANSPORTS";
                 _partHdr ctrlSetTextColor FAC_tiPick_clr_hdr;
                 _partHdr ctrlCommit 0;
                 _controls pushBack _partHdr;
 
-                private _la = _display ctrlCreate ["RscText", 60316];
+                private _la = _display ctrlCreate ["FACRscFormLabel", 60316];
                 _la ctrlSetPosition [0.05, 0.386, 0.36, 0.026];
                 _la ctrlSetText "Available";
                 _la ctrlCommit 0;
                 _controls pushBack _la;
 
-                private _ls = _display ctrlCreate ["RscText", 60317];
+                private _ls = _display ctrlCreate ["FACRscFormLabel", 60317];
                 _ls ctrlSetPosition [0.59, 0.386, 0.36, 0.026];
                 _ls ctrlSetText "Participating";
                 _ls ctrlCommit 0;
                 _controls pushBack _ls;
 
-                private _lbA = _display ctrlCreate ["RscListbox", 60318];
+                private _lbA = _display ctrlCreate ["FACRscListDark", 60318];
                 _lbA ctrlSetPosition [0.05, 0.416, 0.36, 0.31];
                 _lbA ctrlSetBackgroundColor FAC_tiPick_clr_list;
                 _lbA ctrlCommit 0;
                 _controls pushBack _lbA;
 
-                private _ba = _display ctrlCreate ["RscButton", 60320];
+                private _ba = _display ctrlCreate ["FACRscPrimaryBtn", 60320];
                 _ba ctrlSetPosition [0.435, 0.48, 0.13, 0.042];
                 _ba ctrlSetText "Add →";
                 _ba ctrlSetBackgroundColor FAC_tiPick_clr_btnAct;
@@ -194,7 +194,7 @@ if (hasInterface) then {
                 _ba ctrlAddEventHandler ["ButtonClick", { ["add", []] call (missionNamespace getVariable ["FAC_troopInsertPickGui_fnc", {}]) }];
                 _controls pushBack _ba;
 
-                private _br = _display ctrlCreate ["RscButton", 60321];
+                private _br = _display ctrlCreate ["FACRscPrimaryBtn", 60321];
                 _br ctrlSetPosition [0.435, 0.54, 0.13, 0.042];
                 _br ctrlSetText "← Remove";
                 _br ctrlSetBackgroundColor FAC_tiPick_clr_btn;
@@ -202,19 +202,19 @@ if (hasInterface) then {
                 _br ctrlAddEventHandler ["ButtonClick", { ["remove", []] call (missionNamespace getVariable ["FAC_troopInsertPickGui_fnc", {}]) }];
                 _controls pushBack _br;
 
-                private _lbS = _display ctrlCreate ["RscListbox", 60319];
+                private _lbS = _display ctrlCreate ["FACRscListDark", 60319];
                 _lbS ctrlSetPosition [0.59, 0.416, 0.36, 0.31];
                 _lbS ctrlSetBackgroundColor FAC_tiPick_clr_list;
                 _lbS ctrlCommit 0;
                 _controls pushBack _lbS;
 
-                private _footer = _display ctrlCreate ["RscText", 60336];
+                private _footer = _display ctrlCreate ["FACRscFormLabel", 60336];
                 _footer ctrlSetPosition [0.04, 0.752, 0.92, 0.052];
                 _footer ctrlSetBackgroundColor FAC_theme_bgOverlay;
                 _footer ctrlCommit 0;
                 _controls pushBack _footer;
 
-                private _bc = _display ctrlCreate ["RscButton", 60323];
+                private _bc = _display ctrlCreate ["FACRscPrimaryBtn", 60323];
                 _bc ctrlSetPosition [0.06, 0.758, 0.18, 0.042];
                 _bc ctrlSetText "Cancel";
                 _bc ctrlSetBackgroundColor FAC_tiPick_clr_cancel;
@@ -222,7 +222,7 @@ if (hasInterface) then {
                 _bc ctrlAddEventHandler ["ButtonClick", { ["close", []] call (missionNamespace getVariable ["FAC_troopInsertPickGui_fnc", {}]) }];
                 _controls pushBack _bc;
 
-                private _bs = _display ctrlCreate ["RscButton", 60322];
+                private _bs = _display ctrlCreate ["FACRscPrimaryBtn", 60322];
                 _bs ctrlSetPosition [0.76, 0.758, 0.18, 0.042];
                 _bs ctrlSetText "Start";
                 _bs ctrlSetBackgroundColor FAC_tiPick_clr_start;

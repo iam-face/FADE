@@ -528,6 +528,12 @@ private _tryCivZoneSpawn = {
     _spawned
 };
 
+private _spawnReadyWait = time + 60;
+waitUntil {
+    sleep 0.2;
+    !isNil "FADE_missionCreateInfantryGroupAt" || { time > _spawnReadyWait }
+};
+
 while { true } do {
     private _state = missionNamespace getVariable ["FADE_dynamicRoadblockState", createHashMap];
     private _enabled = missionNamespace getVariable ["FADE_dynamicRoadblocksEnabled", false];

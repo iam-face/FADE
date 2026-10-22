@@ -17,7 +17,7 @@ Automated E2E validation: PowerShell runner boots `arma3server_x64`, mission aut
 
 - **Steam running** before server start (mod auth).
 - `C:\Arma3Server\arma3server_x64.exe` installed.
-- `Face\local_server\` with `StartServer.ps1`, `server.cfg`, `client_modline.txt`.
+- `Face\local_server\` with `StartServer.ps1` and `server.cfg`. Headless ignores `client_modline.txt`.
 - `server.cfg`: `persistent = 1` (required for `-autoInit`).
 - `StartServer.ps1`: passes `-autoInit` and `-loadMissionToMemory`.
 - Config: copy `../tools/headless/headless.local.json.example` → `headless.local.json` (beside the example; outside mission git).
@@ -34,7 +34,7 @@ From mission folder:
 # Fast offline syntax lint (~seconds) — run before headless when editing .sqf
 powershell -ExecutionPolicy Bypass -File ..\tools\sqfvm\Invoke-FadeSqfLint.ps1
 
-# Headless (slow: ~5 min mod load + suite)
+# Headless. -mod comes from mission.sqm (not the full launcher list).
 powershell -ExecutionPolicy Bypass -File ..\tools\headless\Run-FadeHeadlessTest.ps1 -Mode compile -SkipModSync
 powershell -ExecutionPolicy Bypass -File ..\tools\headless\Run-FadeHeadlessTest.ps1 -Mode playthrough -SkipModSync
 powershell -ExecutionPolicy Bypass -File ..\tools\headless\Run-FadeHeadlessTest.ps1 -Mode all -SkipModSync
@@ -48,7 +48,7 @@ powershell -ExecutionPolicy Bypass -File ..\tools\headless\Run-FadeHeadlessTest.
 | `playthrough` | MissionPlaythroughSuite | ~10–20 min |
 | `all` | compile then playthrough | ~15–25 min |
 
-Use `-SkipModSync` when `client_modline.txt` is current. Use `-KeepServer` to leave server running for manual RPT inspection.
+The dedicated test server loads only mods that own an entry in `mission.sqm` `addons[]` (base game, the official DLC folders those entries belong to, and CBA / ACE / Eden Objects / GM / SPE / WS / vn / RF when listed). It does not load `client_modline.txt`. `-SkipModSync` only skips rewriting that play-client file from the launcher RPT. Use `-KeepServer` to leave the server running for manual RPT inspection.
 
 ## Architecture (do not break)
 

@@ -46,10 +46,21 @@ FADE_baseNpc_resolveSpawnData = {
         _dir = getDir _obj;
         _src = _markerName;
     } else {
-        diag_log format [
-            "[BaseNpcTalk] Eden marker %1 not found  -  using FADE_baseNpcEdenPosATL %2",
-            _markerName, _pos
-        ];
+        if (worldName != "Altis") then {
+            private _bp = missionNamespace getVariable ["FADE_basePos", []];
+            if (missionNamespace getVariable ["FADE_baseDefined", false] && { _bp isEqualType [] } && { count _bp >= 2 }) then {
+                _pos = [(_bp select 0) + 8, _bp select 1, 0];
+                _src = "FADE_basePos";
+            } else {
+                _pos = [0, 0, 0];
+                _src = "pending";
+            };
+        } else {
+            diag_log format [
+                "[BaseNpcTalk] Eden marker %1 not found  -  using FADE_baseNpcEdenPosATL %2",
+                _markerName, _pos
+            ];
+        };
     };
     [_pos, _dir, _src]
 };
@@ -137,6 +148,10 @@ FADE_baseNpc_spawnAndRegister = {
     if (!isNull _existing) then { deleteVehicle _existing };
 
     (call FADE_baseNpc_resolveSpawnData) params ["_pos", "_dir", "_src"];
+    if (_src == "pending") exitWith {
+        diag_log "[BaseNpcTalk] spawn deferred  -  player base is not set yet";
+        objNull
+    };
     private _class = missionNamespace getVariable ["FADE_baseNpcClass", "C_man_1"];
     if (!isClass (configFile >> "CfgVehicles" >> _class)) then {
         diag_log format ["[BaseNpcTalk] invalid class %1  -  using C_man_1", _class];

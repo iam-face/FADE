@@ -87,8 +87,11 @@ FADE_roadblock_spawnBundle = {
     private _infCount = [3 + floor random 3, 1] call _scaleOpforCount;
     private _infClasses = [];
     for "_i" from 0 to (_infCount - 1) do { _infClasses pushBack (selectRandom _enemyUnits) };
-    private _infGrp = [_center, _sideEnemy, _infClasses] call BIS_fnc_spawnGroup;
-    [_infGrp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
+    private _infGrp = grpNull;
+    if (!isNil "FADE_missionCreateInfantryGroupAt") then {
+        _infGrp = [_center, _sideEnemy, _infClasses] call FADE_missionCreateInfantryGroupAt;
+    };
+    if (isNull _infGrp) then { _infGrp = createGroup _sideEnemy };
     _infGrp setBehaviour "COMBAT";
     _groups pushBack _infGrp;
     {
@@ -157,20 +160,22 @@ FADE_roadblock_spawnBundle = {
             _st set ["combatMode", "RED"];
             [objNull, _posATL, [], _st] call _vgFn;
         } else {
-            private _garGrp = createGroup _sideEnemy;
+            private _garPositions = [];
             for "_k" from 0 to (_nGar - 1) do {
                 (_slots select _k) params ["_b", "_bp"];
-                private _u = _garGrp createUnit [selectRandom _enemyUnits, _bp, [], 0, "NONE"];
-                if (!isNull _u) then {
-                    _u setPosATL _bp;
-                    _u setDir ([_bp, _center] call BIS_fnc_dirTo);
-                    _u disableAI "PATH";
-                    _u setUnitPos "MIDDLE";
-                };
+                private _p = +_bp;
+                if (count _p < 3) then { _p set [2, 0] };
+                _garPositions pushBack _p;
             };
-            [_garGrp] call (missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}]);
-            _garGrp setBehaviour "COMBAT";
-            _groups pushBack _garGrp;
+            private _garGrp = [_garPositions, _sideEnemy, _enemyUnits, "MIDDLE"] call FADE_spawnInfantryAtPositions;
+            if (!isNull _garGrp) then {
+                {
+                    _x setDir ([getPosATL _x, _center] call BIS_fnc_dirTo);
+                    _x disableAI "PATH";
+                } forEach units _garGrp;
+                _garGrp setBehaviour "COMBAT";
+                _groups pushBack _garGrp;
+            };
         };
     };
 

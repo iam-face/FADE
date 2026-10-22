@@ -220,6 +220,7 @@ for "_pg" from 0 to (_numPatrol - 1) do {
 };
 
 private _blds = nearestObjects [_invasionCenter, ["House", "Building"], _zoneRadius * 0.9];
+_blds = [_blds, 24] call FADE_samplePlacementList;
 _blds = (_blds select { count (_x buildingPos -1) >= 2 }) call BIS_fnc_arrayShuffle;
 private _maxB = 2 min count _blds;
 for "_b" from 0 to (_maxB - 1) do {
@@ -244,24 +245,12 @@ for "_b" from 0 to (_maxB - 1) do {
         [_building, _slotATL, [], _st] call _vgReg;
     } else {
         if (count _slotATL > 0) then {
-            private _grpG = createGroup _sideEnemy;
-            {
-                private _pos = +_x;
-                private _u = _grpG createUnit [selectRandom _enemyUnits, _pos, [], 0, "NONE"];
-                if (!isNull _u) then {
-                    if (!(_facApply isEqualTo {})) then { [_grpG] call _facApply };
-                    _u setPos _pos;
-                    _u setUnitPos "MIDDLE";
-                    [_u] call FADE_tryAmbientCombatAnim;
-                };
-            } forEach _slotATL;
-            if (count units _grpG > 0) then {
+            private _grpG = [_slotATL, _sideEnemy, _enemyUnits, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+            if (!isNull _grpG) then {
                 _grpG setBehaviour "AWARE";
                 _grpG setCombatMode "RED";
                 _allGroups pushBack _grpG;
                 [_taskId, _grpG] call FADE_missionEnt_registerGroup;
-            } else {
-                deleteGroup _grpG;
             };
         };
     };

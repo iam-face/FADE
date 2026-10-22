@@ -21,13 +21,13 @@ class FACRscMainPanel: RscText {
 
 class FACRscDialogTitle: RscText {
     idc = -1;
-    sizeEx = 0.038;
+    sizeEx = 0.040;
     colorText[] = FAC_COLOR_TEXT;
     colorBackground[] = {0, 0, 0, 0};
 };
 
 class FACRscTabBtn: RscButton {
-    sizeEx = 0.032;
+    sizeEx = 0.028;
     colorBackground[] = FAC_COLOR_TAB_IDLE;
     colorText[] = FAC_COLOR_TEXT;
     colorBackgroundActive[] = FAC_COLOR_TAB_ACTIVE;
@@ -62,6 +62,7 @@ class FACRscCloseBtn: RscButton {
 };
 
 class FACRscPrimaryBtn: RscButton {
+    sizeEx = 0.026;
     colorBackground[] = FAC_COLOR_BTN_PRIMARY;
     colorBackgroundActive[] = FAC_COLOR_BTN_PRIMARY_A;
     colorFocused[] = FAC_COLOR_BTN_PRIMARY_A;
@@ -75,9 +76,14 @@ class FACRscDangerBtn: RscButton {
     colorText[] = FAC_COLOR_TEXT;
 };
 
+class FACRscPicture: RscPicture {
+    colorBackground[] = FAC_COLOR_BG_LIST;
+};
+
 class FACRscSectionHdr: RscText {
     sizeEx = 0.030;
     colorText[] = FAC_COLOR_TEXT_HDR;
+    colorBackground[] = FAC_COLOR_BG_HEADER;
 };
 
 class FACRscLabelMuted: RscText {
@@ -94,4 +100,37 @@ class FACRscListDark: RscListBox {
 class FACRscEditDark: RscEdit {
     colorBackground[] = FAC_COLOR_BG_INPUT;
     colorText[] = FAC_COLOR_TEXT;
+    sizeEx = 0.028;
+};
+
+class FACRscFormLabel: RscText {
+    sizeEx = 0.028;
+    colorText[] = FAC_COLOR_TEXT;
+    shadow = 0;
+};
+
+class FACRscFormHint: RscText {
+    style = 16;
+    sizeEx = 0.022;
+    colorText[] = FAC_COLOR_TEXT_MUTED;
+    shadow = 0;
+};
+
+class FACRscFormMulti: RscText {
+    style = 16;
+    sizeEx = 0.026;
+    colorText[] = FAC_COLOR_TEXT;
+    shadow = 0;
+};
+
+class FACRscFormStructured: RscStructuredText {
+    size = 0.028;
+    colorBackground[] = FAC_COLOR_BG_SECTION;
+    class Attributes {
+        font = "PuristaMedium";
+        color = "#d8d8dc";
+        align = "left";
+        valign = "top";
+        shadow = 0;
+    };
 };

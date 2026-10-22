@@ -163,42 +163,11 @@ FADE_runMission_InterceptConvoy = {
                 _spawnDir = _thisRoadHit select 1;
             };
         };
-        private _veh = createVehicle [_vClass, _spawnPos, [], 0, "NONE"];
-        if (isNull _veh) exitWith { [objNull, grpNull, grpNull] };
-        _veh setPosATL _spawnPos;
-        _veh setDir _spawnDir;
-        _veh setVectorUp surfaceNormal _spawnPos;
         // Small forward nudge helps newly spawned convoy vehicles break static friction/get unstuck.
-        private _nudge = 2;
-        _veh setVelocity [ (sin _spawnDir) * _nudge, (cos _spawnDir) * _nudge, 0 ];
-        private _vehGrp = createGroup _sideEnemy;
-        private _cargoGrp = grpNull;
-        if (count _enemyUnitsConv > 0) then {
-            private _driver = _vehGrp createUnit [selectRandom _enemyUnitsConv, _spawnPos, [], 0, "NONE"];
-            if (!isNull _driver) then {
-                _driver moveInDriver _veh;
-                _vehGrp selectLeader _driver;
-            };
-            if (_veh emptyPositions "gunner" > 0) then {
-                private _g = _vehGrp createUnit [selectRandom _enemyUnitsConv, _spawnPos, [], 0, "NONE"];
-                if (!isNull _g) then { _g moveInGunner _veh };
-            };
-            if (_veh emptyPositions "commander" > 0) then {
-                private _c = _vehGrp createUnit [selectRandom _enemyUnitsConv, _spawnPos, [], 0, "NONE"];
-                if (!isNull _c) then { _c moveInCommander _veh };
-            };
-        };
-        private _cargoSeats = (_veh emptyPositions "cargo") max 0;
-        if (_cargoSeats > 0 && { count _enemyUnitsConv > 0 }) then {
-            _cargoGrp = createGroup _sideEnemy;
-            for "_c" from 0 to (_cargoSeats - 1) do {
-                private _u = _cargoGrp createUnit [selectRandom _enemyUnitsConv, _spawnPos, [], 0, "NONE"];
-                if (!isNull _u) then { _u moveInCargo _veh };
-            };
-        };
-        [_veh, _enemyUnitsConv] call FADE_ensureEnemyVehicleGunner;
-        _veh engineOn true;
-        [_veh, _vehGrp, _cargoGrp]
+        [
+            _vClass, _spawnPos, _spawnDir, _enemyUnitsConv, _sideEnemy,
+            ["driver", "gunner", "commander", "cargo"], "random", true, -1, 2, -1, 1
+        ] call FADE_spawnCrewedGroundVehicle
     };
 
     // Spawn lead vehicle first, then stagger followers to reduce spawn-gridlock.
@@ -406,8 +375,9 @@ FADE_runMission_InterceptConvoy = {
                 private _leadVeh = (_convoyVehiclesSpawned select { (!isNull _x) && { alive _x } }) param [0, objNull];
                 if (!isNull _leadVeh && { (_leadVeh distance _endPos) <= _warningDist }) then {
                     _warningSent = true;
-                    private _observerGrp = createGroup _sideFriendly;
-                    private _observer = _observerGrp createUnit [_friendlyObserverClass, [0, 0, 0], [], 0, "NONE"];
+                    private _observerGrp = [[[0, 0, 0]], _sideFriendly, [_friendlyObserverClass]] call FADE_spawnInfantryAtPositions;
+                    if (!isNull _observerGrp) then {
+                    private _observer = leader _observerGrp;
                     _observer setIdentity "FADE_ratel_eagleeye";
                     private _dist = round (_leadVeh distance _endPos);
                     private _msgs = [
@@ -422,6 +392,7 @@ FADE_runMission_InterceptConvoy = {
                         sleep 4;
                         if (!isNull _o) then { deleteVehicle _o };
                         if (!isNull _g) then { deleteGroup _g };
+                    };
                     };
                 };
             };

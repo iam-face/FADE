@@ -28,27 +28,28 @@ call compile preprocessFileLineNumbers "rsc\FAC_CivCarRadio.sqf";
 // Mission test suite  -  manual only. Debug console: [player] remoteExec ["FAC_missionTestSuite_execServer", 2]  (systemChat to that player; use [] to broadcast)
 FAC_missionTestSuite_execServer = {
     if (!isServer) exitWith {};
-    private _to = _this param [0, objNull];
-    private _callback = _this param [1, false];
-    private _startMsg = "[FAC TestSuite] Server: starting...";
-    if (!isNull _to && { isPlayer _to }) then {
-        [_startMsg] remoteExec ["systemChat", _to];
-    } else {
-        [_startMsg] remoteExec ["systemChat", 0];
-    };
-    if (isNil "FAC_missionTestSuite_runServer") then {
-        call compile preprocessFileLineNumbers "rsc\MissionTestSuite.sqf";
-    };
-    private _res = [_to] call FAC_missionTestSuite_runServer;
-    if (isNil "_res" || { count _res < 2 }) then {
-        private _err = "[FAC TestSuite] Server: aborted (script error  -  check RPT).";
-        if (!isNull _to && { isPlayer _to }) then { [_err] remoteExec ["systemChat", _to]; } else { [_err] remoteExec ["systemChat", 0]; };
-    } else {
-        _res params ["_p", "_f"];
-        private _end = format ["[FAC TestSuite] Server finished: %1 pass, %2 fail  -  see RPT for [FAC TestSuite].", _p, _f];
-        if (!isNull _to && { isPlayer _to }) then { [_end] remoteExec ["systemChat", _to]; } else { [_end] remoteExec ["systemChat", 0]; };
-        if (_callback && { !isNull _to } && { isPlayer _to }) then {
-            [_res] remoteExec ["FAC_missionTestSuite_onServerDone", _to];
+    _this spawn {
+        params ["_to", "_callback"];
+        private _startMsg = "[FAC TestSuite] Server: starting...";
+        if (!isNull _to && { isPlayer _to }) then {
+            [_startMsg] remoteExec ["systemChat", _to];
+        } else {
+            [_startMsg] remoteExec ["systemChat", 0];
+        };
+        if (isNil "FAC_missionTestSuite_runServer") then {
+            call compile preprocessFileLineNumbers "rsc\MissionTestSuite.sqf";
+        };
+        private _res = [_to] call FAC_missionTestSuite_runServer;
+        if (isNil "_res" || { count _res < 2 }) then {
+            private _err = "[FAC TestSuite] Server: aborted (script error  -  check RPT).";
+            if (!isNull _to && { isPlayer _to }) then { [_err] remoteExec ["systemChat", _to]; } else { [_err] remoteExec ["systemChat", 0]; };
+        } else {
+            _res params ["_p", "_f"];
+            private _end = format ["[FAC TestSuite] Server finished: %1 pass, %2 fail  -  see RPT for [FAC TestSuite].", _p, _f];
+            if (!isNull _to && { isPlayer _to }) then { [_end] remoteExec ["systemChat", _to]; } else { [_end] remoteExec ["systemChat", 0]; };
+            if (_callback && { !isNull _to } && { isPlayer _to }) then {
+                [_res] remoteExec ["FAC_missionTestSuite_onServerDone", _to];
+            };
         };
     };
 };
@@ -56,24 +57,27 @@ publicVariable "FAC_missionTestSuite_execServer";
 
 // Mission playthrough suite — sequential live mission init + QRF probes (dev only).
 // Debug console: [player] remoteExec ["FAC_playthroughSuite_execServer", 2]
+// remoteExec and the debug console are unscheduled, so the run is spawned (sleep is illegal in call).
 FAC_playthroughSuite_execServer = {
     if (!isServer) exitWith {};
-    private _to = _this param [0, objNull];
-    private _types = _this param [1, []];
-    if (isNil "FAC_playthroughSuite_runServer") then {
-        call compile preprocessFileLineNumbers "rsc\MissionPlaythroughSuite.sqf";
-        call compile preprocessFileLineNumbers "rsc\MissionPlaythroughProfiles.sqf";
+    private _args = +_this;
+    _args spawn {
+        params [["_to", objNull], ["_types", []]];
+        if (isNil "FAC_playthroughSuite_runServer") then {
+            call compile preprocessFileLineNumbers "rsc\MissionPlaythroughSuite.sqf";
+            call compile preprocessFileLineNumbers "rsc\MissionPlaythroughProfiles.sqf";
+        };
+        if (_types isEqualTo []) then { _types = +FAC_playthroughSuite__missionTypes };
+        if (isNil "FAC_playthroughSuite_runServer") exitWith {
+            private _err = "[FAC Playthrough] Server: aborted (script failed to load — check RPT).";
+            if (!isNull _to && { isPlayer _to }) then { [_err] remoteExec ["systemChat", _to]; } else { [_err] remoteExec ["systemChat", 0]; };
+        };
+        private _res = [_to, _types] call FAC_playthroughSuite_runServer;
+        if (isNil "_res" || { count _res < 3 }) exitWith {};
+        _res params ["_p", "_f", "_s"];
+        private _end = format ["[FAC Playthrough] Server finished: %1 pass / %2 fail / %3 skipped.", _p, _f, _s];
+        if (!isNull _to && { isPlayer _to }) then { [_end] remoteExec ["systemChat", _to]; } else { [_end] remoteExec ["systemChat", 0]; };
     };
-    if (_types isEqualTo []) then { _types = +FAC_playthroughSuite__missionTypes };
-    if (isNil "FAC_playthroughSuite_runServer") exitWith {
-        private _err = "[FAC Playthrough] Server: aborted (script failed to load — check RPT).";
-        if (!isNull _to && { isPlayer _to }) then { [_err] remoteExec ["systemChat", _to]; } else { [_err] remoteExec ["systemChat", 0]; };
-    };
-    private _res = [_to, _types] call FAC_playthroughSuite_runServer;
-    if (isNil "_res" || { count _res < 3 }) exitWith {};
-    _res params ["_p", "_f", "_s"];
-    private _end = format ["[FAC Playthrough] Server finished: %1 pass / %2 fail / %3 skipped.", _p, _f, _s];
-    if (!isNull _to && { isPlayer _to }) then { [_end] remoteExec ["systemChat", _to]; } else { [_end] remoteExec ["systemChat", 0]; };
 };
 publicVariable "FAC_playthroughSuite_execServer";
 
@@ -89,6 +93,9 @@ publicVariable "FAC_playthroughSuite_abortServer";
 
 // Retry base NPC spawn if postInit / spawn failed; re-anchor if Eden logic was late.
 [] spawn {
+    if (worldName != "Altis") then {
+        waitUntil { sleep 1; missionNamespace getVariable ["FADE_baseDefined", false] };
+    };
     private _delays = [2, 6, 15, 30];
     {
         sleep _x;

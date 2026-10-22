@@ -6,7 +6,7 @@ FADE_opforAir_responseDelayExtra = 200;
 // While every friendly player is within this distance (2D) of BASE_1: despawn ambient OPFOR air and hold spawns/pending.
 FADE_opforAir_hqSafeRadius = 1000;
 
-// Minimum AGL when OPFOR air assets spawn (terrain + these meters ASL).
+// Spawn height above terrain (m). createVehicle takes PositionATL, so this is the z component.
 FADE_opforAir_spawnAglMin = 280;
 FADE_opforAir_spawnAglExtra = 220;
 // Troop-insert LZ search radius (m) around BLUFOR centroid; wider than default FADE_findSafeLZ (80).
@@ -47,9 +47,8 @@ FADE_opforAir_opforDetectsBlufor = {
 
 FADE_opforAir_allFriendliesAtHq = {
     params [["_hqR", 1000]];
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (isNull _base) exitWith { false };
-    private _bp = getPosATL _base;
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp < 2) exitWith { true };
     private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _hasPl = false;
     private _allInside = true;
@@ -64,9 +63,8 @@ FADE_opforAir_allFriendliesAtHq = {
 
 FADE_opforAir_anyPlayerFarFromHq = {
     params [["_hqR", 900]];
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (isNull _base) exitWith { true };
-    private _bp = getPosATL _base;
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp < 2) exitWith { false };
     private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _found = false;
     {
@@ -108,8 +106,8 @@ FADE_opforAir_getTargetASL = {
         };
     } forEach playableUnits;
     if (_n > 0) exitWith { _acc vectorMultiply (1 / _n) };
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (!isNull _base) exitWith { getPosASL _base };
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp >= 2) exitWith { ATLToASL _bp };
     private _minX = missionNamespace getVariable ["FADE_mapMinX", missionNamespace getVariable ["FADE_mapMin", 0]];
     private _maxX = missionNamespace getVariable ["FADE_mapMaxX", missionNamespace getVariable ["FADE_mapMax", worldSize]];
     private _minY = missionNamespace getVariable ["FADE_mapMinY", missionNamespace getVariable ["FADE_mapMin", 0]];
@@ -171,9 +169,8 @@ FADE_opforAir_fallbackHeliClasses = [
 FADE_opforAir_adjustTargetAwayFromBase = {
     params ["_target2", ["_minDist", 1000]];
     if (count _target2 < 2) exitWith { _target2 };
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (isNull _base) exitWith { _target2 };
-    private _bp = getPosATL _base;
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp < 2) exitWith { _target2 };
     if ((_target2 distance2D _bp) >= _minDist) exitWith { _target2 };
     private _dir = _bp getDir _target2;
     private _p = _bp getPos [_minDist + 150, _dir];
@@ -228,35 +225,103 @@ FADE_opforAir_pickVehicleClass = {
     selectRandom _air
 };
 
-// Force _veh airborne at _spawnASL with heading; returns false if still on/near ground.
+// engineOn is a local argument. Run on a remote aircraft and the engine switches off again shortly after.
+FADE_opforAir_engineOnWhereLocal = {
+    params ["_veh"];
+    if (isNull _veh) exitWith {};
+    if (local _veh) then {
+        _veh engineOn true;
+    } else {
+        [_veh, true] remoteExec ["engineOn", _veh];
+    };
+};
+
+// flyInHeight is a local argument. Use the plain form: the forced form at >= 10 m
+// loses to collision avoidance and holds a helicopter around 20-35 m.
+FADE_opforAir_flyInHeightWhereLocal = {
+    params ["_veh", "_flyInH"];
+    if (isNull _veh || { _flyInH < 20 }) exitWith {};
+    if (local _veh) then {
+        _veh flyInHeight _flyInH;
+    } else {
+        [_veh, _flyInH] remoteExec ["flyInHeight", _veh];
+    };
+};
+
+// Hold _veh at _posATL (PositionATL). Returns false if it is still on or near the ground.
+// "FLY" starts an aircraft only when it already has a crew. An empty FLY create leaves the engine off.
+// A forward shove on that helicopter is a nose dive, so helicopters are not given one.
 FADE_opforAir_placeAirborne = {
-    params ["_veh", "_spawnASL", "_heading", ["_flyInH", -1]];
-    if (isNull _veh || { count _spawnASL < 3 }) exitWith { false };
-    private _terrainASL = getTerrainHeightASL [_spawnASL select 0, _spawnASL select 1];
-    private _agl = (_spawnASL select 2) - _terrainASL;
-    if (_flyInH < 0) then { _flyInH = _agl max 180 };
-    _veh setPosASL _spawnASL;
+    params ["_veh", "_posATL", "_heading", ["_flyInH", -1]];
+    if (isNull _veh || { count _posATL < 3 }) exitWith { false };
+    private _xy = [_posATL select 0, _posATL select 1];
+    private _wantAgl = (_posATL select 2) max 180;
+    if (_flyInH < 20) then { _flyInH = _wantAgl };
     _veh setDir _heading;
     _veh enableSimulation true;
-    _veh engineOn true;
-    if (_veh isKindOf "Plane") then {
-        _veh setVelocityModelSpace [0, 120 + random 40, 0];
+
+    private _hasDriver = !isNull driver _veh;
+    if (_hasDriver) then {
+        // setDir first: setVehiclePosition keeps the current direction.
+        _veh setVehiclePosition [_xy, [], 0, "FLY"];
+        [_veh, _flyInH] call FADE_opforAir_flyInHeightWhereLocal;
+        [_veh] call FADE_opforAir_engineOnWhereLocal;
+        if (_veh isKindOf "Plane") then {
+            if (local _veh) then { _veh setVelocityModelSpace [0, 120 + random 40, 0] };
+        } else {
+            if (local _veh && { !(isEngineOn _veh) }) then { _veh setVelocityModelSpace [0, 0, 0] };
+        };
     } else {
-        _veh flyInHeight _flyInH;
-        _veh setVelocityModelSpace [0, 25 + random 20, 0];
+        // No crew yet. CAN_COLLIDE honours z. FLY would not start the engine.
+        _veh setVehiclePosition [_posATL, [], 0, "CAN_COLLIDE"];
     };
-    // Heli "FLY" create can still settle — bump ASL if near ground.
-    if (isTouchingGround _veh || { (getPosATL _veh select 2) < 25 }) then {
-        private _retryASL = [
-            _spawnASL select 0,
-            _spawnASL select 1,
-            _terrainASL + _flyInH + 60
-        ];
-        _veh setPosASL _retryASL;
-        if (!(_veh isKindOf "Plane")) then { _veh flyInHeight _flyInH + 60 };
-        if (_veh isKindOf "Plane") then { _veh setVelocityModelSpace [0, 140, 0] };
+
+    if (isTouchingGround _veh || { ((getPosATL _veh) select 2) < 25 }) then {
+        private _terrainASL = getTerrainHeightASL _xy;
+        _veh setPosASL [_xy select 0, _xy select 1, _terrainASL + _flyInH];
+        _veh setDir _heading;
+        if (_hasDriver) then {
+            _veh setVehiclePosition [_xy, [], 0, "FLY"];
+            [_veh, _flyInH] call FADE_opforAir_flyInHeightWhereLocal;
+            [_veh] call FADE_opforAir_engineOnWhereLocal;
+            if (local _veh && { _veh isKindOf "Helicopter" } && { !(isEngineOn _veh) }) then {
+                _veh setVelocityModelSpace [0, 0, 0];
+            };
+            if (_veh isKindOf "Plane" && { local _veh }) then {
+                _veh setVelocityModelSpace [0, 140, 0];
+            };
+        };
     };
-    !(isTouchingGround _veh) && { (getPosATL _veh select 2) >= 20 }
+    !(isTouchingGround _veh) && { ((getPosATL _veh) select 2) >= 20 }
+};
+
+// Boarding can switch the engine off on the next frame. Re-apply until it stays on.
+// A cold helicopter with forward speed nose-dives, so kill that speed before starting the engine.
+FADE_opforAir_keepAirborne = {
+    params ["_veh", "_flyInH"];
+    if (isNull _veh) exitWith {};
+    [_veh, _flyInH] spawn {
+        params ["_veh", "_flyInH"];
+        private _until = time + 6;
+        private _atl = [0, 0, 0];
+        waitUntil {
+            if (isNull _veh || { !alive _veh }) exitWith { true };
+            if !(isEngineOn _veh) then {
+                if (local _veh && { _veh isKindOf "Helicopter" }) then {
+                    _veh setVelocityModelSpace [0, 0, 0];
+                    _atl = getPosATL _veh;
+                    if ((_atl select 2) < (_flyInH * 0.5)) then {
+                        _veh setDir (getDir _veh);
+                        _veh setVehiclePosition [[_atl select 0, _atl select 1], [], 0, "FLY"];
+                    };
+                };
+                [_veh] call FADE_opforAir_engineOnWhereLocal;
+                [_veh, _flyInH] call FADE_opforAir_flyInHeightWhereLocal;
+            };
+            sleep 0.5;
+            time > _until
+        };
+    };
 };
 
 FADE_opforAir_doSpawn = {
@@ -279,24 +344,25 @@ FADE_opforAir_doSpawn = {
     }]);
     private _aglMin = missionNamespace getVariable ["FADE_opforAir_spawnAglMin", 280];
     private _aglExtra = missionNamespace getVariable ["FADE_opforAir_spawnAglExtra", 220];
-    private _alt = (getTerrainHeightASL [_spawn2 select 0, _spawn2 select 1]) + _aglMin + random _aglExtra;
-    private _spawnPosASL = [_spawn2 select 0, _spawn2 select 1, _alt];
+    private _spawnATL = [_spawn2 select 0, _spawn2 select 1, _aglMin + random _aglExtra];
     private _class = call FADE_opforAir_pickVehicleClass;
     private _face = ((_target2 select 1) - (_spawn2 select 1)) atan2 ((_target2 select 0) - (_spawn2 select 0));
     private _flyInH = 180 + random 120;
 
-    private _veh = createVehicle [_class, _spawnPosASL, [], 0, "FLY"];
+    // CAN_COLLIDE keeps the ATL height. FLY does not start the engine until the aircraft has a crew.
+    private _veh = createVehicle [_class, _spawnATL, [], 0, "CAN_COLLIDE"];
     if (isNull _veh) exitWith {};
-    if (!([_veh, _spawnPosASL, _face, _flyInH] call FADE_opforAir_placeAirborne)) exitWith {
+    if (!([_veh, _spawnATL, _face, _flyInH] call FADE_opforAir_placeAirborne)) exitWith {
         // #region agent log
         diag_log format [
-            "[FAC DbgBrowser 62d308] H17 opforAir groundSpawnAbort class=%1 asl=%2 touching=%3",
-            _class, _spawnPosASL, isTouchingGround _veh
+            "[FAC DbgBrowser 62d308] H17 opforAir groundSpawnAbort class=%1 atl=%2 touching=%3 engine=%4",
+            _class, _spawnATL, isTouchingGround _veh, isEngineOn _veh
         ];
         // #endregion
         { if (!isNull _x) then { deleteVehicle _x } } forEach crew _veh;
         deleteVehicle _veh;
     };
+    [_veh] call FADE_pylon_sanitizeVehicle;
     private _cargoCap0 = _veh emptyPositions "cargo";
     private _crewUnits = missionNamespace getVariable ["FADE_enemyUnits", []];
     if (_crewUnits isEqualTo []) then { _crewUnits = [] call (missionNamespace getVariable ["FADE_resolveScenarioEnemyUnits", { [] }]) };
@@ -304,19 +370,18 @@ FADE_opforAir_doSpawn = {
     { if (!isNull _x) then { deleteVehicle _x } } forEach crew _veh;
     private _sideE = missionNamespace getVariable ["FADE_sideEnemy", east];
     private _grp = createGroup _sideE;
-    private _crewSpawnASL = +_spawnPosASL;
-    private _driver = _grp createUnit [selectRandom _crewUnits, _crewSpawnASL, [], 0, "NONE"];
+    private _crewSpawnATL = +_spawnATL;
+    private _driver = _grp createUnit [selectRandom _crewUnits, _crewSpawnATL, [], 0, "NONE"];
     if (!isNull _driver) then { _driver moveInDriver _veh; _grp selectLeader _driver };
     if (_veh emptyPositions "gunner" > 0) then {
-        private _gun = _grp createUnit [selectRandom _crewUnits, _crewSpawnASL, [], 0, "NONE"];
+        private _gun = _grp createUnit [selectRandom _crewUnits, _crewSpawnATL, [], 0, "NONE"];
         if (!isNull _gun) then { _gun moveInGunner _veh };
     };
     if (_veh emptyPositions "commander" > 0) then {
-        private _cmd = _grp createUnit [selectRandom _crewUnits, _crewSpawnASL, [], 0, "NONE"];
+        private _cmd = _grp createUnit [selectRandom _crewUnits, _crewSpawnATL, [], 0, "NONE"];
         if (!isNull _cmd) then { _cmd moveInCommander _veh };
     };
     if (isNull driver _veh) exitWith { { if (!isNull _x) then { deleteVehicle _x } } forEach units _grp; deleteGroup _grp; deleteVehicle _veh };
-    [_veh, _spawnPosASL, _face, _flyInH] call FADE_opforAir_placeAirborne;
     private _facApply = missionNamespace getVariable ["FAC_applyEnemyScenarioToGroup", {}];
     if (!(_facApply isEqualTo {})) then { [_grp] call _facApply };
     _grp setGroupIdGlobal [format ["OPF-AIR-%1", floor random 999]];
@@ -351,7 +416,7 @@ FADE_opforAir_doSpawn = {
                     private _k = 0;
                     while { _veh emptyPositions "cargo" > 0 && _k < _maxFill } do {
                         _k = _k + 1;
-                        private _u = _grpInf createUnit [selectRandom _crewUnits, _crewSpawnASL, [], 0, "NONE"];
+                        private _u = _grpInf createUnit [selectRandom _crewUnits, _crewSpawnATL, [], 0, "NONE"];
                         if (isNull _u) exitWith {};
                         _u moveInCargo _veh;
                     };
@@ -393,7 +458,7 @@ FADE_opforAir_doSpawn = {
                     private _k = 0;
                     while { _veh emptyPositions "cargo" > 0 && _k < _cargoCap } do {
                         _k = _k + 1;
-                        private _u = _grpInf createUnit [selectRandom _crewUnits, _crewSpawnASL, [], 0, "NONE"];
+                        private _u = _grpInf createUnit [selectRandom _crewUnits, _crewSpawnATL, [], 0, "NONE"];
                         if (isNull _u) exitWith {};
                         _u moveInCargo _veh;
                     };
@@ -425,12 +490,12 @@ FADE_opforAir_doSpawn = {
     };
 
     [_veh, _crewUnits] call FADE_ensureEnemyVehicleGunner;
-    private _airborneOk = [_veh, _spawnPosASL, _face, _flyInH] call FADE_opforAir_placeAirborne;
+    private _airborneOk = [_veh, _spawnATL, _face, _flyInH] call FADE_opforAir_placeAirborne;
     if (!_airborneOk) then {
         // #region agent log
         diag_log format [
-            "[FAC DbgBrowser 62d308] H17 opforAir groundAfterCrew class=%1 agl=%2",
-            _class, (getPosATL _veh select 2) - (getTerrainHeightASL (getPosATL _veh))
+            "[FAC DbgBrowser 62d308] H17 opforAir groundAfterCrew class=%1 agl=%2 engine=%3",
+            _class, (getPosATL _veh) select 2, isEngineOn _veh
         ];
         // #endregion
         private _cargoG = _veh getVariable ["FADE_opforAirCargoGrp", grpNull];
@@ -444,16 +509,17 @@ FADE_opforAir_doSpawn = {
     };
     if (!_airborneOk) exitWith {};
 
+    [_veh, _flyInH] call FADE_opforAir_keepAirborne;
     _arr pushBack _veh;
     missionNamespace setVariable ["FADE_opforAir_active", _arr];
     missionNamespace setVariable ["FADE_opforAir_lastSpawnTime", time];
     _veh setVariable ["FADE_opforAirAsset", true, true];
     _grp setVariable ["FADE_opforAirAsset", true, true];
     // #region agent log
-    private _spawnAgl = (getPosATL _veh select 2) - (getTerrainHeightASL (getPosATL _veh));
+    private _spawnAgl = (getPosATL _veh) select 2;
     diag_log format [
-        "[FAC DbgBrowser 62d308] H17 opforAir spawned class=%1 asl=%2 agl=%3 airborne=%4 active=%5",
-        _class, getPosASL _veh, _spawnAgl, !(isTouchingGround _veh), count _arr
+        "[FAC DbgBrowser 62d308] H17 opforAir spawned class=%1 asl=%2 agl=%3 airborne=%4 engine=%5 active=%6",
+        _class, getPosASL _veh, _spawnAgl, !(isTouchingGround _veh), isEngineOn _veh, count _arr
     ];
     // #endregion
 };

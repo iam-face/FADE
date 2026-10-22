@@ -71,8 +71,11 @@ FADE_map_gridCellsCoveringCircle = {
     private _minIy = floor (((_c select 1) - _r - (_off select 1)) / _cell);
     private _maxIy = floor (((_c select 1) + _r - (_off select 1)) / _cell);
     private _out = [];
-    for "_ix" from _minIx to _maxIx do {
-        for "_iy" from _minIy to _maxIy do {
+    // for "_i" from _private evaluates the bounds in the loop scope, where private is hidden.
+    private _ix = _minIx;
+    while { _ix <= _maxIx } do {
+        private _iy = _minIy;
+        while { _iy <= _maxIy } do {
             private _origin = [
                 (_off select 0) + (_ix * _cell),
                 (_off select 1) + (_iy * _cell),
@@ -89,7 +92,9 @@ FADE_map_gridCellsCoveringCircle = {
             if (([_nearX, _nearY, 0] distance2D _c) <= _r) then {
                 _out pushBackUnique _origin;
             };
+            _iy = _iy + 1;
         };
+        _ix = _ix + 1;
     };
     _out
 };
