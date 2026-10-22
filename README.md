@@ -29,7 +29,7 @@ Think you’ve got what it takes to run with one of Australia’s longest-standi
 
 **FADE (Face's Dynamic Environment) - Beta 8**
 
-This repository holds two missions. `CTB_FAC_FADE.Altis` is the Altis mission, and daily work for it is on `main`. `CTB_FAC_FADE_Portable.Stratis` is the Stratis mission, and world-specific work for it is on `portable`. The feature list below describes the Altis mission.
+This repository holds two missions. `CTB_FAC_FADE.Altis` is the Altis mission. `CTB_FAC_FADE_Portable.Stratis` is the Stratis mission. Both ship on `main` and on `beta`. `main` is the central branch. `beta` is the development branch. The feature list below describes the Altis mission.
 
 FADE is a multiplayer Arma 3 sandbox mission on Altis, tailored for CTB use. Players configure the fight and run training or dynamic missions from boards and GUIs at a fixed player base. You do not need Zeus for day-to-day play.
 It is built for rotary, joint fires, and infantry practice on a local or dedicated server and supports up to 31 players currently.
