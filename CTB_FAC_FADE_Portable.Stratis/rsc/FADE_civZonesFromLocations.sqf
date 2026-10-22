@@ -6,14 +6,25 @@
 // parkedVehicles (2-6 by tier), footMult for walking civ count scaling.
 // Named locations with fewer than FADE_civZoneMinBuildings House/Building within
 // FADE_civZoneBuildingRadius are not designated as civ zones (no CIV_T_* anchor).
+// HQ exclusion: a named location becomes a civ zone only when it is farther than
+// FADE_civZoneCutoffDist from FADE_basePos. Smaller terrains use 500 m. Altis stays 2000 m.
 // =============================================================================
 
 if (!isServer) exitWith {};
 
+// Metres. A location is eligible only when its distance from HQ is greater than this.
+// _world defaults to worldSize. Altis (30720) stays at 2000 m.
+FADE_civZoneCutoffDist = {
+    params [["_world", worldSize]];
+    if (_world isEqualType 0 && { finite _world } && { _world >= 30720 }) exitWith { 2000 };
+    private _cut = missionNamespace getVariable ["FADE_civZoneMinDistFromBase", 500];
+    if (!(_cut isEqualType 0) || { !finite _cut } || { _cut < 0 }) then { _cut = 500 };
+    _cut
+};
+
 FADE_civZonesFromLocations_build = {
     if (!isServer) exitWith {};
 
-    private _minDist = missionNamespace getVariable ["FADE_civZoneMinDistFromBase", 2000];
     private _locTypes = missionNamespace getVariable ["FADE_civZoneLocationTypes", ["NameCityCapital", "NameCity", "NameVillage", "NameLocal"]];
     private _skipWater = missionNamespace getVariable ["FADE_civZoneSkipWater", true];
     private _anchorClass = missionNamespace getVariable ["FADE_civZoneAnchorClass", "Land_HelipadEmpty_F"];
@@ -35,21 +46,36 @@ FADE_civZonesFromLocations_build = {
 
     // [location object, ATL position]
     private _accepted = [];
+    private _skippedDist = 0;
+    private _cut = [] call FADE_civZoneCutoffDist;
     {
         private _loc = _x;
         private _lp = locationPosition _loc;
         if (count _lp >= 2) then {
-            if (([_lp select 0, _lp select 1] distance2D _base2) >= _minDist) then {
-                private _pos = [(_lp select 0), (_lp select 1), 0];
+            private _p2 = [_lp select 0, _lp select 1];
+            private _dist = _p2 distance2D _base2;
+            if (_dist > _cut) then {
+                private _pos = [(_p2 select 0), (_p2 select 1), 0];
                 if (!(_skipWater && { surfaceIsWater _pos })) then {
                     _accepted pushBack [_loc, _pos];
+                };
+            } else {
+                _skippedDist = _skippedDist + 1;
+                if (worldSize < 30720) then {
+                    diag_log format [
+                        "[FADE_civZonesFromLocations] Skip '%1' (%2): %3 m from HQ (need > %4 m).",
+                        text _loc, type _loc, round _dist, round _cut
+                    ];
                 };
             };
         };
     } forEach _locs;
 
     private _n = count _accepted;
-    diag_log format ["[FADE_civZonesFromLocations] %1 named location(s) accepted (>= %2 m from HQ, water filter %3).", _n, _minDist, _skipWater];
+    diag_log format [
+        "[FADE_civZonesFromLocations] %1 named location(s) accepted (world %2 m, water filter %3, distance rejects %4).",
+        _n, worldSize, _skipWater, _skippedDist
+    ];
 
     private _legacyMax = missionNamespace getVariable ["FADE_civTriggerIndexMax", 109];
     if (_legacyMax > 0) then {

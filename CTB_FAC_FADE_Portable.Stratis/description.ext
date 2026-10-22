@@ -221,7 +221,7 @@ class Params
     {
         title = "BUILD: Where";
         values[] = {0, 1};
-        texts[] = {"1000 m of base", "Anywhere"};
+        texts[] = {"500 m of base", "Anywhere"};
         default = 0;
     };
     class FAC_BuildCatalog

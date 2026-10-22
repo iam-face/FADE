@@ -224,15 +224,18 @@ FADE_runMission_AssetRetrieval = {
         };
         private _loreAppendFn = missionNamespace getVariable ["FADE_lore_appendSituationHtml", { params ["_s"]; _this select 0 }];
         _vehSituationTaskText = [_vehSituationTaskText] call _loreAppendFn;
+        private _baseDist = round (missionNamespace getVariable ["FADE_buildRadius", 500]);
         private _vehExecutionTaskText = format [
-            "<t align='left' color='#C0C0C0'>Move to the road / vehicle site. Clear local OPFOR, then recover the OPFOR %1 (drive, tow or sling). Get it operational within 1000 m of base.</t>",
-            _vehicleName
+            "<t align='left' color='#C0C0C0'>Move to the road / vehicle site. Clear local OPFOR, then recover the OPFOR %1 (drive, tow or sling). Get it operational within %2 m of base.</t>",
+            _vehicleName,
+            _baseDist
         ];
         private _vehMissionDesc = format [
-            "Branch: VEHICLE RECOVERY - Grid %1 (%2). Recover the OPFOR %3 and return it within 1000 m of base. Vehicle must stay operational.",
+            "Branch: VEHICLE RECOVERY - Grid %1 (%2). Recover the OPFOR %3 and return it within %4 m of base. Vehicle must stay operational.",
             _topoVeh select 0,
             _topoVeh select 1,
-            _vehicleName
+            _vehicleName,
+            _baseDist
         ];
         [_player, _taskId, _vehMissionDesc, "Asset Retrieval", _center, "car", _vehSituationTaskText, _vehExecutionTaskText] call _fnc_createMissionTask;
 
@@ -242,9 +245,9 @@ FADE_runMission_AssetRetrieval = {
         [_taskId, "AssetRetrieval", _center, _markerOut, [], "ColorOrange", "", [_center]] call FADE_fieldIntel_startForMission;
 
         private _grid = mapGridPosition _center;
-        private _brief = format ["ASSET RETRIEVAL  -  VEHICLE%1%1Objective area (approx.): Grid %2%1%1Recover the enemy vehicle %3 and return it within 1000 m of base. Clear the site, then drive, tow or sling it back. Vehicle must stay recoverable.", toString [10], _grid, _vehicleName] + _briefGuiTail;
+        private _brief = format ["ASSET RETRIEVAL  -  VEHICLE%1%1Objective area (approx.): Grid %2%1%1Recover the enemy vehicle %3 and return it within %4 m of base. Clear the site, then drive, tow or sling it back. Vehicle must stay recoverable.", toString [10], _grid, _vehicleName, _baseDist] + _briefGuiTail;
         _player setVariable ["FADE_myMissionBrief", _brief, true];
-        [format ["<t color='#B0B0B0'>Grid: %1</t><br/><t color='#FFCC00'>Branch: Vehicle recovery</t><br/><t color='#C0C0C0'>Asset vehicle: %2</t><br/><t color='#C0C0C0'>Return it to base (within 1000 m).</t>", _grid, _vehicleName]] call _showAssignedHint;
+        [format ["<t color='#B0B0B0'>Grid: %1</t><br/><t color='#FFCC00'>Branch: Vehicle recovery</t><br/><t color='#C0C0C0'>Asset vehicle: %2</t><br/><t color='#C0C0C0'>Return it to base (within %3 m).</t>", _grid, _vehicleName, _baseDist]] call _showAssignedHint;
         [_player, "Asset Retrieval"] call FADE_notifyOthersMissionStarted;
 
         private _arQrfPos = +_center;
@@ -331,7 +334,7 @@ FADE_runMission_AssetRetrieval = {
             [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
             [_taskId, _allGroups] call FADE_fieldIntel_registerGroups;
             [_taskId, _arQrfPos, _basePos, _enemyUnitsAsset, _allGroups, _arDetect] call FADE_counterAttackStart;
-            private _baseDist = 1000;
+            private _baseDist = missionNamespace getVariable ["FADE_buildRadius", 500];
             waitUntil {
                 sleep 2;
                 if (missionNamespace getVariable ["FADE_assetAborted_" + _taskId, false]) exitWith { true };

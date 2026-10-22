@@ -421,7 +421,7 @@ private _teleportBoardMap = [
     ];
 };
 
-// ACE self-interact (FADE) within 1000 m of base. Same terminal actions; see FAC_aceSelf_install.
+// ACE self-interact (FADE) within FADE_buildRadius of base. Same terminal actions; see FAC_aceSelf_install.
 if (!isNil "FAC_aceSelf_install") then { [] call FAC_aceSelf_install };
 
 // SDE's bar: Nesk_1 (Eden name) - drink interaction (local player only; lethal)
@@ -459,12 +459,13 @@ if (!isNull _nesk) then {
 
 };
 
-// ACE self-interact while within 1000 m of FADE_basePos. Statements call the same
+// ACE self-interact while within FADE_buildRadius of FADE_basePos. Statements call the same
 // terminal / loadout / vehicle paths as the boards (no separate feature logic).
 FAC_aceSelf_nearPlayerBase = {
     private _hq = missionNamespace getVariable ["FADE_basePos", []];
     if (count _hq < 2) exitWith { false };
-    (getPosATL player) distance2D [_hq select 0, _hq select 1] <= 1000
+    private _baseR = missionNamespace getVariable ["FADE_buildRadius", 500];
+    (getPosATL player) distance2D [_hq select 0, _hq select 1] <= _baseR
 };
 
 // Vehicle the player is in, or the Air/Land vehicle they are looking at.

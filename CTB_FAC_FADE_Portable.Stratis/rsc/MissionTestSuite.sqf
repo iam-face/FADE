@@ -210,6 +210,53 @@ FAC_missionTestSuite_runServer = {
         diag_log "[FAC TestSuite] FAIL (server): FADE_basePick_tally missing";
     };
 
+    if (!isNil "FADE_basePick_rememberChoice") then {
+        private _savedChoices = missionNamespace getVariable ["FADE_basePick_choiceList", []];
+        ["p1", "Alpha", 1000, 2000] call FADE_basePick_rememberChoice;
+        ["p1", "Alpha", 1100, 2100] call FADE_basePick_rememberChoice;
+        ["p2", "Bravo", 3000, 4000] call FADE_basePick_rememberChoice;
+        private _choiceRows = missionNamespace getVariable ["FADE_basePick_choiceList", []];
+        _ok = (count _choiceRows) == 2
+            && { (_choiceRows select 0) isEqualTo ["p1", "Alpha", 1100, 2100] }
+            && { (_choiceRows select 1) isEqualTo ["p2", "Bravo", 3000, 4000] };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): base-pick choice rows";
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): base-pick choice rows %1", _choiceRows];
+        };
+        missionNamespace setVariable ["FADE_basePick_choiceList", _savedChoices, true];
+    };
+
+    if (!isNil "FADE_basePick_cardinal") then {
+        private _cardN = [[0, 0, 0], [0, 100, 0]] call FADE_basePick_cardinal;
+        private _cardE = [[0, 0, 0], [100, 0, 0]] call FADE_basePick_cardinal;
+        private _cardS = [[0, 0, 0], [0, -100, 0]] call FADE_basePick_cardinal;
+        private _cardW = [[0, 0, 0], [-100, 0, 0]] call FADE_basePick_cardinal;
+        private _cardNE = [[0, 0, 0], [100, 100, 0]] call FADE_basePick_cardinal;
+        _ok = _cardN == "N" && { _cardE == "E" } && { _cardS == "S" } && { _cardW == "W" } && { _cardNE == "NE" };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): base-pick compass";
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): base-pick compass N=%1 E=%2 S=%3 W=%4 NE=%5", _cardN, _cardE, _cardS, _cardW, _cardNE];
+        };
+    };
+
+    if (!isNil "FADE_basePick_placeLine") then {
+        private _place = [[worldSize * 0.5, worldSize * 0.5, 0]] call FADE_basePick_placeLine;
+        _ok = (_place find "Combat Team Bravo base established at ") == 0 && { (_place find "Deploying you now.") > 0 };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log format ["[FAC TestSuite] PASS (server): base-pick place line %1", _place];
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): base-pick place line %1", _place];
+        };
+    };
+
     if (!isNil "FADE_basePick_ensureZoneMarker") then {
         private _testName = "FADE_suite_basePick_mkr";
         if (getMarkerColor _testName != "") then { deleteMarker _testName };
@@ -226,9 +273,75 @@ FAC_missionTestSuite_runServer = {
         if (getMarkerColor _testName != "") then { deleteMarker _testName };
     };
 
+    if (!isNil "FADE_basePick_rejectReason") then {
+        private _dry = [];
+        private _wet = [];
+        private _i = 0;
+        for "_i" from 0 to 40 do {
+            private _p = [100 + (_i * ((worldSize - 200) / 40)), worldSize * 0.45, 0];
+            private _why = [_p] call FADE_basePick_rejectReason;
+            if (_why == "" && { count _dry < 2 }) then { _dry = _p };
+            if (_why == "That point is in the water." && { count _wet < 2 }) then { _wet = _p };
+        };
+        if (count _dry < 2 || { count _wet < 2 }) then {
+            diag_log "[FAC TestSuite] SKIP (server): base-pick land/water sample";
+        } else {
+            // `_pos call fn` with params ["_pos"] keeps only X. The map handler must pass [_pos].
+            private _unwrapped = _dry call { params ["_pos"]; _pos };
+            _ok = !(_unwrapped isEqualType [])
+                && { [_dry] call FADE_basePick_posOk }
+                && { !([_wet] call FADE_basePick_posOk) }
+                && { ([_wet] call FADE_basePick_rejectReason) == "That point is in the water." };
+            if (_ok) then {
+                _pass = _pass + 1;
+                diag_log format ["[FAC TestSuite] PASS (server): base-pick click accepts land %1 rejects water %2", _dry select [0, 2], _wet select [0, 2]];
+            } else {
+                _fail = _fail + 1;
+                diag_log format ["[FAC TestSuite] FAIL (server): base-pick click land %1 water %2 unwrap %3", _dry, _wet, _unwrapped];
+            };
+        };
+        private _src = preprocessFileLineNumbers "rsc\FAC_BasePick.sqf";
+        _ok = (_src find "FAC_basePick_clickPos") >= 0
+            && { (_src find "_pos call FAC_basePick_onMapClick") < 0 }
+            && { (_src find "BLACK FADED") < 0 }
+            && { (_src find "60962") >= 0 }
+            && { (_src find "FAC_basePick_showDeploy") >= 0 };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): base-pick map click stores _pos";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): base-pick map click stores _pos";
+        };
+    };
+
     private _civT = missionNamespace getVariable ["FADE_civTriggerNames", []];
     _ok = _civT isEqualType [];
     if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_civTriggerNames (%1 zones)", count _civT]; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_civTriggerNames"; };
+
+    // Smaller terrains: a named location is a civ zone only when it is farther than 500 m from HQ.
+    if (isNil "FADE_civZoneCutoffDist") then {
+        _fail = _fail + 1;
+        diag_log "[FAC TestSuite] FAIL (server): FADE_civZoneCutoffDist missing";
+    } else {
+        private _prevFlat = missionNamespace getVariable ["FADE_civZoneMinDistFromBase", 500];
+        missionNamespace setVariable ["FADE_civZoneMinDistFromBase", 500];
+        private _stratisCut = [8192] call FADE_civZoneCutoffDist;
+        private _altisCut = [30720] call FADE_civZoneCutoffDist;
+        private _src = preprocessFileLineNumbers "rsc\FADE_civZonesFromLocations.sqf";
+        _ok = _stratisCut isEqualTo 500
+            && { _altisCut isEqualTo 2000 }
+            && { (_src find "_dist > _cut") >= 0 }
+            && { (_src find "_dist >= _cut") < 0 };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log format ["[FAC TestSuite] PASS (server): civ zone HQ cutoff Stratis %1 Altis %2", _stratisCut, _altisCut];
+        } else {
+            _fail = _fail + 1;
+            diag_log format ["[FAC TestSuite] FAIL (server): civ zone HQ cutoff Stratis %1 Altis %2", _stratisCut, _altisCut];
+        };
+        missionNamespace setVariable ["FADE_civZoneMinDistFromBase", _prevFlat];
+    };
 
     private _hp = missionNamespace getVariable ["FADE_helipads", []];
     _ok = _hp isEqualType [] && { count _hp > 0 };

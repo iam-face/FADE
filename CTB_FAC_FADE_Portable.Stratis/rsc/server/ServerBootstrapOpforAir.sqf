@@ -3,8 +3,8 @@ FADE_opforAir_knowsAboutThreshold = 1.2;
 // Random delay (seconds) after detection before spawn: min + random extra (comms + takeoff).
 FADE_opforAir_responseDelayMin = 40;
 FADE_opforAir_responseDelayExtra = 200;
-// While every friendly player is within this distance (2D) of BASE_1: despawn ambient OPFOR air and hold spawns/pending.
-FADE_opforAir_hqSafeRadius = 1000;
+// While every friendly player is within this distance (2D) of the player base: despawn ambient OPFOR air and hold spawns.
+FADE_opforAir_hqSafeRadius = missionNamespace getVariable ["FADE_buildRadius", 500];
 
 // Spawn height above terrain (m). createVehicle takes PositionATL, so this is the z component.
 FADE_opforAir_spawnAglMin = 280;
@@ -46,7 +46,7 @@ FADE_opforAir_opforDetectsBlufor = {
 };
 
 FADE_opforAir_allFriendliesAtHq = {
-    params [["_hqR", 1000]];
+    params [["_hqR", 500]];
     private _bp = [] call FADE_getPlayerBasePos;
     if (count _bp < 2) exitWith { true };
     private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
@@ -62,7 +62,10 @@ FADE_opforAir_allFriendliesAtHq = {
 };
 
 FADE_opforAir_anyPlayerFarFromHq = {
-    params [["_hqR", 900]];
+    params [["_hqR", -1]];
+    if (_hqR < 0) then {
+        _hqR = (missionNamespace getVariable ["FADE_opforAir_hqSafeRadius", 500]) * 0.9;
+    };
     private _bp = [] call FADE_getPlayerBasePos;
     if (count _bp < 2) exitWith { false };
     private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
@@ -167,7 +170,7 @@ FADE_opforAir_fallbackHeliClasses = [
 
 // If the BLUFOR centroid is within _minDist m of BASE_1 (2D), push SAD/LZ target outward so fixed-wing does not get a point on top of HQ.
 FADE_opforAir_adjustTargetAwayFromBase = {
-    params ["_target2", ["_minDist", 1000]];
+    params ["_target2", ["_minDist", 500]];
     if (count _target2 < 2) exitWith { _target2 };
     private _bp = [] call FADE_getPlayerBasePos;
     if (count _bp < 2) exitWith { _target2 };
@@ -388,7 +391,7 @@ FADE_opforAir_doSpawn = {
     _grp setBehaviour "COMBAT";
     _grp setCombatMode "RED";
 
-    private _sadTgt = [_target2, 1000] call FADE_opforAir_adjustTargetAwayFromBase;
+    private _sadTgt = [_target2, missionNamespace getVariable ["FADE_opforAir_hqSafeRadius", 500]] call FADE_opforAir_adjustTargetAwayFromBase;
     private _isPlane = _veh isKindOf "Plane";
     private _isHeli = _veh isKindOf "Helicopter";
     private _cargoCap = _cargoCap0;
@@ -527,7 +530,7 @@ FADE_opforAir_doSpawn = {
 FADE_opforAir_trySpawn = {
     if (!isServer) exitWith {};
     private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
-    if ([missionNamespace getVariable ["FADE_opforAir_hqSafeRadius", 1000]] call FADE_opforAir_allFriendliesAtHq) exitWith {
+    if ([missionNamespace getVariable ["FADE_opforAir_hqSafeRadius", 500]] call FADE_opforAir_allFriendliesAtHq) exitWith {
         private _arrH = missionNamespace getVariable ["FADE_opforAir_active", []];
         _arrH = _arrH select { !isNull _x && { alive _x } };
         missionNamespace setVariable ["FADE_opforAir_active", _arrH];
