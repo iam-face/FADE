@@ -5,10 +5,13 @@
 ################################################################
 .vscode\sqfvm-lsp
 tools
-rsc\archive
-mission.sqm
+CTB_FAC_FADE.Altis\rsc\archive
+CTB_FAC_FADE_Portable.Stratis\rsc\archive
+CTB_FAC_FADE.Altis\mission.sqm
+CTB_FAC_FADE_Portable.Stratis\mission.sqm
 new_world_funcs.txt
 old_world_funcs.txt
 headless_test.flg
 headless_test_result.txt
-cba_settings.sqf
+CTB_FAC_FADE.Altis\cba_settings.sqf
+CTB_FAC_FADE_Portable.Stratis\cba_settings.sqf

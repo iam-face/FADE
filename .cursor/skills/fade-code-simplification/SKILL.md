@@ -63,7 +63,7 @@ One simplification at a time. Stay inside the files this task already touches.
 After each edit, from the mission folder:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File ..\tools\sqfvm\Invoke-FadeSqfLint.ps1
+powershell -ExecutionPolicy Bypass -File ..\..\tools\sqfvm\Invoke-FadeSqfLint.ps1
 ```
 
 After the whole pass, if behavior is server-side, run headless compile once. Commands and RPT markers: [fade-headless-test](../fade-headless-test/SKILL.md). Do not boot the dedicated server after every small edit.

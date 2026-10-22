@@ -1,12 +1,12 @@
 ---
 name: update-fade-github
-description: Commit and push FADE to GitHub (iam-face/FADE, main). Use when user asks to push/sync/update the repo.
+description: Commit and push the current FADE branch to GitHub (iam-face/FADE). main is the Altis line. portable is the Stratis line. Use when user asks to push/sync/update the repo.
 disable-model-invocation: true
 ---
 
 # Update FADE GitHub
 
-Sync workspace → **https://github.com/iam-face/FADE.git** branch **`main`**. Invocation = permission to commit+push unless user says dry-run or commit-only.
+Sync the current checkout to **https://github.com/iam-face/FADE.git**. Push `main` when that is the checkout (Altis line). Push `portable` only when that is the checkout (Stratis line). Invocation = permission to commit+push unless user says dry-run or commit-only.
 
 ## Safety
 
@@ -17,8 +17,8 @@ Never: change git config, force-push, hard-reset, skip hooks, commit secrets. Re
 1. **Inspect:** `git status -sb`, `git diff --stat HEAD`, `git log --oneline -3`. Clean + synced → report up to date, stop.
 2. **Stage:** `git add -A`; review for secrets/huge binaries.
 3. **Commit:** 1-line subject (+ optional bullets); match repo style (`Beta N:`, `fix:`, `feat:`).
-4. **Push:** `git push origin main`
-5. **Verify:** `git status -sb`, `git log origin/main -1`
+4. **Push:** `git push origin HEAD` (the current branch: `main` or `portable`).
+5. **Verify:** `git status -sb`, `git log -1 --oneline`
 
 ## Failures
 
