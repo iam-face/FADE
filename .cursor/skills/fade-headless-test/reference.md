@@ -65,7 +65,7 @@ persistent = 1;   // required for -autoInit
 ## Junction layout
 
 ```
-C:\Arma3Server\mpmissions\CTB_FAC_FADE.Altis  →  <repo root>
+C:\Arma3Server\mpmissions\CTB_FAC_FADE.Altis  →  <repo>\CTB_FAC_FADE.Altis
 ```
 
 Repo edits are live via `-filePatching` + junction; no copy step.

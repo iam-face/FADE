@@ -1,0 +1,413 @@
+class Header {
+    gameType = "Sandbox";
+    minPlayers = 1;
+    maxPlayers = 31;  // match playable slots in mission.sqm (avoids role count vs maxPlayers warning)
+};
+
+class Params
+{
+    // ACCESS (alphabetical)
+    class FAC_EnableAceArsenalActions
+    {
+        title = "ACCESS: Loadout box ACE Arsenal";
+        values[] = {0, 1};
+        texts[] = {"Disabled", "Enabled"};
+        default = 1;
+    };
+    class FAC_FastTravelToPlayer
+    {
+        title = "ACCESS: Fast Travel - teleport to player";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_LoadoutGuiAccess
+    {
+        title = "ACCESS: Loadout GUI";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_MissionsGuiAccess
+    {
+        title = "ACCESS: Missions GUI";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_RecruitGuiAccess
+    {
+        title = "ACCESS: Who can recruit and dismiss units?";
+        values[] = {0, 1, 2};
+        texts[] = {"Everyone", "Group leaders only (admin/Zeus override)", "Admin only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_ScenarioAdminAccess
+    {
+        title = "ACCESS: Scenario Admin tab";
+        values[] = {0, 1, 2};
+        texts[] = {"All with Scenario access", "Group leaders only (admin/Zeus override)", "Disabled (admin/Zeus override only)"};
+        default = 0;
+    };
+    class FAC_ScenarioGuiAccess
+    {
+        title = "ACCESS: Scenario GUI";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    class FAC_VehicleGuiAccess
+    {
+        title = "ACCESS: Vehicle GUI";
+        values[] = {0, 1};
+        texts[] = {"All players", "Group leaders only (admin/Zeus override)"};
+        default = 0;
+    };
+    // CIVILIANS (alphabetical)
+    class FAC_CiviliansAtStart
+    {
+        title = "CIVILIANS: Ambient civilians";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 1;
+    };
+    class FAC_CivTalkPolicy
+    {
+        title = "CIVILIANS: Who can interrogate civilians?";
+        values[] = {0, 1};
+        texts[] = {"Everyone", "Interpreters only"};
+        default = 0;
+    };
+    class FAC_IntelReadPolicy
+    {
+        title = "CIVILIANS: Who can read intel?";
+        values[] = {0, 1};
+        texts[] = {"Everyone", "Specialists only"};
+        default = 0;
+    };
+    // DEBUG (alphabetical)
+    class FAC_DebugPrintSpawns
+    {
+        title = "DEBUG: Print spawns";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 0;
+    };
+    class FAC_DebugTools
+    {
+        title = "DEBUG: Script debug tools (Zeus via Admin tab)";
+        values[] = {0, 1, 2};
+        texts[] = {"Off", "Logged admin only", "Server admin"};
+        default = 2;
+    };
+    class FAC_DebugCivTownMarkers
+    {
+        title = "DEBUG: Show civilian town markers";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 0;
+    };
+    class FAC_DebugVgMarkers
+    {
+        title = "DEBUG: Show garrison buildings";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 0;
+    };
+    // GAMEPLAY (alphabetical)
+    class FAC_GearPolicy
+    {
+        title = "GAMEPLAY: Gear policy";
+        values[] = {0, 1, 2};
+        texts[] = {"Unrestricted", "Friendly faction only", "Preset loadouts only"};
+        default = 0;
+    };
+    class FAC_HqAutoHeal
+    {
+        title = "GAMEPLAY: HQ auto-heal";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 1;
+    };
+    // MISSIONS
+    class FAC_AoStrength
+    {
+        title = "MISSIONS: AO mission strength";
+        values[] = {0, 1, 2};
+        texts[] = {"Low", "Mid", "High"};
+        default = 1;
+    };
+    // OPFOR (alphabetical)
+    class FAC_OpforAir
+    {
+        title = "OPFOR: Air";
+        values[] = {0, 1, 2, 3};
+        texts[] = {"Off", "Low", "Normal", "High"};
+        default = 0;
+    };
+    class FAC_OpforDrones
+    {
+        title = "OPFOR: Drones";
+        values[] = {0, 1, 2, 3};
+        texts[] = {"Off", "Low", "Normal", "High"};
+        default = 0;
+    };
+    class FAC_OpforGrenades
+    {
+        title = "OPFOR: Grenades";
+        values[] = {0, 1, 2, 3};
+        texts[] = {"Normal", "Reduced", "Minimal", "None"};
+        default = 1;
+    };
+    class FAC_OpforPatrols
+    {
+        title = "OPFOR: Patrols";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 1;
+    };
+    class FAC_OpforPatrolTownChance
+    {
+        title = "OPFOR: Patrols town chance";
+        values[] = {0, 1, 2, 3};
+        texts[] = {"Low (25%)", "Medium (50%)", "High (75%)", "Every town (100%)"};
+        default = 0;
+    };
+    class FAC_OpforPlayerScale
+    {
+        title = "OPFOR: Player scaling";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 1;
+    };
+    class FAC_OpforThreat
+    {
+        title = "OPFOR: Population multiplier";
+        values[] = {0, 1, 2, 3, 4, 5};
+        texts[] = {"Very Low", "Low", "Normal", "High", "Very High", "Insane"};
+        default = 1;
+    };
+    // WORLD (alphabetical)
+    class FAC_StartingTime
+    {
+        title = "WORLD: Starting time";
+        values[] = {0, 1, 2, 3, 4, 5, 6};
+        texts[] = {"Random", "Night (00:00)", "Dawn (04:00)", "Morning (06:00)", "Midday (12:00)", "Afternoon (15:00)", "Evening (19:00)"};
+        default = 0;
+    };
+    class FAC_StartingWeather
+    {
+        title = "WORLD: Starting weather";
+        values[] = {0, 1, 2, 3, 4, 5, 6};
+        texts[] = {"Random", "Clear", "Overcast", "Foggy", "Rain", "Storm", "Face Mission"};
+        default = 0;
+    };
+    // BUILD (appended after WORLD so existing paramsArray indices stay put)
+    class FAC_BuildAccess
+    {
+        title = "BUILD: Who can build";
+        values[] = {0, 1, 2};
+        texts[] = {"Engineers", "Anyone", "No-one"};
+        default = 1;
+    };
+    class FAC_BuildLogistics
+    {
+        title = "BUILD: Logistics";
+        values[] = {0, 1};
+        texts[] = {"Not required", "Required"};
+        default = 0;
+    };
+    class FAC_BuildArea
+    {
+        title = "BUILD: Where";
+        values[] = {0, 1};
+        texts[] = {"1000 m of base", "Anywhere"};
+        default = 0;
+    };
+    class FAC_BuildCatalog
+    {
+        title = "BUILD: Object list";
+        values[] = {0, 1};
+        texts[] = {"Anything", "Realistic"};
+        default = 0;
+    };
+    class FAC_BuildRequire
+    {
+        title = "BUILD: Base structures";
+        values[] = {0, 1};
+        texts[] = {"Not required", "Required"};
+        default = 0;
+    };
+};
+
+// Respawn: override mission.sqm to avoid respawn on mission start (no script calls forceRespawn).
+// 0 = none; set to 3 in Eden for base respawn on death if desired.
+respawn = 3;
+respawnTemplates[] = { "Spectator" };
+respawnOnStart = 0;
+
+// ESC debug console (Splendid Camera + Spectator). Not lobby-tunable at runtime — use lobby param
+// FAC_DebugTools for script Zeus self-assign (Scenario Admin tab). 2 = server admin in MP.
+enableDebugConsole = 2;
+
+// bis_fnc_cp_* stubs before Eden CP/CPE modules (see rsc\fn_bisCpPreInit.sqf)
+#include "rsc\CfgFunctionsMission.hpp"
+
+// Face's Dynamic Sandbox GUI -- base controls (import can fail with some mod combinations)
+#include "rsc\BaseControls.hpp"
+#include "rsc\FAC_Theme.hpp"
+#include "rsc\FAC_DialogChrome.hpp"
+
+// Display base -- must be defined before use (game class can be undefined with mod combos)
+class RscDisplayEmpty { idd = -1; movingEnable = 1; enableSimulation = 1; };
+
+#include "rsc\FAC_Terminal.hpp"
+
+
+// Combo in nested dialog controls does not inherit mission RscCombo fields — use this base for combos under RscDisplay* (FIRES drill, Medical training, etc.).
+class FACRscCombo: RscCombo {
+    maxHistoryDelay = 0;
+    shadow = 0;
+    arrowEmpty = "\a3\ui_f\data\gui\cfg\scrollbar\arrowempty_ca.paa";
+    arrowFull = "\a3\ui_f\data\gui\cfg\scrollbar\arrowfull_ca.paa";
+    wholeHeight = 0.35;
+    soundSelect[] = {"", 0, 0};
+    soundExpand[] = {"", 0, 0};
+    soundCollapse[] = {"", 0, 0};
+    class ComboScrollBar {
+        color[] = {1, 1, 1, 0.6};
+        colorActive[] = {1, 1, 1, 1};
+        colorDisabled[] = {1, 1, 1, 0.3};
+        thumb = "\a3\ui_f\data\gui\cfg\scrollbar\thumb_ca.paa";
+        arrowFull = "\a3\ui_f\data\gui\cfg\scrollbar\arrowfull_ca.paa";
+        arrowEmpty = "\a3\ui_f\data\gui\cfg\scrollbar\arrowempty_ca.paa";
+        border = 0;
+        size = 0;
+    };
+};
+
+// Vehicles — single dialog (60001): left: category / search / list / place; right: faction / preview / details.
+class RscDisplayVehicle: FAC_Terminal {
+    idd = 60001;
+    onLoad = "0 spawn { private _d = findDisplay 60001; if (!isNull _d) then { ['onLoadVehicle', [_d]] call (missionNamespace getVariable ['FAC_vehicleGui_fnc', {}]); }; };";
+};
+
+
+// Manage Missions dialog -- tabbed: Browse | Active slots
+class RscDisplayMissions: FAC_Terminal {
+    idd = 60002;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]); };";
+};
+
+
+// Manage Scenario — header tabs (Vehicle-style) + Scenario / Weather / Factions / Admin panels
+class RscDisplayScenario: FAC_Terminal {
+    idd = 60003;
+    onLoad = "0 spawn { private _d = findDisplay 60003; if (!isNull _d) then { ['onLoad', [_d]] call (missionNamespace getVariable ['FAC_scenarioGui_fnc', {}]); }; };";
+};
+
+
+// Loadout GUI: single definition in rsc\LoadoutDialog.hpp (createDialog "RscDisplayLoadout", idd 60200).
+#include "rsc\LoadoutDialog.hpp"
+#include "rsc\RecruitDialog.hpp"
+#include "rsc\BuildDialog.hpp"
+#include "rsc\BuildSignDialog.hpp"
+#include "rsc\BasePickDialog.hpp"
+#include "rsc\CivTalkDialog.hpp"
+
+#include "rsc\SniperDialog.hpp"
+#include "rsc\RangeDialog.hpp"
+
+// CQB killhouse — tabbed: Setup | Info
+class RscDisplayCQB: FAC_Terminal {
+    idd = 60500;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_cqbGui_fnc', {}]); };";
+};
+
+
+// Teleport / Fast Travel — tabbed chrome; destination tiles in SQF
+class RscDisplayTeleport: FAC_Terminal {
+    idd = 60600;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]); };";
+};
+
+
+// Legacy idd — kept for description.ext / test suite references; tabs now live in RscDisplayTeleport (60600).
+class RscDisplayTeleportPlayers: FAC_Terminal {
+    idd = 60610;
+    onLoad = "[] spawn { sleep 0.01; ['onLoadPlayers', []] call (missionNamespace getVariable ['FAC_teleportGui_fnc', {}]); };";
+};
+
+
+// FIRES terminal (60700). Header tabs: Range | Timed drill (sub-page). Layout positions finalized in FiresGui.sqf (FAC_firesGui_applyPage).
+class RscDisplayFires: FAC_Terminal {
+    idd = 60700;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_firesGui_fnc', {}]); };";
+};
+
+
+// Medical training terminal — tabbed: Dummies | Injuries
+class RscDisplayMedicalTraining: FAC_Terminal {
+    idd = 60800;
+    onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_medicalTrainingGui_fnc', {}]); };";
+};
+
+
+// rsc scripts loaded via execVM in initServer.sqf (matches FinestHour/Tequila pattern)
+
+// Surrender Challenge sounds (OGG files in Sounds/ folder)
+class CfgSounds
+{
+    #include "rsc\CfgSoundsCutscene.inc.hpp"
+    class FAC_surrenderAffirmative
+    {
+        name = "FAC_surrenderAffirmative";
+        sound[] = {"\Sounds\affirmative.ogg", 2.5, 1, 500};
+        titles[] = {};
+    };
+    class FAC_surrenderNegative
+    {
+        name = "FAC_surrenderNegative";
+        sound[] = {"\Sounds\negative.ogg", 2.5, 1, 500};
+        titles[] = {};
+    };
+    // Initial challenge shouts (Surrender Challenge audio; player path optional)
+    class FAC_apprehend001 { name = "FAC_apprehend001"; sound[] = {"\Sounds\fac_apprehend-001.ogg", 2.5, 1, 500}; titles[] = {}; };
+    class FAC_apprehend006 { name = "FAC_apprehend006"; sound[] = {"\Sounds\fac_apprehend-006.ogg", 2.5, 1, 500}; titles[] = {}; };
+    class FAC_apprehend011 { name = "FAC_apprehend011"; sound[] = {"\Sounds\fac_apprehend-011.ogg", 2.5, 1, 500}; titles[] = {}; };
+    // Troop transport: add FADE_embarkStart / FADE_embarkDone / FADE_disembarkStart / FADE_disembarkDone here when the matching OGGs exist in Sounds\ (TroopTransport.sqf skips playSound if absent)
+    // CQB killhouse loudspeaker (Eden object cqbLoudspeaker; 3D origin +5 m above object in script)
+    // Audio file from Sig_CTB_MSL_SFX_Amb (must be loaded on server/clients)
+    class FAC_cqbLoudspeakerHorn
+    {
+        name = "FAC_cqbLoudspeakerHorn";
+        sound[] = {"\Sig_CTB_MSL_SFX_Amb\Sounds\Alarm\alarm_2.ogg", 3, 1, 250};
+        titles[] = {};
+    };
+};
+
+// HVT mission: identities so unit name matches briefing codename
+class CfgIdentities
+{
+    class FADE_hvt_Viktor  { name = "Viktor";   face = "WhiteHead_02"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.0; };
+    class FADE_hvt_Dmitri { name = "Dmitri";   face = "WhiteHead_03"; glasses = "None"; speaker = "Male02ENGB"; pitch = 1.0; };
+    class FADE_hvt_Sergei { name = "Sergei";   face = "WhiteHead_04"; glasses = "None"; speaker = "Male03ENGB"; pitch = 1.0; };
+    class FADE_hvt_Ivan   { name = "Ivan";     face = "WhiteHead_05"; glasses = "None"; speaker = "Male04ENGB"; pitch = 1.0; };
+    class FADE_hvt_Pavel  { name = "Pavel";   face = "WhiteHead_06"; glasses = "None"; speaker = "Male05ENGB"; pitch = 1.0; };
+    class FADE_hvt_Boris  { name = "Boris";   face = "WhiteHead_07"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.0; };
+    class FADE_hvt_Volkov { name = "Volkov";  face = "WhiteHead_08"; glasses = "None"; speaker = "Male02ENGB"; pitch = 1.0; };
+    class FADE_hvt_Kozlov { name = "Kozlov";  face = "WhiteHead_09"; glasses = "None"; speaker = "Male03ENGB"; pitch = 1.0; };
+    // Hostage mission: setIdentity keys (see FADE_hostageIdentities in rsc\Config.sqf)
+    class FADE_hostage_PhilCassidy { name = "Phil Cassidy"; face = "WhiteHead_10"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.0; };
+    class FADE_hostage_WarrenWazzaDriscoll { name = "Warren 'Wazza' Driscoll"; face = "WhiteHead_11"; glasses = "None"; speaker = "Male02ENGB"; pitch = 1.0; };
+    class FADE_ratel_eagleeye { name = "Eagle Eye"; face = "WhiteHead_01"; glasses = "None"; speaker = "Male01ENGB"; pitch = 1.05; };
+    // Base NPC (initServer): setIdentity "FAC_baseNPC_wordsman"
+    class FAC_baseNPC_wordsman { name = "S Wordsman"; face = "WhiteHead_12"; glasses = "None"; speaker = "Male04ENG"; pitch = 1.0; };
+};
+
+briefingName = "FADE";
+onLoadName = "FADE";
+author = "Face";
+overviewText = "Face's Dynamic Environment (BETA 8)";
+overviewPicture = "img\FADE_1.jpg";
+loadScreen = "img\loadingb.jpg";

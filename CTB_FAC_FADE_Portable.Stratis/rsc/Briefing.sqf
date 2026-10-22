@@ -1,0 +1,566 @@
+// =============================================================================
+// Briefing.sqf  - In-game briefing and diary records (map screen)
+// =============================================================================
+// Runs on each client from initPlayerLocal.sqf (call compile  -  must finish before play adds diary records).
+// Diary order: create in reverse order (last created = first displayed).
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Diary subject: Notes (for reference material)
+// -----------------------------------------------------------------------------
+player createDiarySubject ["FAC_Notes", "FADE Notes"];
+// Player-collected HUMINT (civilian talk, etc.): dynamic entries via FADE_civTalk_clientAppendIntelDiary during play.
+player createDiarySubject ["FAC_Intel", "Intel"];
+player createDiaryRecord ["FAC_Intel", ["About Intel", "
+<font color='#87CEEB' size='14'>INTEL LOG</font><br/><br/>
+<font color='#E0E0E0'>Actionable tips land here as <font color='#FFD700'>timestamped entries</font> (newest first). Sources include:</font><br/>
+- <font color='#90EE90'>Talk to civilian</font> (ambient foot civs or the base NPC)<br/>
+- <font color='#90EE90'>Read intel</font> on building props<br/>
+- <font color='#90EE90'>Body search</font> during some missions (narrows search zones)<br/>
+- <font color='#90EE90'>Mission background</font> lore when a mission starts<br/>
+- Picking up an <font color='#90EE90'>Asset Retrieval</font> package when that applies<br/><br/>
+<font color='#AAAAAA'>Open the map → <font color='#FFD700'>Intel</font> to review past reports. Building intel also shows on-screen hints and optional map markers.</font>
+"]];
+private _facNotes = [];
+
+// -----------------------------------------------------------------------------
+// Note: RATEL - Radio Telephone Procedure (FAC standard)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["RATEL (Radio Procedure)", "
+<font color='#FFD700' size='14'>RADIO TELEPHONE PROCEDURE</font><br/><br/>
+All AI and player radio traffic in FADE follows FAC RATEL. Use this format so comms stay clear and consistent.<br/><br/>
+
+<font color='#87CEEB'>STANDARD FORMAT</font><br/>
+<font color='#90EE90'>Called station, this is [Your callsign]. [Message]. Over.</font> - When you expect a reply (e.g. request, question).<br/>
+<font color='#90EE90'>Called station, this is [Your callsign]. [Message]. Out.</font> - End of transmission; no reply expected.<br/><br/>
+
+<font color='#87CEEB'>EXAMPLES</font><br/>
+''RZ, this is Bravo 2-1. We're at Grid 123456, awaiting pickup. Over.''<br/>
+''All callsigns, this is Eagle Eye. Convoy tracking, 400 metres from end zone. Expedite intercept. Out.''<br/>
+''RZ, this is Bravo 2-1. All aboard. Ready for liftoff. Over.''<br/><br/>
+
+<font color='#87CEEB'>OVER vs OUT</font><br/>
+<font color='#90EE90'>Over</font> - I have finished speaking and am waiting for your reply.<br/>
+<font color='#90EE90'>Out</font> - This transmission is finished; no reply expected. Use when closing the conversation or sending a one-way update.
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Area of Operations and Artillery
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Area of Operations and Artillery", "
+<font color='#FFD700' size='14'>AO MISSION AND FIRES SUPPORT</font><br/><br/>
+The <font color='#90EE90'>Area of Operations</font> mission (Manage Missions, <font color='#90EE90'>[G] Global</font>) creates a 2 km x 2 km zone with three capture objectives. BLUFOR and OPFOR ground parties snap to the nearest civil zone on opposite sides of the AO, along the assault axis. BLUFOR assaults toward OBJ 1, OBJ 2, and OBJ 3. OPFOR hold the objectives, receive reinforcements from their infil sector, and may counter-attack after a capture. Mission strength uses <font color='#90EE90'>FADE_aoStrength</font> from lobby and startup settings. There is no Scenario GUI slider for AO strength. Hold all three objectives before the 60-minute timeout.<br/><br/>
+<font color='#87CEEB'>FIRES range</font><br/>
+Use <font color='#90EE90'>terminalFires</font> at Joon's Fires Range to spawn / rearm / despawn approved indirect-fire pieces, place an observer UAV by map click, and run timed grid / elevation drills. Qualifying indirect rounds can show short fall-of-shot camera feeds on enabled <font color='#90EE90'>firesScreenPos_*</font> screens. The CFF / GPO material in these Notes is doctrine for player-run training; FADE does not yet simulate a full AI GPO readback net for live player fire missions.
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Terminology and Brevity Codes (source: FAC Joint Fires doc)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Terminology and Brevity Codes", "
+<font color='#FFD700' size='14'>GLOSSARY AND PROCEDURE TERMS</font><br/><br/>
+Standard acronyms and commands for JFO/JTAC, GPO and pilot coordination. Source: Joint Fires Observer / JTAC reference.<br/><br/>
+
+<font color='#87CEEB'>ROLES AND ABBREVIATIONS</font><br/>
+JFO  - Joint Fires Observer. JTAC  - Joint Terminal Attack Controller. GPO  - Gun Position Officer. FM  - Fire Mission. GR  - Grid Reference. ALT  - Altitude. DC  - Danger Close. VT  - Variable Time (airburst). AMC  - At My Command. LZ  - Landing Zone. ISR  - Information, Surveillance, Reconnaissance. NAI  - Named/Numbered Area of Interest. IP  - Initial Point. GRIDREF  - Grid reference (XXXX YYYY, 8-figure or XXX YYY 6-figure).<br/><br/>
+Round types: HE  - High Explosive. WP  - White Phosphorus. SMK  - Smoke. ILLUM  - Illumination.<br/><br/>
+
+<font color='#87CEEB'>FIRES NET</font><br/>
+Dedicated frequency for JFO/JTAC and indirect/air assets only. All other callsigns stay off this net.<br/><br/>
+
+<font color='#87CEEB'>CONTROL COMMANDS</font><br/>
+- <font color='#90EE90'>AT MY COMMAND</font>  - Fires are delivered only when JFO/JTAC gives the command.<br/>
+- <font color='#90EE90'>CANCEL AT MY COMMAND</font>  - Supporting unit no longer waits for JFO/JTAC to engage; may fire when ready.<br/>
+- <font color='#90EE90'>REPEAT</font>  - <font color='#FF6666'>Critical:</font> On the fires net, REPEAT means the <font color='#FF6666'>last fire mission</font> (indirect or air) is to be <font color='#FF6666'>re-engaged immediately</font> with the same method. Do NOT use REPEAT to ask someone to say their last transmission again; use ''Say again'' or ''Repeat your last.''<br/>
+- <font color='#90EE90'>CHECK FIRE</font>  - Stop firing immediately.<br/>
+- <font color='#90EE90'>CANCEL CHECK FIRE</font>  - Only command that allows mortar/artillery to begin firing again after check fire.<br/>
+- <font color='#90EE90'>FIRE</font>  - Execute; e.g. ''Fire'' to commence.<br/>
+- <font color='#90EE90'>CLEARED HOT</font>  - Airframe is cleared to engage the target passed by JFO/JTAC.<br/><br/>
+
+<font color='#87CEEB'>OTHER</font><br/>
+MSR  - Main supply route. ASR  - Alternative supply route. LASE/LASING  - Using weapon-mounted laser or Laser Target Designator to mark. REST  - Gun line may stand down briefly. CANCEL REST  - Gun line return to readiness. CONTINUOUS FIRE  - All pieces fire on current target until check fire or ammunition expended. BDA  - Battle damage assessment. Splash  - Ordnance impact (call ''Splash'' or ''Splash in 5'' for time to impact).
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Control Measures (source: FAC Joint Fires doc)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Control Measures", "
+<font color='#FFD700' size='14'>CONTROL MEASURES FOR JOINT FIRES</font><br/><br/>
+Measures used to deconflict and control fires; coordinate with mission leadership and ground forces. Source: Joint Fires Observer / JTAC reference.<br/><br/>
+
+<font color='#87CEEB'>ATTACK AXIS</font><br/>
+Direction of attack (run-in and egress) for aircraft or direction of fire for indirect. Prevents ordnance from impacting toward friendlies. JTAC/observer specifies; pilot and gun line comply.<br/><br/>
+
+<font color='#87CEEB'>INGRESS AND EGRESS</font><br/>
+Ingress point = entry point for aircraft into the AO. Egress point = exit point. Establish before mission or at will by JFO/JTAC or pilot. Assists deconfliction of airspace around the AO.<br/><br/>
+
+<font color='#87CEEB'>BATTLE POSITIONS (DECONFLICTION)</font><br/>
+When multiple airframes support the AO, assign each to a Battle Position  - an area outside the AO where they loiter until called in. Reduces clutter over the AO and helps prioritise which asset to bring on station. Altitude at battle position is pilot's choice. If multiple aircraft must be over the AO at once, JFO/JTAC prioritises strikes and gives clear instructions on ingress, egress and altitudes. Airframes may also be asked to deconflict among themselves over internal comms.<br/><br/>
+
+<font color='#87CEEB'>ANCHOR POINT</font><br/>
+For fixed-wing: an easily identifiable terrain or infrastructure feature the pilot can hold on sensors or visually. Used as a reference to quickly talk onto a target or area of interest. After a strike from an anchor, pilots default back to the anchor for BDA unless given new instructions. If a talk-on from the anchor fails, revert to the anchor and start again.<br/><br/>
+
+<font color='#87CEEB'>FLOT (FORWARD LINE OWN TROOPS)</font><br/>
+Location of the most forward friendly troops (whether firm or moving). Report movements to JFO/JTAC so joint fires can be used with maximum effect and minimal risk to friendlies. JFO/JTAC passively maintains FLOT awareness to support the manoeuvre commander. FLOT can be multiple positions.<br/><br/>
+
+<font color='#87CEEB'>NAI (NAMED/NUMBERED AREA OF INTEREST)</font><br/>
+Designates an area of particular reference. In joint fires context, NAIs give a quick reference and talk-on point for pilots, reducing time to engage. Can be used for route planning (e.g. likely ambush, IED or choke points).<br/><br/>
+
+<font color='#87CEEB'>RESTRICTIVE MEASURES</font><br/>
+No-fire area (NFA), restrictive fire area (RFA), weapons control status. Danger close: declare when friendlies are within minimum safe distance; adjust or reduce charge per SOP. Abort criteria: conditions under which attack is aborted (e.g. friendlies in sector, loss of mark).
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Joint Fires Roles (source: FAC Joint Fires doc)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Joint Fires Roles", "
+<font color='#FFD700' size='14'>JOINT FIRES ROLES  - JFO, JTAC AND GPO</font><br/><br/>
+Source: Joint Fires Observer / JTAC reference.<br/><br/>
+
+<font color='#87CEEB'>JFO  - JOINT FIRES OBSERVER</font><br/>
+Observes and requests indirect fires (artillery, mortars); passes target information to JTAC or qualified controller for CAS. Calls for fire and adjusts indirect when authorised. Typically does not clear CAS or control attack aircraft release; hands off to JTAC for ''cleared hot''. Role: eyes on target, accurate grid and description, adjustment of indirect; liaison with JTAC for air. Acts as advisor to the manoeuvre commander and anticipates fire missions to support ground forces.<br/><br/>
+
+<font color='#87CEEB'>JTAC  - JOINT TERMINAL ATTACK CONTROLLER</font><br/>
+Authorised to control CAS: clear aircraft to engage, designate targets, assume responsibility for ordnance release within ROE and control measures. Transmits simplified 5-line (or full CAS brief per unit SOP); coordinates attack axis, egress and abort criteria. Can coordinate or request indirect fires; often works with JFOs. Role: terminal control of airborne ordnance; integration of air and surface fires; BDA and re-attack. Maintains FLOT awareness to support command.<br/><br/>
+
+<font color='#87CEEB'>GPO  - GUN POSITION OFFICER</font><br/>
+Runs the gun line (mortars/artillery). Communicates with deployed JFO/JTAC via fires net; receives calls for fire; calculates firing solutions; issues commands to gunners for fast, accurate fires. Gunners crew the pieces; GPO does not. Chain: JFO/JTAC sends CFF -> GPO plots, calculates, orders fire -> gunners execute. Read back all CFF transmissions word for word to prevent errors (e.g. wrong grid).<br/><br/>
+
+<font color='#87CEEB'>REQUESTING FIRES (NON-JFO/JTAC)</font><br/>
+In general, section commanders request supporting fires via the platoon commander, who forwards to JFO/JTAC. This keeps the fires net clear for JFO/JTAC during complex situations. Section commanders pass enemy information to the platoon commander; suggest fire missions through the chain. Providing an 8-figure grid (or preplanned TRPs) speeds the request.
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Joint arms call for fires (FAC Fires doc §6.4 style  -  combined arms integration)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Joint arms call for fires (combined arms)", "
+<font color='#FFD700' size='14'>JOINT ARMS CALL FOR FIRES</font><br/><br/>
+How surface fires, air and manoeuvre fit together under one plan. Aligned with FAC joint-fires training material (§6.4 style).<br/><br/>
+
+<font color='#87CEEB'>COMMAND AND FLOW</font><br/>
+The manoeuvre commander (or delegated fires coordinator) sets priorities, timing and effects. Observers (JFO/JTAC) translate that intent into specific missions on the fires net. Requests that skip the chain risk duplicating assets, fratricide or empty deconfliction. Non-qualified callers still pass target data up; they do not self-clear fires.<br/><br/>
+
+<font color='#87CEEB'>SYNCHRONISATION</font><br/>
+Plan whether effects are <font color='#90EE90'>sequential</font> (e.g. suppress, then assault) or <font color='#90EE90'>simultaneous</font> (e.g. CAS and mortars on separate aim points). State <font color='#90EE90'>time on target</font> or phase when the commander needs multiple arms on the same clock. Rehearse hand-overs: who shifts from adjustment to FFE, who calls check fire before friendly movement, and how BDA is passed before re-attack.<br/><br/>
+
+<font color='#87CEEB'>DECONFLICTION</font><br/>
+Use control measures (ACAs, fire support coordination measures, attack headings, no-fire areas) so rotary/fixed-wing and indirect are not competing for the same airspace or impact area. If in doubt, pause one asset until the observer confirms separation. Update the picture when the scheme of manoeuvre changes.<br/><br/>
+
+<font color='#87CEEB'>TARGET HAND-OFF</font><br/>
+When more than one agency can engage (arty, mortars, CAS), the controlling observer states which asset is primary, what is held in reserve, and any restrictions (danger close, AMC, weapon/shell type). Read backs stay word-for-word on grids and technical data. Changes to the target or friendly locations get re-transmitted before the next volley or pass.<br/><br/>
+
+<font color='#87CEEB'>SUPPORT TO MANOEUVRE</font><br/>
+Fires should support the main effort: suppression for crossing open ground, obscuration for breaching, precision for point targets. The observer ties each mission to an observable effect the ground commander asked for, not only to map coordinates.
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Manual / map gunnery  -  elevation and interpolation (instructor reference)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Manual fires  -  elevation and interpolation (instructor)", "
+<font color='#FFD700' size='14'>GUN ELEVATION AND INTERPOLATION (MANUAL / MAP WORK)</font><br/><br/>
+Short reference for teaching manual firing solutions when tables or computers are primary; use with unit ballistics and safety SOPs. Instructor SME: Gobbit (no formal citation in-repo).<br/><br/>
+
+<font color='#87CEEB'>ELEVATION (QUADRANT / TUBE)</font><br/>
+Charge and elevation (quadrant elevation or equivalent) translate range and terrain into tube attitude. <font color='#90EE90'>Always</font> confirm charge is safe for the trajectory (clearance, crests, overhead restrictions) before sending data to the line. Corrections from fall of shot change elevation and/or charge per tables  -  not by guess. Record amendments read back by the gun line.<br/><br/>
+
+<font color='#87CEEB'>INTERPOLATION</font><br/>
+Tabulated data are stepped in range, charge or meteor lines. When the mission falls between entries, <font color='#90EE90'>interpolate</font> linearly between the bracketing values unless your tables specify otherwise. Double-check direction (line, attitude in mils) separately from range; mixing corrections from different charge columns causes large errors. If the solution is near a table limit, confirm with a second method or adjust position before accepting fire for effect.<br/><br/>
+
+<font color='#87CEEB'>TEACHING POINTS</font><br/>
+Have crews quote both the <font color='#90EE90'>ordered</font> and <font color='#90EE90'>applied</font> data; trace one correction from observer wording through GPO solution to gun display. In FADE, use the timed drill and map grid to practise reporting consistent grids and elevations under time pressure.
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Call for Fire / Artillery (source: FAC Joint Fires doc)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Call for Fire (CFF) / Artillery", "
+<font color='#FFD700' size='14'>INDIRECT FIRES  - CALL FOR FIRE</font><br/><br/>
+Indirect fires: mortars, artillery, MLRS/HIMARS. CFF passes clear, accurate instructions to the gun line. <font color='#90EE90'>Every message must be read back word for word</font> by GPO/mortar SL to avoid errors (e.g. wrong grid). Source: Joint Fires Observer / JTAC reference.<br/><br/>
+
+<font color='#87CEEB'>GPO UPDATE (PRE-MISSION)</font><br/>
+Before or at mission start: radio check with GPO; confirm piece type(s) and number; rounds available; round types available. Conduct radio check before leaving the FOB.<br/><br/>
+
+<font color='#87CEEB'>CFF STRUCTURE (4 ELEMENTS)</font><br/>
+1. <font color='#90EE90'>C/S and fire mission type</font>  - Danger Close, Screening, Illumination, or Marking as applicable.<br/>
+2. <font color='#90EE90'>Target grid</font>  - 8-figure (XXXX YYYY); include ALT (target altitude) in metres.<br/>
+3. <font color='#90EE90'>Target description</font>  - e.g. section in the open 50x50, bunker, vehicle.<br/>
+4. <font color='#90EE90'>Technical</font>  - e.g. HE in adjustment (adjust fire); SMOKE in effect; VT (Variable Time/airburst).<br/><br/>
+
+<font color='#87CEEB'>EXAMPLE (JFO/JTAC red, GPO green readback)</font><br/>
+JFO: ''Two Zero this is Warlock, Fire Mission, over.''  - GPO: ''Warlock, 20, Fire Mission, out.''<br/>
+JFO: ''GRID 1234 5678. ALT 40.''  - GPO: ''GRID 1234 5678, ALT 40, out.''<br/>
+JFO: ''Section in the open 50x50, over.''  - GPO: ''Section in the open 50x50, out.''<br/>
+JFO: ''HE in adjustment, adjust fire, over.''  - GPO: ''HE in adjustment, adjust fire, out.''<br/>
+GPO: ''Shot, time of flight 25, over.''  - JFO: ''Shot 25, out.''<br/>
+GPO: ''Rounds complete, over.''  - JFO: ''Rounds complete, out.''<br/><br/>
+
+<font color='#87CEEB'>ADJUSTING</font><br/>
+Observe fall of shot; send correction in 3 parts: (1) Add or Drop + cardinal direction, (2) Distance in metres (e.g. 50 as ''FIVE ZERO''), (3) One round fire for effect, or full FFE round count and nature if confident. If several adjustments miss, end the mission, recheck grid and send a new CFF. Enemy may move; recheck target.<br/><br/>
+
+<font color='#87CEEB'>FIRE FOR EFFECT / END OF MISSION</font><br/>
+When fall of shot is good: ''Fire for effect'' + round count and ammunition type. When gun line reports ''Rounds complete'', observe effects then send ''End of Mission'' + target report (e.g. target suppressed, target neutralised, enemy withdrawing direction). This allows gun line to refresh, re-lay and resupply.<br/><br/>
+
+<font color='#87CEEB'>TECHNICAL MISSIONS</font><br/>
+<font color='#90EE90'>Screening</font>  - SMOKE or WP to screen friendly movement or enemy positions; can be between two points. <font color='#90EE90'>Linear</font>  - Target(s) in a line 200-600 m; observer sends centre grid, <font color='#90EE90'>attitude</font> (direction in mils from North) and <font color='#90EE90'>length</font> (metres). Number of tubes/guns limits max length (see unit tables). <font color='#90EE90'>Illumination</font>  - Airburst illumination over a point. Coordinated illumination as per unit SOP.<br/><br/>
+
+<font color='#87CEEB'>ROUND TYPES</font><br/>
+HE (point detonating); VT (airburst, good vs troops in open, soft-skinned); FRAG (extra fragmentation); Smoke (screening, marking); WP (screening/marking with effect); ILLUM (light); Rocket (MLRS/HIMARS, area targets).<br/><br/>
+
+<font color='#87CEEB'>ARTILLERY CALLSIGNS (NOMENCLATURE)</font><br/>
+Mortars (sub 100 mm, e.g. 82 mm): Auspost. Howitzers (105-155 mm): Fedex. MLRS/grid-square: Evergreen.<br/><br/>
+
+<font color='#87CEEB'>SILENT MARKING</font><br/>
+Anyone in the AO can silent mark: scan for enemy/friendly/civilian; mark items of interest on map with 8-figure grid and description. Report significant finds to manoeuvre commander. Data can be passed to fires units for pre-planned solutions. Use ''GROUP'' for map marks to avoid cluttering shared map; seek permission to mark for all friendlies.
+"];
+
+// -----------------------------------------------------------------------------
+// Note: CCA/CAS 5-Line Call for Fire (source: FAC Joint Fires doc)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["CCA/CAS 5-Line Call for Fire", "
+<font color='#FFD700' size='14'>SIMPLIFIED 5-LINE FOR CCA AND CAS</font><br/><br/>
+Condensed from standard 9-line for CCA (rotary, close combat attack, within ~5 km) and CAS (fixed-wing). After the initial call is acknowledged, callsigns may be shortened. Source: Joint Fires Observer / JTAC reference.<br/><br/>
+
+<font color='#87CEEB'>LINE 1  - FIRE MISSION</font><br/>
+JFO/JTAC: ''[Pilot C/S], [JFO/JTAC C/S], Fire Mission, over.'' Pilot: ''[JFO/JTAC C/S], Fire Mission, out.''<br/><br/>
+
+<font color='#87CEEB'>LINE 2  - FRIENDLY LOCATION</font><br/>
+JFO/JTAC: ''I am located at GRID XXXX YYYY. Describe your location; state if you are the FLOT or location of FLOT.'' Enables pilot to avoid friendlies and respect attack axis.<br/><br/>
+
+<font color='#87CEEB'>LINE 3  - TARGET LOCATION</font><br/>
+''Target at GRID XXXX YYYY. Target and grid are [e.g. second floor, two-storey compound, SE corner]. Target marked by [laser/smoke/talk-on].''<br/><br/>
+
+<font color='#87CEEB'>LINE 4  - TARGET DESCRIPTION</font><br/>
+Clear description: e.g. ''HMG position with crew and half-section in defensive positions in and around the compound.''<br/><br/>
+
+<font color='#87CEEB'>LINE 5  - REMARKS</font><br/>
+Danger close; At my command; restrictions (e.g. ''Can be engaged by HMG from SE, recommend SW approach''); type of ordnance requested; final attack heading. Example: ''Request engagement with 30 mm cannon to suppress or neutralise HMG and force defenders to withdraw or remain suppressed.''<br/><br/>
+
+<font color='#FFD700'>CCA vs CAS</font><br/>
+CCA  - Rotary-wing within proximity of friendlies; quick manoeuvre; any armed rotary can be used; often in pairs (Air Weapons Team). CAS  - Fixed-wing; larger punch, longer set-up; lasing speeds coordination but talk-on is often used; fixed-wing also typically in pairs when available.
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Marking (Friendly and Enemy) (source: FAC Joint Fires doc)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Marking (Friendly and Enemy)", "
+<font color='#FFD700' size='14'>MARKING FRIENDLY AND ENEMY LOCATIONS</font><br/><br/>
+Source: Joint Fires Observer / JTAC reference. Brief supporting callsigns on smoke/mark colours at mission start; state any changes as soon as practical.<br/><br/>
+
+<font color='#87CEEB'>MARKING FRIENDLY LOCATION</font><br/>
+Marker panel; strobe; IR strobe; IR marker from weapon (only when other methods unavailable); chemlight; smoke in <font color='#90EE90'>positive</font> colours (BLUE, GREEN, PURPLE); 8-figure grid; target talk-on + pilot confirmation readback.<br/><br/>
+
+<font color='#87CEEB'>MARKING ENEMY LOCATION</font><br/>
+Tracer (state colour); smoke  - thrown, 40 mm, 60 mm, 81 mm, 105 mm, 155 mm  - in <font color='#90EE90'>negative</font> colours (RED, ORANGE, YELLOW); HE mark (debris cloud); 8-figure grid; IR marker from weapon; laser designator; IR strobe; strobe; chemlight; target talk-on + pilot confirmation readback.<br/><br/>
+
+<font color='#87CEEB'>TARGET TALK-ON</font><br/>
+Used when mark or lase is not available. Go <font color='#90EE90'>large to small</font>: use terrain, infrastructure, structures or vehicles near the target, then narrow with increasing detail so the pilot builds a picture. Ask the pilot for a <font color='#90EE90'>mini talk-on</font>  - they describe something near the target so you confirm everyone is looking at the same spot. If the pilot acquires the target early, confirm by asking them to describe something adjacent; if it matches, proceed to engagement without finishing the full talk-on.
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Air Support Coordination (source: FAC Joint Fires doc)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Air Support Coordination", "
+<font color='#FFD700' size='14'>AIR SUPPORT  - RADIO CHECK, CHECK-IN, SIT UPDATE</font><br/><br/>
+Source: Joint Fires Observer / JTAC reference. Ground: be patient until aircraft are on station and call. Air: wait until ~3-4 km from AO before radio check.<br/><br/>
+
+<font color='#87CEEB'>RADIO CHECK</font><br/>
+Example: Pilot: ''Warlock this is Bonesaw, radio check, over.'' JFO/JTAC: ''Bonesaw, Warlock loud and clear, over.'' Pilot: ''Warlock, Bonesaw loud and clear, out.''<br/><br/>
+
+<font color='#87CEEB'>CHECK-IN (JFO/JTAC INITIATES)</font><br/>
+Pilot provides: airframe type and number; location relative to friendlies; time on station (fuel); ordnance (weapons and quantities). Example: ''Warlock, Bonesaw 1-1 and 1-2, AWT of two AH-64 Delta, currently south tracking north to your AO. Approx 800 rounds 30 mm, 40 x 2.75'' rockets, 2 Hellfire Kilo, 2 Hellfire November. Time on station one plus 20.'' (Combined totals for the pair if AWT.)<br/><br/>
+
+<font color='#87CEEB'>SITUATION UPDATE</font><br/>
+After check-in. JFO/JTAC gives: callsign and location of friendlies; friendly vehicles; mission; how friendly position is marked. Then: ''We're in contact, engaged by [e.g. HMG position and small arms from vicinity]. Report ready for Fire Mission.''<br/><br/>
+
+<font color='#87CEEB'>REPEAT / RE-ATTACK</font><br/>
+<font color='#90EE90'>Indirect:</font> ''REPEAT'' = re-engage last fire mission with same rounds and nature (e.g. 3 rounds HE FFE). <font color='#90EE90'>CCA/CAS:</font> ''Request immediate re-attack''; same target, same or different ordnance as needed.<br/><br/>
+
+<font color='#87CEEB'>SHOW OF FORCE</font><br/>
+Request a show of force over a point to confirm pilot has correct approach and target, or to distract/scare the enemy. Specify direction and height. Also used in EW when jamming is suspected (see Electronic Warfare note).
+"];
+
+// -----------------------------------------------------------------------------
+// Note: LZs, EZs and Supply Drops (source: FAC Joint Fires doc)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["LZs, EZs and Supply Drops", "
+<font color='#FFD700' size='14'>LANDING ZONES, EXFIL ZONES AND SUPPLY DROPS</font><br/><br/>
+Organise in advance where possible with the pilots who will conduct the task. JFO/JTAC can only request; pilot decides go/no-go after weighing risks. If pilot deems area too risky they can suggest an alternative. Source: Joint Fires Observer / JTAC reference.<br/><br/>
+
+<font color='#87CEEB'>INFORMATION TO PROVIDE</font><br/>
+8-figure grid; description of the LZ/EZ/supply point; task (pick up, drop off, supply); ingress and egress; friendlies in vicinity; enemy activity; anti-air threat; how the site will be marked (e.g. positive-colour smoke  - BLUE, GREEN, PURPLE; at night: laser or IR strobe).<br/><br/>
+LZ/EZ should have clear approach and egress for the airframe and, if possible, natural or man-made cover.<br/><br/>
+
+<font color='#87CEEB'>ALCO (QUICK REFERENCE)</font><br/>
+- <font color='#90EE90'>Assess</font>  - Hostile locations and threats to the airframe.<br/>
+- <font color='#90EE90'>Locate</font>  - Suitable LZ: cover, clear approach/egress, space for the airframe.<br/>
+- <font color='#90EE90'>Communicate</font>  - Situation and LZ to air; threats (enemy and environmental); pilot approves or declines.<br/>
+- <font color='#90EE90'>Organise</font>  - Plan so ground and air have the best chance of success; minimise delay (aircraft are vulnerable on the ground).
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Emergency Fire Mission (source: FAC Joint Fires doc)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Emergency Fire Mission (EFM)", "
+<font color='#FFD700' size='14'>EMERGENCY FIRE MISSION  - WHEN JFO/JTAC IS UNAVAILABLE</font><br/><br/>
+For dire circumstances only. Normally only JFO/JTAC organises assets, triages targets and calls fires. If JFO/JTAC is killed and a section urgently needs coordinated joint fires, use the following. Source: Joint Fires Observer / JTAC reference.<br/><br/>
+
+<font color='#87CEEB'>CHAIN OF SENIORITY</font><br/>
+(1) JFO dies -> Platoon Commander confirms, switches to fires net, requests EFM. (2) PL dies -> PL 2IC (if present) switches to fires net. (3) No 2IC -> 3IC (nominated section commander) requests EFM.<br/><br/>
+
+<font color='#87CEEB'>PROCEDURE</font><br/>
+PL (or successor) gets 8-figure grid and target description from the section in contact; orders withdrawal or hold and seek cover as appropriate; switches to fires net; states emergency fire mission needed; sends grid and target info. GPO calculates and responds with a default (e.g. 4 rounds HE or SMOKE to screen). PL trusts GPO to deliver as fast as possible until a replacement JFO/JTAC is reinserted.<br/><br/>
+
+<font color='#87CEEB'>ROUND COUNTS (GPO DISCRETION)</font><br/>
+Typical default totals: 81 mm = 8 rounds; 105 mm = 4 rounds; 155 mm = 2 rounds. GPO may vary to preserve ammunition. Two types: <font color='#90EE90'>Destruction</font> (HE to destroy/suppress); <font color='#90EE90'>Screening</font> (smoke to obscure enemy or friendlies for movement/breaking contact).<br/><br/>
+
+<font color='#87CEEB'>TARGET DESCRIPTION (EFM)</font><br/>
+Include: rough enemy size (section, platoon, etc.); vehicles; cover; rough footprint (size on ground); distance from FLOT. EFM continues until the immediate threat is reduced; ceases when replacement JFO/JTAC is in place.<br/><br/>
+
+<font color='#87CEEB'>EXAMPLE (DESTRUCTION)</font><br/>
+1-0: ''FedEx this is 1-0, Emergency Fire Mission Destruction, over.'' FedEx: ''1-0 this is FedEx, Emergency Fire Mission send, over.'' 1-0: ''FedEx this is 1-0, GR 1234 5678, section in the open 50x50.'' FedEx: ''1-0 this is FedEx, GR 1234 5678 section in the open 50x50, preparing EFM standby for Shot, over.'' FedEx: ''1-0 this is FedEx Shot time of flight 25 over.'' 1-0: ''FedEx this is 1-0 roger Shot time of flight 25 over.'' Later: 1-0: ''FedEx this is 1-0 End of mission target neutralised/suppressed/withdraw [direction].''
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Electronic Warfare (source: FAC Joint Fires doc)
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Electronic Warfare (Jamming)", "
+<font color='#FFD700' size='14'>OPERATING WHEN RADIOS ARE JAMMED</font><br/><br/>
+Enemy EW can jam radio. You may not be briefed in advance. Key point: <font color='#90EE90'>EW is range-limited</font>. You on the ground may be jammed and unable to receive, but you can still <font color='#90EE90'>transmit</font>; assets outside the jamming bubble can still receive your messages. Source: Joint Fires Observer / JTAC reference.<br/><br/>
+
+<font color='#87CEEB'>PROCEDURE</font><br/>
+1. Conduct one or two radio checks with friendly assets to confirm comms are down.<br/>
+2. Send a further transmission with a <font color='#90EE90'>situation update</font> that you believe you are being jammed.<br/>
+3. If safe: ask the pilot to conduct a <font color='#90EE90'>show of force</font> or deploy flares over a position. That confirms they can hear you and that you are not receiving their replies.<br/>
+4. Continue normal engagement procedures with the asset; they will not be able to speak to you. As JFO/JTAC you must know friendly and enemy positions precisely before engaging.
+"];
+
+// -----------------------------------------------------------------------------
+// KAT Medical (KAM)  -  by topic; condensed from KAM docs for in-mission reference
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["KAT  -  Airway and vomiting", "
+<font color='#FFD700' size='14'>KAT AIRWAY (KAM DOCS)</font><br/><br/>
+<font color='#87CEEB'>Obstruction</font>  - Airway blocked (e.g. tongue, debris). <font color='#90EE90'>Guedel tube</font> (<font color='#C0C0C0'>kat_guedel</font>) supports the airway and clears obstruction; patient must be unconscious and <font color='#FF6666'>not</font> occluded. One-time use; removed if patient wakes.<br/><br/>
+<font color='#87CEEB'>Occlusion</font>  - Different from obstruction: material in the airway (e.g. after vomiting while supine). Guedel does <font color='#FF6666'>not</font> clear occlusions. Use <font color='#90EE90'>Accuvac</font> (<font color='#C0C0C0'>kat_accuvac</font>) suction from Head &gt; Airway Management; patient must be unconscious; clears occlusion reliably per KAM.<br/><br/>
+<font color='#87CEEB'>Vomiting</font>  - Unconscious patients can vomit; on the back, vomit can remain and cause occlusion  - treat as occlusion (suction / appropriate KAT actions).<br/><br/>
+<font color='#87CEEB'>Chest seal path</font>  - Chest seal is under Torso &gt; Airway Management for pneumothorax / tension / hemopneumothorax (see chest note).
+"];
+
+_facNotes pushBack ["KAT  -  Bleeding and wounds", "
+<font color='#FFD700' size='14'>KAT BLEEDING / WOUNDS (KAM DOCS)</font><br/><br/>
+In-game, wound severity often shows as bandage colours (rough guide): <font color='#EEEE00'>yellow</font>  - moderate bleed; <font color='#FFA500'>orange</font>  - heavy; <font color='#FF6666'>red</font>  - severe. Stop bleeding with the right tools (tourniquets on limbs, packing, etc.) per your SOP.<br/><br/>
+<font color='#87CEEB'>Coagulation</font>  - If enabled, wounds can clot over time (unstable clot); clotting factors are consumed. <font color='#90EE90'>TXA</font> (IV) can help stabilise clots; IV fluid choice affects coagulation (see fluids note).<br/><br/>
+<font color='#87CEEB'>Deep penetrating injury</font>  - See separate note; treated in the chest / seal workflow, not ordinary surface bandaging alone.
+"];
+
+_facNotes pushBack ["KAT  -  Blood volume and IV fluids", "
+<font color='#FFD700' size='14'>KAT BLOOD VOLUME &amp; IV (KAM DOCS)</font><br/><br/>
+Rough blood state (about <font color='#90EE90'>6 L</font> total): <font color='#90EE90'>5.9  - 5.1 L</font> lost some; <font color='#90EE90'>5.1  - 4.2 L</font> lost a lot; <font color='#90EE90'>4.2  - 3.6 L</font> lost a large amount; <font color='#90EE90'>3.6  - 3.0 L</font> lost a fatal amount. By default, below about <font color='#FF6666'>3 L</font> is lethal unless treated; severe loss leads toward <font color='#90EE90'>cardiac arrest</font>.<br/><br/>
+<font color='#87CEEB'>IV / IO</font>  - Establish access: <font color='#90EE90'>16g IV</font> (limbs, minor damage, no TQ on that limb) or <font color='#90EE90'>FAST IO</font> (torso; painful). <font color='#87CEEB'>IV obstruction</font>  - After some drugs (e.g. TXA, EACA), line can block; use Inspect Catheter and <font color='#90EE90'>saline flush</font> (needs saline on line).<br/><br/>
+<font color='#87CEEB'>Fluids</font>  - Saline, blood, plasma increase circulating volume; each differs in effect on coagulation and kidney pH (see KAM Nephrology if using long treatments).
+"];
+
+_facNotes pushBack ["KAT  -  Cardiac arrest and AED", "
+<font color='#FFD700' size='14'>KAT CARDIAC ARREST (KAM DOCS)</font><br/><br/>
+Arrest from critical HR/BP; patient becomes unconscious with no effective breathing/perfusion. <font color='#87CEEB'>Rhythms</font>  - <font color='#90EE90'>Shockable:</font> <font color='#90EE90'>VT</font> (ventricular tachycardia), <font color='#90EE90'>VF</font> (ventricular fibrillation). <font color='#90EE90'>Non-shockable:</font> <font color='#90EE90'>PEA</font> (pulseless electrical activity  - EKG may look organised but no pulse), <font color='#90EE90'>asystole</font> (flat/near-flat line). <font color='#FF6666'>PEA can mimic normal sinus on EKG</font>  - check pulse.<br/><br/>
+<font color='#87CEEB'>AED</font> (<font color='#C0C0C0'>kat_AED</font>)  - Analyse rhythm; shock if advised (clear the patient); if no shock advised, CPR and meds per algorithm. <font color='#87CEEB'>AED-X</font> adds EKG to identify VT vs VF vs PEA vs asystole. If you only have a basic AED, KAM notes you may treat shockable rhythms similarly to V-tach.<br/><br/>
+<font color='#87CEEB'>Treatment assumptions (KAM)</font>  - Docs assume major bleeding controlled, airway managed, IV access and fluids where appropriate, pads connected, and rhythm identified before advanced arrest care (epinephrine, amiodarone, lidocaine, shocks as indicated).
+"];
+
+_facNotes pushBack ["KAT  -  Chest deep penetrating injury", "
+<font color='#FFD700' size='14'>KAT CHEST / DEEP PENETRATING (KAM DOCS)</font><br/><br/>
+<font color='#90EE90'>Deep penetrating injury</font>  - A chest injury pattern in KAM tied to ballistic/thoracic trauma logic; shown in injury UI. Manage with appropriate KAT chest interventions (e.g. <font color='#90EE90'>chest seal</font> <font color='#C0C0C0'>kat_chestseal</font> for open chest wounds, pneumothorax, tension pneumothorax, hemopneumothorax per mod). Use Torso &gt; Airway Management &gt; chest seal as per training.<br/><br/>
+Pair with bleeding control and respiratory assessment (breath sounds, SpO2, decompression options if your modset enables them).
+"];
+
+_facNotes pushBack ["KAT  -  Pharmacy quick reference", "
+<font color='#FFD700' size='14'>KAT PHARMACY (KAM DOCS  - SHORT)</font><br/><br/>
+<font color='#87CEEB'>IM (examples)</font>  - <font color='#90EE90'>Epinephrine</font> used in arrest algorithms and shocks; follow KAM cardiac pages for sequencing with CPR and analysis.<br/><br/>
+<font color='#87CEEB'>IV (examples)</font>  - <font color='#90EE90'>Amiodarone</font>, <font color='#90EE90'>lidocaine</font> appear in shockable-rhythm treatment chains; <font color='#90EE90'>TXA</font> supports clot stabilisation; <font color='#90EE90'>EACA</font> also tied to coagulation/line care. Always confirm dose and contraindications in-game.<br/><br/>
+Full tables: KAM docs under Pharmacy (IV / IM / Oral).
+"];
+
+_facNotes pushBack ["KAT  -  Medical training terminal (FADE)", "
+<font color='#FFD700' size='14'>MEDICAL TRAINING TERMINAL</font><br/><br/>
+Use the <font color='#90EE90'>Medical training</font> scroll action on <font color='#90EE90'>terminalMedical</font> (Medical Training Area). Spawn training dummies, apply <font color='#90EE90'>random or chosen presets</font> from the KAT injury pool (same framework as before). Dummies are uniform-only (no vest, backpack, NVG, or carried items) when configured that way from the terminal:<br/><br/>
+<font color='#87CEEB'>Bleeding tiers</font>  - Minor: awake, few wounds, light bleed. Moderate: <font color='#90EE90'>unconscious</font>, several wounds (yellow-tier bleed rates). Massive: unconscious, many wounds (orange-tier rates). Catastrophic: unconscious, very many wounds (red-tier rates). <font color='#C0C0C0'>Uncon</font> means unconscious.<br/><br/>
+<font color='#87CEEB'>Airway</font>  - Obstruction; occlusion; or vomiting pathway (occlusion / suction scenario).<br/><br/>
+<font color='#87CEEB'>Blood volume</font>  - Hypovolemia from reduced circulating volume (some to severe) plus light wounds.<br/><br/>
+<font color='#87CEEB'>Deep penetrating injury</font>  - KAM deep penetrating chest flag with torso trauma.<br/><br/>
+<font color='#87CEEB'>Cardiac</font>  - Arrest rhythm <font color='#90EE90'>VT</font>, <font color='#90EE90'>VF</font>, <font color='#90EE90'>PEA</font>, or <font color='#90EE90'>asystole</font> (KAM types).<br/><br/>
+<font color='#87CEEB'>Fractures</font>  - KAM Surgery simple, compound, or comminuted fracture on a random body part (requires KAT Surgery).<br/><br/>
+Requires <font color='#90EE90'>ACE Medical + KAM (KAT)</font> (and <font color='#90EE90'>KAT Surgery</font> for fracture presets). Heal or remove dummies from the terminal when finished.
+"];
+
+// -----------------------------------------------------------------------------
+// Note: Rotary Piloting 101
+// -----------------------------------------------------------------------------
+_facNotes pushBack ["Rotary Piloting 101", "
+<font color='#FFD700' size='14'>ROTARY PILOTING 101</font><br/><br/>
+
+For CAS and CFF procedure, use the other <font color='#FFD700'>FADE Notes</font>.<br/><br/>
+
+Rotary aircraft change the fight quickly and kill people when flown poorly. Treat the seat as earned: practise outside the mission so in-session flying is predictable for the ground force. The list below is the minimum bar.<br/><br/>
+
+<font color='#87CEEB'>FUNDAMENTAL FLIGHT</font><br/>
+- Basic flight  - Stable hover, translational lift, autorotation awareness, and confident handling in all phases (take-off, cruise, approach, landing).<br/>
+- Evasive and defensive flight  - Terrain masking, nap-of-the-earth (NOE) where appropriate, and manoeuvring to reduce exposure without dumping the mission.<br/>
+- Role-appropriate flight  - Logistics (smooth, predictable, passenger- and cargo-focused) versus air support (attack profiles, run-in and egress, weapon employment).<br/><br/>
+
+<font color='#87CEEB'>THREATS AND AIRFRAME LIMITATIONS</font><br/>
+- Enemy threats  - Small arms, AAA, MANPADS and other ADA; know ranges and countermeasures; respect threat rings and exclusion criteria.<br/>
+- Environmental threats  - Weather (visibility, wind, precipitation), terrain (obstacles, wires, confined LZs), and day/night limits of your airframe and crew.<br/>
+- Know your aircraft  - Performance envelope, payload limits, single-engine or system failures where applicable, and when to abort or turn back.<br/><br/>
+
+<font color='#87CEEB'>PRE-MISSION PLANNING</font><br/>
+Coordinate with mission leadership (flight coordinator, platoon lead or lead pilot) as required:<br/>
+- Flight paths  - Routes in and out of the AO; avoid known threats and restricted areas.<br/>
+- Exclusion zones  - No-fly or restricted areas; altitude limits; weapons-free vs weapons-tight.<br/>
+- Infil and exfil points  - Primary and alternate LZs; timing and sequencing with ground forces.<br/>
+- Weapon loadouts  - Restrictions (e.g. no ordnance near friendlies); correct ordnance for the task; safe separation and egress.<br/><br/>
+
+<font color='#87CEEB'>NAVIGATION</font><br/>
+- Situational awareness  - Position relative to objective, friendlies and threats; fuel and time; when to request updated tasking or RTB.<br/>
+- Map reading  - Grid references, terrain association, and ability to brief and follow routes without sole reliance on GPS.<br/><br/>
+
+<font color='#87CEEB'>COMMUNICATIONS</font><br/>
+- Flight coordination  - Clear, concise comms with mission leadership and lead pilot; acknowledge tasking and report status (inbound, on station, RTB).<br/>
+- Crew communications  - Door gunners / crew chief for threat call-outs and cabin / load management.<br/>
+- Passenger communications  - Brief passengers on timings, LZ behaviour and emergency procedures where relevant.<br/><br/>
+
+<font color='#87CEEB'>MISSION FLOW</font><br/>
+Stay inside briefed limits. Know your own limits and the aircraft's. Do not take needless risk that dumps the lift or puts the ground force at hazard.
+"];
+
+// Sort by display name (case-insensitive). Diary shows newest first, so create in reverse.
+private _sortedFacNotes = _facNotes apply { [toLower (_x select 0), _x] };
+_sortedFacNotes sort true;
+_sortedFacNotes = _sortedFacNotes apply { _x select 1 };
+reverse _sortedFacNotes;
+{
+    player createDiaryRecord ["FAC_Notes", _x];
+} forEach _sortedFacNotes;
+
+// -----------------------------------------------------------------------------
+// Briefing: Scenario and Server (created first; diary shows newest first)
+// -----------------------------------------------------------------------------
+player createDiaryRecord ["Diary", ["Scenario and Server", "
+<font color='#FFD700' size='14'>SCENARIO SETTINGS AND SERVER RULES</font><br/><br/>
+
+<font color='#87CEEB'>MANAGE SCENARIO</font><br/>
+Rhodesy's office opens <font color='#90EE90'>Manage Scenario</font> (scenario, weather, factions, admin). Apply pushes settings to the server for everyone.<br/><br/>
+
+<font color='#87CEEB'>ENVIRONMENT AND LIMITS</font><br/>
+Set time of day, time compression, weather preset / sliders, gear limits, preset-loadout limits, civilians on/off, civilian density / max alive, and factions for friendly, enemy and civilian spawns.<br/><br/>
+
+<font color='#87CEEB'>ENEMY OPTIONS</font><br/>
+Patrols, patrols town chance (<font color='#90EE90'>Low</font> 25%, <font color='#90EE90'>Medium</font> 50%, <font color='#90EE90'>High</font> 75%, <font color='#90EE90'>Every</font> 100% per civilian zone), AI skill, routing / retreat, AAA (<font color='#90EE90'>Off</font>, <font color='#90EE90'>AAA</font>, <font color='#90EE90'>AAA+MANPADS</font> - same guns around sustained air; about one flight in four, one gun is a MANPADS team instead), OPFOR AT prevalence, OPFOR population scaling, OPFOR air (<font color='#90EE90'>Off</font> / <font color='#90EE90'>Low</font> / <font color='#90EE90'>Normal</font> / <font color='#90EE90'>High</font>), OPFOR drones (same tiers - faction UAV patrol; a spot inside the objective can start that mission's QRF), and Operation / Invasion zone count.<br/><br/>
+OPFOR population multipliers on mission spawn counts: <font color='#90EE90'>Very Low</font> 0.25×, <font color='#90EE90'>Low</font> 0.5×, <font color='#90EE90'>Normal</font> 1×, <font color='#90EE90'>High</font> 1.5×, <font color='#90EE90'>Very High</font> 2×, <font color='#90EE90'>Insane</font> 4×. Area of Operations strength comes from lobby / startup settings, not a live Scenario GUI slider.<br/><br/>
+
+<font color='#87CEEB'>CIVILIANS AND INTEL</font><br/>
+Ambient civilians and traffic use civilian zones. With civilian talk on, use <font color='#90EE90'>Talk to civilian</font> on foot civs or the base NPC. Actionable tips append to the map <font color='#FFD700'>Intel</font> log. Building intel props can appear with virtual garrisons; <font color='#90EE90'>Read intel</font> may show live OPFOR, vehicles, garrisons, checkpoints or mission context. Scenario policy can lock talk to interpreters and reading to Intel specialists.<br/><br/>
+
+<font color='#87CEEB'>LOBBY PARAMETERS</font><br/>
+The host can gate Missions, Scenario, Vehicle, Loadout, Fast Travel to player, Scenario Admin, ACE Arsenal, civilian talk, intel reading, debug tools and HQ auto-heal. OPFOR patrol town chance can also be preset before load. Group leaders and admin / Zeus usually override leader-only locks. Access denied means the lobby setting is blocking that action.<br/><br/>
+
+<font color='#87CEEB'>ADMIN AND CLEANUP</font><br/>
+Admin covers aborting missions, despawning civilians or OPFOR, teleport-all to base, and Zeus controls. Use cleanup carefully on live sessions.
+"]];
+
+// -----------------------------------------------------------------------------
+// Briefing: Missions
+// -----------------------------------------------------------------------------
+player createDiaryRecord ["Diary", ["Missions", "
+<font color='#FFD700' size='14'>DYNAMIC MISSIONS</font><br/><br/>
+
+<font color='#87CEEB'>MISSION STREAMS</font><br/>
+In <font color='#FFD700'>Manage Missions</font>, <font color='#90EE90'>[G] Global</font> is one shared mission for the server (only one at a time). <font color='#90EE90'>[S] Single</font> missions are smaller per-player tasks (up to three at once, different starters). You may only personally run one mission at a time, global or single.<br/><br/>
+
+<font color='#87CEEB'>STARTING A MISSION</font><br/>
+Most missions open a location overlay: <font color='#90EE90'>Random location</font> or <font color='#90EE90'>Map click</font> (20 s timer). Some types snap to nearby civilian zones; others search outward from the click. <font color='#90EE90'>Point Defense</font> uses a duration slider (default 20 min) then Random (civ-zone snap) or Map click (no snap). <font color='#90EE90'>Troop Insert</font> and <font color='#90EE90'>Troop Extract</font> skip that overlay - LZ / pickup sites are chosen randomly near civ zones (including each wave). Escape &amp; Evasion and Geo-Guesser use participant pickers; the starter must be included.<br/><br/>
+
+<font color='#87CEEB'>GLOBAL [G]</font><br/>
+- <font color='#90EE90'>Area of Operations</font>  - 2 km square AO with three objectives. BLUFOR and OPFOR infil from nearest civ zones on opposite AO sides; BLUFOR assaults OBJ 1 through OBJ 3; OPFOR defend, reinforce and may counter-attack. 60-minute limit.<br/>
+- <font color='#90EE90'>Asset Retrieval</font>  - Clear a site, then Pick up the package (completes in place), or drive an OPFOR vehicle to within 1000 m of base.<br/>
+- <font color='#90EE90'>CAS / Fire Support</font>  - Support friendly AI under attack. Friendlies can radio a 5-line CCA call; succeed when OPFOR drops below the task threshold, fail if all friendlies are lost.<br/>
+- <font color='#90EE90'>Clear Area</font>  - Clear an enemy town or procedural camp; about 80% of enemies must be eliminated before timeout.<br/>
+- <font color='#90EE90'>CSAR</font>  - Downed helo survivor moves near the crash, radios at 1 km and marks with smoke / IR near 500 m. Extract and RTB.<br/>
+- <font color='#90EE90'>Escape &amp; Evasion</font>  - Selected evadees start dispersed without GPS in a hostile civilian area. Any selected evadee death fails; all living selected evadees must reach within 1000 m of base. No destination markers for evadees.<br/>
+- <font color='#90EE90'>Geo-Guesser</font>  - Navigation drill: pick participants, round time (30-600 s), and difficulty. Shared random drop; click the map where you think you are. Faster guesses score higher. Ranked results when the timer ends or everyone has guessed.<br/>
+- <font color='#90EE90'>Hostage</font>  - Rescue civilians held in urban buildings and return survivors near base; too many hostage deaths fail the mission.<br/>
+- <font color='#90EE90'>HVT</font>  - Find a high-value target in an urban building. Kill or capture; captured HVTs must be brought back near base.<br/>
+- <font color='#90EE90'>Intercept Convoy</font>  - Stop a moving road convoy before the end zone. At least 60% of convoy vehicles must be destroyed or immobilised.<br/>
+- <font color='#90EE90'>Invasion</font>  - OPFOR seizes a beachhead and pushes through nearest civil zones. Retake the INVASION beachhead to win; lose if OPFOR holds every zone.<br/>
+- <font color='#90EE90'>Point Defense</font>  - Occupy a 250 m zone (crashed helicopter or halted friendly convoy flavour). Timer starts when players enter; hold against infantry and vehicle assault waves for the chosen duration. Fails immediately if enemies enter while no players are present.<br/>
+- <font color='#90EE90'>Operation</font>  - Hub-and-spoke across civilian zones: clear outer objectives (codenames on map), then secure the OPFOR HQ. HQ unlocks only when every outer zone is held. OPFOR resupply and QRF spawn from HQ. Zones capture when cleared and can be contested again; evaluation about every 5 s.<br/>
+- <font color='#90EE90'>Raid</font>  - Three objectives across the map (recover object, HVT kill/capture, or hostage) tied to one enemy network. Each site gets a codename on the target building. Clear them in any order.<br/>
+- <font color='#90EE90'>Search &amp; Destroy</font>  - Search a marked town zone (approx. 55 m search circle) for ammo caches in garrisoned buildings. Burning barrels mark cache buildings; task text states cache count and required destroy percentage.<br/><br/>
+
+<font color='#87CEEB'>MISSION BACKGROUND (LORE)</font><br/>
+Most missions stamp a short procedural background into the assigned intro, SMEAC BACKGROUND block, and an <font color='#FFD700'>Intel</font> diary entry. Flavour only - no gameplay effect.<br/><br/>
+
+<font color='#87CEEB'>SINGLE [S]</font><br/>
+- <font color='#90EE90'>Cargo / Resupply</font>  - Sling-load or deliver supplies from CargoPoint_1 to a friendly camp and land to complete. Logistics only.<br/>
+- <font color='#90EE90'>CASEVAC</font>  - Evacuate wounded from the field. ACE / KAT injuries apply when available; the pickup may draw enemy pressure.<br/>
+- <font color='#90EE90'>Mine Clearing</font>  - EOD on roads near a civilian zone: either 2-5 mines or 1-3 IEDs (one hazard type per mission). Clear all hazards to complete.<br/>
+- <font color='#90EE90'>Troop Extract</font>  - Multi-participant field pickup near a civ-zone heli site; load and RTB. Set 1-10 waves (new field pickup each wave). Optional local enemy groups per wave; cleared when the wave ends.<br/>
+- <font color='#90EE90'>Troop Insert</font>  - Multi-participant insert from base: fresh squads at B_SP/base each wave, fly to civ-zone LZs and dismount. Set 1-10 waves (1 = single lift). Between waves, RTB and pick up new squads at base.<br/><br/>
+
+<font color='#87CEEB'>TASKS AND SMEAC</font><br/>
+Mission start builds a task and SMEAC-style text. Use Tasks and map markers for grids, routes, return distances, win/fail and abort. The Missions GUI only shows a short live summary.
+"]];
+
+// -----------------------------------------------------------------------------
+// Briefing: Base and Travel
+// -----------------------------------------------------------------------------
+player createDiaryRecord ["Diary", ["Base and Travel", "
+<font color='#FFD700' size='14'>BASE FACILITIES AND SHORTCUTS</font><br/><br/>
+
+<font color='#87CEEB'>RHODESY'S OFFICE</font><br/>
+Mission board for <font color='#FFD700'>Manage Missions</font> and <font color='#87CEEB'>Manage Scenario</font>. Scenario Admin actions sit under Manage Scenario when lobby settings allow them.<br/><br/>
+
+<font color='#87CEEB'>VEHICLES</font><br/>
+<font color='#00FF00'>Manage Vehicles</font> at the vehicle terminal / board places aircraft and land vehicles in the base area, within 1000 m of base. Place opens a camera. WASD moves it. The mouse looks. The wheel sets the distance. Q and E turn the vehicle. Page Up and Page Down raise aircraft. Space places it. Esc cancels. Place multiple stays in the camera. It starts off. Lists come from loaded mod CfgVehicles. Pilots can use pylon / loadout actions on supported spawned aircraft.<br/><br/>
+
+<font color='#87CEEB'>GEAR AND LOADOUTS</font><br/>
+MB's gear room and loadout boxes: <font color='#90EE90'>Manage My Loadout</font>, <font color='#90EE90'>Save my loadout</font>, ACE Arsenal when enabled, interpreter / Intel specialist flags, Engineer role, and preset or faction gear. Initial mission gear is kept for respawn until you save a replacement.<br/><br/>
+
+<font color='#87CEEB'>ACE SELF-INTERACT</font><br/>
+Within 1000 m of base, self-interact and open <font color='#FFD700'>FADE...</font>. <font color='#FFD700'>Gear and Units...</font> covers loadouts, Recruit AI, and Heal Me. <font color='#FFD700'>Vehicles...</font> and <font color='#FFD700'>Scenario...</font> cover the vehicle terminal, mission board, Fast Travel, and Teleport to Map Location. <font color='#FFD700'>Base...</font> covers Build. Rearm, repair, refuel, and pylons need you in the vehicle, or looking at it from within 50 m.<br/><br/>
+
+<font color='#87CEEB'>BUILD</font><br/>
+Within 1000 m of base you can put up props. Open Build from the FADE self-interact menu, under Base. Pick a category and a type, or use the search box. Place opens a camera. WASD moves it. The mouse looks. The wheel sets the distance. Q and E turn the piece. Page Up raises it. Page Down lowers it. T follows the slope. Space places the piece. Esc returns to the menu. Ctrl+Z removes the last piece you placed. Place multiple stays in the camera for the next piece. Simulation, damage, and simple object are toggles in the menu. The Placed tab lists every placed piece. Select one and press Delete to remove it. The lobby can allow building anywhere. Outside the base, Build is on ACE self-interact itself, and the rest of the FADE menu stays at base. The lobby also decides who may build, and whether the shared supply pool is charged. The object list is Anything or Realistic. Anything includes every prop. Realistic is a set list of fortifications, camp gear, and supplies. An admin can switch that list from the Admin page. If the lobby requires base structures, place Gear, Barracks, Vehicles, and Medical inside the base area. Each building unlocks only that service. Look at a placed piece, open ACE Interact, and choose Destroy to take it down. On a placed piece that can take a texture, choose Write. Type \n for a new line. Clear erases it.<br/><br/>
+
+<font color='#87CEEB'>TRAINING TERMINALS</font><br/>
+- <font color='#90EE90'>terminalMedical</font>: dummies and KAT presets (bleeding, airway, blood volume, deep penetrating chest, cardiac rhythms, fractures). Not a Missions GUI entry.<br/>
+- <font color='#90EE90'>terminalFires</font>: FIRES pieces, observer UAV, rearm, timed drills, fall-of-shot screens.<br/>
+- <font color='#90EE90'>terminalRange</font>: firing and AT range lanes.<br/>
+- <font color='#90EE90'>terminalSniper</font>: sniper range with trace / impact feedback.<br/>
+- <font color='#90EE90'>cqbBoard</font>: CQB shoothouse (targets or live AI, density, civilian options).<br/><br/>
+
+<font color='#87CEEB'>FAST TRAVEL</font><br/>
+Teleport boards or <font color='#FFD700'>Ctrl+Shift+apostrophe</font> from anywhere. Destinations include Base HQ, Cargo Slingload, Sultan's CQB Killhouse, Joon's Fires Range, Bean's Medical Area, Officer Area, Firing Range and Sniper Range. Server settings may also allow teleport-to-player.<br/><br/>
+
+<font color='#87CEEB'>SOCIAL AREAS</font><br/>
+SDE's Pub, Juko's Locker Room, C3 Quiet Area and other Eden placements are flavour / training spaces.<br/><br/>
+
+<font color='#87CEEB'>KEYBOARD</font><br/>
+<font color='#FFD700'>Ctrl+;</font> - Manage Missions. <font color='#FFD700'>Ctrl+Shift+apostrophe</font> - Fast Travel.<br/><br/>
+
+<font color='#87CEEB'>RESPAWN AND HQ HEAL</font><br/>
+Respawn is enabled. After death, use the configured respawn menu. With HQ auto-heal on, players near BASE_1 are healed on a timer.
+"]];
+
+// -----------------------------------------------------------------------------
+// Briefing: Overview (first thing players see)
+// -----------------------------------------------------------------------------
+player createDiaryRecord ["Diary", ["Overview", "
+<font color='#FFD700' size='14'>FACE'S DYNAMIC ENVIRONMENT (FADE)</font><br/><br/>
+
+FADE Beta 8 is a CTB sandbox on <font color='#90EE90'>Altis</font>. A normal session does not need Zeus.<br/><br/>
+
+Set the theatre in <font color='#FFD700'>Manage Scenario</font> at Rhodesy's office. Start a mission from <font color='#FFD700'>Manage Missions</font> or <font color='#FFD700'>Ctrl+;</font>. The mission gives you the task, the map markers, and the SMEAC text.<br/><br/>
+
+Apply in Manage Scenario sends weather, factions, civilians, AI, AAA, and access gates to the whole server.<br/><br/>
+
+Read <font color='#FFD700'>FADE Notes</font> for RATEL, CAS, CFF, and medical. Read <font color='#FFD700'>Intel</font> for reports collected in play. Mission types and the base layout are on the other Briefing pages.
+"]];

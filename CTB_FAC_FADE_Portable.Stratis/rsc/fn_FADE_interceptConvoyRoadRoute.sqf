@@ -1,0 +1,209 @@
+/*
+    Server-only helper: find two road positions for Intercept Convoy.
+    Returns [] if no valid pair, else [[x,y,z],[x,y,z]].
+    Random / single-anchor routes require 2D distance >= _minRouteM (default FADE_convoyMinRouteM).
+    Dual map-click (start + end anchors): no minimum route length; only requires distinct road snaps.
+    Params: [_basePos, _minRouteM optional, _mapStartAnchor optional, _resolvedRadius optional,
+             _mapEndAnchor optional — when both anchors valid, snaps each to nearest road near click]
+*/
+params [["_basePos", [0, 0, 0]], ["_minRouteM", -1], ["_mapAnchor", []], ["_resolvedRadius", -1], ["_mapEndAnchor", []]];
+if (_minRouteM < 0) then {
+    _minRouteM = missionNamespace getVariable ["FADE_convoyMinRouteM", if (isNil "FADE_convoyMinRouteM") then { 5000 } else { FADE_convoyMinRouteM }];
+};
+private _mapMinX = missionNamespace getVariable ["FADE_mapMinX", missionNamespace getVariable ["FADE_mapMin", 0]];
+private _mapMaxX = missionNamespace getVariable ["FADE_mapMaxX", missionNamespace getVariable ["FADE_mapMax", worldSize]];
+private _mapMinY = missionNamespace getVariable ["FADE_mapMinY", missionNamespace getVariable ["FADE_mapMin", 0]];
+private _mapMaxY = missionNamespace getVariable ["FADE_mapMaxY", missionNamespace getVariable ["FADE_mapMax", worldSize]];
+private _minFromBase = FADE_minDistFromBase;
+private _useAnchor = [_mapAnchor] call FADE_fnc_isValidMapClickPos;
+private _useEndAnchor = [_mapEndAnchor] call FADE_fnc_isValidMapClickPos;
+
+private _roadPosCandidatesNearAnchor = {
+    params ["_anchor", ["_maxRoads", 20], ["_roadSearchM", 500]];
+    private _roads = _anchor nearRoads _roadSearchM;
+    _roads = [_roads, [], { (getPosATL _x) distance2D _anchor }, "ASCEND"] call BIS_fnc_sortBy;
+    private _out = [];
+    private _ri = 0;
+    while { _ri < (count _roads min _maxRoads) } do {
+        private _sp = getPosATL (_roads select _ri);
+        _ri = _ri + 1;
+        if (count _sp < 3) then { _sp = [(_sp select 0), (_sp select 1), 0] };
+        if (surfaceIsWater _sp) then { continue };
+        if ((_sp distance2D _basePos) < _minFromBase) then { continue };
+        _out pushBack _sp;
+    };
+    _out
+};
+
+if (_useAnchor && { _useEndAnchor }) exitWith {
+    private _startCandidates = [_mapAnchor, 20, 500] call _roadPosCandidatesNearAnchor;
+    private _endCandidates = [_mapEndAnchor, 20, 500] call _roadPosCandidatesNearAnchor;
+    if (_startCandidates isEqualTo [] || { _endCandidates isEqualTo [] }) exitWith { [] };
+    private _bestPair = [];
+    private _bestScore = 1e15;
+    {
+        private _sp = _x;
+        {
+            private _ep = _x;
+            if (_sp distance2D _ep < 50) then { continue };
+            private _score = (_sp distance2D _mapAnchor) + (_ep distance2D _mapEndAnchor);
+            if (_score < _bestScore) then {
+                _bestScore = _score;
+                _bestPair = [_sp, _ep];
+            };
+        } forEach _endCandidates;
+    } forEach _startCandidates;
+    _bestPair
+};
+
+private _anchorSearchR = if (_useAnchor) then {
+    private _snappedR = missionNamespace getVariable ["FADE_missionMapClickSnappedRadius", -2];
+    if (_resolvedRadius == _snappedR || { _resolvedRadius < 0 }) then {
+        missionNamespace getVariable ["FADE_missionPlayerAnchorRadiusM", 5000]
+    } else {
+        _resolvedRadius
+    }
+} else { 0 };
+
+private _tryRouteFromStart = {
+    params ["_sp", "_minRouteM", "_basePos", "_minFromBase", "_mapMinX", "_mapMaxX", "_mapMinY", "_mapMaxY"];
+    private _endPos = [];
+    if (count _sp < 3) then { _sp = [(_sp select 0), (_sp select 1), 0] };
+    if (surfaceIsWater _sp) exitWith { [] };
+    if ((_sp distance2D _basePos) < _minFromBase) exitWith { [] };
+    private _dir = random 360;
+    private _roughEnd = _sp getPos [(_minRouteM + random 2000), _dir];
+    if (
+        (surfaceIsWater _roughEnd)
+        || { (_roughEnd select 0) < _mapMinX } || { (_roughEnd select 0) > _mapMaxX }
+        || { (_roughEnd select 1) < _mapMinY } || { (_roughEnd select 1) > _mapMaxY }
+    ) exitWith { [] };
+    private _roadsEnd = _roughEnd nearRoads 700;
+    if (_roadsEnd isEqualTo []) exitWith { [] };
+    private _okEnds = _roadsEnd select {
+        private _ep = getPosATL _x;
+        if (count _ep < 3) then { _ep = [(_ep select 0), (_ep select 1), 0] };
+        !surfaceIsWater _ep
+        && { (_ep distance2D _sp) >= _minRouteM }
+        && { (_ep distance2D _basePos) >= _minFromBase }
+    };
+    if (count _okEnds == 0) exitWith { [] };
+    private _pick = selectRandom _okEnds;
+    _endPos = getPosATL _pick;
+    if (count _endPos < 3) then { _endPos = [(_endPos select 0), (_endPos select 1), 0] };
+    [_sp, _endPos]
+};
+
+private _startPos = [];
+private _endPos = [];
+private _routeFound = false;
+
+if (_useAnchor) then {
+    private _roadsNear = _mapAnchor nearRoads (_anchorSearchR max 500);
+    _roadsNear = [_roadsNear, [], { (getPosATL _x) distance2D _mapAnchor }, "ASCEND"] call BIS_fnc_sortBy;
+    private _ri = 0;
+    while { _ri < (count _roadsNear min 40) && { !_routeFound } } do {
+        private _rS = _roadsNear select _ri;
+        _ri = _ri + 1;
+        private _sp = getPosATL _rS;
+        private _pair = [_sp, _minRouteM, _basePos, _minFromBase, _mapMinX, _mapMaxX, _mapMinY, _mapMaxY] call _tryRouteFromStart;
+        if (count _pair == 2) then {
+            _pair params ["_s", "_e"];
+            _startPos = _s;
+            _endPos = _e;
+            _routeFound = true;
+        };
+    };
+};
+
+for "_attempt" from 1 to 90 do {
+    if (_routeFound) exitWith {};
+    private _rough = if (_useAnchor && { _attempt <= 30 }) then {
+        private _a = random 360;
+        private _d = random (_anchorSearchR max 250);
+        [(_mapAnchor select 0) + _d * (cos _a), (_mapAnchor select 1) + _d * (sin _a), 0]
+    } else {
+        [_mapMinX + random (_mapMaxX - _mapMinX), _mapMinY + random (_mapMaxY - _mapMinY), 0]
+    };
+    if (surfaceIsWater _rough) then { continue };
+    private _roadsStart = _rough nearRoads 500;
+    if (_roadsStart isEqualTo []) then { continue };
+    private _rS = selectRandom _roadsStart;
+    private _sp = getPosATL _rS;
+    private _pair = [_sp, _minRouteM, _basePos, _minFromBase, _mapMinX, _mapMaxX, _mapMinY, _mapMaxY] call _tryRouteFromStart;
+    if (count _pair == 2) then {
+        _pair params ["_s", "_e"];
+        _startPos = _s;
+        _endPos = _e;
+        _routeFound = true;
+    };
+};
+
+if (!_routeFound) then {
+    private _zoneNames = missionNamespace getVariable ["FADE_civTriggerNames", []];
+    private _roadPts = [];
+    private _pushRoad = {
+        params ["_raw"];
+        if (count _raw < 2) exitWith {};
+        private _roads = _raw nearRoads 800;
+        if (_roads isEqualTo []) exitWith {};
+        private _sp = getPosATL (_roads select 0);
+        if (count _sp < 3) then { _sp = [(_sp select 0), (_sp select 1), 0] };
+        if (surfaceIsWater _sp) exitWith {};
+        if ((_sp distance2D _basePos) < _minFromBase) exitWith {};
+        _roadPts pushBack _sp;
+    };
+    private _zi = 0;
+    while { _zi < count _zoneNames && { count _roadPts < 40 } } do {
+        private _tr = missionNamespace getVariable [_zoneNames select _zi, objNull];
+        _zi = _zi + 1;
+        if (isNull _tr) then { continue };
+        private _zc = getPosATL _tr;
+        if (count _zc < 2) then { continue };
+        if ((_zc distance2D _basePos) < _minFromBase) then { continue };
+        [_zc] call _pushRoad;
+    };
+    private _ws = worldSize;
+    {
+        [_x] call _pushRoad;
+    } forEach [
+        [_ws * 0.28, _ws * 0.36, 0],
+        [_ws * 0.48, _ws * 0.58, 0],
+        [_ws * 0.64, _ws * 0.40, 0],
+        [_ws * 0.72, _ws * 0.70, 0],
+        [_ws * 0.36, _ws * 0.74, 0]
+    ];
+    private _bestD = 0;
+    private _bestS = [];
+    private _bestE = [];
+    private _ai = 0;
+    while { _ai < count _roadPts } do {
+        private _sp = _roadPts select _ai;
+        _ai = _ai + 1;
+        private _bi = _ai;
+        while { _bi < count _roadPts } do {
+            private _ep = _roadPts select _bi;
+            _bi = _bi + 1;
+            private _d = _sp distance2D _ep;
+            if (_d > _bestD) then {
+                _bestD = _d;
+                _bestS = _sp;
+                _bestE = _ep;
+            };
+        };
+    };
+    private _acceptM = _minRouteM min 1500;
+    if (count _bestS >= 2 && { count _bestE >= 2 } && { _bestD >= _acceptM }) then {
+        _startPos = _bestS;
+        _endPos = _bestE;
+        _routeFound = true;
+    } else {
+        diag_log format [
+            "[FADE] Convoy route search failed: zones=%1 roadPts=%2 bestPairM=%3 needM=%4",
+            count _zoneNames, count _roadPts, round _bestD, round _minRouteM
+        ];
+    };
+};
+
+if (!_routeFound || { count _startPos < 2 } || { count _endPos < 2 }) exitWith { [] };
+[_startPos, _endPos]

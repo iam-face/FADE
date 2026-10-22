@@ -1,4 +1,4 @@
-![](img/gh-logo.jpg)
+![](CTB_FAC_FADE.Altis/img/gh-logo.jpg)
 
 # FADE (Face's Dynamic Environment)
 You are welcome to fork this repository and submit pull requests. If you are interested in joining CTB or supporting development of this project, see the discord link below.
@@ -7,7 +7,7 @@ You are welcome to fork this repository and submit pull requests. If you are int
 
 ---
 
-<img src="./img/flagCTB.jpg" alt="CTB Flag" width="150">
+<img src="./CTB_FAC_FADE.Altis/img/flagCTB.jpg" alt="CTB Flag" width="150">
 
 ### What is CTB?
 
@@ -28,6 +28,8 @@ Think you’ve got what it takes to run with one of Australia’s longest-standi
 ---
 
 **FADE (Face's Dynamic Environment) - Beta 8**
+
+This repository holds two missions. `CTB_FAC_FADE.Altis` is the Altis mission, and daily work for it is on `main`. `CTB_FAC_FADE_Portable.Stratis` is the Stratis mission, and world-specific work for it is on `portable`. The feature list below describes the Altis mission.
 
 FADE is a multiplayer Arma 3 sandbox mission on Altis, tailored for CTB use. Players configure the fight and run training or dynamic missions from boards and GUIs at a fixed player base. You do not need Zeus for day-to-day play.
 It is built for rotary, joint fires, and infantry practice on a local or dedicated server and supports up to 31 players currently.
@@ -177,6 +179,6 @@ Entry points: `initServer.sqf` (loads `rsc/server/`) and `initPlayerLocal.sqf`. 
 
 **Mission playthrough tests:** `[] call FAC_playthroughSuite_execAll` (second dev scroll-wheel action). RPT filter: `[FAC Playthrough]`. Runs mission types in about 10 minutes or less with no player input after exec (server teleports and win cheats). Abort with `[] call FAC_playthroughSuite_abort`. Tune budget and phase toggles in `rsc/MissionPlaythroughProfiles.sqf`.
 
-**Offline SQF lint:** Install the [SQF-VM Language Server](https://marketplace.visualstudio.com/items?itemName=SQF-VM.sqf-vm-language-server) in Cursor/VS Code. From the mission folder: `powershell -ExecutionPolicy Bypass -File ..\tools\sqfvm\Invoke-FadeSqfLint.ps1 -InstallIfMissing`. Static analysis only; it does not prove runtime mission behaviour.
+**Offline SQF lint:** Install the [SQF-VM Language Server](https://marketplace.visualstudio.com/items?itemName=SQF-VM.sqf-vm-language-server) in Cursor/VS Code. From the mission folder: `powershell -ExecutionPolicy Bypass -File ..\..\tools\sqfvm\Invoke-FadeSqfLint.ps1 -InstallIfMissing`. Static analysis only; it does not prove runtime mission behaviour.
 
-**Headless dedicated tests (optional):** `powershell -ExecutionPolicy Bypass -File ..\tools\headless\Run-FadeHeadlessTest.ps1`. Modes: `-Mode boot`, `-Mode compile` (default), `-Mode playthrough`, `-Mode all`. Config: `..\tools\headless\headless.local.json`. Agent workflow: `.cursor/skills/fade-headless-test/SKILL.md`.
+**Headless dedicated tests (optional):** `powershell -ExecutionPolicy Bypass -File ..\..\tools\headless\Run-FadeHeadlessTest.ps1`. Modes: `-Mode boot`, `-Mode compile` (default), `-Mode playthrough`, `-Mode all`. Config: `..\..\tools\headless\headless.local.json`. Agent workflow: `.cursor/skills/fade-headless-test/SKILL.md`.

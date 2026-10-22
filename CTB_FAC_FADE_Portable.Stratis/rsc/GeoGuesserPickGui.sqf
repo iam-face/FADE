@@ -1,0 +1,180 @@
+// =============================================================================
+// GeoGuesserPickGui.sqf  -  participant / time / difficulty overlay (60002)
+// =============================================================================
+if (hasInterface) then {
+    FAC_geoGuesserPickGui_fnc_destroyOverlay = {
+        if (isNil "FAC_missionPickOverlay_destroy") exitWith {};
+        ["FAC_ggPick_overlayCtrls"] call FAC_missionPickOverlay_destroy;
+    };
+
+    FAC_geoGuesserPickGui_fnc = {
+        params ["_action", ["_params", []]];
+        private _display = findDisplay 60002;
+        switch _action do {
+            case "open": {
+                if (isNull _display) exitWith {
+                    systemChat "GEO-GUESSER: open Manage Missions first, then start this mission type.";
+                };
+                disableSerialization;
+                [] call FAC_geoGuesserPickGui_fnc_destroyOverlay;
+                [false] call FAC_missionPickOverlay_setBaseVisible;
+                private _controls = [];
+                private _bg = _display ctrlCreate ["FACRscFormLabel", 60300];
+                _bg ctrlSetPosition [0.02, 0.08, 0.96, 0.74];
+                _bg ctrlSetBackgroundColor FAC_theme_bgOverlay;
+                _bg ctrlCommit 0;
+                _controls pushBack _bg;
+                private _title = _display ctrlCreate ["FACRscFormLabel", 60301];
+                _title ctrlSetPosition [0.02, 0.08, 0.96, 0.048];
+                _title ctrlSetText "GEO-GUESSER  -  SETUP";
+                _title ctrlSetBackgroundColor FAC_theme_bgOverlayTitle;
+                _title ctrlCommit 0;
+                _controls pushBack _title;
+                private _help = _display ctrlCreate ["FACRscEditDark", 60302];
+                _help ctrlSetPosition [0.04, 0.136, 0.92, 0.09];
+                _help ctrlSetText "Navigation drill: participants are teleported to a random map location and must click the map where they think they are. Faster guesses score higher. You must include yourself.";
+                _help ctrlEnable false;
+                _help ctrlCommit 0;
+                _controls pushBack _help;
+                private _la = _display ctrlCreate ["FACRscFormLabel", 60303];
+                _la ctrlSetPosition [0.04, 0.232, 0.42, 0.028];
+                _la ctrlSetText "Available";
+                _la ctrlCommit 0;
+                _controls pushBack _la;
+                private _ls = _display ctrlCreate ["FACRscFormLabel", 60304];
+                _ls ctrlSetPosition [0.52, 0.232, 0.44, 0.028];
+                _ls ctrlSetText "Participants";
+                _ls ctrlCommit 0;
+                _controls pushBack _ls;
+                private _lbA = _display ctrlCreate ["FACRscListDark", 60305];
+                _lbA ctrlSetPosition [0.04, 0.265, 0.42, 0.34];
+                _lbA ctrlCommit 0;
+                _controls pushBack _lbA;
+                private _lbS = _display ctrlCreate ["FACRscListDark", 60306];
+                _lbS ctrlSetPosition [0.52, 0.265, 0.44, 0.34];
+                _lbS ctrlCommit 0;
+                _controls pushBack _lbS;
+                private _timeLbl = _display ctrlCreate ["FACRscFormLabel", 60307];
+                _timeLbl ctrlSetPosition [0.04, 0.618, 0.42, 0.028];
+                _timeLbl ctrlSetText "Round time (seconds)";
+                _timeLbl ctrlCommit 0;
+                _controls pushBack _timeLbl;
+                private _timeVal = _display ctrlCreate ["FACRscFormLabel", 60308];
+                _timeVal ctrlSetPosition [0.52, 0.618, 0.44, 0.028];
+                _timeVal ctrlSetText "60 s";
+                _timeVal ctrlCommit 0;
+                _controls pushBack _timeVal;
+                private _timeSl = _display ctrlCreate ["RscXSliderH", 60309];
+                _timeSl ctrlSetPosition [0.04, 0.650, 0.92, 0.032];
+                _timeSl sliderSetRange [30, 600];
+                _timeSl sliderSetPosition 60;
+                _timeSl ctrlAddEventHandler ["SliderPosChanged", {
+                    ["timeSlider", []] call (missionNamespace getVariable ["FAC_geoGuesserPickGui_fnc", {}]);
+                }];
+                _timeSl ctrlCommit 0;
+                _controls pushBack _timeSl;
+                _controls pushBack _timeVal;
+                private _diffLbl = _display ctrlCreate ["FACRscFormLabel", 60310];
+                _diffLbl ctrlSetPosition [0.04, 0.692, 0.42, 0.028];
+                _diffLbl ctrlSetText "Difficulty";
+                _diffLbl ctrlCommit 0;
+                _controls pushBack _diffLbl;
+                private _diffCb = _display ctrlCreate ["FACRscCombo", 60311];
+                _diffCb ctrlSetPosition [0.52, 0.688, 0.44, 0.034];
+                private _d0 = _diffCb lbAdd "Normal  -  map + GPS; nearer settlements";
+                _diffCb lbSetData [_d0, "Normal"];
+                private _d1 = _diffCb lbAdd "Hard  -  no GPS; rural drops";
+                _diffCb lbSetData [_d1, "Hard"];
+                private _d2 = _diffCb lbAdd "Impossible  -  no GPS; remote terrain";
+                _diffCb lbSetData [_d2, "Impossible"];
+                _diffCb lbSetCurSel 0;
+                _diffCb ctrlCommit 0;
+                _controls pushBack _diffCb;
+                private _footer = [_display, 60312, 0.735, "FAC_geoGuesserPickGui_fnc"] call FAC_missionPick_createParticipantFooter;
+                _controls append _footer;
+                uinamespace setVariable ["FAC_ggPick_overlayCtrls", _controls];
+                uinamespace setVariable ["FAC_ggPick_selectedUids", [getPlayerUID player]];
+                uinamespace setVariable ["FAC_geoGuesserPickGui_fnc", FAC_geoGuesserPickGui_fnc];
+                ["refreshLists", []] call FAC_geoGuesserPickGui_fnc;
+            };
+            case "timeSlider": {
+                disableSerialization;
+                _display = findDisplay 60002;
+                if (isNull _display) exitWith {};
+                private _sl = _display displayCtrl 60309;
+                private _tv = _display displayCtrl 60308;
+                if (isNull _sl || { isNull _tv }) exitWith {};
+                private _sec = round (sliderPosition _sl);
+                _sec = _sec max 30 min 600;
+                _tv ctrlSetText format ["%1 s", _sec];
+            };
+            case "refreshLists": {
+                disableSerialization;
+                _display = findDisplay 60002;
+                if (isNull _display) exitWith {};
+                [
+                    _display displayCtrl 60305,
+                    _display displayCtrl 60306,
+                    +(uinamespace getVariable ["FAC_ggPick_selectedUids", []])
+                ] call FAC_missionPick_fillParticipantLists;
+            };
+            case "add": {
+                disableSerialization;
+                _display = findDisplay 60002;
+                if (isNull _display) exitWith {};
+                private _lbA = _display displayCtrl 60305;
+                private _i = lbCurSel _lbA;
+                if (_i < 0) exitWith {};
+                private _uid = _lbA lbData _i;
+                if (_uid == "") exitWith {};
+                private _sel = +(uinamespace getVariable ["FAC_ggPick_selectedUids", []]);
+                if !(_uid in _sel) then { _sel pushBack _uid };
+                uinamespace setVariable ["FAC_ggPick_selectedUids", _sel];
+                ["refreshLists", []] call FAC_geoGuesserPickGui_fnc;
+            };
+            case "remove": {
+                disableSerialization;
+                _display = findDisplay 60002;
+                if (isNull _display) exitWith {};
+                private _lbS = _display displayCtrl 60306;
+                private _i = lbCurSel _lbS;
+                if (_i < 0) exitWith {};
+                private _uid = _lbS lbData _i;
+                if (_uid == getPlayerUID player) exitWith { systemChat "GEO-GUESSER: you must stay on the participant list."; };
+                private _sel = (uinamespace getVariable ["FAC_ggPick_selectedUids", []]) select { _x != _uid };
+                uinamespace setVariable ["FAC_ggPick_selectedUids", _sel];
+                ["refreshLists", []] call FAC_geoGuesserPickGui_fnc;
+            };
+            case "confirm": {
+                disableSerialization;
+                _display = findDisplay 60002;
+                if (isNull _display) exitWith {};
+                private _sel = +(uinamespace getVariable ["FAC_ggPick_selectedUids", []]);
+                private _callerUid = getPlayerUID player;
+                if !(_callerUid in _sel) exitWith {
+                    systemChat "GEO-GUESSER: include yourself as a participant.";
+                };
+                if (count _sel < 1) exitWith {};
+                private _sl = _display displayCtrl 60309;
+                private _cb = _display displayCtrl 60311;
+                private _timeSec = 60;
+                if (!isNull _sl) then { _timeSec = round (sliderPosition _sl) max 30 min 600 };
+                private _diff = "Normal";
+                if (!isNull _cb) then {
+                    private _di = lbCurSel _cb;
+                    if (_di >= 0) then { _diff = _cb lbData _di };
+                };
+                [_sel, _timeSec, _diff, player] remoteExec ["FADE_startGeoGuesser", 2];
+                if (!isNil "FADE_ggClient_closeMissionGui") then { [] call FADE_ggClient_closeMissionGui } else { [] call FAC_geoGuesserPickGui_fnc_destroyOverlay };
+                if (!isNull (findDisplay 60002)) then { closeDialog 0 };
+                hint parseText "<t size='1.1' color='#A0D0A0'>Requesting Geo-Guesser...</t>";
+                [] call (missionNamespace getVariable ["FAC_guiScheduleHeaderRefresh", {}]);
+            };
+            case "close": {
+                [] call FAC_geoGuesserPickGui_fnc_destroyOverlay;
+            };
+            default { };
+        };
+    };
+    missionNamespace setVariable ["FAC_geoGuesserPickGui_fnc", FAC_geoGuesserPickGui_fnc];
+};

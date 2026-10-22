@@ -24,7 +24,7 @@ Process adapted from [addyosmani/agent-skills](https://github.com/addyosmani/age
 
 | Failure | First command |
 |---------|----------------|
-| `.sqf` compile or syntax | `..\tools\sqfvm\Invoke-FadeSqfLint.ps1` |
+| `.sqf` compile or syntax | `..\..\tools\sqfvm\Invoke-FadeSqfLint.ps1` |
 | Server logic, spawn, mission runner | Headless `-Mode compile -SkipModSync` |
 | Live mission start | Headless `-Mode playthrough` only after compile is green |
 | Client GUI only | Say so. Headless does not click dialogs. Trace `FAC_*Gui_fnc` and the `remoteExec` back to the server |

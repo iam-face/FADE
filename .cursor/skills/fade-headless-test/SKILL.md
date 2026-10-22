@@ -20,8 +20,8 @@ Automated E2E validation: PowerShell runner boots `arma3server_x64`, mission aut
 - `Face\local_server\` with `StartServer.ps1` and `server.cfg`. Headless ignores `client_modline.txt`.
 - `server.cfg`: `persistent = 1` (required for `-autoInit`).
 - `StartServer.ps1`: passes `-autoInit` and `-loadMissionToMemory`.
-- Config: copy `../tools/headless/headless.local.json.example` → `headless.local.json` (beside the example; outside mission git).
-- Mission junction: `C:\Arma3Server\mpmissions\CTB_FAC_FADE.Altis` → mission folder (runner creates if missing).
+- Config: copy `../../tools/headless/headless.local.json.example` → `headless.local.json` (beside the example; outside mission git).
+- Mission junction: `C:\Arma3Server\mpmissions\CTB_FAC_FADE.Altis` → `FADE\CTB_FAC_FADE.Altis` (the Altis mission folder, not the git root). The runner creates the junction if it is missing.
 - Helpers live in sibling `mpmissions/tools/` (not inside the mission PBO folder).
 
 Env overrides: `FADE_A3_SERVER_ROOT`, `FADE_A3_CLIENT_ROOT`, `FADE_LOCAL_SERVER_DIR`.
@@ -32,13 +32,13 @@ From mission folder:
 
 ```powershell
 # Fast offline syntax lint (~seconds) — run before headless when editing .sqf
-powershell -ExecutionPolicy Bypass -File ..\tools\sqfvm\Invoke-FadeSqfLint.ps1
+powershell -ExecutionPolicy Bypass -File ..\..\tools\sqfvm\Invoke-FadeSqfLint.ps1
 
 # Headless. -mod comes from mission.sqm (not the full launcher list).
-powershell -ExecutionPolicy Bypass -File ..\tools\headless\Run-FadeHeadlessTest.ps1 -Mode compile -SkipModSync
-powershell -ExecutionPolicy Bypass -File ..\tools\headless\Run-FadeHeadlessTest.ps1 -Mode playthrough -SkipModSync
-powershell -ExecutionPolicy Bypass -File ..\tools\headless\Run-FadeHeadlessTest.ps1 -Mode all -SkipModSync
-powershell -ExecutionPolicy Bypass -File ..\tools\headless\Run-FadeHeadlessTest.ps1 -Mode boot -SkipModSync
+powershell -ExecutionPolicy Bypass -File ..\..\tools\headless\Run-FadeHeadlessTest.ps1 -Mode compile -SkipModSync
+powershell -ExecutionPolicy Bypass -File ..\..\tools\headless\Run-FadeHeadlessTest.ps1 -Mode playthrough -SkipModSync
+powershell -ExecutionPolicy Bypass -File ..\..\tools\headless\Run-FadeHeadlessTest.ps1 -Mode all -SkipModSync
+powershell -ExecutionPolicy Bypass -File ..\..\tools\headless\Run-FadeHeadlessTest.ps1 -Mode boot -SkipModSync
 ```
 
 | Mode | What runs | Typical time after boot |
@@ -54,8 +54,8 @@ The dedicated test server loads only mods that own an entry in `mission.sqm` `ad
 
 | Piece | Role |
 |-------|------|
-| `../tools/headless/Run-FadeHeadlessTest.ps1` | Orchestrator |
-| `../tools/headless/FadeHeadlessLib.ps1` | Boot wait, RPT parse, flag cleanup |
+| `../../tools/headless/Run-FadeHeadlessTest.ps1` | Orchestrator |
+| `../../tools/headless/FadeHeadlessLib.ps1` | Boot wait, RPT parse, flag cleanup |
 | `rsc/FADE_HeadlessTest.sqf` | Server-side harness (modes, lighten world) |
 | `initServer.sqf` | Spawns harness only if `headless_test.flg` exists |
 | `rsc/MissionTestSuite.sqf` | Shared server+client checks (headless calls server only) |
@@ -66,7 +66,7 @@ Runner writes `headless_test.flg`, clears it in `finally`. **Never leave the fla
 ## RPT markers (success / failure)
 
 **Paths:** `C:\Arma3Server\profiles_local\arma3server_x64_*.rpt`  
-**Runner log:** `../tools/headless/last-run.log`
+**Runner log:** `../../tools/headless/last-run.log`
 
 | Marker | Meaning |
 |--------|---------|
@@ -96,7 +96,7 @@ Copy and track:
 - [ ] 5. Re-run until PASS or user stops
 ```
 
-1. **Lint first** for compile/syntax issues (`../tools/sqfvm/Invoke-FadeSqfLint.ps1`).
+1. **Lint first** for compile/syntax issues (`../../tools/sqfvm/Invoke-FadeSqfLint.ps1`).
 2. **Run compile** before `all` — catches 500+ checks in ~6 min total.
 3. **Read FAIL lines** from runner output or RPT tail; fix one cluster at a time.
 4. **Re-run** same mode to verify.
@@ -145,5 +145,5 @@ When editing harness or suite code:
 ## Additional reference
 
 - Detailed troubleshooting and timings: [reference.md](reference.md)
-- Runner header comments: `../tools/headless/Run-FadeHeadlessTest.ps1`
+- Runner header comments: `../../tools/headless/Run-FadeHeadlessTest.ps1`
 - README section: headless dedicated-server tests

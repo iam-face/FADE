@@ -16,6 +16,6 @@ Orient token-consciously at task start. List `.cursor/` if unsure; open only wha
 | `agent-docs/AGENTS_REFERENCE.md` | Mission types, scenario GUI, BIS/RPT |
 | `rules/` | When adding or editing Cursor rules |
 | `skills/*/SKILL.md` | When user task matches skill description |
-| `../tools/` (mpmissions sibling) | Only when task or user points at a helper |
+| `../../tools/` (from a mission folder; `mpmissions/tools`) | Only when task or user points at a helper |
 
 Most of `.cursor/` is gitignored. **`rules/`** and **`skills/`** stay tracked and shareable.
