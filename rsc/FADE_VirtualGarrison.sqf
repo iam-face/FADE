@@ -326,7 +326,9 @@ FADE_vg_spawnOne = {
     private _owner = _st getOrDefault ["owner", ""];
     if (_owner != "") then { _grp setVariable ["FADE_vgOwner", _owner, false] };
     if (_owner find "mis:" == 0) then {
-        [_owner select [4], _grp] call FADE_missionEnt_registerGroup;
+        private _misTid = _owner select [4];
+        [_misTid, _grp] call FADE_missionEnt_registerGroup;
+        [_misTid, [_grp]] call (missionNamespace getVariable ["FADE_fieldIntel_registerGroups", {}]);
     };
     if (_owner find "op:" == 0) then {
         [_owner select [3], _grp] call FADE_missionEnt_registerGroup;

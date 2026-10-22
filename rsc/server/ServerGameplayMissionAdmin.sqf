@@ -266,6 +266,13 @@ FADE_adminCleanupAction = {
             [sideEmpty, _se] call FADE_despawnScenarioWorldUnits;
             ["Admin cleanup complete: scenario enemy units despawned."] remoteExec ["systemChat", _requester];
         };
+        case "clearPlaced": {
+            if (isNil "FADE_build_clearAll") exitWith {
+                ["Admin cleanup failed: build is not loaded."] remoteExec ["systemChat", _requester];
+            };
+            private _n = [] call FADE_build_clearAll;
+            [format ["Admin cleanup complete: %1 placed objects removed.", _n]] remoteExec ["systemChat", _requester];
+        };
         case "makeZeus": {
             private _oldScript = _requester getVariable ["FAC_scriptGrantedCurator", objNull];
             if (!isNull _oldScript) then {
@@ -302,13 +309,12 @@ FADE_adminCleanupAction = {
             [format ["%1 is no longer Zeus (script module removed).", name _requester]] remoteExec ["systemChat", 0];
         };
         case "teleportAllToBase": {
-            // Same anchor as Fast Travel HQ (rsc/TeleportGui.sqf FAC_teleportGui_destBaseKey)
             private _baseObj = missionNamespace getVariable ["teleportBase", objNull];
-            if (isNull _baseObj) exitWith {
-                ["Teleport-all failed: Eden object 'teleportBase' not found (place logic/object for HQ)."] remoteExec ["systemChat", _requester];
+            private _center = if (!isNull _baseObj) then { getPosATL _baseObj } else { [] call FADE_getPlayerBasePos };
+            private _face = if (!isNull _baseObj) then { getDir _baseObj } else { 0 };
+            if (count _center < 2) exitWith {
+                ["Teleport-all failed: player base is not set."] remoteExec ["systemChat", _requester];
             };
-            private _center = getPosATL _baseObj;
-            private _face = getDir _baseObj;
             private _movedVehs = [];
             private _idx = 0;
             {

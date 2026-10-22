@@ -55,7 +55,7 @@ Do not mark a command `UNVERIFIED` only because a fetch hit the interstitial. Us
 | Old MP | `remoteExec`, not `BIS_fnc_MP` |
 | Spawn, AI, scenario | `isServer` |
 | Faction lists | `missionNamespace` after `FADE_applyScenarioSettings` |
-| Tasks, groups | `BIS_fnc_taskCreate`, `BIS_fnc_spawnGroup` as used in `AGENTS_REFERENCE.md` |
+| Tasks, groups | `BIS_fnc_taskCreate`. Mission infantry and ground crews use `FADE_missionCreateInfantryGroupAt`, `FADE_spawnInfantryAtPositions`, and `FADE_spawnCrewedGroundVehicle` |
 | RPC name on clients | `publicVariable` the server function from initServer |
 
 When the wiki and the mission disagree, keep the mission wrapper. Say so in the reply. When two official pages disagree, quote both and do not pick silently.

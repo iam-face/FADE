@@ -257,6 +257,7 @@ FAC_sniperGui_fnc = {
         case "onLoad": {
             _display = findDisplay 60910;
             if (isNull _display) exitWith {};
+            [_display, FAC_gui_spec_sniper] call FAC_gui_build;
             uinamespace setVariable ["FAC_sniperGui_fnc", FAC_sniperGui_fnc];
 
             uinamespace setVariable ["FAC_sniperGui_enemyType", "targets"];

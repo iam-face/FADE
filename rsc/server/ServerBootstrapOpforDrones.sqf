@@ -1,11 +1,11 @@
-// ServerBootstrapOpforDrones.sqf — ambient OPFOR UAV patrol / ISR + QRF vectoring (server)
+// ServerBootstrapOpforDrones.sqf — ambient OPFOR UAV patrol (server)
 // Setting: FADE_opforDroneSetting Off | Low | Normal | High (see FADE_opforDroneIntensity in Config.sqf)
+// A UAV that knows a player inside a live mission sensor arms that mission's QRF. This file does not spawn its own trucks.
 
 if (!isServer) exitWith {};
 
 missionNamespace setVariable ["FADE_opforDrone_active", []];
 missionNamespace setVariable ["FADE_opforDrone_lastSpawnTime", -1e9];
-missionNamespace setVariable ["FADE_opforDrone_lastQrfTime", -1e9];
 missionNamespace setVariable ["FADE_opforDrone_qrfGroups", []];
 missionNamespace setVariable ["FADE_opforDrone_spotThreshold", 1.25];
 
@@ -80,9 +80,8 @@ FADE_opforDrone_isGroundPlayer = {
 
 FADE_opforDrone_allFriendliesAtHq = {
     params ["_hqR"];
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (isNull _base) exitWith { false };
-    private _bp = getPosATL _base;
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp < 2) exitWith { true };
     private _friendlySide = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _hasPl = false;
     private _allInside = true;
@@ -114,8 +113,8 @@ FADE_opforDrone_patrolCenter = {
         private _tr = missionNamespace getVariable [_pick, objNull];
         if (!isNull _tr) exitWith { getPosATL _tr };
     };
-    private _base = missionNamespace getVariable ["BASE_1", objNull];
-    if (!isNull _base) exitWith { getPosATL _base };
+    private _bp = [] call FADE_getPlayerBasePos;
+    if (count _bp >= 2) exitWith { _bp };
     [worldSize / 2, worldSize / 2, 0]
 };
 
@@ -156,6 +155,18 @@ FADE_opforDrone_despawnAll = {
         };
     } forEach _arr;
     missionNamespace setVariable ["FADE_opforDrone_active", []];
+    private _leftover = missionNamespace getVariable ["FADE_opforDrone_qrfGroups", []];
+    {
+        if (_x isEqualType grpNull && { !isNull _x }) then {
+            { if (!isNull _x) then { deleteVehicle _x } } forEach units _x;
+            deleteGroup _x;
+        };
+        if (_x isEqualType objNull && { !isNull _x }) then {
+            { if (!isNull _x) then { deleteVehicle _x } } forEach crew _x;
+            deleteVehicle _x;
+        };
+    } forEach _leftover;
+    missionNamespace setVariable ["FADE_opforDrone_qrfGroups", []];
 };
 
 FADE_opforDrone_doSpawn = {
@@ -182,6 +193,7 @@ FADE_opforDrone_doSpawn = {
     private _uav = createVehicle [_class, _spawnPos, [], 0, "FLY"];
     if (isNull _uav) exitWith {};
     _uav setPosASL _spawnPos;
+    [_uav] call FADE_pylon_sanitizeVehicle;
     createVehicleCrew _uav;
     if (isNull driver _uav) then {
         private _sideE = missionNamespace getVariable ["FADE_sideEnemy", east];
@@ -251,86 +263,11 @@ FADE_opforDrone_trySpawn = {
     call FADE_opforDrone_doSpawn;
 };
 
-FADE_opforDrone_triggerQrf = {
-    params ["_contactPos"];
-    if (!isServer) exitWith {};
-    if (count _contactPos < 2) exitWith {};
-    private _setting = [missionNamespace getVariable ["FADE_opforDroneSetting", "Off"]] call FADE_normalizeOpforThreatSetting;
-    if (_setting == "Off") exitWith {};
-
-    private _intensity = [_setting] call FADE_opforDroneIntensity;
-    _intensity params ["_maxActiveUnused", "_spawnCdUnused", "_qrfCd"];
-    private _last = missionNamespace getVariable ["FADE_opforDrone_lastQrfTime", -1e9];
-    if (time - _last < _qrfCd) exitWith {};
-    missionNamespace setVariable ["FADE_opforDrone_lastQrfTime", time];
-
-    private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", []];
-    if (_enemyUnits isEqualTo []) exitWith {};
-    private _groups = missionNamespace getVariable ["FADE_opforDrone_qrfGroups", []];
-    private _base = missionNamespace getVariable ["FADE_basePos", [0, 0, 0]];
-    private _pos3 = if (count _contactPos >= 3) then { +_contactPos } else { [(_contactPos select 0), (_contactPos select 1), 0] };
-    private _taskId = format ["fade_drone_qrf_%1", floor time];
-
-    private _fl = missionNamespace getVariable ["FADE_qrfSpawnHintFlare", {}];
-    if (!(_fl isEqualTo {})) then { [_pos3, 450] call _fl };
-
-    if (isNil "FADE_counterAttackStart" || { FADE_counterAttackStart isEqualTo {} }) exitWith {
-        ["droneQrf aborted counterAttackStart missing pos=%1", _pos3] call FADE_qrfDbgLog;
-    };
-    ["droneQrf start task=%1 pos=%2 ambientSingleWave", _taskId, _pos3] call FADE_qrfDbgLog;
-    [_taskId, _pos3, _base, _enemyUnits, _groups, 450, true, 45, 120, true] call FADE_counterAttackStart;
-};
-
-FADE_opforDrone_tickSpotting = {
-    if (!isServer) exitWith {};
-    private _setting = missionNamespace getVariable ["FADE_opforDroneSetting", "Off"];
-    if (_setting == "Off") exitWith {};
-
-    private _thr = missionNamespace getVariable ["FADE_opforDrone_spotThreshold", 1.25];
-    private _arr = missionNamespace getVariable ["FADE_opforDrone_active", []];
-    _arr = _arr select { !isNull _x && { alive _x } };
-    missionNamespace setVariable ["FADE_opforDrone_active", _arr];
-    if (_arr isEqualTo []) exitWith {};
-
-    private _bestPos = [];
-    private _bestK = 0;
-    {
-        private _pl = _x;
-        if ([_pl] call FADE_opforDrone_isGroundPlayer) then {
-            {
-                private _uav = _x;
-                private _grp = group (driver _uav);
-                private _ka = _uav knowsAbout _pl;
-                if (!isNull _grp) then {
-                    { _ka = _ka max (_x knowsAbout _pl) } forEach units _grp;
-                };
-                if (_ka >= _thr && { _ka > _bestK }) then {
-                    _bestK = _ka;
-                    _bestPos = getPosATL _pl;
-                };
-            } forEach _arr;
-        };
-    } forEach playableUnits;
-
-    if (count _bestPos >= 2) then {
-        [_bestPos] call FADE_opforDrone_triggerQrf;
-    };
-};
-
 [] spawn {
     sleep 60;
     while { true } do {
         sleep 45;
         if (!isServer) exitWith {};
         call FADE_opforDrone_trySpawn;
-    };
-};
-
-[] spawn {
-    sleep 135;
-    while { true } do {
-        sleep 22;
-        if (!isServer) exitWith {};
-        call FADE_opforDrone_tickSpotting;
     };
 };

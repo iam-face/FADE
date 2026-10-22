@@ -121,6 +121,7 @@ FADE_runMission_MineClearing = {
             [_player] call FADE_clearActiveMission;
             [_player, "MISSION ERROR", "Could not spawn all hazards. Try again."] call FADE_missionErrorHint;
         } else {
+            { if (!isNull _x) then { [_taskId, _x] call FADE_missionEnt_registerObject } } forEach _hazards;
             private _hazardWord = if (_useMines) then {
                 if (_need == 1) then { "mine" } else { "mines" }
             } else {

@@ -41,6 +41,12 @@ FAC_LOBBY_IDX_OPFOR_THREAT        = 24;
 // WORLD
 FAC_LOBBY_IDX_STARTING_TIME       = 25;
 FAC_LOBBY_IDX_STARTING_WEATHER    = 26;
+// BUILD (appended; do not insert above or saved server params shift)
+FAC_LOBBY_IDX_BUILD_ACCESS        = 27;
+FAC_LOBBY_IDX_BUILD_LOGISTICS     = 28;
+FAC_LOBBY_IDX_BUILD_AREA          = 29;
+FAC_LOBBY_IDX_BUILD_CATALOG       = 30;
+FAC_LOBBY_IDX_BUILD_REQUIRE       = 31;
 
 FAC_lobbyParams_getArray = {
     if (!isNil "paramsArray" && { paramsArray isEqualType [] }) then { paramsArray } else { [] }
@@ -72,6 +78,13 @@ FAC_lobbyParams_read = {
     missionNamespace setVariable ["FAC_param_opforPatrols", _p param [FAC_LOBBY_IDX_OPFOR_PATROLS, 1]];
     missionNamespace setVariable ["FAC_param_opforPatrolTownChance", _p param [FAC_LOBBY_IDX_OPFOR_PATROL_TOWN, 0]];
     missionNamespace setVariable ["FAC_param_opforPlayerScale", _p param [FAC_LOBBY_IDX_OPFOR_PLAYER_SCALE, 1]];
+    missionNamespace setVariable ["FAC_param_buildAccess", _p param [FAC_LOBBY_IDX_BUILD_ACCESS, 1]];
+    missionNamespace setVariable ["FAC_param_buildLogistics", _p param [FAC_LOBBY_IDX_BUILD_LOGISTICS, 0]];
+    missionNamespace setVariable ["FAC_param_buildArea", _p param [FAC_LOBBY_IDX_BUILD_AREA, 0]];
+    if (isNil { missionNamespace getVariable "FAC_param_buildCatalog" }) then {
+        missionNamespace setVariable ["FAC_param_buildCatalog", _p param [FAC_LOBBY_IDX_BUILD_CATALOG, 0]];
+    };
+    missionNamespace setVariable ["FAC_param_buildRequire", _p param [FAC_LOBBY_IDX_BUILD_REQUIRE, 0]];
 };
 
 // Population labels match Scenario GUI (Very Low … Insane). Other fields scale with threat tier.
@@ -239,6 +252,11 @@ FAC_lobbyParams_publishAccessVars = {
         "FAC_param_recruitGuiAccess",
         "FAC_param_debugTools",
         "FAC_param_hqAutoHeal",
+        "FAC_param_buildAccess",
+        "FAC_param_buildLogistics",
+        "FAC_param_buildArea",
+        "FAC_param_buildCatalog",
+        "FAC_param_buildRequire",
         "FADE_teleportToPlayerMode",
         "FADE_civiliansEnabled",
         "FADE_limitGearToFriendlyFaction",
@@ -347,6 +365,21 @@ FAC_playerCanUseScenarioAdmin = {
     (leader group _player == _player) || { [_player] call FAC_playerHasLeaderOverrideAccess }
 };
 
+// 0 Engineers (Loadout GUI Engineer trait), 1 Anyone, 2 No-one. Admin and Zeus always pass.
+FAC_playerCanBuild = {
+    params [["_player", objNull]];
+    if !(_player isEqualType objNull) then { _player = player };
+    if (isNull _player) then { _player = player };
+    if (isNull _player) exitWith { false };
+    if ([_player] call FAC_playerHasLeaderOverrideAccess) exitWith { true };
+    private _mode = (missionNamespace getVariable ["FAC_param_buildAccess", 1]) max 0 min 2;
+    switch (_mode) do {
+        case 0: { _player getUnitTrait "Engineer" isEqualTo true };
+        case 1: { true };
+        default { false };
+    };
+};
+
 FAC_playerCanUseDebugTools = {
     params [["_player", objNull]];
     if !(_player isEqualType objNull) then { _player = player };
@@ -415,6 +448,7 @@ FAC_lobbyParams_install = {
         "FAC_playerCanTeleportToPlayers",
         "FAC_playerCanUseScenarioAdmin",
         "FAC_playerCanUseDebugTools",
+        "FAC_playerCanBuild",
         "FAC_lobbyParams_callAccess",
         "FAC_lobbyParams_serverDenyUnless"
     ];

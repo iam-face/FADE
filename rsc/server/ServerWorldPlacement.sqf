@@ -20,7 +20,7 @@ FADE_findMissionPosUrban = {
         private _trig = missionNamespace getVariable [_zoneName, objNull];
         if (!isNull _trig) then {
             private _zoneCenter = getPosATL _trig;
-            private _candidate = [[_zoneCenter, 100, _civZoneRadius, 5, 1, 0.5, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray;
+            private _candidate = [_zoneCenter, 100, _civZoneRadius] call FADE_placement_posInRing;
             if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
                 private _sx = _candidate select 0;
                 private _sy = _candidate select 1;
@@ -53,7 +53,7 @@ FADE_findMissionPosUrbanNearCenter = {
         private _trig = missionNamespace getVariable [_zoneName, objNull];
         if (!isNull _trig) then {
             private _zoneCenter = getPosATL _trig;
-            private _candidate = [[_zoneCenter, 50, 400, 5, 1, 0.5, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray;
+            private _candidate = [_zoneCenter, 50, 400] call FADE_placement_posInRing;
             if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
                 private _sx = _candidate select 0;
                 private _sy = _candidate select 1;
@@ -113,7 +113,7 @@ FADE_findMissionPosAssetRetrieval = {
         private _trig = missionNamespace getVariable [_zoneName, objNull];
         if (!isNull _trig) then {
             private _zoneCenter = getPosATL _trig;
-            private _candidate = [[_zoneCenter, 5, _radiusFromZone, 5, 1, 0.5, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray;
+            private _candidate = [_zoneCenter, 5, _radiusFromZone] call FADE_placement_posInRing;
             if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
                 private _sx = _candidate select 0;
                 private _sy = _candidate select 1;
@@ -151,7 +151,7 @@ FADE_findMissionPos = {
             private _trig = missionNamespace getVariable [_zoneName, objNull];
             if (!isNull _trig) then {
                 private _zoneCenter = getPosATL _trig;
-                _candidate = [[_zoneCenter, 100, _civZoneRadius, 5, 1, 0.5, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray;
+                _candidate = [_zoneCenter, 100, _civZoneRadius] call FADE_placement_posInRing;
             };
         };
         if (count _candidate < 2) then {
@@ -186,7 +186,7 @@ FADE_findMissionPosNearAnchor = {
     private _attempt = 0;
     while { _attempt < 25 && { count _result == 0 } } do {
         _attempt = _attempt + 1;
-        private _candidate = [[_anchor, 0, _radiusM, 5, 1, 0.5, 0, [], _anchor], _anchor] call FADE_findSafePosArray;
+        private _candidate = [_anchor, 0, _radiusM] call FADE_placement_posInRing;
         if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
             if ((_candidate distance2D _anchor) <= _radiusM) then {
                 private _sx = _candidate select 0;
@@ -230,7 +230,7 @@ FADE_findMissionPosUrbanNearCenterNearAnchor = {
         private _trig = missionNamespace getVariable [_zoneName, objNull];
         if (!isNull _trig) then {
             private _zoneCenter = getPosATL _trig;
-            private _candidate = [[_zoneCenter, 50, 400, 5, 1, 0.5, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray;
+            private _candidate = [_zoneCenter, 50, 400] call FADE_placement_posInRing;
             if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
                 if ((_candidate distance2D _anchor) <= _radiusM) then {
                     private _sx = _candidate select 0;
@@ -275,7 +275,7 @@ FADE_findMissionPosUrbanNearAnchor = {
             private _trig = missionNamespace getVariable [_zoneName, objNull];
             if (!isNull _trig) then {
                 private _zoneCenter = getPosATL _trig;
-                _candidate = [[_zoneCenter, 50, 400, 5, 1, 0.5, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray;
+                _candidate = [_zoneCenter, 50, 400] call FADE_placement_posInRing;
             };
         };
         if (count _candidate < 2) then {
@@ -329,7 +329,7 @@ FADE_findMissionPosAssetRetrievalNearAnchor = {
             private _trig = missionNamespace getVariable [_zoneName, objNull];
             if (!isNull _trig) then {
                 private _zoneCenter = getPosATL _trig;
-                private _candidate = [[_zoneCenter, 5, _radiusFromZone, 5, 1, 0.5, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray;
+                private _candidate = [_zoneCenter, 5, _radiusFromZone] call FADE_placement_posInRing;
                 if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
                     private _sx = _candidate select 0;
                     private _sy = _candidate select 1;
@@ -365,7 +365,7 @@ FADE_findMissionPosAssetRetrievalNearAnchor = {
         private _trig = missionNamespace getVariable [_zoneName, objNull];
         if (!isNull _trig) then {
             private _zoneCenter = getPosATL _trig;
-            private _candidate = [[_zoneCenter, 5, _radiusFromZone, 5, 1, 0.5, 0, [], _zoneCenter], _zoneCenter] call FADE_findSafePosArray;
+            private _candidate = [_zoneCenter, 5, _radiusFromZone] call FADE_placement_posInRing;
             if (count _candidate >= 2 && { !(surfaceIsWater _candidate) } && { (_candidate distance _base) >= _minDist }) then {
                 if ((_candidate distance2D _anchor) <= _radiusM) then {
                     private _sx = _candidate select 0;

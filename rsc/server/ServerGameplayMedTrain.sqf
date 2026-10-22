@@ -205,13 +205,11 @@ FADE_medTrain_deleteAll = {
     [] call FADE_medTrain_publishList;
 };
 
-publicVariable "FADE_spawnHeli";
-publicVariable "FADE_duplicateVehicleAtBase";
+publicVariable "FADE_spawnVehicleAtPos";
 publicVariable "FADE_despawnVehicle";
 publicVariable "FADE_deleteWrecksNearVehicleTerminal";
 publicVariable "FADE_serviceVehicle";
 publicVariable "FADE_serviceVehiclePart";
-publicVariable "FADE_spawnLandVehicle";
 publicVariable "FADE_requestVehiclesAtBase";
 publicVariable "FADE_setTime";
 publicVariable "FADE_setWeather";
@@ -398,7 +396,10 @@ FADE_cleanupMissionEntities = {
     } forEach (_ent getOrDefault ["groups", []]);
     { [_x] call FADE_missionEnt_deleteGroupFull } forEach _seenGrps;
     { if (!isNull _x) then { [_x] call FADE_missionEnt_deleteVehicleFull } } forEach (_ent getOrDefault ["vehicles", []]);
-    { if (!isNull _x) then { deleteVehicle _x } } forEach (_ent getOrDefault ["objects", []]);
+    { if (!isNull _x) then {
+        _x allowDamage true;
+        deleteVehicle _x;
+    } } forEach (_ent getOrDefault ["objects", []]);
 
     private _aoEnt = missionNamespace getVariable ["FADE_aoEntities_" + _taskId, []];
     if (_aoEnt isEqualType [] && { count _aoEnt >= 2 }) then {
@@ -447,7 +448,8 @@ FADE_cleanupMissionEntities = {
         missionNamespace setVariable ["FADE_operationCapState_" + _taskId, nil];
         missionNamespace setVariable ["FADE_operationZoneCenters_" + _taskId, nil];
         missionNamespace setVariable ["FADE_operationHqIdx_" + _taskId, nil];
-        missionNamespace setVariable ["FADE_operationCivZoneIds_" + _taskId, nil];
+        // Keep FADE_operationCivZoneIds_<taskId>. FADE_mission_unpinCivZonesForTask reads it
+        // after the abort delay. Nilling it here leaves those towns pinned.
         missionNamespace setVariable ["FADE_operationMakeVehFn_" + _taskId, nil];
         missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, nil];
     };

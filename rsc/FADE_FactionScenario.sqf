@@ -123,10 +123,13 @@ FADE_pickDefaultEnemyFactionForFriendly = {
     private _enemyIds = _enemies apply { _x select 0 };
     if (_prefer != "" && { _prefer in _enemyIds }) exitWith { _prefer };
     private _fsn = [_friendlyFaction, 1] call FADE_getFactionSideNum;
+    private _blufor = missionNamespace getVariable ["FADE_scenarioBluforFaction", "BLU_F"];
+    private _redfor = missionNamespace getVariable ["FADE_scenarioRedforFaction", "OPF_F"];
+    private _indep = missionNamespace getVariable ["FADE_scenarioIndepFaction", "IND_F"];
     private _defaults = switch (_fsn) do {
-        case 0: { ["BLU_F", "NATO_F"] };
-        case 1: { ["OPF_F", "OPF_G_F"] };
-        case 2: { ["BLU_F", "OPF_F"] };
+        case 0: { [_blufor, _indep, "BLU_F", "NATO_F"] };
+        case 1: { [_redfor, _indep, "OPF_F", "OPF_G_F"] };
+        case 2: { [_blufor, _redfor, "BLU_F", "OPF_F"] };
         default { ["OPF_F", "BLU_F"] };
     };
     private _picked = { if (_x in _enemyIds) exitWith { _x } } forEach _defaults;

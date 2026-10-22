@@ -45,53 +45,15 @@ FADE_runMission_ClearArea = {
         // BIS_fnc_findSafePos returns scalar 0 on failure  -  do not use count on that
         if (!(_center isEqualType []) || { count _center < 2 }) then { _center = _destPos };
         if (count _center < 3) then { _center = [(_center select 0), (_center select 1), 0] };
-        // Multiple camp compositions to choose from randomly for variety
-        private _campVariants = [
-            // Variant A: patrol forward base
-            [
-                ["Land_TentA_F", 12, 0], ["Land_TentDome_F", 15, 180], ["Land_CampingTable_F", 8, 90],
-                ["Campfire_burning_F", 6, 270], ["Box_NATO_Ammo_F", 18, 45], ["Box_NATO_Support_F", 18, 315]
-            ],
-            // Variant B: dug-in position with sandbags
-            [
-                ["Land_BagFence_Round_F", 5, 0], ["Land_BagFence_Round_F", 5, 90], ["Land_BagFence_Round_F", 5, 180],
-                ["Land_TentA_F", 16, 225], ["Campfire_burning_F", 4, 315], ["Box_NATO_Ammo_F", 20, 60]
-            ],
-            // Variant C: roadside checkpoint
-            [
-                ["Land_Barrier_01_wide_F", 8, 0], ["Land_Barrier_01_wide_F", 8, 180],
-                ["Land_CampingTable_F", 6, 90], ["Campfire_burning_F", 5, 270],
-                ["Land_TentDome_F", 14, 45], ["Box_NATO_Ammo_F", 16, 135]
-            ],
-            // Variant D: logistics camp
-            [
-                ["Land_TentA_F", 10, 30], ["Land_TentA_F", 10, 150], ["Land_TentDome_F", 14, 270],
-                ["Land_CampingTable_F", 7, 60], ["Land_CampingChair_V2_F", 8, 100],
-                ["Box_NATO_Ammo_F", 20, 0], ["Box_NATO_Support_F", 20, 180], ["Campfire_burning_F", 5, 230]
-            ],
-            // Variant E: minimal hide
-            [
-                ["Land_TentDome_F", 8, 0], ["Campfire_burning_F", 5, 180],
-                ["Box_NATO_Ammo_F", 12, 90], ["Land_CampingTable_F", 10, 270]
-            ]
-        ];
-        private _campComp = selectRandom _campVariants;
-        {
-            _x params ["_cls", "_dist", "_angle"];
-            private _p = [(_center select 0) + _dist * (cos _angle), (_center select 1) + _dist * (sin _angle), 0];
-            _p = [[_p, 0, 2, 0, 1, 0.3, 0, [], _p], _p] call FADE_findSafePosArray;
-            if (_p isEqualType [] && { count _p >= 2 }) then {
-                _p = [(_p select 0), (_p select 1), (_p param [2, 0])];
-                private _obj = createVehicle [_cls, _p, [], 0, "NONE"];
-                _obj setPosATL _p;
-                _campObjects pushBack _obj;
-                [_taskId, _obj] call FADE_missionEnt_registerObject;
-            };
-        } forEach _campComp;
+        _campObjects = [selectRandom FADE_comp_ids, _center, _taskId] call FADE_comp_spawn;
+        private _guardPos = _center;
+        if (count _campObjects > 0) then {
+            _guardPos = (_campObjects select 0) getVariable ["FADE_comp_anchor", _center];
+        };
 
         // Stationary enemies at the camp itself (ambient combat anims like HVT/Hostage guards)
         private _stationaryCount = [3 + floor random 5, 1] call _scaleOpforCount;
-        _allGroups append ([_center, _stationaryCount, _enemyUnitsCA, _sideEnemy, _taskId, 3, 12, 20] call FADE_missionSpawnGuards);
+        _allGroups append ([_guardPos, _stationaryCount, _enemyUnitsCA, _sideEnemy, _taskId, 3, 12, 20] call FADE_missionSpawnGuards);
     };
     if (count _center >= 2 && { count _center < 3 }) then { _center = [(_center select 0), (_center select 1), 0] };
     private _areaRadius = if (_useTown) then {
@@ -104,6 +66,9 @@ FADE_runMission_ClearArea = {
     private _buildingsAll = nearestObjects [_center, ["House", "Building"], _areaRadius + _caGarExtra];
     private _buildings = (_buildingsAll select { random 1 < _caBldChance });
     if (count _buildings == 0 && { count _buildingsAll > 0 }) then { _buildings = +_buildingsAll };
+    if (count _buildings > 18) then {
+        _buildings = (_buildings call BIS_fnc_arrayShuffle) select [0, 18];
+    };
     private _usedPositions = [];
     private _maxUnitsPerBuilding = 2;
     private _maxGarrisonTotal = [35, 8] call _scaleOpforCount;
@@ -140,21 +105,8 @@ FADE_runMission_ClearArea = {
                 _st set ["barrelsRef", _campObjects];
                 [_bld, _slotATL, +_enemyUnitsCA, _st] call _vgCa;
             } else {
-                private _grp = createGroup _sideEnemy;
-                {
-                    private _pos = +_x;
-                    private _cls = selectRandom _enemyUnitsCA;
-                    private _u = _grp createUnit [_cls, _pos, [], 0, "NONE"];
-                    if (!isNull _u) then {
-                        _u setPos _pos;
-                        _u setUnitPos "MIDDLE";
-                        [_u] call FADE_tryAmbientCombatAnim;
-                    };
-                } forEach _slotATL;
-                if (count units _grp > 0) then {
-                    [_grp] call FAC_applyEnemyScenarioToGroup;
-                    _allGroups pushBack _grp;
-                } else { deleteGroup _grp };
+                private _grp = [_slotATL, _sideEnemy, _enemyUnitsCA, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+                if (!isNull _grp) then { _allGroups pushBack _grp };
             };
         };
         if (count _usedPositions >= _maxGarrisonTotal) exitWith {};
@@ -165,6 +117,7 @@ FADE_runMission_ClearArea = {
     private _sp = [0, 0, 0];
     private _patrolSize = 0;
     private _patrolGrp = grpNull;
+    private _patrolClasses = [];
     private _pk = 0;
     private _pCls = "";
     private _pU = objNull;
@@ -180,14 +133,12 @@ FADE_runMission_ClearArea = {
         if (_sp isEqualType [] && { count _sp >= 2 }) then {
             _sp = [(_sp select 0), (_sp select 1), (_sp param [2, 0])];
             _patrolSize = [3 + floor random 5, 1] call _scaleOpforCount;
-            _patrolGrp = createGroup _sideEnemy;
+            _patrolClasses = [];
             for "_k" from 0 to (_patrolSize - 1) do {
-                _pCls = if (_k < count _enemyUnitsCA) then { _enemyUnitsCA select _k } else { _baseClassCA };
-                _pU = _patrolGrp createUnit [_pCls, _sp, [], 0, "NONE"];
-                if (!isNull _pU) then { _pU setPos _sp };
+                _patrolClasses pushBack (if (_k < count _enemyUnitsCA) then { _enemyUnitsCA select _k } else { _baseClassCA });
             };
-            if (count units _patrolGrp > 0) then {
-                [_patrolGrp] call FAC_applyEnemyScenarioToGroup;
+            _patrolGrp = [_sp, _sideEnemy, _patrolClasses] call FADE_missionCreateInfantryGroupAt;
+            if (!isNull _patrolGrp) then {
                 _patrolGrp setBehaviour "SAFE";
                 for "_w" from 0 to 3 do {
                     _pa = _w * 90 + (random 30);
@@ -199,7 +150,7 @@ FADE_runMission_ClearArea = {
                     if (_w == 3) then { _wp setWaypointType "CYCLE" };
                 };
                 _allGroups pushBack _patrolGrp;
-            } else { deleteGroup _patrolGrp };
+            };
         };
     };
     private _areaVehicles = [];

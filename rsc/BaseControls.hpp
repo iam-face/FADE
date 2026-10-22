@@ -174,6 +174,44 @@ class RscXSliderH {
     shadow = 0;
 };
 
+// CT_CONTROLS_GROUP. Mission class so ctrlCreate does not depend on the game config
+// (main config is searched first; this name exists only in the mission).
+class FACRscScrollGroup {
+    type = 15;
+    idc = -1;
+    style = 16;
+    x = 0;
+    y = 0;
+    w = 1;
+    h = 1;
+    shadow = 0;
+    colorBackground[] = {0, 0, 0, 0};
+    class VScrollbar {
+        color[] = {1, 1, 1, 0.6};
+        width = 0.021;
+        autoScrollEnabled = 0;
+        autoScrollSpeed = -1;
+        autoScrollDelay = 5;
+        autoScrollRewind = 0;
+        shadow = 0;
+        scrollSpeed = 0.06;
+        thumb = "\a3\ui_f\data\gui\cfg\scrollbar\thumb_ca.paa";
+        arrowFull = "\a3\ui_f\data\gui\cfg\scrollbar\arrowfull_ca.paa";
+        arrowEmpty = "\a3\ui_f\data\gui\cfg\scrollbar\arrowempty_ca.paa";
+        border = "\a3\ui_f\data\gui\cfg\scrollbar\border_ca.paa";
+    };
+    class HScrollbar {
+        color[] = {1, 1, 1, 0.6};
+        height = 0.008;
+        shadow = 0;
+        thumb = "\a3\ui_f\data\gui\cfg\scrollbar\thumb_ca.paa";
+        arrowFull = "\a3\ui_f\data\gui\cfg\scrollbar\arrowfull_ca.paa";
+        arrowEmpty = "\a3\ui_f\data\gui\cfg\scrollbar\arrowempty_ca.paa";
+        border = "\a3\ui_f\data\gui\cfg\scrollbar\border_ca.paa";
+    };
+    class Controls {};
+};
+
 // Map control (CT_MAP_MAIN = 101) -- fallback when game config not available
 class RscMapControl {
     type = 101;

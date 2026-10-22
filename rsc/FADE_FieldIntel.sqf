@@ -1,5 +1,9 @@
 // =============================================================================
 // FADE_FieldIntel.sqf — body search intel + search-zone refinement (server)
+// State: 0 taskId, 1 missionType, 2 truePos, 3 anchorPos, 4 objectivePositions,
+// 5 mode, 6 iconMarker, 7 zoneKey, 8 gridNames, 9 initialRadius,
+// 10 points, 11 revealLevel, 12 markerColor, 13 destTaskId,
+// 14 trackUnit, 15 currentCentre, 16 currentHalfSize
 // =============================================================================
 
 if (!isServer) exitWith {};
@@ -23,13 +27,109 @@ FADE_fieldIntel_isEnabledForType = {
     _missionType in _list
 };
 
+FADE_fieldIntel_normalisePos = {
+    params ["_p"];
+    if !(_p isEqualType []) exitWith { [] };
+    if (count _p < 2) exitWith { [] };
+    if (count _p < 3) then { _p = [(_p select 0), (_p select 1), 0] };
+    _p
+};
+
+FADE_fieldIntel_objectivePositions = {
+    params ["_state"];
+    private _out = [];
+    if (count _state > 4 && { (_state select 4) isEqualType [] }) then {
+        {
+            private _p = [_x] call FADE_fieldIntel_normalisePos;
+            if (count _p >= 2) then { _out pushBack _p };
+        } forEach (_state select 4);
+    };
+    if (_out isEqualTo [] && { count _state > 2 }) then {
+        private _p = [_state select 2] call FADE_fieldIntel_normalisePos;
+        if (count _p >= 2) then { _out pushBack _p };
+    };
+    _out
+};
+
+// Stored objectives, plus the tracked unit's position at this moment (HVT).
+FADE_fieldIntel_containPositions = {
+    params ["_state"];
+    private _contain = [_state] call FADE_fieldIntel_objectivePositions;
+    if (count _state > 14) then {
+        private _track = _state select 14;
+        if (!isNull _track && { alive _track }) then {
+            private _p = [getPosATL _track] call FADE_fieldIntel_normalisePos;
+            if (count _p >= 2) then { _contain pushBack _p };
+        };
+    };
+    _contain
+};
+
 FADE_fieldIntel_bodyRankValue = {
     params ["_unit"];
     if (isNull _unit) exitWith { 0 };
     private _isLeader = _unit == leader (group _unit);
     private _cls = toLower (typeOf _unit);
-    private _isOfficer = ("officer" in _cls) || { rank _unit in ["CAPTAIN", "MAJOR", "COLONEL", "GENERAL"] };
+    private _isOfficer = ("officer" in _cls) || { rank _unit in ["LIEUTENANT", "CAPTAIN", "MAJOR", "COLONEL", "GENERAL"] };
     if (_isLeader || _isOfficer) then { 2 } else { 1 }
+};
+
+FADE_fieldIntel_hintText = {
+    params ["_level", ["_objectiveCount", 1]];
+    private _many = _objectiveCount > 1;
+    switch (true) do {
+        case (_level >= 100): {
+            if (_many) then {
+                "The marked area contains the objectives."
+            } else {
+                "The marked area contains the objective."
+            }
+        };
+        case (_level >= 75): {
+            if (_many) then {
+                "The marked area is much smaller. The objectives are still inside it."
+            } else {
+                "The marked area is much smaller. The objective is still inside it."
+            }
+        };
+        case (_level >= 50): {
+            if (_many) then {
+                "The marked area is tighter. The objectives are still inside it."
+            } else {
+                "The marked area is tighter. The objective is still inside it."
+            }
+        };
+        default {
+            if (_many) then {
+                "Partial intel. The marked area is smaller. The objectives are still inside it."
+            } else {
+                "Partial intel. The marked area is smaller. The objective is still inside it."
+            }
+        };
+    }
+};
+
+FADE_fieldIntel_diaryBody = {
+    params ["_contain", "_confirmed", ["_namedCount", 1]];
+    if (_confirmed) then {
+        private _grids = [];
+        {
+            if (_x isEqualType [] && { count _x >= 2 }) then {
+                _grids pushBackUnique (mapGridPosition _x);
+            };
+        } forEach _contain;
+        if (count _grids <= 1) then {
+            format ["Objective grid: %1.", _grids param [0, "unknown"]]
+        } else {
+            format ["Objective grids: %1.", _grids joinString ", "]
+        }
+    } else {
+        if (_namedCount > 1) then {
+            "The marked area is smaller. The objectives are still inside it."
+        } else {
+            "The marked area is smaller. The objective is still inside it."
+        }
+    }
 };
 
 FADE_fieldIntel_registerBody = {
@@ -41,24 +141,31 @@ FADE_fieldIntel_registerBody = {
     };
     _corpse setVariable ["FADE_fieldIntel_taskId", _taskId, true];
     _corpse setVariable ["FADE_fieldIntel_bodyId", _bodyId, true];
-    _corpse setVariable ["FADE_fieldIntel_rankValue", [_corpse] call FADE_fieldIntel_bodyRankValue, true];
+    if (isNil { _corpse getVariable "FADE_fieldIntel_rankValue" }) then {
+        _corpse setVariable ["FADE_fieldIntel_rankValue", [_corpse] call FADE_fieldIntel_bodyRankValue, true];
+    };
     [_corpse] remoteExecCall ["FADE_fieldIntel_clientRegisterBody", 0, _corpse];
 };
 
 FADE_fieldIntel_registerGroups = {
     params ["_taskId", "_groups"];
     if (_taskId == "") exitWith {};
+    private _state = [_taskId] call FADE_fieldIntel_getState;
+    if !(_state isEqualType []) exitWith {};
+    if (count _state < 13) exitWith {};
     {
         if (isNull _x) then { continue };
         {
             if (alive _x) then {
+                if (_x getVariable ["FADE_fieldIntel_missionTaskId", ""] == _taskId) then { continue };
+                _x setVariable ["FADE_fieldIntel_missionTaskId", _taskId, true];
+                _x setVariable ["FADE_fieldIntel_rankValue", [_x] call FADE_fieldIntel_bodyRankValue, true];
                 _x addEventHandler ["Killed", {
                     params ["_unit"];
                     private _tid = _unit getVariable ["FADE_fieldIntel_missionTaskId", ""];
                     if (_tid == "") exitWith {};
                     [_unit, _tid] call FADE_fieldIntel_registerBody;
                 }];
-                _x setVariable ["FADE_fieldIntel_missionTaskId", _taskId, true];
             };
         } forEach units _x;
     } forEach _groups;
@@ -66,49 +173,37 @@ FADE_fieldIntel_registerGroups = {
 
 FADE_fieldIntel_applyGeometry = {
     params ["_state", "_revealLevel", ["_snapToTrue", false]];
-    if (_state isEqualType [] && { count _state < 13 }) exitWith {};
+    if !(_state isEqualType []) exitWith { [] };
+    if (count _state < 13) exitWith { _state };
     _state params [
-        "_taskId", "_missionType", "_truePos", "_anchorPos", "_mustContain",
+        "_taskId", "_missionType", "_truePos", "_anchorPos", "_objectivePositions",
         "_mode", "_iconMarker", "_zoneKey", "_gridNames", "_initialRadius",
         "_points", "_revealLevelOld", "_markerColor"
     ];
     private _maxPts = missionNamespace getVariable ["FADE_fieldIntelMaxPoints", 100];
     private _frac = (_revealLevel / _maxPts) min 1 max 0;
-    private _markerPos = +_anchorPos;
-    private _radius = _initialRadius;
-    private _contain = +_mustContain;
-    _contain pushBackUnique +_truePos;
-    if (_snapToTrue) then {
-        _markerPos = +_truePos;
-        _radius = missionNamespace getVariable ["FADE_fieldIntelRevealSnapRadiusM", 45];
+    private _contain = [_state] call FADE_fieldIntel_containPositions;
+    private _snapR = missionNamespace getVariable ["FADE_fieldIntelRevealSnapRadiusM", 45];
+    private _nominal = if (_snapToTrue) then {
+        _snapR
     } else {
-        private _shrink = 1 - (_frac * 0.75);
-        private _nominal = (_initialRadius * _shrink) max (missionNamespace getVariable ["FADE_fieldIntelRevealSnapRadiusM", 45]);
-        private _computed = [_anchorPos, _nominal, 0, _contain] call FADE_mission_computeSearchZone;
-        _computed params ["_markerPos", "_radius"];
+        (_initialRadius * (1 - (_frac * 0.75))) max _snapR
     };
-    if (_mode == "grid") then {
-        if (_snapToTrue) then {
-            _gridNames = [_taskId, _zoneKey, _markerPos, _radius, _markerColor, _contain] call FADE_mission_createGridZoneMarkers;
-        } else {
-            if (_frac > 0 && { _zoneKey != "" } && { getMarkerColor _zoneKey != "" }) then {
-                _zoneKey setMarkerShape "ELLIPSE";
-                _zoneKey setMarkerBrush "Border";
-                _zoneKey setMarkerAlpha (missionNamespace getVariable ["FADE_missionRadiusMarkerAlpha", 1]);
-                [_zoneKey, _markerPos, _radius] call FADE_mission_setRadiusMarkerGeometry;
-                _gridNames = [_zoneKey];
-            } else {
-                _gridNames = [_taskId, _zoneKey, _markerPos, _radius, _markerColor, _contain] call FADE_mission_createGridZoneMarkers;
+    private _computed = [_anchorPos, _nominal, 0, _contain] call FADE_mission_computeSearchZone;
+    _computed params ["_markerPos", "_radius"];
+    if (_zoneKey != "") then {
+        _gridNames = [_taskId, _zoneKey, _markerPos, _radius, _markerColor, _contain] call FADE_mission_createGridZoneMarkers;
+        if (getMarkerColor _zoneKey != "") then {
+            private _centre = getMarkerPos _zoneKey;
+            _state set [15, _centre];
+            _state set [16, getMarkerSize _zoneKey];
+            if (_iconMarker != "" && { getMarkerColor _iconMarker != "" }) then {
+                _iconMarker setMarkerPos ([_centre] call FADE_normPos3);
             };
+        } else {
+            _state set [15, _markerPos];
+            _state set [16, [_radius, _radius]];
         };
-    } else {
-        if (_zoneKey != "" && { markerShape _zoneKey != "" }) then {
-            [_zoneKey, _markerPos, _radius] call FADE_mission_setRadiusMarkerGeometry;
-        };
-    };
-    if (_iconMarker != "" && { getMarkerColor _iconMarker != "" }) then {
-        private _iconPos = if (_snapToTrue) then { +_truePos } else { +_markerPos };
-        _iconMarker setMarkerPos ([_iconPos] call FADE_normPos3);
     };
     _state set [8, _gridNames];
     missionNamespace setVariable [[_taskId] call FADE_fieldIntel_missionKey, _state];
@@ -121,49 +216,47 @@ FADE_fieldIntel_addPoints = {
     if !(_state isEqualType []) exitWith { false };
     if (count _state < 13) exitWith { false };
     private _maxPts = missionNamespace getVariable ["FADE_fieldIntelMaxPoints", 100];
-    private _pts = (_state select 10) + _delta;
-    _pts = _pts min _maxPts max 0;
+    private _pts = ((_state select 10) + _delta) min _maxPts max 0;
     _state set [10, _pts];
     missionNamespace setVariable [[_taskId] call FADE_fieldIntel_missionKey, _state];
     private _prevLevel = _state select 11;
-    private _thresholds = [25, 50, 75, 100];
     private _newLevel = 0;
     {
         if (_pts >= _x) then { _newLevel = _x };
-    } forEach _thresholds;
-    if (_delta > 0) then {
-        [_state, _pts, _pts >= _maxPts] call FADE_fieldIntel_applyGeometry;
-        // #region agent log
-        diag_log format [
-            "[FAC DbgBrowser 62d308] H16 fieldIntel refine task=%1 pts=%2/%3 level=%4 radiusMode=%5",
-            _taskId, _pts, _maxPts, _newLevel, _state select 5
-        ];
-        // #endregion
-    };
+    } forEach [25, 50, 75, 100];
     if (_newLevel > _prevLevel) then {
+        private _confirmed = _newLevel >= 100;
+        private _applied = [_state, _pts, _confirmed] call FADE_fieldIntel_applyGeometry;
+        if (_applied isEqualType [] && { count _applied >= 13 }) then { _state = _applied };
         _state set [11, _newLevel];
         missionNamespace setVariable [[_taskId] call FADE_fieldIntel_missionKey, _state];
-        private _msg = switch (true) do {
-            case (_newLevel >= 100): { "Intel confirms the objective. Search area refined to grid." };
-            case (_newLevel >= 75): { "Intel narrows the search area a lot." };
-            case (_newLevel >= 50): { "Intel tightens the search area." };
-            default { "Partial intel. Search area slightly reduced." };
-        };
+        private _namedCount = count ([_state] call FADE_fieldIntel_objectivePositions);
+        private _contain = [_state] call FADE_fieldIntel_containPositions;
+        private _msg = [_newLevel, _namedCount] call FADE_fieldIntel_hintText;
         [_msg] remoteExec ["FADE_showMissionHint", 0];
-        if (_newLevel >= 100 && { !isNil "BIS_fnc_taskSetDestination" }) then {
-            private _truePos = _state select 2;
-            private _destTask = if (count _state > 13 && { (_state select 13) != "" }) then { _state select 13 } else { _taskId };
-            [_destTask, _truePos] call BIS_fnc_taskSetDestination;
+        if (_confirmed && { !isNil "BIS_fnc_taskSetDestination" }) then {
+            private _destTask = if (count _state > 13 && { (_state select 13) isEqualType "" && { (_state select 13) != "" } }) then {
+                _state select 13
+            } else {
+                _taskId
+            };
+            if ((_destTask call BIS_fnc_taskState) in ["ASSIGNED", "CREATED"]) then {
+                private _destPos = [];
+                if (count _state > 14) then {
+                    private _track = _state select 14;
+                    if (!isNull _track && { alive _track }) then { _destPos = getPosATL _track };
+                };
+                if (count _destPos < 2 && { count _contain > 0 }) then { _destPos = _contain select 0 };
+                if (count _destPos >= 2) then {
+                    [_destTask, _destPos] call BIS_fnc_taskSetDestination;
+                };
+            };
         };
-    };
-    if (missionNamespace getVariable ["FADE_intelDiaryLog", false]) then {
-        private _cumPct = round ((_pts / _maxPts) * 100);
-        private _grid = mapGridPosition (_state select 2);
-        private _line = format [
-            "%1: objective grid %2 (search %3%% refined, +%4%% this find).",
-            _sourceLabel, _grid, _cumPct, round (_delta / _maxPts * 100)
-        ];
-        [_line] remoteExec ["FADE_intel_clientAppendIntelDiary", 0];
+        if (missionNamespace getVariable ["FADE_intelDiaryLog", false]) then {
+            private _whenStr = format ["Mission +%1 min", floor (time / 60) max 0];
+            private _body = [_contain, _confirmed, _namedCount] call FADE_fieldIntel_diaryBody;
+            ["Body search", _whenStr, _body, "Body search"] remoteExec ["FADE_intel_clientAppendIntelDiary", 0];
+        };
     };
     true
 };
@@ -202,7 +295,9 @@ FADE_fieldIntel_startForMission = {
         "_markerOut",
         "_enemyGroups",
         ["_markerColor", "ColorEAST"],
-        ["_destTaskId", ""]
+        ["_destTaskId", ""],
+        ["_objectivePositions", []],
+        ["_trackUnit", objNull]
     ];
     if !([_missionType] call FADE_fieldIntel_isEnabledForType) exitWith {};
     if (_taskId == "" || { _markerOut isEqualType [] && { count _markerOut < 4 } }) exitWith {};
@@ -213,13 +308,22 @@ FADE_fieldIntel_startForMission = {
     private _radius = _markerOut select 3;
     private _gridNames = if (count _markerOut > 4) then { _markerOut select 4 } else { [] };
     private _mode = if (_zoneKey find "_grid" >= 0) then { "grid" } else { "ellipse" };
-    private _mustContain = [+_truePos];
+    private _positions = [];
+    {
+        private _p = [_x] call FADE_fieldIntel_normalisePos;
+        if (count _p >= 2) then { _positions pushBack _p };
+    } forEach _objectivePositions;
+    if (_positions isEqualTo []) then {
+        private _p = [_truePos] call FADE_fieldIntel_normalisePos;
+        if (count _p >= 2) then { _positions = [_p] };
+    };
+    private _track = if (isNull _trackUnit) then { objNull } else { _trackUnit };
     private _state = [
         _taskId,
         _missionType,
         +_truePos,
         +_markerPos,
-        [+_truePos],
+        _positions,
         _mode,
         _icon,
         _zoneKey,
@@ -228,7 +332,10 @@ FADE_fieldIntel_startForMission = {
         0,
         0,
         _markerColor,
-        _destTaskId
+        _destTaskId,
+        _track,
+        +_markerPos,
+        [_radius, _radius]
     ];
     missionNamespace setVariable [[_taskId] call FADE_fieldIntel_missionKey, _state];
     [_taskId, _enemyGroups] call FADE_fieldIntel_registerGroups;

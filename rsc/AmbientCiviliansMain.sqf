@@ -22,12 +22,15 @@ FADE_civ_checkZones = {
         private _trigger = missionNamespace getVariable [_name, objNull];
         if (!isNull _trigger) then {
             private _pinned = [_name] call FADE_civ_isZonePinned;
+            private _active = !(isNil { FADE_civZoneState get _name });
             private _center = getPosATL _trigger;
             private _minPlayerDist = 1e12;
             {
                 _minPlayerDist = _minPlayerDist min (_x distance2D _center);
             } forEach _players;
-            if (_minPlayerDist > _zoneActivationDist && { !_pinned }) then { continue };
+            // Skip towns that are idle and out of range. An active town still needs the
+            // far-check below, or it stays spawned after the player leaves.
+            if (!_pinned && { !_active } && { _minPlayerDist > _zoneActivationDist }) then { continue };
             private _nearCount = 0;
             private _farCount = 0;
             for "_p" from 0 to (_numPlayers - 1) do {

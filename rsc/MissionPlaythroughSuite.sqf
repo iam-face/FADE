@@ -2,7 +2,7 @@
 // MissionPlaythroughSuite.sqf  -  sequential mission init + mechanic smoke tests.
 // Complements MissionTestSuite.sqf (static smoke). Mutates live mission state.
 //
-// RECOMMENDED (debug-tools lobby param adds scroll-wheel action):
+// RECOMMENDED (debug console or the dev scroll-wheel action). The entry spawns; do not call the runner directly.
 //   [] call FAC_playthroughSuite_execAll
 //
 // Server only (debug console, dedicated host):
@@ -24,9 +24,9 @@ FAC_playthroughSuite__counterAttackTypes = [
     "AssetRetrieval", "SearchDestroy", "ClearArea", "CAS", "Raid", "Hostage", "HVT", "CASEVAC", "CSAR"
 ];
 
-FAC_playthroughSuite__longInitTypes = ["AreaOfOperations", "Operation", "Raid", "Invasion", "InterceptConvoy", "AssetRetrieval"];
+FAC_playthroughSuite__longInitTypes = ["AreaOfOperations", "Operation", "Raid", "Invasion", "InterceptConvoy", "AssetRetrieval", "ClearArea", "EscapeEvasion"];
 FAC_playthroughSuite__initTimeoutSec = 14;
-FAC_playthroughSuite__longInitTimeoutSec = 22;
+FAC_playthroughSuite__longInitTimeoutSec = 50;
 FAC_playthroughSuite__convoyInitTimeoutSec = 40;
 FAC_playthroughSuite__cleanupTimeoutSec = 8;
 FAC_playthroughSuite__betweenMissionSec = 0.5;
@@ -83,19 +83,20 @@ FAC_playthroughSuite__getDestPos = {
         +(_global select 2)
     };
     private _singleList = missionNamespace getVariable ["FADE_singleMissions", []];
+    private _pos = [];
     {
         if ((_x select 0) == _missionType && { [_x, _player] call FADE_isMissionEntryOwnedByPlayer }) exitWith {
-            +(_x select 2)
+            _pos = +(_x select 2);
         };
     } forEach _singleList;
-    []
+    _pos
 };
 
 FAC_playthroughSuite__saveCounterAttackTiming = {
     private _keys = [
-        "FADE_counterAttackFirstDelayMin", "FADE_counterAttackFirstDelayMax",
-        "FADE_counterAttackBetweenMin", "FADE_counterAttackBetweenMax",
-        "FADE_counterAttackPollInterval", "FADE_counterAttackDetectionRadius"
+        "FADE_qrfFirstDelayMin", "FADE_qrfFirstDelayMax",
+        "FADE_qrfBetweenMin", "FADE_qrfBetweenMax",
+        "FADE_qrfPollInterval", "FADE_qrfDetectionRadius"
     ];
     private _saved = createHashMap;
     { _saved set [_x, missionNamespace getVariable [_x, nil]] } forEach _keys;
@@ -116,11 +117,11 @@ FAC_playthroughSuite__restoreCounterAttackTiming = {
 };
 
 FAC_playthroughSuite__fastCounterAttackTiming = {
-    missionNamespace setVariable ["FADE_counterAttackFirstDelayMin", 1];
-    missionNamespace setVariable ["FADE_counterAttackFirstDelayMax", 2];
-    missionNamespace setVariable ["FADE_counterAttackBetweenMin", 3];
-    missionNamespace setVariable ["FADE_counterAttackBetweenMax", 5];
-    missionNamespace setVariable ["FADE_counterAttackPollInterval", 1];
+    missionNamespace setVariable ["FADE_qrfFirstDelayMin", 1];
+    missionNamespace setVariable ["FADE_qrfFirstDelayMax", 2];
+    missionNamespace setVariable ["FADE_qrfBetweenMin", 3];
+    missionNamespace setVariable ["FADE_qrfBetweenMax", 5];
+    missionNamespace setVariable ["FADE_qrfPollInterval", 1];
 };
 
 FAC_playthroughSuite__teleportPlayer = {
@@ -164,7 +165,9 @@ FAC_playthroughSuite__startMission = {
             [[_uid], 30, "Normal", _player] call FADE_startGeoGuesser;
         };
         case "PointDefense": {
-            [_player, [], missionNamespace getVariable ["FADE_pdRun_durationSec", 12]] call FADE_startPointDefense;
+            missionNamespace setVariable ["FADE_pointDefenseDurationMinSec", 4];
+            missionNamespace setVariable ["FADE_pdRun_durationSec", 4];
+            [_player, [], 4] call FADE_startPointDefense;
         };
         default {
             [_missionType, _player] call FADE_startMission;
@@ -307,14 +310,14 @@ FAC_playthroughSuite__purgeTaskId = {
         if (markerShape _bluM != "") then { [_bluM] call FADE_deleteMarkerSafe };
     };
 
+    if (!isNil "FADE_mission_unpinCivZonesForTask") then {
+        [_taskId] call FADE_mission_unpinCivZonesForTask;
+    };
     if (!isNil "FADE_cleanupMissionEntities") then {
         [_taskId, _mType, true] call FADE_cleanupMissionEntities;
     };
     if (!isNil "FADE_cleanupMissionMarkers") then {
         [_taskId, _player] call FADE_cleanupMissionMarkers;
-    };
-    if (!isNil "FADE_mission_unpinCivZonesForTask") then {
-        [_taskId] call FADE_mission_unpinCivZonesForTask;
     };
     if (!isNil "FADE_missionEnt_scheduledCleanup") then {
         [_taskId, 0, _player] spawn FADE_missionEnt_scheduledCleanup;
@@ -490,6 +493,7 @@ FAC_playthroughSuite__runQrfProbe = {
 
     [_savedTiming] call FAC_playthroughSuite__restoreCounterAttackTiming;
     [] call FAC_playthroughSuite__fastCounterAttackTiming;
+    // Detection still needs an OPFOR unit to know the player. Teleport alone does not arm a wave.
 
     private _probePos = if (count _dest >= 3) then { +_dest } else { [(_dest select 0), (_dest select 1), 0] };
     [_player, _probePos] call FAC_playthroughSuite__teleportPlayer;
@@ -620,9 +624,14 @@ FAC_playthroughSuite__runOne = {
 FAC_playthroughSuite_runServer = {
     params [
         ["_notifyPlayer", objNull],
-        ["_types", FAC_playthroughSuite__missionTypes]
+        ["_types", []]
     ];
     if (!isServer) exitWith { [0, 0, 0] };
+    if (_types isEqualTo []) then { _types = +FAC_playthroughSuite__missionTypes };
+    if (_types isEqualTo []) exitWith {
+        diag_log "[FAC Playthrough] FAIL: no mission types to run";
+        [0, 1, 0]
+    };
 
     if (missionNamespace getVariable ["FAC_playthroughSuite_running", false]) exitWith {
         ["[FAC Playthrough] Already running.", _notifyPlayer] call FAC_playthroughSuite__chat;
@@ -633,7 +642,27 @@ FAC_playthroughSuite_runServer = {
         _notifyPlayer = objNull;
         { if (isPlayer _x) exitWith { _notifyPlayer = _x } } forEach allPlayers;
     };
-    if (isNull _notifyPlayer || { !isPlayer _notifyPlayer }) exitWith {
+    private _headlessOwner = false;
+    if ((isNull _notifyPlayer || { !isPlayer _notifyPlayer }) && { missionNamespace getVariable ["FADE_headlessTestActive", false] }) then {
+        private _side = missionNamespace getVariable ["FADE_sideFriendly", west];
+        if !(_side isEqualType west) then { _side = west };
+        private _class = switch (_side) do {
+            case east: { "O_Soldier_F" };
+            case independent: { "I_Soldier_F" };
+            default { "B_Soldier_F" };
+        };
+        private _pos = missionNamespace getVariable ["FADE_basePos", [0, 0, 0]];
+        if (count _pos < 2) then { _pos = [0, 0, 0] };
+        private _grp = createGroup [_side, true];
+        _notifyPlayer = _grp createUnit [_class, _pos, [], 0, "NONE"];
+        if (!isNull _notifyPlayer) then {
+            _notifyPlayer setVariable ["FADE_headlessOwner", true, true];
+            _notifyPlayer allowDamage false;
+            missionNamespace setVariable ["FADE_headlessOwnerUnit", _notifyPlayer];
+        };
+        _headlessOwner = !isNull _notifyPlayer;
+    };
+    if ((isNull _notifyPlayer || { !isPlayer _notifyPlayer }) && { !_headlessOwner }) exitWith {
         diag_log "[FAC Playthrough] FAIL: no player available for mission ownership";
         [0, 1, 0]
     };

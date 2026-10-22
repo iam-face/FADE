@@ -239,7 +239,7 @@ FADE_runMission_AssetRetrieval = {
         private _markerName = "FADE_asset_" + _taskId;
         _player setVariable ["FADE_myMissionMarker", _markerName, true];
         private _markerOut = [_taskId, _markerName, _center, _areaRadius, "ColorOrange", "objective", _operationName, -1, -1, [_center]] call FADE_mission_createObjectiveMarker;
-        [_taskId, "AssetRetrieval", _center, _markerOut, [], "ColorOrange"] call FADE_fieldIntel_startForMission;
+        [_taskId, "AssetRetrieval", _center, _markerOut, [], "ColorOrange", "", [_center]] call FADE_fieldIntel_startForMission;
 
         private _grid = mapGridPosition _center;
         private _brief = format ["ASSET RETRIEVAL  -  VEHICLE%1%1Objective area (approx.): Grid %2%1%1Recover the enemy vehicle %3 and return it within 1000 m of base. Clear the site, then drive, tow or sling it back. Vehicle must stay recoverable.", toString [10], _grid, _vehicleName] + _briefGuiTail;
@@ -276,17 +276,10 @@ FADE_runMission_AssetRetrieval = {
                 };
                 if (_guardPos isEqualType [] && { count _guardPos >= 2 }) then {
                     if (count _guardPos < 3) then { _guardPos = [(_guardPos select 0), (_guardPos select 1), 0] };
-                    private _guardGrp = createGroup _sideEnemy;
-                    private _u = _guardGrp createUnit [selectRandom _enemyUnitsAsset, _guardPos, [], 0, "NONE"];
-                    if (!isNull _u) then {
-                        [_guardGrp] call FAC_applyEnemyScenarioToGroup;
-                        _u setPosATL _guardPos;
-                        _u setUnitPos "MIDDLE";
-                        [_u] call FADE_tryAmbientCombatAnim;
+                    private _guardGrp = [[_guardPos], _sideEnemy, _enemyUnitsAsset, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+                    if (!isNull _guardGrp) then {
                         _allGroups pushBack _guardGrp;
                         _guardCountSpawned = _guardCountSpawned + 1;
-                    } else {
-                        deleteGroup _guardGrp;
                     };
                 };
             };
@@ -304,14 +297,12 @@ FADE_runMission_AssetRetrieval = {
                 if (_sp isEqualType [] && { count _sp >= 2 }) then {
                     _sp = [(_sp select 0), (_sp select 1), (_sp param [2, 0])];
                     private _size = [3 + floor random 3, 2] call _scaleOpforCount;
-                    private _grp = createGroup _sideEnemy;
+                    private _patrolClasses = [];
                     for "_k" from 0 to (_size - 1) do {
-                        private _cls = if (_k < count _enemyUnitsAsset) then { _enemyUnitsAsset select _k } else { _baseEnemyClass };
-                        private _u = _grp createUnit [_cls, _sp, [], 0, "NONE"];
-                        if (!isNull _u) then { _u setPosATL _sp };
+                        _patrolClasses pushBack (if (_k < count _enemyUnitsAsset) then { _enemyUnitsAsset select _k } else { _baseEnemyClass });
                     };
-                    if (count units _grp > 0) then {
-                        [_grp] call FAC_applyEnemyScenarioToGroup;
+                    private _grp = [_sp, _sideEnemy, _patrolClasses] call FADE_missionCreateInfantryGroupAt;
+                    if (!isNull _grp) then {
                         _grp setBehaviour "SAFE";
                         _grp setCombatMode "YELLOW";
                         for "_w" from 0 to 2 do {
@@ -332,8 +323,6 @@ FADE_runMission_AssetRetrieval = {
                             };
                         };
                         _allGroups pushBack _grp;
-                    } else {
-                        deleteGroup _grp;
                     };
                 };
             };
@@ -383,6 +372,7 @@ FADE_runMission_AssetRetrieval = {
 
     if (_fromMapClick && { count _mapAnchor >= 2 }) then {
         private _buildingsNear = nearestObjects [_mapAnchor, ["House", "Building"], 500];
+        if (count _buildingsNear > 40) then { _buildingsNear resize 40 };
         private _suitableNear = [];
         {
             private _bps = _x buildingPos -1;
@@ -521,7 +511,7 @@ FADE_runMission_AssetRetrieval = {
     private _markerName = "FADE_asset_" + _taskId;
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _markerOut = [_taskId, _markerName, _center, _areaRadius, "ColorOrange", "objective", _operationName, -1, -1, [_center]] call FADE_mission_createObjectiveMarker;
-    [_taskId, "AssetRetrieval", _center, _markerOut, [], "ColorOrange"] call FADE_fieldIntel_startForMission;
+    [_taskId, "AssetRetrieval", _center, _markerOut, [], "ColorOrange", "", [_center]] call FADE_fieldIntel_startForMission;
 
     private _grid = mapGridPosition _center;
     private _brief = format ["ASSET RETRIEVAL  -  OBJECT%1%1Objective area (approx.): Grid %2%1%1Recover %3 (most likely indoors in a defended building). Clear the site, then Pick up the package.", toString [10], _grid, _assetName] + _briefGuiTail;
@@ -558,17 +548,10 @@ FADE_runMission_AssetRetrieval = {
             if (count _pos >= 2 && { random 1 < 0.75 }) then {
                 if (count _pos < 3) then { _pos = [(_pos select 0), (_pos select 1), 0] };
                 if !([_pos] call _dryPos) then { continue };
-                private _grp = createGroup _sideEnemy;
-                private _u = _grp createUnit [selectRandom _enemyUnitsAsset, _pos, [], 0, "NONE"];
-                if (!isNull _u) then {
-                    [_grp] call FAC_applyEnemyScenarioToGroup;
-                    _u setPosATL _pos;
-                    _u setUnitPos "MIDDLE";
-                    [_u] call FADE_tryAmbientCombatAnim;
+                private _grp = [[_pos], _sideEnemy, _enemyUnitsAsset, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+                if (!isNull _grp) then {
                     _allGroups pushBack _grp;
                     _garrisonCount = _garrisonCount + 1;
-                } else {
-                    deleteGroup _grp;
                 };
             };
         };
@@ -577,23 +560,18 @@ FADE_runMission_AssetRetrieval = {
             if (_fallbackIdx == _assetIdx && { count _houseBps > 1 }) then { _fallbackIdx = 1 };
             private _fallbackPos = _houseBps select _fallbackIdx;
             if (count _fallbackPos < 3) then { _fallbackPos = [(_fallbackPos select 0), (_fallbackPos select 1), 0] };
-            private _grp = createGroup _sideEnemy;
-            private _u = _grp createUnit [_baseEnemyClass, _fallbackPos, [], 0, "NONE"];
-            if (!isNull _u) then {
-                [_grp] call FAC_applyEnemyScenarioToGroup;
-                _u setPosATL _fallbackPos;
-                _u setUnitPos "MIDDLE";
-                [_u] call FADE_tryAmbientCombatAnim;
+            private _grp = [[_fallbackPos], _sideEnemy, [_baseEnemyClass], "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+            if (!isNull _grp) then {
                 _allGroups pushBack _grp;
                 _garrisonCount = 1;
-            } else {
-                deleteGroup _grp;
             };
         };
         private _nearRad = missionNamespace getVariable ["FADE_garrisonMissionNearbyRadiusM", 450];
         private _nearBldChance = missionNamespace getVariable ["FADE_garrisonMissionNearbyBuildingChance", 0.25];
         private _nearSlotP = missionNamespace getVariable ["FADE_vgNearbySlotChance", 0.165];
-        private _nearBuildingsFull = (nearestObjects [_center, ["House", "Building"], _nearRad]) select {
+        private _nearRaw = nearestObjects [_center, ["House", "Building"], _nearRad];
+        _nearRaw = [_nearRaw, 40] call FADE_samplePlacementList;
+        private _nearBuildingsFull = _nearRaw select {
             !(_x isEqualTo _house) && { count (_x buildingPos -1) >= 1 } && { [getPosATL _x] call _dryPos }
         };
         if (count _nearBuildingsFull > 16) then {
@@ -634,18 +612,8 @@ FADE_runMission_AssetRetrieval = {
                     _st set ["barrelsRef", _vgArHintObjs];
                     [_bld, _slotATL, +_enemyUnitsAsset, _st] call _vgAr;
                 } else {
-                    private _bldGrp = createGroup _sideEnemy;
-                    {
-                        private _pos = +_x;
-                        private _u = _bldGrp createUnit [selectRandom _enemyUnitsAsset, _pos, [], 0, "NONE"];
-                        if (!isNull _u) then {
-                            _u setPosATL _pos;
-                            _u setUnitPos "MIDDLE";
-                            [_u] call FADE_tryAmbientCombatAnim;
-                        };
-                    } forEach _slotATL;
-                    [_bldGrp] call FAC_applyEnemyScenarioToGroup;
-                    _allGroups pushBack _bldGrp;
+                    private _bldGrp = [_slotATL, _sideEnemy, _enemyUnitsAsset, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+                    if (!isNull _bldGrp) then { _allGroups pushBack _bldGrp };
                 };
                 _garrisonCount = _garrisonCount + _spawnedInBld;
             };
@@ -662,17 +630,10 @@ FADE_runMission_AssetRetrieval = {
             };
             if (_guardPos isEqualType [] && { count _guardPos >= 2 }) then {
                 if (count _guardPos < 3) then { _guardPos = [(_guardPos select 0), (_guardPos select 1), 0] };
-                private _guardGrp = createGroup _sideEnemy;
-                private _u = _guardGrp createUnit [selectRandom _enemyUnitsAsset, _guardPos, [], 0, "NONE"];
-                if (!isNull _u) then {
-                    [_guardGrp] call FAC_applyEnemyScenarioToGroup;
-                    _u setPosATL _guardPos;
-                    _u setUnitPos "MIDDLE";
-                    [_u] call FADE_tryAmbientCombatAnim;
+                private _guardGrp = [[_guardPos], _sideEnemy, _enemyUnitsAsset, "MIDDLE", true] call FADE_spawnInfantryAtPositions;
+                if (!isNull _guardGrp) then {
                     _allGroups pushBack _guardGrp;
                     _guardCountSpawned = _guardCountSpawned + 1;
-                } else {
-                    deleteGroup _guardGrp;
                 };
             };
         };
@@ -690,14 +651,12 @@ FADE_runMission_AssetRetrieval = {
             if (_sp isEqualType [] && { count _sp >= 2 }) then {
                 _sp = [(_sp select 0), (_sp select 1), (_sp param [2, 0])];
                 private _size = [3 + floor random 3, 2] call _scaleOpforCount;
-                private _grp = createGroup _sideEnemy;
+                private _patrolClasses = [];
                 for "_k" from 0 to (_size - 1) do {
-                    private _cls = if (_k < count _enemyUnitsAsset) then { _enemyUnitsAsset select _k } else { _baseEnemyClass };
-                    private _u = _grp createUnit [_cls, _sp, [], 0, "NONE"];
-                    if (!isNull _u) then { _u setPosATL _sp };
+                    _patrolClasses pushBack (if (_k < count _enemyUnitsAsset) then { _enemyUnitsAsset select _k } else { _baseEnemyClass });
                 };
-                if (count units _grp > 0) then {
-                    [_grp] call FAC_applyEnemyScenarioToGroup;
+                private _grp = [_sp, _sideEnemy, _patrolClasses] call FADE_missionCreateInfantryGroupAt;
+                if (!isNull _grp) then {
                     _grp setBehaviour "SAFE";
                     _grp setCombatMode "YELLOW";
                     for "_w" from 0 to 2 do {
@@ -718,8 +677,6 @@ FADE_runMission_AssetRetrieval = {
                         };
                     };
                     _allGroups pushBack _grp;
-                } else {
-                    deleteGroup _grp;
                 };
             };
         };

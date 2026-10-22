@@ -1,8 +1,8 @@
 // =============================================================================
 // MissionRaid.sqf  -  Global multi-objective raid. N objectives at separate
-// CIV_T_* zones. Each zone: weighted variant (in-zone + RTB mix), per-zone
-// QRF on player detection (foot wave then vehicles). Target buildings marked at spawn. Helpers in
-// FADE_ObjectiveHelpers.sqf and FADE_RaidHelpers.sqf.
+// CIV_T_* zones. Each zone: weighted variant (in-zone + RTB mix). One QRF
+// controller for the parent task; later zones add sensors. Target buildings
+// marked at spawn. Helpers in FADE_ObjectiveHelpers.sqf and FADE_RaidHelpers.sqf.
 // =============================================================================
 if (!isServer) exitWith {};
 FADE_runMission_Raid = {
@@ -22,13 +22,8 @@ FADE_runMission_Raid = {
     private _raidZoneCount = (round (missionNamespace getVariable ["FADE_raidObjectiveCount", 3])) max 2 min 5;
     private _minDistBase = 1000;
     private _minDistBetweenZones = missionNamespace getVariable ["FADE_minDistBetweenMissions", 2000];
-    private _raidQrfSkipDetection = missionNamespace getVariable ["FADE_raidQrfSkipDetectionWait", false];
-    private _raidQrfFirstMin = missionNamespace getVariable ["FADE_raidQrfFirstDelayMin", 0];
-    private _raidQrfFirstMax = missionNamespace getVariable ["FADE_raidQrfFirstDelayMax", 30];
-    private _raidQrfFootWave = missionNamespace getVariable ["FADE_raidQrfFootWave", true];
     private _raidTimeoutSec = missionNamespace getVariable ["FADE_raidTimeoutSec", 0];
     private _baseDistForComplete = 100;
-    private _qrfDetectRadius = missionNamespace getVariable ["FADE_raidQrfDetectionRadiusM", 350];
     private _variantLabels = missionNamespace getVariable ["FADE_raid_variantLabels", createHashMap];
 
     [] call FADE_ensureBisTaskSetParent;
@@ -380,7 +375,7 @@ FADE_runMission_Raid = {
         private _variantTitle = _variantLabels getOrDefault [_actualVariant, _actualVariant];
         [_childTaskId, _variantDesc, _variantTitle, _buildingPos, "attack"] call _fnc_createChildTask;
 
-        [_taskId, _zoneWinPos, _basePos, _enemyUnitsRaid, _zoneGroups, _qrfDetectRadius, _raidQrfSkipDetection, _raidQrfFirstMin, _raidQrfFirstMax, false, _raidQrfFootWave] call FADE_counterAttackStart;
+        [_taskId, _zoneWinPos, _basePos, _enemyUnitsRaid, _zoneGroups] call FADE_counterAttackStart;
 
         [_taskId, _childTaskId, _zi, _basePos, _baseDistForComplete, _actualVariant, _watcherPayload, _zoneMarkerName, _zoneWinPos, _zoneCodename] spawn {
             params ["_taskId", "_childTaskId", "_zi", "_basePos", "_baseDistForComplete", "_variant", "_payload", "_zoneMarkerName", "_zoneWinPos", "_zoneCodename"];
@@ -449,6 +444,7 @@ FADE_runMission_Raid = {
                             _result = "FAILED";
                         };
                         if (!_done && { alive _hostage } && { (_hostage distance _basePos) < _baseDistForComplete }) then {
+                            [_hostage] call FADE_hostage_playReturnCue;
                             _done = true;
                             _result = "SUCCEEDED";
                         };

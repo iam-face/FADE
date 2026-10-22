@@ -112,10 +112,10 @@ FADE_runMission_HVT = {
     [format ["<t color='#FFFFFF'>Grid: %1</t><br/><t color='#FFFFFF'>HVT: %2 -- %3</t><br/><br/><t color='#FFFFFF'>Eliminate or capture and return to base.</t>", _grid, _hvtCodename, _hvtTypeName]] call _showAssignedHint;
     [_player, "HVT"] call FADE_notifyOthersMissionStarted;
 
-    private _allGroups = [_hvtGroup, _guardGroup] + _areaGroups + _patrolGroups;
-    [[_guardGroup] + _patrolGroups, _basePos] call FADE_registerEnemyRetreat;
+    private _allGroups = ([_hvtGroup, _guardGroup] + _areaGroups + _patrolGroups) select { !isNull _x };
+    [([_guardGroup] + _patrolGroups) select { !isNull _x }, _basePos] call FADE_registerEnemyRetreat;
 
-    [_taskId, "HVT", _hvtObjectivePos, _markerOut, _allGroups, _markerEnemy] call FADE_fieldIntel_startForMission;
+    [_taskId, "HVT", _hvtObjectivePos, _markerOut, _allGroups, _markerEnemy, "", [_hvtObjectivePos], _hvt] call FADE_fieldIntel_startForMission;
 
     [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
     if (!isNull _hvtBarrel) then { [_taskId, _hvtBarrel] call FADE_missionEnt_registerObject };

@@ -5,101 +5,7 @@
 // =============================================================================
 
 FAC_medicalTrainingGui_applyLayout = {
-    private _d = findDisplay 60800;
-    if (isNull _d) exitWith {};
-    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow false } } forEach [60890, 60891];
-    private _injuryIdcs = [
-        60892, 60802, 60830, 60836, 60894, 60895, 60896, 60897, 60898, 60899, 60900, 60901, 60902, 60903, 60904, 60905,
-        60860, 60861, 60862, 60863, 60871, 60864, 60872, 60865, 60866, 60867, 60868, 60869, 60870,
-        60803, 60804, 60806, 60805, 60807, 60831, 60832, 60833, 60834, 60835, 60850
-    ];
-    { private _c = _d displayCtrl _x; if (!isNull _c) then { _c ctrlShow true } } forEach _injuryIdcs;
-    private _set = {
-        params ["_idc", "_x", "_y", "_w", "_h"];
-        private _c = _d displayCtrl _idc;
-        if (!isNull _c) then { _c ctrlSetPosition [_x, _y, _w, _h]; _c ctrlCommit 0 };
-    };
-    [60880, 0.04, 0.105, 0.28, 0.028] call _set;
-    [60801, 0.04, 0.135, 0.28, 0.52] call _set;
-    [60814, 0.04, 0.665, 0.28, 0.036] call _set;
-    [60815, 0.04, 0.708, 0.28, 0.036] call _set;
-    [60816, 0.04, 0.751, 0.28, 0.036] call _set;
-    [60893, 0.04, 0.794, 0.28, 0.048] call _set;
-    [60892, 0.34, 0.105, 0.62, 0.028] call _set;
-    [60802, 0.34, 0.132, 0.62, 0.034] call _set;
-    [60830, 0.34, 0.172, 0.30, 0.036] call _set;
-    [60836, 0.66, 0.172, 0.32, 0.036] call _set;
-    [60894, 0.34, 0.216, 0.62, 0.022] call _set;
-    [60895, 0.34, 0.240, 0.30, 0.018] call _set;
-    [60860, 0.34, 0.260, 0.30, 0.032] call _set;
-    [60896, 0.66, 0.240, 0.30, 0.018] call _set;
-    [60861, 0.66, 0.260, 0.30, 0.032] call _set;
-    [60897, 0.34, 0.298, 0.30, 0.018] call _set;
-    [60862, 0.34, 0.318, 0.30, 0.032] call _set;
-    [60898, 0.66, 0.298, 0.30, 0.018] call _set;
-    [60863, 0.66, 0.318, 0.30, 0.032] call _set;
-    [60871, 0.34, 0.356, 0.62, 0.018] call _set;
-    [60864, 0.34, 0.376, 0.62, 0.028] call _set;
-    [60872, 0.34, 0.410, 0.62, 0.018] call _set;
-    [60865, 0.34, 0.430, 0.62, 0.028] call _set;
-    [60899, 0.34, 0.464, 0.30, 0.018] call _set;
-    [60866, 0.34, 0.484, 0.30, 0.032] call _set;
-    [60900, 0.66, 0.464, 0.30, 0.018] call _set;
-    [60867, 0.66, 0.484, 0.30, 0.032] call _set;
-    [60868, 0.34, 0.524, 0.62, 0.036] call _set;
-    [60901, 0.34, 0.568, 0.62, 0.022] call _set;
-    [60869, 0.34, 0.592, 0.44, 0.034] call _set;
-    [60870, 0.80, 0.592, 0.16, 0.034] call _set;
-    [60902, 0.34, 0.634, 0.62, 0.022] call _set;
-    [60903, 0.34, 0.658, 0.30, 0.018] call _set;
-    [60803, 0.34, 0.678, 0.30, 0.032] call _set;
-    [60904, 0.66, 0.658, 0.30, 0.018] call _set;
-    [60804, 0.66, 0.678, 0.30, 0.032] call _set;
-    [60806, 0.34, 0.716, 0.62, 0.018] call _set;
-    [60805, 0.34, 0.736, 0.62, 0.028] call _set;
-    [60905, 0.34, 0.770, 0.30, 0.018] call _set;
-    [60807, 0.34, 0.790, 0.30, 0.032] call _set;
-    [60831, 0.66, 0.770, 0.30, 0.052] call _set;
-    [60832, 0.34, 0.832, 0.30, 0.036] call _set;
-    [60833, 0.66, 0.832, 0.30, 0.036] call _set;
-    [60834, 0.34, 0.876, 0.30, 0.036] call _set;
-    [60835, 0.66, 0.876, 0.30, 0.036] call _set;
-    [60850, 0.34, 0.920, 0.62, 0.028] call _set;
-    private _legacyLabels = [
-        "Airway / chest (Zeus parity)", "Obstruction", "Occluded", "Hemopneumothorax", "Tension PTX",
-        "PTX deteriorate", "Deep penetrating", "Cardiac rhythm", "Bleeding wound / part", "Body part", "Wound type", "Depth"
-    ];
-    private _legacyHidden = 0;
-    {
-        if ((ctrlIDC _x) == -1 && { (ctrlText _x) in _legacyLabels }) then {
-            _x ctrlShow false;
-            // #region agent log
-            _legacyHidden = _legacyHidden + 1;
-            // #endregion
-        };
-    } forEach (allControls _d);
-    // #region agent log
-    private _labelIdcs = [60894, 60895, 60896, 60897, 60898, 60899, 60900, 60901, 60902, 60903, 60904, 60905];
-    private _missing = [];
-    private _presentShown = [];
-    private _presentHidden = [];
-    {
-        private _c = _d displayCtrl _x;
-        if (isNull _c) then {
-            _missing pushBack _x;
-        } else {
-            if (ctrlShown _c) then { _presentShown pushBack [_x, ctrlText _c] } else { _presentHidden pushBack [_x, ctrlText _c] };
-        };
-    } forEach _labelIdcs;
-    private _comboIdcs = [60860, 60861, 60862, 60863, 60869, 60803, 60804, 60807];
-    private _combosOk = [];
-    { private _c = _d displayCtrl _x; _combosOk pushBack [_x, !isNull _c, if (isNull _c) then { false } else { ctrlShown _c }] } forEach _comboIdcs;
-    diag_log format ["FAC_DEBUG_ca734f {""sessionId"":""ca734f"",""hypothesisId"":""A"",""location"":""MedicalTrainingGui.sqf:applyLayout"",""message"":""missing_label_idcs"",""data"":{""missing"":%1,""presentShown"":%2,""presentHidden"":%3},""timestamp"":%4}", _missing, _presentShown, _presentHidden, floor (time * 1000)];
-    diag_log format ["FAC_DEBUG_ca734f {""sessionId"":""ca734f"",""hypothesisId"":""B"",""location"":""MedicalTrainingGui.sqf:applyLayout"",""message"":""legacy_labels_hidden"",""data"":{""legacyHiddenCount"":%1},""timestamp"":%2}", _legacyHidden, floor (time * 1000)];
-    diag_log format ["FAC_DEBUG_ca734f {""sessionId"":""ca734f"",""hypothesisId"":""C"",""location"":""MedicalTrainingGui.sqf:applyLayout"",""message"":""combo_visibility"",""data"":{""combos"":%1},""timestamp"":%2}", _combosOk, floor (time * 1000)];
-    missionNamespace setVariable ["FAC_DEBUG_medTrainLabels", [_missing, _legacyHidden, _presentShown, _presentHidden]];
-    systemChat format ["FAC_DEBUG med labels missing=%1 legacyHidden=%2", count _missing, _legacyHidden];
-    // #endregion
+    // The shared shell places the controls. The old pass hid labels and chatted a debug line.
 };
 
 FAC_medicalTrainingGui_fnc = {
@@ -362,6 +268,7 @@ FAC_medicalTrainingGui_fnc = {
         case "onLoad": {
             private _display = findDisplay 60800;
             if (isNull _display) exitWith {};
+            [_display, FAC_gui_spec_medical] call FAC_gui_build;
             uinamespace setVariable ["FAC_medicalTrainingGui_fnc", FAC_medicalTrainingGui_fnc];
             [] call _fncFillCombos;
             [] call _fncFillAirwayChestCombos;
@@ -376,7 +283,6 @@ FAC_medicalTrainingGui_fnc = {
                 FAC_theme_htmlBody, FAC_theme_htmlEmphasis
             ];
             (_display displayCtrl 60850) ctrlSetStructuredText parseText _info;
-            [] call FAC_medicalTrainingGui_applyLayout;
             [player] remoteExec ["FADE_medTrain_requestList", 2];
             [] spawn {
                 sleep 0.35;

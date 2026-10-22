@@ -495,9 +495,14 @@ call compile preprocessFileLineNumbers "rsc\FADE_FactionScenario.sqf";
 FADE_op_countBluforPlayersInRadius = {
     params ["_center", "_r"];
     private _n = 0;
+    private _units = allPlayers;
+    private _headless = missionNamespace getVariable ["FADE_headlessOwnerUnit", objNull];
+    if (!isNull _headless && { _headless getVariable ["FADE_headlessOwner", false] }) then {
+        _units = _units + [_headless];
+    };
     {
-        if ([_x] call FADE_isScenarioFriendlyUnit && { isPlayer _x } && { alive _x } && { (_x distance2D _center) <= _r }) then { _n = _n + 1 };
-    } forEach allPlayers;
+        if ([_x] call FADE_isScenarioFriendlyUnit && { [_x] call FADE_unitIsMissionPlayer } && { alive _x } && { (_x distance2D _center) <= _r }) then { _n = _n + 1 };
+    } forEach _units;
     _n
 };
 FADE_op_countBluforInRadius = {
