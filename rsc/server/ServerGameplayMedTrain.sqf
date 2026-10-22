@@ -448,7 +448,8 @@ FADE_cleanupMissionEntities = {
         missionNamespace setVariable ["FADE_operationCapState_" + _taskId, nil];
         missionNamespace setVariable ["FADE_operationZoneCenters_" + _taskId, nil];
         missionNamespace setVariable ["FADE_operationHqIdx_" + _taskId, nil];
-        missionNamespace setVariable ["FADE_operationCivZoneIds_" + _taskId, nil];
+        // Keep FADE_operationCivZoneIds_<taskId>. FADE_mission_unpinCivZonesForTask reads it
+        // after the abort delay. Nilling it here leaves those towns pinned.
         missionNamespace setVariable ["FADE_operationMakeVehFn_" + _taskId, nil];
         missionNamespace setVariable ["FADE_operationQrfLast_" + _taskId, nil];
     };

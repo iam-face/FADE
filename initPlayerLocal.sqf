@@ -694,7 +694,7 @@ FAC_playthroughSuite_execAll = {
     };
     systemChat "[FAC Playthrough] Starting sequential playthrough (<=10 min, no input — see RPT).";
     if (isServer) then {
-        [player] call FAC_playthroughSuite_runServer;
+        [player] spawn FAC_playthroughSuite_runServer;
     } else {
         [player] remoteExec ["FAC_playthroughSuite_execServer", 2];
     };

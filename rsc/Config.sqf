@@ -125,5 +125,3 @@ FADE_rangeFriendlyVehPosDisplayNames = [
     "Friendly Equipment Position 5",
     "Friendly Equipment Position 6"
 ];
-
-// Locker Room ambient: client tunables in ConfigClient.sqf

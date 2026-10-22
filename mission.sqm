@@ -8,7 +8,7 @@ class EditorData
 	toggles=513;
 	class ItemIDProvider
 	{
-		nextID=16394;
+		nextID=16503;
 	};
 	class MarkerIDProvider
 	{
@@ -16,14 +16,14 @@ class EditorData
 	};
 	class LayerIndexProvider
 	{
-		nextID=2401;
+		nextID=2404;
 	};
 	class Camera
 	{
-		pos[]={14952.344,42.91,17063.164};
-		dir[]={0,-0.70710683,0.70710683};
-		up[]={0,0.70710677,0.70710677};
-		aside[]={0.99999994,0,-0};
+		pos[]={14761.372,59.397327,16661.244};
+		dir[]={0.036312714,-0.37944365,0.92462999};
+		up[]={0.014891117,0.92517209,0.37923673};
+		aside[]={0.99934143,6.8594636e-07,-0.03924429};
 	};
 };
 binarizationWanted=0;
@@ -151,13 +151,14 @@ addons[]=
 	"A3_Structures_F_Ind_WindPowerPlant",
 	"A3_Structures_F_Ind_Transmitter_Tower",
 	"A3_Structures_F_EPB_Items_Vessels",
-	"A3_Structures_F_Heli_Ind_Machines"
+	"A3_Structures_F_Heli_Ind_Machines",
+	"gm_objects_tents"
 };
 class AddonsMetaData
 {
 	class List
 	{
-		items=66;
+		items=67;
 		class Item0
 		{
 			className="A3_Ui_F";
@@ -602,6 +603,13 @@ class AddonsMetaData
 			author="ACE-Team";
 			url="https://ace3.acemod.org/";
 		};
+		class Item66
+		{
+			className="gm_objects_tents";
+			name="gm_objects_tents";
+			author="Global Mobilization";
+			url="global-mobilization.com";
+		};
 	};
 };
 class DynamicSimulation
@@ -766,7 +774,7 @@ class Mission
 	};
 	class Entities
 	{
-		items=1612;
+		items=1620;
 		class Item0
 		{
 			dataType="Trigger";
@@ -7696,7 +7704,7 @@ class Mission
 				angles[]={0,1.4911419,0};
 			};
 			side="Empty";
-			flags=1;
+			flags=5;
 			class Attributes
 			{
 				createAsSimpleObject=1;
@@ -7705,7 +7713,6 @@ class Mission
 			};
 			id=9306;
 			type="Land_BottlePlastic_V2_F";
-			atlOffset=0.75429344;
 			class CustomAttributes
 			{
 				class Attribute0
@@ -52662,6 +52669,111 @@ class Mission
 				};
 				nAttributes=1;
 			};
+		};
+		class Item1612
+		{
+			dataType="Layer";
+			name="Camp (East)";
+			id=16439;
+			atlOffset=185.97;
+		};
+		class Item1613
+		{
+			dataType="Layer";
+			name="Camp Walls 3";
+			id=16476;
+			atlOffset=185.97;
+		};
+		class Item1614
+		{
+			dataType="Layer";
+			name="Command Tent";
+			id=16494;
+			atlOffset=185.97;
+		};
+		class Item1615
+		{
+			dataType="Object";
+			class PositionInfo
+			{
+				position[]={14550.261,18.225872,16325.49};
+				angles[]={6.276526,0,6.2698536};
+			};
+			side="Empty";
+			flags=4;
+			class Attributes
+			{
+			};
+			id=16498;
+			type="Land_TentA_F";
+			atlOffset=6.8664551e-05;
+		};
+		class Item1616
+		{
+			dataType="Object";
+			class PositionInfo
+			{
+				position[]={14553.35,18.199677,16322.254};
+				angles[]={6.276526,0,6.2698536};
+			};
+			side="Empty";
+			flags=4;
+			class Attributes
+			{
+			};
+			id=16499;
+			type="Land_TentDome_F";
+			atlOffset=7.0571899e-05;
+		};
+		class Item1617
+		{
+			dataType="Object";
+			class PositionInfo
+			{
+				position[]={14553.088,17.734482,16324.771};
+				angles[]={6.2751918,0,6.2711902};
+			};
+			side="Empty";
+			flags=4;
+			class Attributes
+			{
+			};
+			id=16500;
+			type="Land_TentSolar_01_folded_olive_F";
+			atlOffset=1.1444092e-05;
+		};
+		class Item1618
+		{
+			dataType="Object";
+			class PositionInfo
+			{
+				position[]={14553.047,17.739237,16325.305};
+				angles[]={6.2751918,0,6.2711902};
+			};
+			side="Empty";
+			flags=4;
+			class Attributes
+			{
+			};
+			id=16501;
+			type="Land_TentSolar_01_folded_sand_F";
+			atlOffset=-3.8146973e-06;
+		};
+		class Item1619
+		{
+			dataType="Object";
+			class PositionInfo
+			{
+				position[]={14560.008,17.592623,16324.892};
+				angles[]={6.2751846,0,0.017332481};
+			};
+			side="Empty";
+			flags=4;
+			class Attributes
+			{
+			};
+			id=16502;
+			type="gm_gc_tent_5x5m";
 		};
 	};
 	class Connections

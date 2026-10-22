@@ -148,7 +148,7 @@ FAC_gui_spec_scenario = [
     ]]],
     ["page", "admin", [
         ["section", "Admin tools", 60930],
-        ["segments", "Object list", "Anything is every prop. Realistic is fortifications only.", [
+        ["segments", "Object list", "Anything is every prop. Realistic is a set list of fortifications, camp gear, and supplies.", [
             ["Anything", 60848, "setBuildCatalog", [0], "primary"],
             ["Realistic", 60849, "setBuildCatalog", [1], "idle"]
         ]],

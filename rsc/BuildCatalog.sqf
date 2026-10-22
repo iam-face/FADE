@@ -49,24 +49,69 @@ _keyed sort true;
 FADE_buildCatalog = _keyed apply { _x select 3 };
 FADE_buildCatalogIndex = _index;
 
-// Realistic keeps the original costs. A class missing from this config is skipped.
+// Row: class, display name, cost, subcategory, category.
+// An empty display name uses the config name. A class missing from this config is skipped.
+// The first ten keep their original costs. Added rows cost 10.
 private _realisticSrc = [
-    ["Land_BagFence_Long_F", "Sandbag fence (long)", 15, "Sandbags"],
-    ["Land_BagFence_Short_F", "Sandbag fence (short)", 8, "Sandbags"],
-    ["Land_BagFence_Round_F", "Sandbag fence (round)", 10, "Sandbags"],
-    ["Land_HBarrier_1_F", "H-barrier (single)", 20, "Barriers"],
-    ["Land_HBarrier_5_F", "H-barrier (5)", 40, "Barriers"],
-    ["Land_Razorwire_F", "Razor wire", 12, "Barriers"],
-    ["Land_CncBarrierMedium4_F", "Concrete barrier", 25, "Barriers"],
-    ["Land_BagBunker_Small_F", "Small bag bunker", 80, "Bunkers"],
-    ["Land_CamoNet_BIG_F", "Camo net (large)", 30, "Camo"],
-    ["Land_PortableLight_single_F", "Portable light", 10, "Lights"]
+    ["Land_BagFence_Long_F", "Sandbag fence (long)", 15, "Sandbags", "Fortifications"],
+    ["Land_BagFence_Short_F", "Sandbag fence (short)", 8, "Sandbags", "Fortifications"],
+    ["Land_BagFence_Round_F", "Sandbag fence (round)", 10, "Sandbags", "Fortifications"],
+    ["Land_HBarrier_1_F", "H-barrier (single)", 20, "Barriers", "Fortifications"],
+    ["Land_HBarrier_5_F", "H-barrier (5)", 40, "Barriers", "Fortifications"],
+    ["Land_HBarrierTower_lxWS", "", 10, "Barriers", "Fortifications"],
+    ["Land_Razorwire_F", "Razor wire", 12, "Barriers", "Fortifications"],
+    ["Land_CncBarrierMedium4_F", "Concrete barrier", 25, "Barriers", "Fortifications"],
+    ["Land_BagBunker_Small_F", "Small bag bunker", 80, "Bunkers", "Fortifications"],
+    ["Land_CamoNet_BIG_F", "Camo net (large)", 30, "Camo", "Fortifications"],
+    ["CamoNet_OPFOR_open_F", "", 10, "Camo", "Fortifications"],
+    ["Land_PortableLight_single_F", "Portable light", 10, "Lights", "Fortifications"],
+    ["Land_Net_Fence_8m_F", "", 10, "Fences", "Fortifications"],
+    ["Land_Net_Fence_4m_F", "", 10, "Fences", "Fortifications"],
+    ["Land_Net_Fence_Gate_F", "", 10, "Fences", "Fortifications"],
+    ["Land_Shoot_House_Wall_Long_F", "", 10, "Walls", "Fortifications"],
+    ["Land_Shoot_House_Wall_F", "", 10, "Walls", "Fortifications"],
+    ["Land_CampingChair_V2_white_F", "", 10, "Furniture", "Camp"],
+    ["Land_CampingChair_V1_F", "", 10, "Furniture", "Camp"],
+    ["Land_CampingTable_white_F", "", 10, "Furniture", "Camp"],
+    ["Land_Sofa_01_F", "", 10, "Furniture", "Camp"],
+    ["Metal_Locker_F", "", 10, "Furniture", "Camp"],
+    ["Fridge_01_closed_F", "", 10, "Furniture", "Camp"],
+    ["Land_WaterCooler_01_new_F", "", 10, "Furniture", "Camp"],
+    ["Land_FlowerPot_01_Flower_F", "", 10, "Furniture", "Camp"],
+    ["Land_ToiletBox_F", "", 10, "Furniture", "Camp"],
+    ["Land_MedicalTent_01_NATO_generic_closed_F", "", 10, "Tents", "Camp"],
+    ["Land_TentA_F", "", 10, "Tents", "Camp"],
+    ["Land_TentDome_F", "", 10, "Tents", "Camp"],
+    ["Land_TentSolar_01_folded_olive_F", "", 10, "Tents", "Camp"],
+    ["Land_TentSolar_01_folded_sand_F", "", 10, "Tents", "Camp"],
+    ["gm_gc_tent_5x5m", "", 10, "Tents", "Camp"],
+    ["Land_PowerGenerator_F", "", 10, "Power", "Camp"],
+    ["Land_TTowerSmall_2_F", "", 10, "Power", "Camp"],
+    ["WaterPump_01_sand_F", "", 10, "Water", "Camp"],
+    ["Land_WaterTank_F", "", 10, "Water", "Camp"],
+    ["Land_WaterBarrel_F", "", 10, "Water", "Camp"],
+    ["Land_MapBoard_01_Wall_F", "", 10, "Boards", "Signs"],
+    ["Land_MapBoard_F", "", 10, "Boards", "Signs"],
+    ["Land_WallSign_01_F", "", 10, "Boards", "Signs"],
+    ["Land_PaperBox_closed_F", "", 10, "Cargo", "Supplies"],
+    ["CargoNet_01_box_F", "", 10, "Cargo", "Supplies"],
+    ["Box_Cargo_Science_RF", "", 10, "Cargo", "Supplies"],
+    ["Box_Cargo_Green_RF", "", 10, "Cargo", "Supplies"],
+    ["Land_FoodSacks_01_cargo_brown_F", "", 10, "Cargo", "Supplies"],
+    ["CargoNet_01_barrels_F", "", 10, "Cargo", "Supplies"],
+    ["Land_BarrelTrash_grey_F", "", 10, "Cargo", "Supplies"],
+    ["Land_MetalBarrel_F", "", 10, "Cargo", "Supplies"],
+    ["Land_MetalBarrel_empty_F", "", 10, "Cargo", "Supplies"]
 ];
 private _realistic = [];
 {
-    _x params ["_class", "_dn", "_cost", "_sub"];
+    _x params ["_class", "_dn", "_cost", "_sub", "_cat"];
     if !(isClass (configFile >> "CfgVehicles" >> _class)) then { continue };
-    _realistic pushBack [_class, _dn, _cost, 0, "", "Fortifications", _sub];
+    if (_dn == "") then {
+        _dn = getText (configFile >> "CfgVehicles" >> _class >> "displayName");
+    };
+    if (_dn == "") then { _dn = _class };
+    _realistic pushBack [_class, _dn, _cost, 0, "", _cat, _sub];
 } forEach _realisticSrc;
 FADE_buildCatalogRealistic = _realistic;
 
