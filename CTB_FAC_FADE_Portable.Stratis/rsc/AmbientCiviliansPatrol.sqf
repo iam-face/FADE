@@ -358,9 +358,10 @@ FADE_enemyPatrol_spawnForZone = {
     if (!(missionNamespace getVariable ["FADE_scenarioPatrols", true])) exitWith {};
     if (!isNil "FADE_civ_isZonePinned" && { [_zoneId] call FADE_civ_isZonePinned }) exitWith {};
     if (!(isNil { FADE_enemyPatrolZoneState get _zoneId })) exitWith {};
-    // Never spawn ambient patrol within 1 km of player base (BASE_1)
+    // Never spawn an ambient patrol inside the player base bubble.
     private _basePos = missionNamespace getVariable ["FADE_basePos", []];
-    if (count _basePos >= 2 && { (_center distance _basePos) < 1000 }) exitWith {};
+    private _baseR = missionNamespace getVariable ["FADE_buildRadius", 500];
+    if (count _basePos >= 2 && { (_center distance _basePos) < _baseR }) exitWith {};
     private _townChance = missionNamespace getVariable ["FADE_enemyPatrolTownChance", 0.25];
     if (random 1 > _townChance) exitWith {};
     private _enemyUnits = missionNamespace getVariable ["FADE_enemyUnits", []];

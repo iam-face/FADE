@@ -290,7 +290,8 @@ FADE_runMission_EscapeEvasion = {
 
     private _sfEe = missionNamespace getVariable ["FADE_sideFriendly", west];
     private _eeMissionTxt = "Separated personnel must survive and return to friendly base. Any evadee KIA fails the mission.";
-    private _eeExecTxt = "<t align='left' color='#C0C0C0'>GPS and map markers denied. Navigate by terrain; coordinate on assigned radio channels. Reach extraction within 1000 m of base.</t>";
+    private _baseR = round (missionNamespace getVariable ["FADE_buildRadius", 500]);
+    private _eeExecTxt = format ["<t align='left' color='#C0C0C0'>GPS and map markers denied. Navigate by terrain; coordinate on assigned radio channels. Reach extraction within %1 m of base.</t>", _baseR];
     [_player, _taskId, _eeMissionTxt, "Escape & Evasion", _zoneCenter, "run", "", _eeExecTxt, true] call _fnc_createMissionTask;
 
     private _eeGrid = if (count _zoneCenter >= 2) then { mapGridPosition _zoneCenter } else { "N/A" };
@@ -298,7 +299,7 @@ FADE_runMission_EscapeEvasion = {
     if (!isNull _player) then {
         _player setVariable ["FADE_myMissionBrief", _briefEe, true];
     };
-    [format ["<t color='#FFFFFF'>Evadees dispersed in the denied area. No grid given - navigate by terrain and comms. RTB within 1000 m; all must survive.</t>"]] call _showAssignedHint;
+    [format ["<t color='#FFFFFF'>Evadees dispersed in the denied area. No grid given - navigate by terrain and comms. RTB within %1 m; all must survive.</t>", _baseR]] call _showAssignedHint;
     [_player, "Escape & Evasion"] call FADE_notifyOthersMissionStarted;
 
     // OPFOR search helicopter: faction heli (or FADE_opforAir fallback list), orbit waypoints on zone geometry only  -  never player positions.
@@ -471,7 +472,8 @@ FADE_runMission_EscapeEvasion = {
             _live = _evadeePlayers select { !isNull _x && { alive _x } && { [_x] call FADE_unitIsMissionPlayer } };
             if (_live isEqualTo []) exitWith { "ended" };
             _home = true;
-            { if ((_x distance2D _basePos) > 1000) then { _home = false } } forEach _live;
+            private _homeR = missionNamespace getVariable ["FADE_buildRadius", 500];
+            { if ((_x distance2D _basePos) > _homeR) then { _home = false } } forEach _live;
             if (_home) exitWith { "home" };
             "ready"
         };
@@ -624,7 +626,7 @@ FADE_runMission_EscapeEvasion = {
             };
             private _allHome = true;
             {
-                if ((_x distance2D _basePos) > 1000) then { _allHome = false };
+                if ((_x distance2D _basePos) > (missionNamespace getVariable ["FADE_buildRadius", 500])) then { _allHome = false };
             } forEach _liveE;
             if (_allHome) exitWith {
                 [_taskId, "SUCCEEDED"] call BIS_fnc_taskSetState;

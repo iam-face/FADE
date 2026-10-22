@@ -23,7 +23,10 @@ FADE_despawnVehicle = {
     if ([_player, "FAC_playerCanUseVehicleGui", "Vehicle GUI access denied by lobby settings."] call FAC_lobbyParams_serverDenyUnless) exitWith {};
     if (isNull _veh) exitWith { ["INVALID VEHICLE."] remoteExec ["systemChat", _player] };
     private _dist = (getPosATL _veh) distance FADE_basePos;
-    if (_dist > 1000) exitWith { ["VEHICLE MUST BE WITHIN 1000M OF BASE TO DESPAWN."] remoteExec ["systemChat", _player] };
+    private _baseR = missionNamespace getVariable ["FADE_buildRadius", 500];
+    if (_dist > _baseR) exitWith {
+        [format ["VEHICLE MUST BE WITHIN %1M OF BASE TO DESPAWN.", round _baseR]] remoteExec ["systemChat", _player];
+    };
     // Eject all crew (players and AI) before despawning
     private _crew = crew _veh;
     { if (isPlayer _x) then { moveOut _x } else { _veh deleteVehicleCrew _x } } forEach _crew;
@@ -91,8 +94,9 @@ FADE_serviceVehicle = {
         ["SELECT AN AIRCRAFT OR LAND VEHICLE."] remoteExec ["systemChat", _player];
     };
     private _dist = (getPosATL _veh) distance FADE_basePos;
-    if (_dist > 1000) exitWith {
-        ["VEHICLE MUST BE WITHIN 1000M OF BASE TO SERVICE."] remoteExec ["systemChat", _player];
+    private _baseR = missionNamespace getVariable ["FADE_buildRadius", 500];
+    if (_dist > _baseR) exitWith {
+        [format ["VEHICLE MUST BE WITHIN %1M OF BASE TO SERVICE.", round _baseR]] remoteExec ["systemChat", _player];
     };
     _veh setFuel 1;
     _veh setDamage 0;
@@ -122,8 +126,9 @@ FADE_serviceVehiclePart = {
         ["SELECT AN AIRCRAFT OR LAND VEHICLE."] remoteExec ["systemChat", _player];
     };
     private _dist = (getPosATL _veh) distance FADE_basePos;
-    if (_dist > 1000) exitWith {
-        ["VEHICLE MUST BE WITHIN 1000M OF BASE TO SERVICE."] remoteExec ["systemChat", _player];
+    private _baseR = missionNamespace getVariable ["FADE_buildRadius", 500];
+    if (_dist > _baseR) exitWith {
+        [format ["VEHICLE MUST BE WITHIN %1M OF BASE TO SERVICE.", round _baseR]] remoteExec ["systemChat", _player];
     };
     if !(_ratio isEqualType 0) then { _ratio = -1 };
     if (_ratio >= 0) then { _ratio = (_ratio max 0) min 1 };
@@ -211,7 +216,8 @@ FADE_requestVehiclesAtBase = {
     if ([_player, "FAC_playerCanUseVehicleGui", "Vehicle GUI access denied by lobby settings."] call FAC_lobbyParams_serverDenyUnless) exitWith {};
     private _pos = FADE_basePos;
     if (_pos isEqualType objNull) then { _pos = getPosATL _pos };
-    private _near = nearestObjects [_pos, ["Air", "LandVehicle"], 1000];
+    private _baseR = missionNamespace getVariable ["FADE_buildRadius", 500];
+    private _near = nearestObjects [_pos, ["Air", "LandVehicle"], _baseR];
     private _result = [];
     {
         if (!isNull _x && { alive _x }) then {

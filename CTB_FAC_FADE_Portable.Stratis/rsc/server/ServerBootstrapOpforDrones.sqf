@@ -238,7 +238,7 @@ FADE_opforDrone_trySpawn = {
     private _setting = [missionNamespace getVariable ["FADE_opforDroneSetting", "Off"]] call FADE_normalizeOpforThreatSetting;
     if (_setting == "Off") exitWith {};
 
-    private _hqR = missionNamespace getVariable ["FADE_opforAir_hqSafeRadius", 1000];
+    private _hqR = missionNamespace getVariable ["FADE_opforAir_hqSafeRadius", 500];
     if ([_hqR] call FADE_opforDrone_allFriendliesAtHq) exitWith {
         if ((count (missionNamespace getVariable ["FADE_opforDrone_active", []])) > 0) then { call FADE_opforDrone_despawnAll };
         // #region agent log

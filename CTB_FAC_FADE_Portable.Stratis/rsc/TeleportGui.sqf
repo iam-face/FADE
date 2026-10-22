@@ -307,15 +307,10 @@ FAC_teleport_fnc_returnToBase = {
     };
 };
 
+// Portable has no Eden training sites. Fast Travel (ACE self-interact, boards, hotkey) offers the player base only.
+// teleportBase falls back to FADE_basePos when the Eden anchor is absent.
 FAC_teleportGui_destinations = [
-    ["Cargo Slingload", "teleportSlingload"],
-    ["Sultan's CQB Killhouse", "teleportCQB"],
-    ["Joon's Fires Range", "teleportFires"],
-    ["Base HQ", "teleportBase"],
-    ["Bean's Medical Area", "teleportMedical"],
-    ["Officer Area", "teleportOfficer"],
-    ["Firing Range", "teleportRange"],
-    ["Sniper Range", "teleportSniper"]
+    ["Base HQ", "teleportBase"]
 ];
 
 FAC_teleportGui_fnc_destinationDisplayLabel = {

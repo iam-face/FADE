@@ -126,7 +126,7 @@ FAC_build_onFrame = {
     private _agl = ASLToAGL _camPos;
     if !([] call FADE_build_anywhere) then {
         private _base = missionNamespace getVariable ["FADE_basePos", []];
-        private _radius = missionNamespace getVariable ["FADE_buildRadius", 1000];
+        private _radius = missionNamespace getVariable ["FADE_buildRadius", 500];
         if (count _base >= 2) then {
             private _dx = (_agl select 0) - (_base select 0);
             private _dy = (_agl select 1) - (_base select 1);

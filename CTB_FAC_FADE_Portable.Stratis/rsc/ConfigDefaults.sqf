@@ -14,8 +14,9 @@ FADE_startupFactionIndepClasses = ["rhsgref_faction_cdf_ground", "rhssaf_faction
 FADE_civiliansEnabled = true;  // When false, no ambient civilians (zones, road vehicles, civ aircraft)
 // Legacy upper bound for Eden CIV_T_* cleanup; runtime count is set by FADE_civZonesFromLocations_build (initServer).
 FADE_civTriggerIndexMax = 109;
-// Named-location civ zones: min straight-line distance from FADE_basePos (m); optional type list / anchor class in missionNamespace
-FADE_civZoneMinDistFromBase = 2000;
+// Named-location civ zones must be farther than this from FADE_basePos (m).
+// Altis-sized worlds stay at 2000 m inside FADE_civZoneCutoffDist.
+FADE_civZoneMinDistFromBase = 500;
 // SMEAC / intel "Area:" label: search radius (m) for map locations; pick balances distance vs settlement size (see FADE_getTopographySummary in Missions.sqf)
 FADE_topographyLocationRadius = 8000;
 // FADE_civZoneLocationTypes = ["NameCityCapital","NameCity","NameVillage","NameLocal"];  // optional override
@@ -696,7 +697,7 @@ FADE_qrfFootDistMax = 450;
 FADE_qrfFootMinFromPlayers = 200;
 FADE_qrfFootBuildingChance = 0.4;
 FADE_qrfMinCargoSeats = 4;
-FADE_qrfMinDistFromBase = 1000;
+FADE_qrfMinDistFromBase = 500; // truck spawns stay outside the player base bubble
 FADE_qrfCargoStaggerSec = 0.35;
 FADE_qrfFollowIntervalS = 60;
 FADE_qrfDebug = false;
@@ -708,8 +709,14 @@ FADE_civZoneActivationDist = 900;
 // Mission load profiling (RPT): CfgVehicles scan, client GUI compile, waitUntil. Set true temporarily to measure; leave false in production.
 FADE_profileMissionLoad = false;
 
-// Player construction. Radius matches the ACE FADE menu bubble (FAC_aceSelf_nearPlayerBase).
+// Non-Altis base pick. Seconds on the server clock before the map opens.
+// The server starts a new window if init is still running when this one ends.
+FADE_basePick_joinWait = 20;
+// Seconds to mark a point on the map, then seconds to vote. Both use serverTime.
+FADE_basePick_pickWait = 20;
+
+// Player base bubble (m). Build, the ACE FADE menu, vehicle place/service, and RTB use this.
 // Supply start is charged only when BUILD: Logistics is Required.
-FADE_buildRadius = 1000;
+FADE_buildRadius = 500;
 FADE_buildSupplyStart = 2000;
 

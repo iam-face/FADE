@@ -1,7 +1,7 @@
 // =============================================================================
 // VehicleGui.sqf - Vehicles: single dialog (60001), header tabs + main content
 // =============================================================================
-// Spawn: 3D placement inside 1000 m of base (rsc/VehiclePlacement.sqf). No pad slots.
+// Spawn: 3D placement inside FADE_buildRadius of base (rsc/VehiclePlacement.sqf). No pad slots.
 // Manage: list at base, repair/refuel/rearm, despawn. Server RPC FADE_spawnVehicleAtPos.
 // =============================================================================
 

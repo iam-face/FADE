@@ -32,7 +32,7 @@ if (hasInterface) then {
                 _controls pushBack _title;
                 private _help = _display ctrlCreate ["FACRscEditDark", 60282];
                 _help ctrlSetPosition [0.04, 0.148, 0.92, 0.10];
-                _help ctrlSetText "You must stay in the right-hand list. Add players who will be teleported (dispersed in the AO). Others are the rescue party. No map markers. Success: all evadees within 1000 m of base.";
+                _help ctrlSetText format ["You must stay in the right-hand list. Add players who will be teleported (dispersed in the AO). Others are the rescue party. No map markers. Success: all evadees within %1 m of base.", round (missionNamespace getVariable ["FADE_buildRadius", 500])];
                 _help ctrlEnable false;
                 _help ctrlCommit 0;
                 _controls pushBack _help;

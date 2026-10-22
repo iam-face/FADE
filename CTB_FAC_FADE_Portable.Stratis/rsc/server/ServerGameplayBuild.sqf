@@ -20,7 +20,7 @@ FADE_build_refreshServices = {
     if (!isServer) exitWith {};
     private _up = [];
     private _base = missionNamespace getVariable ["FADE_basePos", []];
-    private _radius = missionNamespace getVariable ["FADE_buildRadius", 1000];
+    private _radius = missionNamespace getVariable ["FADE_buildRadius", 500];
     if ((count _base) >= 2) then {
         {
             private _rec = FADE_build_registry getOrDefault [_x, createHashMap];
@@ -98,11 +98,11 @@ FADE_build_place = {
     private _outsideBase = false;
     if (_role != "") then {
         private _base = missionNamespace getVariable ["FADE_basePos", []];
-        private _radius = missionNamespace getVariable ["FADE_buildRadius", 1000];
+        private _radius = missionNamespace getVariable ["FADE_buildRadius", 500];
         _outsideBase = (count _base) < 2 || { (_pos distance2D _base) > _radius };
     };
     if (_outsideBase) exitWith {
-        [_player, "Place base structures within 1000 m of base."] call FADE_build_chat;
+        [_player, format ["Place base structures within %1 m of base.", round _radius]] call FADE_build_chat;
         false
     };
     private _spot = [_entryClass, _pos, _dir, objNull] call FADE_build_spotBlocked;

@@ -548,7 +548,7 @@ FADE_qrfResolveRoadSpawn = {
     if !(_pairs isEqualTo []) then {
         _pairs = [_pairs, [], { _x select 0 }, "ASCEND"] call BIS_fnc_sortBy;
     };
-    private _minBase = missionNamespace getVariable ["FADE_qrfMinDistFromBase", 1000];
+    private _minBase = missionNamespace getVariable ["FADE_qrfMinDistFromBase", 500];
     private _baseQ = [FADE_basePos] call FADE_qrfNorm3;
     private _roadPos = [];
     private _roadDir = 0;
@@ -666,7 +666,7 @@ FADE_qrfSpawnTrucks = {
     private _stagger = missionNamespace getVariable ["FADE_qrfCargoStaggerSec", 0.35];
     private _followIv = (missionNamespace getVariable ["FADE_qrfFollowIntervalS", 60]) max 15;
     private _baseQ = [FADE_basePos] call FADE_qrfNorm3;
-    private _minBase = missionNamespace getVariable ["FADE_qrfMinDistFromBase", 1000];
+    private _minBase = missionNamespace getVariable ["FADE_qrfMinDistFromBase", 500];
     private _spawned = [];
     private _dir = [_roadPos, _obj] call BIS_fnc_dirTo;
     if (_vehPick isEqualTo []) exitWith {

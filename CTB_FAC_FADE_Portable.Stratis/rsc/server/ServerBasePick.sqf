@@ -18,16 +18,24 @@ FADE_basePick_anyLoggedInAdmin = {
     _found
 };
 
-FADE_basePick_posOk = {
+// "" when the point can be the player base. Otherwise the sentence to send the player.
+FADE_basePick_rejectReason = {
     params ["_pos"];
-    if (!(_pos isEqualType []) || { count _pos < 2 }) exitWith { false };
+    if (!(_pos isEqualType []) || { count _pos < 2 }) exitWith { "That point is not on the map." };
     private _x = _pos select 0;
     private _y = _pos select 1;
-    if (!(_x isEqualType 0) || { !(_y isEqualType 0) }) exitWith { false };
-    if (!finite _x || { !finite _y }) exitWith { false };
-    if (surfaceIsWater [_x, _y]) exitWith { false };
+    if (!(_x isEqualType 0) || { !(_y isEqualType 0) }) exitWith { "That point is not on the map." };
+    if (!finite _x || { !finite _y }) exitWith { "That point is not on the map." };
+    if (surfaceIsWater [_x, _y]) exitWith { "That point is in the water." };
     private _fn = missionNamespace getVariable ["FADE_mapPosInBounds", {}];
-    if (_fn isEqualType {}) then { [_pos] call _fn } else { true }
+    private _in = if (_fn isEqualType {}) then { [_pos] call _fn } else { true };
+    if (!_in) exitWith { "That point is off the map." };
+    ""
+};
+
+FADE_basePick_posOk = {
+    params ["_pos"];
+    ([_pos] call FADE_basePick_rejectReason) == ""
 };
 
 FADE_basePick_findDryFromCenter = {
@@ -98,7 +106,7 @@ FADE_basePick_refreshRespawnMarker = {
 FADE_basePick_ensureZoneMarker = {
     params ["_pos"];
     if (getMarkerColor "mkrBaseZone" != "") exitWith {};
-    private _r = missionNamespace getVariable ["FADE_buildRadius", 1000];
+    private _r = missionNamespace getVariable ["FADE_buildRadius", 500];
     createMarker ["mkrBaseZone", _pos];
     "mkrBaseZone" setMarkerShape "ELLIPSE";
     "mkrBaseZone" setMarkerBrush "Border";
@@ -114,17 +122,43 @@ FADE_basePick_clearChoiceMarkers = {
     } forEach (keys _choices);
 };
 
-FADE_basePick_publishChoices = {
-    private _choices = missionNamespace getVariable ["FADE_basePick_choices", createHashMap];
-    private _out = [];
+FADE_basePick_playerKey = {
+    params ["_player"];
+    if (isNull _player) exitWith { "" };
+    private _uid = getPlayerUID _player;
+    if (_uid == "") then { _uid = format ["owner:%1", owner _player] };
+    _uid
+};
+
+FADE_basePick_pickSeconds = {
+    private _secs = missionNamespace getVariable ["FADE_basePick_pickWait", 20];
+    if (!(_secs isEqualType 0) || { _secs < 5 }) then { 20 } else { _secs }
+};
+
+// Flat rows the vote dialog reads: [id, name, x, y]. Replaces a row when the same player clicks again.
+FADE_basePick_rememberChoice = {
+    params ["_uid", "_nm", "_px", "_py"];
+    private _list = missionNamespace getVariable ["FADE_basePick_choiceList", []];
+    if !(_list isEqualType []) then { _list = [] };
+    private _idx = -1;
     {
-        private _row = _choices get _x;
-        if (_row isEqualType [] && { count _row >= 2 }) then {
-            _row params ["_nm", "_pos"];
-            _out pushBack [_x, _nm, _pos select 0, _pos select 1];
-        };
-    } forEach (keys _choices);
-    missionNamespace setVariable ["FADE_basePick_choiceList", _out, true];
+        if ((_x param [0, ""]) isEqualTo _uid) exitWith { _idx = _forEachIndex };
+    } forEach _list;
+    private _entry = [_uid, _nm, _px, _py];
+    if (_idx < 0) then {
+        _list pushBack _entry;
+    } else {
+        _list set [_idx, _entry];
+    };
+    missionNamespace setVariable ["FADE_basePick_choiceList", _list, true];
+    _list
+};
+
+FADE_basePick_publishChoices = {
+    private _list = missionNamespace getVariable ["FADE_basePick_choiceList", []];
+    if !(_list isEqualType []) then { _list = [] };
+    missionNamespace setVariable ["FADE_basePick_choiceList", _list, true];
+    _list
 };
 
 // _choiceUids: candidate ids. _voteChoiceUids: one entry per voter (last vote already applied).
@@ -154,24 +188,92 @@ FADE_basePick_commit = {
     FADE_basePos = [_pos select 0, _pos select 1, 0];
     publicVariable "FADE_basePos";
     missionNamespace setVariable ["FADE_baseDefined", true, true];
-    missionNamespace setVariable ["FADE_basePickPhase", "done", true];
     [] call FADE_basePick_clearChoiceMarkers;
     [FADE_basePos] call FADE_basePick_ensureZoneMarker;
     [] call FADE_basePick_refreshRespawnMarker;
-    if (!_quiet) then {
-        ["Player base set. Moving now."] remoteExec ["systemChat", 0];
-    };
     private _players = allPlayers select { !isNull _x && { isPlayer _x } };
-    private _n = count _players;
+    private _line = "";
+    if (!_quiet) then {
+        _line = [FADE_basePos] call FADE_basePick_placeLine;
+        missionNamespace setVariable ["FADE_basePick_deployLine", _line, true];
+    };
+    missionNamespace setVariable ["FADE_basePickPhase", "done", true];
+    if (_quiet) then {
+        [_players] call FADE_basePick_movePlayers;
+        { ["done"] remoteExec ["FAC_basePick_applyPhase", _x] } forEach _players;
+    } else {
+        {
+            ["done", _line] remoteExec ["FAC_basePick_applyPhase", _x];
+        } forEach _players;
+        [_players] spawn {
+            params ["_players"];
+            sleep 1.2;
+            [_players] call FADE_basePick_movePlayers;
+        };
+    };
+    if (!isNil "FADE_world_startBaseDependent") then { [] call FADE_world_startBaseDependent };
+    diag_log format ["[FADE] Player base committed at %1", FADE_basePos];
+};
+
+FADE_basePick_gridText = {
+    params ["_pos"];
+    private _g = mapGridPosition _pos;
+    private _digits = (count _g) >= 4 && { ((count _g) mod 2) == 0 };
+    if (_digits) then {
+        private _i = 0;
+        for "_i" from 0 to ((count _g) - 1) do {
+            if !((_g select [_i, 1]) in ["0","1","2","3","4","5","6","7","8","9"]) exitWith { _digits = false };
+        };
+    };
+    if (_digits) then {
+        private _half = (count _g) / 2;
+        format ["%1 %2", _g select [0, _half], _g select [_half, _half]]
+    } else {
+        _g
+    }
+};
+
+// Compass direction of _to from _from. Wiki: (dx) atan2 (dy), then bring it into 0..360.
+FADE_basePick_cardinal = {
+    params ["_from", "_to"];
+    private _dx = (_to select 0) - (_from select 0);
+    private _dy = (_to select 1) - (_from select 1);
+    private _dir = (_dx atan2 _dy);
+    _dir = (_dir + 360) % 360;
+    ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] select ((round (_dir / 45)) mod 8)
+};
+
+FADE_basePick_placeLine = {
+    params ["_pos"];
+    private _grid = [_pos] call FADE_basePick_gridText;
+    private _tail = "";
+    private _locs = nearestLocations [[_pos select 0, _pos select 1, 0], ["NameCityCapital", "NameCity", "NameVillage"], 8000];
+    if (count _locs > 0) then {
+        private _loc = _locs select 0;
+        private _name = text _loc;
+        if (_name != "") then {
+            private _lp = locationPosition _loc;
+            if ((_pos distance2D _lp) < 400) then {
+                _tail = format [", at %1", _name];
+            } else {
+                private _card = [_lp, _pos] call FADE_basePick_cardinal;
+                _tail = format [", %1 of %2", _card, _name];
+            };
+        };
+    };
+    format ["Combat Team Bravo base established at %1%2. Deploying you now.", _grid, _tail]
+};
+
+FADE_basePick_movePlayers = {
+    params ["_players"];
+    private _live = _players select { !isNull _x && { isPlayer _x } };
+    private _n = count _live;
     {
         private _ang = if (_n <= 1) then { 0 } else { _forEachIndex * (360 / _n) };
         private _tp = [FADE_basePos, 8, _ang] call BIS_fnc_relPos;
         if (surfaceIsWater _tp) then { _tp = FADE_basePos };
         [_tp, 0] remoteExec ["FADE_clientTeleportPos", _x];
-        ["done"] remoteExec ["FAC_basePick_applyPhase", _x];
-    } forEach _players;
-    if (!isNil "FADE_world_startBaseDependent") then { [] call FADE_world_startBaseDependent };
-    diag_log format ["[FADE] Player base committed at %1", FADE_basePos];
+    } forEach _live;
 };
 
 FADE_basePick_adminConfirm = {
@@ -179,8 +281,9 @@ FADE_basePick_adminConfirm = {
     if (!isServer) exitWith {};
     if (missionNamespace getVariable ["FADE_basePickPhase", ""] != "admin") exitWith {};
     if !([_player] call FADE_basePick_loggedInAdmin) exitWith {};
-    if !([_pos] call FADE_basePick_posOk) exitWith {
-        ["That point is off the map or in the water."] remoteExec ["systemChat", _player];
+    private _why = [_pos] call FADE_basePick_rejectReason;
+    if (_why != "") exitWith {
+        [_why] remoteExec ["systemChat", _player];
     };
     [_pos] call FADE_basePick_commit;
 };
@@ -190,16 +293,19 @@ FADE_basePick_suggest = {
     if (!isServer) exitWith {};
     if (missionNamespace getVariable ["FADE_basePickPhase", ""] != "suggest") exitWith {};
     if (isNull _player || { !isPlayer _player }) exitWith {};
-    if !([_pos] call FADE_basePick_posOk) exitWith {
-        ["That point is off the map or in the water."] remoteExec ["systemChat", _player];
+    private _why = [_pos] call FADE_basePick_rejectReason;
+    if (_why != "") exitWith {
+        [_why] remoteExec ["systemChat", _player];
     };
-    private _uid = getPlayerUID _player;
+    private _uid = [_player] call FADE_basePick_playerKey;
     if (_uid == "") exitWith {};
     private _nm = name _player;
     if (_nm == "") then { _nm = "Unknown" };
+    [_uid, _nm, _pos select 0, _pos select 1] call FADE_basePick_rememberChoice;
     private _choices = missionNamespace getVariable ["FADE_basePick_choices", createHashMap];
     _choices set [_uid, [_nm, [_pos select 0, _pos select 1, 0]]];
     missionNamespace setVariable ["FADE_basePick_choices", _choices];
+    ["Choice recorded."] remoteExec ["systemChat", _player];
     private _m = format ["FADE_basePick_%1", _uid];
     if (getMarkerColor _m == "") then {
         createMarker [_m, _pos];
@@ -217,36 +323,56 @@ FADE_basePick_vote = {
     if (missionNamespace getVariable ["FADE_basePickPhase", ""] != "vote") exitWith {};
     if (isNull _player || { !isPlayer _player }) exitWith {};
     if !(_choiceUid isEqualType "") exitWith {};
-    private _uid = getPlayerUID _player;
+    private _uid = [_player] call FADE_basePick_playerKey;
     if (_uid == "") exitWith {};
-    private _choices = missionNamespace getVariable ["FADE_basePick_choices", createHashMap];
-    if (isNil { _choices get _choiceUid }) exitWith {};
+    private _list = missionNamespace getVariable ["FADE_basePick_choiceList", []];
+    if !(_list isEqualType []) then { _list = [] };
+    private _known = false;
+    {
+        if (_x isEqualType [] && { (_x param [0, ""]) isEqualTo _choiceUid }) exitWith { _known = true };
+    } forEach _list;
+    if (!_known) exitWith {};
     private _votes = missionNamespace getVariable ["FADE_basePick_votes", createHashMap];
     _votes set [_uid, _choiceUid];
     missionNamespace setVariable ["FADE_basePick_votes", _votes];
 };
 
 FADE_basePick_runVote = {
-    [] call FADE_basePick_publishChoices;
+    private _list = [] call FADE_basePick_publishChoices;
+    if (_list isEqualTo []) exitWith {
+        diag_log "[FADE] Base pick vote skipped (no choices).";
+    };
     missionNamespace setVariable ["FADE_basePick_votes", createHashMap];
-    missionNamespace setVariable ["FADE_basePick_deadline", serverTime + 60, true];
+    private _secs = [] call FADE_basePick_pickSeconds;
+    private _deadline = serverTime + _secs;
+    missionNamespace setVariable ["FADE_basePick_deadline", _deadline, true];
     missionNamespace setVariable ["FADE_basePickPhase", "vote", true];
     {
-        ["vote"] remoteExec ["FAC_basePick_applyPhase", _x];
+        ["vote", _list] remoteExec ["FAC_basePick_applyPhase", _x];
     } forEach allPlayers;
-    private _end = time + 60;
-    waitUntil { sleep 1; time >= _end || { missionNamespace getVariable ["FADE_baseDefined", false] } };
+    waitUntil {
+        sleep 0.5;
+        serverTime >= _deadline || { missionNamespace getVariable ["FADE_baseDefined", false] }
+    };
     if (missionNamespace getVariable ["FADE_baseDefined", false]) exitWith {};
-    private _choices = missionNamespace getVariable ["FADE_basePick_choices", createHashMap];
-    private _uids = keys _choices;
+    _list = missionNamespace getVariable ["FADE_basePick_choiceList", []];
+    if !(_list isEqualType []) then { _list = [] };
+    private _uids = _list apply { _x param [0, ""] };
     private _votes = missionNamespace getVariable ["FADE_basePick_votes", createHashMap];
     private _cast = [];
-    { _cast pushBack (_votes get _x) } forEach (keys _votes);
+    {
+        private _choice = _votes get _x;
+        if (_choice isEqualType "") then { _cast pushBack _choice };
+    } forEach (keys _votes);
     private _winUid = [_uids, _cast] call FADE_basePick_tally;
-    private _row = _choices get _winUid;
-    if (isNil "_row") exitWith {};
-    _row params ["_nm", "_pos"];
-    [_pos] call FADE_basePick_commit;
+    private _picked = [];
+    {
+        if ((_x param [0, ""]) isEqualTo _winUid) exitWith { _picked = _x };
+    } forEach _list;
+    if (count _picked < 4) exitWith {
+        diag_log "[FADE] Base pick vote ended with no choice to commit.";
+    };
+    [[_picked select 2, _picked select 3, 0]] call FADE_basePick_commit;
 };
 
 FADE_basePick_runSuggestUntilCommit = {
@@ -255,16 +381,20 @@ FADE_basePick_runSuggestUntilCommit = {
     };
     while { !(missionNamespace getVariable ["FADE_baseDefined", false]) } do {
         [] call FADE_basePick_holdStragglers;
-        missionNamespace setVariable ["FADE_basePick_deadline", serverTime + 60, true];
+        private _secs = [] call FADE_basePick_pickSeconds;
+        private _deadline = serverTime + _secs;
+        missionNamespace setVariable ["FADE_basePick_deadline", _deadline, true];
         missionNamespace setVariable ["FADE_basePickPhase", "suggest", true];
         {
             ["suggest"] remoteExec ["FAC_basePick_applyPhase", _x];
         } forEach allPlayers;
-        private _end = time + 60;
-        waitUntil { sleep 1; time >= _end || { missionNamespace getVariable ["FADE_baseDefined", false] } };
+        waitUntil {
+            sleep 0.5;
+            serverTime >= _deadline || { missionNamespace getVariable ["FADE_baseDefined", false] }
+        };
         if (missionNamespace getVariable ["FADE_baseDefined", false]) exitWith {};
-        private _choices = missionNamespace getVariable ["FADE_basePick_choices", createHashMap];
-        if ((count (keys _choices)) == 0) then {
+        private _list = missionNamespace getVariable ["FADE_basePick_choiceList", []];
+        if !(_list isEqualType [] && { count _list > 0 }) then {
             ["No choices yet. Mark a point on the map."] remoteExec ["systemChat", 0];
         } else {
             [] call FADE_basePick_runVote;
@@ -309,15 +439,13 @@ FADE_basePick_orchestrate = {
             diag_log "[FADE] Headless base pick found no dry ground.";
         };
     };
-    waitUntil { sleep 0.5; missionNamespace getVariable ["FADE_clientInitReady", false] };
-    waitUntil { sleep 1; count allPlayers > 0 };
-    sleep 1;
-    [] call FADE_basePick_holdStragglers;
-    private _deadline = time + 20;
     waitUntil {
-        sleep 1;
-        ([] call FADE_basePick_anyLoggedInAdmin) || { time >= _deadline }
+        sleep 0.5;
+        missionNamespace getVariable ["FADE_basePick_joinDone", false]
+        || { missionNamespace getVariable ["FADE_baseDefined", false] }
     };
+    if (missionNamespace getVariable ["FADE_baseDefined", false]) exitWith {};
+    [] call FADE_basePick_holdStragglers;
     if ([] call FADE_basePick_anyLoggedInAdmin) then {
         [] call FADE_basePick_runAdmin;
     };

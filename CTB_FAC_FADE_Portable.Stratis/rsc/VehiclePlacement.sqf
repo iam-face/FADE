@@ -117,7 +117,8 @@ FADE_vehiclePlacement_poseReason = {
     private _agl = ASLToAGL (getPosASL _probe);
     private _base = [] call FADE_vehiclePlacement_basePos;
     if (count _base < 2) exitWith { "Player base is not set yet." };
-    if ((_agl distance2D _base) > 1000) exitWith { "OUTSIDE BASE AREA." };
+    private _baseR = missionNamespace getVariable ["FADE_buildRadius", 500];
+    if ((_agl distance2D _base) > _baseR) exitWith { "OUTSIDE BASE AREA." };
     private _aglZ = _agl select 2;
     if (_aglZ < -1 || { _aglZ > 80 }) exitWith { "HEIGHT OUT OF RANGE." };
     private _probeClass = typeOf _probe;
@@ -396,8 +397,9 @@ FAC_vehiclePlacement_onFrame = {
     private _dx = (_agl select 0) - (_base select 0);
     private _dy = (_agl select 1) - (_base select 1);
     private _dist = sqrt ((_dx * _dx) + (_dy * _dy));
-    if (_dist > 1000 && { _dist > 0 }) then {
-        private _s = 1000 / _dist;
+    private _baseR = missionNamespace getVariable ["FADE_buildRadius", 500];
+    if (_dist > _baseR && { _dist > 0 }) then {
+        private _s = _baseR / _dist;
         _agl = [(_base select 0) + (_dx * _s), (_base select 1) + (_dy * _s), _agl select 2];
     };
     _agl set [2, ((_agl select 2) max 2) min 80];

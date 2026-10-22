@@ -12,6 +12,12 @@
 // - Surrender Challenge: player path disabled (see FAC_surrenderChallenge_playerEnabled on server).
 // =============================================================================
 
+// Base pick before the server-ready wait, so the join screen is up while initServer is still running.
+if (hasInterface) then {
+    call compile preprocessFileLineNumbers "rsc\FAC_BasePick.sqf";
+    [] call FAC_basePick_clientStart;
+};
+
 // Debug: set true to show systemChat for every key interaction (cursorTarget, cursorObject, etc.)
 FAC_surrenderChallenge_debugKeys = false;
 
@@ -234,9 +240,12 @@ FADE_applyScenarioClientSync = {
 };
 
 // -----------------------------------------------------------------------------
-// Loading hint  - shown immediately whilst config and actions load
+// Loading hint  - shown immediately whilst config and actions load.
+// Non-Altis uses the base-pick join screen instead, so this hint does not cover it.
 // -----------------------------------------------------------------------------
-hint "FADE LOADING...";
+if (worldName == "Altis" || { missionNamespace getVariable ["FADE_baseDefined", false] }) then {
+    hint "FADE LOADING...";
+};
 
 // Diary + reference subjects early (Intel tab must exist before civilian HUMINT can append during play).
 call compile preprocessFileLineNumbers "rsc\Briefing.sqf";
@@ -409,9 +418,6 @@ if (_iplT0 >= 0) then {
     diag_log format ["[FAC profile] client waitUntil FADE_clientInitReady: %1 s", diag_tickTime - _iplT0];
 };
 
-call compile preprocessFileLineNumbers "rsc\FAC_BasePick.sqf";
-[] call FAC_basePick_clientStart;
-
 private _initPack = missionNamespace getVariable ["FADE_scenarioClientSync", []];
 if (count _initPack > 0) then { [_initPack] call FADE_applyScenarioClientSync };
 "FADE_scenarioClientSync" addPublicVariableEventHandler {
@@ -543,7 +549,15 @@ private _welcomeText = format [
     "</t>",
     _playerName
 ];
-hint parseText _welcomeText;
+if (worldName == "Altis" || { missionNamespace getVariable ["FADE_baseDefined", false] }) then {
+    hint parseText _welcomeText;
+} else {
+    [_welcomeText] spawn {
+        params ["_welcomeText"];
+        waitUntil { sleep 0.5; missionNamespace getVariable ["FADE_baseDefined", false] };
+        hint parseText _welcomeText;
+    };
+};
 
 // Invisible ambient lights 25m above each helipad and vehicle spawn
 [] spawn { execVM "rsc\LightTowers.sqf" };

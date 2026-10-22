@@ -164,7 +164,7 @@ FADE_build_spotBlocked = {
     if (count _pos < 2) exitWith { "radius" };
     if (surfaceIsWater [_pos select 0, _pos select 1]) exitWith { "water" };
     private _base = missionNamespace getVariable ["FADE_basePos", []];
-    private _radius = missionNamespace getVariable ["FADE_buildRadius", 1000];
+    private _radius = missionNamespace getVariable ["FADE_buildRadius", 500];
     if (count _base < 2) exitWith { "radius" };
     if (!([] call FADE_build_anywhere) && { (_pos distance2D _base) > _radius }) exitWith { "radius" };
     ""
