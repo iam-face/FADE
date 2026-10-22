@@ -748,8 +748,8 @@ class Mission
 {
 	class Intel
 	{
-		briefingName="FADE (Face's Dynamic Environment) BETA v8";
-		overviewText="BETA 7: Lobby parameters set defaults. Pick any role; Zeus and scenario controls are in-mission.";
+		briefingName="FADE (Face's Dynamic Environment) BETA";
+		overviewText="[BETA Build] Welcome to Face's Dynamic Environment";
 		resistanceWest=0;
 		resistanceEast=1;
 		timeOfChanges=1800.0002;
