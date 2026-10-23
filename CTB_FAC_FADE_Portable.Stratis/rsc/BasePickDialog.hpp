@@ -100,6 +100,7 @@ class RscDisplayBasePickVote: RscDisplayEmpty {
             h = 0.18;
             rowHeight = 0.036;
             sizeEx = 0.030;
+            onLBSelChanged = "['voteFocus', _this] call (missionNamespace getVariable ['FAC_basePick_fnc', {}]);";
         };
         class VoteBtn: FACRscPrimaryBtn {
             idc = 60982;

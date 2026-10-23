@@ -139,6 +139,9 @@ FADE_runMission_CAS = {
     };
 
     [_taskId, _destPos, _basePos, _enemyUnits, _enemyGroups] call FADE_counterAttackStart;
+    if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+        [_taskId, _destPos, _basePos] call FADE_missionRoadblocks_spawnAround;
+    };
 
     // When player within 1km: night -- radio callsign; day -- green smoke.
     [_friendlyGroup, _player, _taskId, _destPos, _basePos, _enemyUnits, _enemyGroups] spawn {

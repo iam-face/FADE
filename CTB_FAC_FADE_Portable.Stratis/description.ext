@@ -178,7 +178,7 @@ class Params
         title = "OPFOR: Player scaling";
         values[] = {0, 1};
         texts[] = {"Off", "On"};
-        default = 1;
+        default = 0;
     };
     class FAC_OpforThreat
     {
@@ -222,14 +222,14 @@ class Params
         title = "BUILD: Where";
         values[] = {0, 1};
         texts[] = {"500 m of base", "Anywhere"};
-        default = 0;
+        default = 1;
     };
     class FAC_BuildCatalog
     {
         title = "BUILD: Object list";
         values[] = {0, 1};
         texts[] = {"Anything", "Realistic"};
-        default = 0;
+        default = 1;
     };
     class FAC_BuildRequire
     {

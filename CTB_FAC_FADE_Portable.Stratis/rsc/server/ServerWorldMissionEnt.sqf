@@ -260,6 +260,12 @@ FADE_missionEnt_deleteGroupFull = {
 FADE_missionEnt_deleteVehicleFull = {
     params ["_veh"];
     if (isNull _veh) exitWith {};
+    // A player who took a parked OPFOR truck keeps it. Deleting the crew would delete the player.
+    private _keepForPlayer = false;
+    if (_veh getVariable ["FADE_parkedOpforVeh", false]) then {
+        { if (isPlayer _x) exitWith { _keepForPlayer = true } } forEach crew _veh;
+    };
+    if (_keepForPlayer) exitWith {};
     private _cg = _veh getVariable ["FADE_qrfCargoGrp", grpNull];
     if (isNull _cg) then { _cg = _veh getVariable ["FADE_eeQrfCargoGrp", grpNull] };
     if (isNull _cg) then { _cg = _veh getVariable ["FADE_opCargoGrp", grpNull] };

@@ -389,6 +389,9 @@ FADE_runMission_SearchDestroy = {
     private _sdDetect = (_areaRadius + 120) max 280;
     [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
     [_taskId, _center, _basePos, _enemyUnitsSd, _allGroups, _sdDetect] call FADE_counterAttackStart;
+    if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+        [_taskId, _center, _basePos] call FADE_missionRoadblocks_spawnAround;
+    };
 
     private _sdTimeout = 900;
     [_taskId, _allGroups, _initialCount, _markerName, _player, _sdTimeout, _sdCleanupObjs, _misOwnSd, _sdAmmoObjs, _requiredDestroy, _cacheCount] spawn {

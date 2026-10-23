@@ -134,6 +134,7 @@ Cargo camps, Clear Area camps, and two Area of Operations objectives use a share
 - Within 1000 m of base on Altis (500 m on portable maps), Build (FADE self-interact, under Base) places Eden props, grouped by category and type, with a search box. Place opens a camera. Space places the piece. Esc returns to the menu. Ctrl+Z removes the last piece you placed. Place multiple stays in the camera. Simulation, damage, and simple object are toggles in the menu. The Placed tab lists every placed piece. Select one and press Delete to remove it. Lobby Where can instead allow Build anywhere: outside the base bubble it appears on ACE self-interact itself, and the rest of the FADE menu stays at base. Confirming a single placement opens the menu again. The server records each object. Lobby settings choose who may build, and whether a shared supply pool is charged. The object list is Anything or Realistic. Anything is every prop. Realistic is a set list of fortifications, camp gear, and supplies. An admin can switch that list from the Admin page. If the lobby requires base structures, place Gear, Barracks, Vehicles, and Medical inside the base area. Each building unlocks only that service. Look at a placed piece and use ACE Interact, then Destroy, to take it down. On a placed piece that already has a texture, Write sets the text. Type \n for a new line. Clear erases it.
 - On a map other than Altis, a logged-in admin places the player base, or players suggest a point (60 seconds) and then vote (60 seconds). Ranges stay off. ACE self-interact and Build are the interface there. Map bounds are the terrain square (`0..worldSize`) on every world.
 - Ambient civilians in map-derived zones (`CIV_T_*`); talk for tips; building intel packages; dynamic roadblocks.
+- Mission objectives (except Operation, Escape and Evasion, Intercept Convoy, Geo-Guesser, and Mine Clearing) get up to four OPFOR checkpoints on roads around the site. One faces base. They stay when Patrols is off and leave when the mission ends. Ambient town and corridor blocks still require Patrols.
 - Terrain survey (`FADE_AoSurvey`) buckets roads, flat ground, forest, and buildings for patrol placement.
 - Map diary briefing with scenario notes and joint-fires reference (`rsc/Briefing.sqf`).
 - MOTD boards rotate messages; HQ main board shows the current procedural op name.
@@ -164,10 +165,9 @@ Full backlog and design notes: [TODO.md](TODO.md).
 - **Intercept Convoy re-enable** (`FADE_disabledMissionTypes`): fix route / road spawn / RPT errors, then show it in the Missions GUI again.
 - **Operation v2:** intel-gated 3×3 km grid with three hidden objectives (civ talk + body search); replaces standalone Hunt (not planned as its own type).
 - **Spoken radio:** `kbTell` voice on top of existing `FADE_aiSideChat` subtitles.
-- **OPFOR roadblocks:** place blocks using `FADE_AoSurvey` road buckets and real player traffic.
 - **Portable FADE:** mod package + Eden base module so FADE can run on maps other than Altis with thin mission glue.
 
-**Already shipped (see Features above, not the open list):** Raid, Invasion, Point Defense, lore, AAA engagement fix, OPFOR drones, field intel / grid search / AoSurvey, any-side factions, HQ recruit board, player-facing copy pass, player construction, non-Altis base pick.
+**Already shipped (see Features above, not the open list):** Raid, Invasion, Point Defense, lore, AAA engagement fix, OPFOR drones, field intel / grid search / AoSurvey, any-side factions, HQ recruit board, player-facing copy pass, player construction, non-Altis base pick, objective roadblocks.
 
 ---
 

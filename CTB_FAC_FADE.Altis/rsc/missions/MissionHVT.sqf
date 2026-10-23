@@ -120,6 +120,9 @@ FADE_runMission_HVT = {
     [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
     if (!isNull _hvtBarrel) then { [_taskId, _hvtBarrel] call FADE_missionEnt_registerObject };
     [_taskId, _hvtObjectivePos, _basePos, _enemyUnits, _allGroups, -1] call FADE_counterAttackStart;
+    if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+        [_taskId, _hvtObjectivePos, _basePos] call FADE_missionRoadblocks_spawnAround;
+    };
 
     [_taskId, _hvt, _basePos, _baseDistForComplete, _markerName, _player, _allGroups, _hvtBarrel, _hvtVgHintObjs] spawn {
         params ["_taskId", "_hvt", "_basePos", "_baseDistForComplete", "_markerName", "_player", "_allGroups", "_hvtBarrel", "_hvtVgHintObjs"];

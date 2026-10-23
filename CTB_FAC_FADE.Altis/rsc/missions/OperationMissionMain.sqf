@@ -75,6 +75,9 @@ private _hqIdx = 0;
 } forEach _zoneCivIds;
 missionNamespace setVariable ["FADE_operationCivZoneIds_" + _taskId, +_zoneCivIds];
 if (!isNil "FADE_civ_pinZones") then { [_zoneCivIds] call FADE_civ_pinZones };
+if (!isNil "FADE_parkedOpfor_spawnAt") then {
+    { [_taskId, _x, 1] call FADE_parkedOpfor_spawnAt } forEach _zones;
+};
 
 private _zoneCodenames = [_taskId, count _zones] call FADE_raid_pickObjectiveCodenames;
 private _maxFleet = missionNamespace getVariable ["FADE_operationMaxFleetVehicles", 10];

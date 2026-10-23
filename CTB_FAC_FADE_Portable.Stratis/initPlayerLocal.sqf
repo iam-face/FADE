@@ -532,31 +532,29 @@ player addEventHandler ["Respawn", {
     if (!isNil "FADE_baseNpc_clientEnsureInteract") then { [] call FADE_baseNpc_clientEnsureInteract };
 };
 
-// Welcome hint  - replaces loading hint when config and actions are ready (briefing + GUIs hold full detail)
+// Welcome hint after the deploy card. That card clears hints, and the base move happens during it.
 private _playerName = name player;
 private _welcomeText = format [
     "<t size='1.25' color='#FFD700'>[FADE] FACE'S DYNAMIC ENVIRONMENT</t><br/><br/>" +
     "<t align='left'>" +
     "<t color='#FFFFFF'>Welcome, </t><t color='#FFCC00'>%1</t><t color='#FFFFFF'>.</t><br/><br/>" +
-    "<t color='#FFCC00'>Rhodesy's office</t><t color='#FFFFFF'> - Manage Scenario, Missions and Admin.</t><br/>" +
-    "<t color='#FFCC00'>MB's gear room</t><t color='#FFFFFF'> - loadouts and kit.</t><br/>" +
-    "<t color='#FF0000'>Base HQ</t><t color='#FFFFFF'> boards also cover vehicles, music and teleport.</t><br/><br/>" +
-    "<t color='#FFFFFF'>Training: Bean's Medical, Joon's FIRES, Sultan's CQB, sniper / rifle / AT ranges.</t><br/>" +
-    "<t color='#FFFFFF'>Social: SDE's pub, Juko's locker, C3 Quiet Area.</t><br/><br/>" +
-    "<t color='#FFFFFF'>Map -> </t><t color='#FFCC00'>FADE Notes</t><t color='#FFFFFF'> for doctrine. SMEAC builds when you start a mission.</t><br/>" +
-    "<t color='#FFCC00'>Ctrl+;</t><t color='#FFFFFF'> Missions / </t><t color='#FFCC00'>Ctrl+Shift+'</t><t color='#FFFFFF'> Fast Travel</t><br/><br/>" +
-    "<t color='#FFFFFF'>Remember: Do not take SDE's STANAGs.</t>" +
+    "<t color='#FFFFFF'>Open ACE self-interact to access menus. Choose </t><t color='#FFCC00'>FADE...</t><t color='#FFFFFF'>, available by default within 500 m of the player base.</t><br/><br/>" +
+    "<t color='#FFCC00'>Gear and Units...</t><t color='#FFFFFF'>: Loadouts, Recruit AI, and Heal Me.</t><br/>" +
+    "<t color='#FFCC00'>Vehicles...</t><t color='#FFFFFF'>: Open the vehicle terminal.</t><br/>" +
+    "<t color='#FFFFFF'>Sit in the vehicle to rearm, repair, refuel, or set pylons.</t><br/>" +
+    "<t color='#FFCC00'>Scenario...</t><t color='#FFFFFF'>: Missions, scenario settings, Fast Travel, and map teleport.</t><br/>" +
+    "<t color='#FFCC00'>Base...</t><t color='#FFFFFF'>: Build structures and fortifications.</t><br/><br/>" +
+    "<t color='#FFFFFF'>Map -> </t><t color='#FFCC00'>FADE Notes</t><t color='#FFFFFF'> for doctrine. SMEACs are written when you start a mission and are available in the Tasks tab.</t><br/>" +
+    "<t color='#FFCC00'>Ctrl+;</t><t color='#FFFFFF'> Quickly access missions, </t><t color='#FFCC00'>Ctrl+Shift+'</t><t color='#FFFFFF'> to fast travel.</t>" +
     "</t>",
     _playerName
 ];
-if (worldName == "Altis" || { missionNamespace getVariable ["FADE_baseDefined", false] }) then {
-    hint parseText _welcomeText;
-} else {
-    [_welcomeText] spawn {
-        params ["_welcomeText"];
-        waitUntil { sleep 0.5; missionNamespace getVariable ["FADE_baseDefined", false] };
-        hint parseText _welcomeText;
+[_welcomeText] spawn {
+    params ["_welcomeText"];
+    if (worldName != "Altis") then {
+        waitUntil { sleep 0.25; missionNamespace getVariable ["FAC_basePick_deployFinished", false] };
     };
+    hint parseText _welcomeText;
 };
 
 // Invisible ambient lights 25m above each helipad and vehicle spawn

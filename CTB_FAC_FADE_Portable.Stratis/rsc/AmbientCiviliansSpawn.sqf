@@ -200,7 +200,7 @@ FADE_civ_distPointToSeg2D = {
 
 // Reject if parked car (center + fore/aft samples) lies too close to another road segment that crosses ours
 FADE_civ_parkClearOfCrossRoads = {
-    params ["_xy", "_vehDir", "_rOwn", "_r2Own"];
+    params ["_xy", "_vehDir", "_rOwn", "_r2Own", ["_halfLenOverride", -1]];
     private _scan = missionNamespace getVariable ["FADE_civParkedCrossRoadScan", 24];
     private _minClear = missionNamespace getVariable ["FADE_civParkedCrossRoadClearM", 6.8];
     private _angMin = missionNamespace getVariable ["FADE_civParkedCrossRoadAngleMin", 38];
@@ -210,8 +210,8 @@ FADE_civ_parkClearOfCrossRoads = {
     private _near = _nearL nearRoads _scan;
     private _px = _nearL select 0;
     private _py = _nearL select 1;
-    private _halfLen = missionNamespace getVariable ["FADE_civParkedCrossRoadHalfLen", 4.5];
-    _halfLen = (_halfLen max 3) min 7;
+    private _halfLen = if (_halfLenOverride >= 0) then { _halfLenOverride } else { missionNamespace getVariable ["FADE_civParkedCrossRoadHalfLen", 4.5] };
+    _halfLen = if (_halfLenOverride >= 0) then { (_halfLen max 3) min 12 } else { (_halfLen max 3) min 7 };
     private _checkPts = [
         _nearL,
         [_px, _py] getPos [_halfLen, _vehDir],
@@ -251,7 +251,7 @@ FADE_civ_parkClearOfCrossRoads = {
 
 // Try shuffled road segments; optional require House/Building within _nearBldM of park ASL
 FADE_civ_pickParkSlotFromRoadList = {
-    params ["_roads", "_requireNearBuilding", ["_nearBldM", 125]];
+    params ["_roads", "_requireNearBuilding", ["_nearBldM", 125], ["_halfLen", -1], ["_minGap", -1]];
     if (_roads isEqualTo []) exitWith { [] };
     _roads = _roads call BIS_fnc_arrayShuffle;
     private _lim = (count _roads) min 60;
@@ -259,6 +259,9 @@ FADE_civ_pickParkSlotFromRoadList = {
     private _k = 0;
     private _minAlong = missionNamespace getVariable ["FADE_civParkedMinAlongRoadM", 7];
     _minAlong = (_minAlong max 4) min 18;
+    private _gap = if (_minGap >= 0) then { (_minGap max 5) min 18 } else { 5.5 };
+    private _offMin = if (_gap > 8) then { 4.2 } else { 3.2 };
+    private _offSpan = if (_gap > 8) then { 1.8 } else { 1.6 };
     while { _k < _lim && { _res isEqualTo [] } } do {
         private _r = _roads select _k;
         _k = _k + 1;
@@ -276,17 +279,17 @@ FADE_civ_pickParkSlotFromRoadList = {
                     private _along = _alongMin + random (_alongMax - _alongMin);
                     private _anchor = [_p1 select 0, _p1 select 1] getPos [_along, _dir];
                     private _lat = if (random 1 > 0.5) then { 90 } else { -90 };
-                    private _off = 3.2 + random 1.6;
+                    private _off = _offMin + random _offSpan;
                     private _xy = _anchor getPos [_off, _dir + _lat];
                     if (!surfaceIsWater _xy) then {
                         private _z = getTerrainHeightASL _xy;
                         private _asl = [_xy select 0, _xy select 1, _z + 0.25];
-                        if (count (nearestObjects [_asl, ["AllVehicles", "Wreck_Base"], 5.5] select { alive _x }) == 0) then {
+                        if (count (nearestObjects [_asl, ["AllVehicles", "Wreck_Base"], _gap] select { alive _x }) == 0) then {
                             private _bldOk = true;
                             if (_requireNearBuilding && { _nearBldM > 0 }) then {
                                 _bldOk = count (nearestObjects [_asl, ["House", "Building"], _nearBldM]) > 0;
                             };
-                            if (_bldOk && { [_xy, _dir, _r, _r2] call FADE_civ_parkClearOfCrossRoads }) then {
+                            if (_bldOk && { [_xy, _dir, _r, _r2, _halfLen] call FADE_civ_parkClearOfCrossRoads }) then {
                                 _res = [_asl, _dir];
                             };
                         };
@@ -300,7 +303,7 @@ FADE_civ_pickParkSlotFromRoadList = {
 
 // Roads near buildings first (urban), then tight ring from zone centre, then wider ring; building proximity required until last merge pass
 FADE_civ_tryRoadParkPosition = {
-    params ["_center", "_searchRadius"];
+    params ["_center", "_searchRadius", ["_halfLen", -1], ["_minGap", -1], ["_allowOpenRoad", true]];
     private _bScan = missionNamespace getVariable ["FADE_civParkedBuildingScanRadius", 380];
     private _roadAtB = missionNamespace getVariable ["FADE_civParkedRoadFromBuildingRadius", 100];
     private _cenNarrow = missionNamespace getVariable ["FADE_civParkedCenterRoadRadius", 260];
@@ -322,21 +325,144 @@ FADE_civ_tryRoadParkPosition = {
         { if (!(_x in _urban)) then { _urban pushBack _x } } forEach (_bp nearRoads _roadAtB);
     };
 
-    private _res = [_urban, true, _nearBld] call FADE_civ_pickParkSlotFromRoadList;
+    private _res = [_urban, true, _nearBld, _halfLen, _minGap] call FADE_civ_pickParkSlotFromRoadList;
     if (_res isEqualTo []) then {
         private _ring = _center nearRoads ((_cenNarrow min _searchRadius) max 90);
-        _res = [_ring, true, _nearBld] call FADE_civ_pickParkSlotFromRoadList;
+        _res = [_ring, true, _nearBld, _halfLen, _minGap] call FADE_civ_pickParkSlotFromRoadList;
     };
     if (_res isEqualTo []) then {
         private _ring2 = _center nearRoads ((_cenWide min _searchRadius) max 120);
-        _res = [_ring2, true, _nearBld] call FADE_civ_pickParkSlotFromRoadList;
+        _res = [_ring2, true, _nearBld, _halfLen, _minGap] call FADE_civ_pickParkSlotFromRoadList;
     };
-    if (_res isEqualTo []) then {
+    if (_allowOpenRoad && { _res isEqualTo [] }) then {
         private _merged = +_urban;
         { if (!(_x in _merged)) then { _merged pushBack _x } } forEach (_center nearRoads ((_cenWide min _searchRadius) max 90));
-        _res = [_merged, false, _nearBld] call FADE_civ_pickParkSlotFromRoadList;
+        _res = [_merged, false, _nearBld, _halfLen, _minGap] call FADE_civ_pickParkSlotFromRoadList;
     };
     _res
+};
+
+// Unarmored wheeled OPFOR transport (jeep or soft truck, 2+ cargo seats). No APC, MRAP, or armed turret.
+FADE_parkedOpfor_classOk = {
+    params ["_class"];
+    if !(_class isEqualType "" && { _class != "" }) exitWith { false };
+    private _cfg = configFile >> "CfgVehicles" >> _class;
+    if !(isClass _cfg) exitWith { false };
+    if !(_class isKindOf "Car") exitWith { false };
+    if (_class isKindOf "Tank" || { _class isKindOf "Wheeled_APC_F" }) exitWith { false };
+    private _armored = false;
+    {
+        if (isClass (configFile >> "CfgVehicles" >> _x) && { _class isKindOf _x }) then { _armored = true };
+    } forEach ["MRAP_01_base_F", "MRAP_02_base_F", "MRAP_03_base_F"];
+    if (_armored) exitWith { false };
+    private _armed = false;
+    {
+        if (count (getArray (_x >> "weapons")) > 0) then { _armed = true };
+    } forEach ("true" configClasses (_cfg >> "Turrets"));
+    if (_armed) exitWith { false };
+    (getNumber (_cfg >> "transportSoldier")) >= 2
+};
+
+FADE_parkedOpfor_collectClasses = {
+    if !(missionNamespace getVariable ["FADE_parkedOpforEnabled", true]) exitWith { [] };
+    private _list = +(missionNamespace getVariable ["FADE_enemyVehicles", []]);
+    if (_list isEqualTo []) then {
+        private _fn = missionNamespace getVariable ["FADE_getEnemyVehiclesForFaction", {}];
+        if (!(_fn isEqualTo {})) then {
+            _list = [missionNamespace getVariable ["FADE_scenarioEnemyFaction", ""]] call _fn;
+        };
+    };
+    _list select { [_x] call FADE_parkedOpfor_classOk }
+};
+
+// Empty OPFOR transports on the shoulder near _center. Requires a building (town). Registers for mission cleanup.
+// _want < 0 uses FADE_parkedOpforCountMin/Max. Returns the vehicles spawned for this task so far.
+FADE_parkedOpfor_spawnAt = {
+    params ["_taskId", "_center", ["_want", -1]];
+    if (!isServer) exitWith { [] };
+    if !(missionNamespace getVariable ["FADE_parkedOpforEnabled", true]) exitWith { [] };
+    if (_taskId isEqualTo "" || { !(_center isEqualType []) } || { count _center < 2 }) exitWith { [] };
+    if (isNil "FADE_civ_tryRoadParkPosition") exitWith { [] };
+    private _key = format ["FADE_parkedOpfor_spawned_%1", _taskId];
+    private _spawned = missionNamespace getVariable [_key, []];
+    _spawned = _spawned select { !isNull _x && { alive _x } };
+    private _maxN = missionNamespace getVariable ["FADE_parkedOpforMaxPerMission", 8];
+    _maxN = (round _maxN) max 0;
+    if (count _spawned >= _maxN) exitWith {
+        missionNamespace setVariable [_key, _spawned];
+        _spawned
+    };
+    private _alreadyHere = false;
+    {
+        if ((_x distance2D _center) < 80) then { _alreadyHere = true };
+    } forEach _spawned;
+    if (_alreadyHere) exitWith {
+        missionNamespace setVariable [_key, _spawned];
+        _spawned
+    };
+    private _classes = call FADE_parkedOpfor_collectClasses;
+    if (_classes isEqualTo []) exitWith { _spawned };
+    if (_want < 0) then {
+        private _mn = round (missionNamespace getVariable ["FADE_parkedOpforCountMin", 1]);
+        private _mx = round (missionNamespace getVariable ["FADE_parkedOpforCountMax", 2]);
+        _mn = _mn max 0;
+        _mx = _mx max _mn;
+        _want = _mn + floor random ((_mx - _mn) + 1);
+    } else {
+        _want = round _want;
+    };
+    _want = _want min (_maxN - count _spawned);
+    if (_want <= 0) exitWith { _spawned };
+    private _rad = missionNamespace getVariable ["FADE_civParkedWideRoadRadius", 400];
+    private _halfCar = missionNamespace getVariable ["FADE_parkedOpforHalfLenCar", 4.5];
+    private _gapCar = missionNamespace getVariable ["FADE_parkedOpforMinGapCar", 8];
+    private _halfTruck = missionNamespace getVariable ["FADE_parkedOpforHalfLenTruck", 8.5];
+    private _gapTruck = missionNamespace getVariable ["FADE_parkedOpforMinGapTruck", 12];
+    private _cars = _classes select { !(_x isKindOf "Truck") };
+    private _placed = +_spawned;
+    private _cls = "";
+    private _isTruck = false;
+    private _half = 0;
+    private _gap = 0;
+    private _slot = [];
+    private _asl = [];
+    private _tooClose = false;
+    private _veh = objNull;
+    for "_i" from 1 to _want do {
+        _cls = selectRandom _classes;
+        _isTruck = _cls isKindOf "Truck";
+        _half = if (_isTruck) then { _halfTruck } else { _halfCar };
+        _gap = if (_isTruck) then { _gapTruck } else { _gapCar };
+        _slot = [_center, _rad, _half, _gap, false] call FADE_civ_tryRoadParkPosition;
+        if (_slot isEqualTo [] && { _isTruck } && { count _cars > 0 }) then {
+            _cls = selectRandom _cars;
+            _isTruck = false;
+            _half = _halfCar;
+            _gap = _gapCar;
+            _slot = [_center, _rad, _half, _gap, false] call FADE_civ_tryRoadParkPosition;
+        };
+        if (_slot isEqualTo []) then { continue };
+        _asl = _slot select 0;
+        _tooClose = false;
+        {
+            if (!isNull _x && { alive _x } && { (_asl distance (getPosASL _x)) < _gap }) then { _tooClose = true };
+        } forEach _placed;
+        if (_tooClose) then { continue };
+        _veh = createVehicle [_cls, _asl, [], 0, "NONE"];
+        if (isNull _veh) then { continue };
+        _veh setPosASL _asl;
+        _veh setDir (_slot select 1);
+        _veh setVectorUp (surfaceNormal (ASLToAGL _asl));
+        _veh setVariable ["FADE_parkedOpforVeh", true, true];
+        _veh setVariable ["FADE_parkedOpforTask", _taskId, false];
+        _veh enableSimulationGlobal true;
+        if (!isNil "FADE_missionEnt_registerVehicle") then {
+            [_taskId, _veh] call FADE_missionEnt_registerVehicle;
+        };
+        _placed pushBack _veh;
+    };
+    missionNamespace setVariable [_key, _placed];
+    _placed
 };
 
 // Empty parked civ cars on roads (side of road, aligned to segment)

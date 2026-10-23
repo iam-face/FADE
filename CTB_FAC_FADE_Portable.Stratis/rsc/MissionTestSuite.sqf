@@ -313,6 +313,31 @@ FAC_missionTestSuite_runServer = {
             _fail = _fail + 1;
             diag_log "[FAC TestSuite] FAIL (server): base-pick map click stores _pos";
         };
+        private _dlg = preprocessFileLineNumbers "rsc\BasePickDialog.hpp";
+        _ok = (_src find "ctrlMapAnimAdd") >= 0
+            && { (_src find "voteFocus") >= 0 }
+            && { (_dlg find "voteFocus") >= 0 };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): base-pick vote row pans the map";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): base-pick vote row pans the map";
+        };
+        private _welcome = preprocessFileLineNumbers "initPlayerLocal.sqf";
+        private _deployIdx = _src find "FAC_basePick_deployFinished";
+        private _blackInIdx = _src find "BLACK IN";
+        _ok = _deployIdx > _blackInIdx
+            && { _blackInIdx >= 0 }
+            && { (_welcome find "FAC_basePick_deployFinished") >= 0 }
+            && { (_welcome find "missionNamespace getVariable [""FADE_baseDefined"", false]") < 0 || { (_welcome find "hint parseText _welcomeText") > (_welcome find "FAC_basePick_deployFinished") } };
+        if (_ok) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): welcome hint waits until the deploy card closes";
+        } else {
+            _fail = _fail + 1;
+            diag_log "[FAC TestSuite] FAIL (server): welcome hint waits until the deploy card closes";
+        };
     };
 
     private _civT = missionNamespace getVariable ["FADE_civTriggerNames", []];
@@ -634,6 +659,17 @@ FAC_missionTestSuite_runServer = {
     };
     if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): OPFOR drone/air intensity helpers"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): OPFOR drone/air intensity helpers"; };
 
+    _ok = !isNil "FADE_parkedOpfor_classOk" && { !isNil "FADE_parkedOpfor_spawnAt" };
+    if (_ok) then {
+        private _truckOk = ["O_Truck_02_transport_F"] call FADE_parkedOpfor_classOk;
+        private _jeepOk = ["O_G_Offroad_01_F"] call FADE_parkedOpfor_classOk;
+        private _apcOk = ["O_APC_Wheeled_02_rcws_v2_F"] call FADE_parkedOpfor_classOk;
+        private _mrapOk = ["O_MRAP_02_F"] call FADE_parkedOpfor_classOk;
+        private _armedOk = ["O_G_Offroad_01_armed_F"] call FADE_parkedOpfor_classOk;
+        _ok = _truckOk && { _jeepOk } && { !_apcOk } && { !_mrapOk } && { !_armedOk };
+    };
+    if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): parked OPFOR transport filter"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): parked OPFOR transport filter"; };
+
     // ----- All server publicVariable RPCs (must be CODE on server) -----
     private _lazyRangeServers = missionNamespace getVariable ["FADE_lazyLoadRangeServers", {}];
     if (_lazyRangeServers isEqualType {}) then { [] call _lazyRangeServers };
@@ -786,6 +822,7 @@ FAC_missionTestSuite_runServer = {
         "rsc\ConfigDefaults.sqf",
         "rsc\EnemyAAA.sqf",
         "rsc\RoadblockCommon.sqf",
+        "rsc\MissionRoadblocks.sqf",
         "rsc\DynamicRoadblocks.sqf",
         "rsc\DummyUnits.sqf",
         "rsc\FiresFallOfShot.sqf",
@@ -1186,6 +1223,48 @@ FAC_missionTestSuite_runServer = {
         _shrunk params ["_sPos", "_sRad"];
         _ok = (_truePos distance2D _sPos) <= (_sRad + 1);
         if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): FADE_mission_computeSearchZone shrink contains true pos (r=%1)", _sRad]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): FADE_mission_computeSearchZone shrink contains true pos dist=%1 rad=%2", _truePos distance2D _sPos, _sRad]; };
+    };
+
+    if (!isNil "FADE_missionRoadblocks_spawnAround" && { !isNil "FADE_missionRoadblocks_despawnForTask" }) then {
+        private _mrbTask = "FADE_test_missionRoadblock";
+        private _mrbBase = FADE_basePos;
+        if (_mrbBase isEqualType objNull) then { _mrbBase = getPosATL _mrbBase };
+        _mrbBase = [_mrbBase] call FADE_normPos3;
+        private _mrbRoads = _mrbBase nearRoads 2000;
+        private _mrbAnchor = [];
+        {
+            private _rp = getPosATL _x;
+            if (count _rp >= 2 && { (_rp distance2D _mrbBase) > 900 }) exitWith { _mrbAnchor = [(_rp select 0), (_rp select 1), 0] };
+        } forEach _mrbRoads;
+        if (count _mrbAnchor < 2) then {
+            _pass = _pass + 1;
+            diag_log "[FAC TestSuite] PASS (server): mission roadblock (no road 900m+ from base to sample)";
+        } else {
+            private _mrbPatrols = missionNamespace getVariable ["FADE_scenarioPatrols", true];
+            missionNamespace setVariable ["FADE_scenarioPatrols", false];
+            private _mrbN = [_mrbTask, _mrbAnchor, _mrbBase] call FADE_missionRoadblocks_spawnAround;
+            private _mrbAgain = [_mrbTask, _mrbAnchor, _mrbBase] call FADE_missionRoadblocks_spawnAround;
+            missionNamespace setVariable ["FADE_scenarioPatrols", _mrbPatrols];
+            private _mrbSt = missionNamespace getVariable ["FADE_missionRoadblockState", createHashMap];
+            private _mrbSeen = 0;
+            private _mrbOnRoad = true;
+            private _mrbInRing = true;
+            {
+                private _e = _mrbSt get _x;
+                if (_e isEqualType [] && { count _e >= 3 } && { (_e select 2) == _mrbTask }) then {
+                    _mrbSeen = _mrbSeen + 1;
+                    private _p = _e select 0;
+                    if ((count (_p nearRoads 25)) == 0) then { _mrbOnRoad = false };
+                    private _dObj = _p distance2D _mrbAnchor;
+                    if (_dObj < 80 || { _dObj > 350 }) then { _mrbInRing = false };
+                };
+            } forEach (keys _mrbSt);
+            _ok = _mrbN == _mrbSeen && { _mrbN <= 4 } && { _mrbAgain == 0 } && { _mrbOnRoad } && { _mrbInRing };
+            if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): mission roadblock spokes=%1", _mrbN]; } else { _fail = _fail + 1; diag_log format ["[FAC TestSuite] FAIL (server): mission roadblock n=%1 seen=%2 again=%3 onRoad=%4 ring=%5", _mrbN, _mrbSeen, _mrbAgain, _mrbOnRoad, _mrbInRing]; };
+            [_mrbTask] call FADE_missionRoadblocks_despawnForTask;
+            missionNamespace setVariable [format ["FADE_missionEnt_%1", _mrbTask], nil];
+            missionNamespace setVariable [format ["FADE_missionEnt_cleaned_%1", _mrbTask], nil];
+        };
     };
 
     if (!isNil "FADE_aoSurvey_build") then {
