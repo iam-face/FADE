@@ -14,6 +14,7 @@ FADE_serverWorldModuleList = [
 missionNamespace setVariable ["FADE_serverWorldModuleList", FADE_serverWorldModuleList];
 
 call compile preprocessFileLineNumbers "rsc\RoadblockCommon.sqf";
+call compile preprocessFileLineNumbers "rsc\MissionRoadblocks.sqf";
 call compile preprocessFileLineNumbers "rsc\server\ServerBasePick.sqf";
 if (missionNamespace getVariable ["FADE_dynamicRoadblocksEnabled", false]) then {
     [] execVM "rsc\DynamicRoadblocks.sqf";

@@ -141,6 +141,9 @@ if !([_destPos] call _dryFn) exitWith {
     [_player, _taskId] call FADE_clearActiveMission;
     [_player, "AO ERROR", "Could not anchor the AO on dry land (area was over water). Try again.", "#FF6666"] call FADE_missionOutcomeHint;
 };
+if (!isNil "FADE_parkedOpfor_spawnAt") then {
+    [_taskId, _destPos] call FADE_parkedOpfor_spawnAt;
+};
 
 // 2 km x 2 km square AO; BLUFOR spawn on one edge, assault along depth axis
 private _zoneHalfWidth = 1000;   // half-size each axis = 2 km x 2 km square
@@ -558,6 +561,9 @@ private _bluCount = (count _friendlyUnits) max 1;
 if (_friendlyUnits isEqualTo []) exitWith {
     [_player, _taskId] call FADE_clearActiveMission;
     [_player, "AO ERROR", "No friendly unit classes available for BLUFOR spawns. Check scenario faction.", "#FF6666"] call FADE_missionOutcomeHint;
+};
+if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+    [_taskId, _destPos, _basePos] call FADE_missionRoadblocks_spawnAround;
 };
 if (!([_bluSpawn] call _dryFn)) then {
     private _landBlu = [_bluSpawn, 50, 400] call _fnc_findLandPos;

@@ -351,6 +351,9 @@ FADE_cleanupMissionEntities = {
     // Civ-zone unpin is deferred to FADE_missionEnt_scheduledCleanup so ambient roadblocks/patrols
     // do not respawn OPFOR at the objective while players are still on site after abort.
     if (missionNamespace getVariable [format ["FADE_missionEnt_cleaned_%1", _taskId], false]) exitWith {};
+    if (!isNil "FADE_missionRoadblocks_despawnForTask") then {
+        [_taskId] call FADE_missionRoadblocks_despawnForTask;
+    };
 
     if (_missionType == "AreaOfOperations") then {
         missionNamespace setVariable ["FADE_aoEnded_" + _taskId, true];

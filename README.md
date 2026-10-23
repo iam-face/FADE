@@ -1,184 +1,97 @@
 ![](CTB_FAC_FADE.Altis/img/gh-logo.jpg)
 
 # FADE (Face's Dynamic Environment)
-You are welcome to fork this repository and submit pull requests. If you are interested in joining CTB or supporting development of this project, see the discord link below.
 
-🔗 [My YouTube channel](https://www.youtube.com/@iamface) | 🔗 [CTB Discord](https://discord.gg/d5g2dFH)
+FADE is a multiplayer Arma 3 sandbox built for [Combat Team Bravo](https://discord.gg/d5g2dFH). From base you set the theatre, then start a generated mission or use a training range. A normal session runs from the boards and GUIs. Zeus is optional. Forks and pull requests of this repo are welcome.
 
----
+[YouTube](https://www.youtube.com/@iamface) · [CTB Discord](https://discord.gg/d5g2dFH)
 
-<img src="./CTB_FAC_FADE.Altis/img/flagCTB.jpg" alt="CTB Flag" width="150">
+![CTB Flag](./CTB_FAC_FADE.Altis/img/flagCTB.jpg)
 
-### What is CTB?
+## Combat Team Bravo
 
-Combat Team Bravo (CTB) is an Australian Arma group with over 17 years of history running immersive, story-driven MilSim missions. We run missions every Sunday and Monday night (1930 AEST). We take a approachable milsim approach focused on tactics, techniques and immersion, but not at the expense of fun. There are no ranks, no fixed roles, and no major attendance requirements. Just good missions, solid teamwork, and plenty of banter.
+CTB is an Australian Arma group with more than 17 years of story-driven milsim. We play Sunday and Monday nights at 1930 AEST. Sunday is training and mini-ops. Monday is the main op.
 
-What we offer:
-- Narrative-driven MilSim in Arma 3.
-- No ranks, no mandatory roles
-- 18+ only
-- No minimum attendance. Real life comes first, just mark your RSVP!
-- Arma 3 training/mini-ops every Sunday
-- Arma 3 ops every Monday
-- We regularly use Apex, Contact, SOG, GM, and SPE 1944 DLCs for A3
-- A welcoming, active community built on mateship and shared interest beyond mission nights
+The style is approachable milsim: tactics and immersion, with room for banter. There are no ranks, no fixed roles, and no attendance minimum. Real life comes first, so mark your RSVP when you can make it. Players are 18+. Ops regularly use Apex, Contact, SOG, Global Mobilization, and Spearhead 1944.
 
-Think you’ve got what it takes to run with one of Australia’s longest-standing Arma units? Join our Discord and start your path with CTB.
+## Maps
 
----
+`CTB_FAC_FADE.Altis` is the main CTB Altis mission, with a pre-built base. `CTB_FAC_FADE_Portable.Stratis` is the portable template, on Stratis. On the portable variant, a logged-in admin places the player base, or players vote for it to be placed at a location of their choosing. 
 
-**FADE (Face's Dynamic Environment) - Beta 8**
+The server holds up to 31 players. It owns the scenario, the AI, and mission spawns. Clients open the GUIs and receive updates over `remoteExec` and public variables. Lobby parameters in `description.ext` set who can open each GUI, and the starting weather, OPFOR, civilians, and build rules.
 
-This repository holds two missions. `CTB_FAC_FADE.Altis` is the Altis mission. `CTB_FAC_FADE_Portable.Stratis` is the Stratis mission. Both ship on `main` and on `beta`. `main` is the central branch. `beta` is the development branch. The feature list below describes the Altis mission.
+## A typical session
 
-FADE is a multiplayer Arma 3 sandbox mission on Altis, tailored for CTB use. Players configure the fight and run training or dynamic missions from boards and GUIs at a fixed player base. You do not need Zeus for day-to-day play.
-It is built for rotary, joint fires, and infantry practice on a local or dedicated server and supports up to 31 players currently.
-The server owns the scenario state, AI, and mission spawns. Clients use GUIs and get updates over `remoteExec` / public variables. Lobby parameters in `description.ext` set access locks and starting defaults before the mission starts.
+Open **Manage Scenario** at the mission board, or via ACE self-interact. Set weather, time, factions, civilians, gear, and how hard OPFOR fights. Apply sends that to the server, including players who join later. Admins and Zeus can override group-leader locks on the GUIs.
 
-### Note on mods
+Open **Manage Missions**, or press `Ctrl+;`. Pick a type, read the blurb, and start. Some types ask for a map click or a player first. The blurb states the objective and the win condition.
 
-This project utilises several mods which are contained within the mission.sqm. Much of the scenario does not depend on these mods as available equipment for players is governed by reading your running Arma 3 config files.
-Some content is hard-coded, such as loadouts and the base layout, and will not function correctly without the CTB modlist loaded. The modlist can be obtained by joining the CTB discord.
+Around the base you can place vehicles, apply loadouts, recruit friendly AI, and fast travel (`Ctrl+Shift+'`). The Altis FADE variant includes a CQB shoothouse, ACE and KAT medical dummies, rifle, AT, and sniper ranges, and a FIRES terminal for call-for-fire practice with fall-of-shot screens. HQ auto-heal is on unless the lobby turns it off.
 
-### How a session runs
-As of Beta 8, you can access GUIs from either their in-world location (the terminals or boards) or via ACE Self-Interact.
-1. Open **Manage Scenario** at the mission board or via ACE self-interact: weather, time, friendly/enemy/civilian factions, OPFOR threat, civilians, gear policy, and related options.
-2. Open **Manage Missions**: pick a type, read the in-GUI blurb, start. Some types ask for a map click or player pick first.
-3. Use ACE self-interact base terminals and boards for vehicles, loadouts, recruit AI, fast travel, CQB, jukebox, medical training, live-fire / AT / sniper ranges, and the FIRES range.
+Within 1000 m of the Altis base (500 m on the portable variant), ACE self-interact repeats those actions and adds **Build**. Place opens a camera. Space drops the piece. Esc leaves the camera. Ctrl+Z removes the last piece you placed, and the Placed tab can delete any of them. Look at a placed object, then ACE Interact and Destroy, to take it down. On a piece that already has a texture, Write sets the sign text. Type `\n` for a new line.
 
-Admins and Zeus can usually override group-leader-only GUI locks. Changes from Scenario apply on the server and sync to players who join later (JIP).
+By default anyone can build, anywhere, from the realistic list: fortifications, camp gear, and supplies. An admin can switch that list to allow players to build every prop in the game. An optional shared supply pool, and an optional rule that Gear, Barracks, Vehicles, and Medical tents must be placed before those services work, stay off unless the lobby turns them on. Outside the bubble, **Build** appears on ACE self-interact by itself when the lobby allows building anywhere. The rest of the FADE menu stays at base.
 
-## Features
+Vehicle placement uses the same camera, inside the same bubble. Search and a faction filter narrow the list. Spawned vehicles can be repaired, rearmed, refuelled, and given pylons when the vehicle has them.
 
-### Scenario control
+## Missions
 
-- Weather, time of day, and gear policy (including optional ACE Arsenal on loadout boxes).
-- Friendly, enemy, and civilian factions from `CfgFactionClasses`, limited to factions the server can spawn infantry for. Friendly list covers EAST / WEST / GUER. Enemy list is filtered to opposed sides (GUER counts as hostile to both majors). Apply rejects a faction with no infantry and keeps the previous one. Invalid mixes are corrected on Apply with a hint; player side syncs on Apply, JIP, and respawn. Mission start uses RHS US Army (desert, then woodland), RHS Russia (MSV), and CDF ground forces when those mods are loaded, otherwise NATO, CSAT, and AAF. Civilians stay the vanilla civilian faction.
-- OPFOR population multiplier, patrols (including town chance), skill / routing / retreat behaviour, and AAA (Off / AAA / AAA+MANPADS).
-- OPFOR grenades (Normal / Reduced / Minimal / None, default Reduced): caps thrown HE, under-barrel HE, and dedicated grenade launchers on enemy infantry. Smoke, flares, and chemlights stay.
-- OPFOR player scaling (default On): garrison, patrol, and QRF counts follow alive player count on top of the population multiplier. Off keeps population-only counts.
-- OPFOR air and drones (Off / Low / Normal / High): ambient UAV patrol. A spot inside the objective can start that mission's QRF.
-- Ambient civilian budget and density; who may talk to civilians; who may read building intel.
-- HQ auto-heal and other gameplay toggles from lobby and Scenario Admin.
-- Scenario Admin tab for operators (access locked by lobby param).
+One **global** mission runs for the whole server. Each player can also hold up to three **single** missions.
 
-### Missions
+Global missions include Area of Operations, Asset Retrieval, CAS / Fire Support, Clear Area, CSAR, Escape and Evasion, Geo-Guesser, Hostage, HVT, Invasion, Point Defense, Operation, Raid, and Search and Destroy. 
 
-**Global [G]** missions share one slot for the whole server. **Single [S]** missions are per player (up to three at once). The tables below list every type currently wired in the Missions GUI (including Intercept Convoy, which is disabled for start).
+Single missions are Troop Insert, Troop Extract, Cargo / Resupply, CASEVAC, and Mine Clearing.
 
-In-GUI blurbs under Manage Missions are the source of truth for objectives and win conditions. Mission logic lives under `rsc/missions/`; `rsc/Missions.sqf` dispatches.
+HVT, Hostage, Search and Destroy, and Asset Retrieval use a 100 m search grid. Searching a dead enemy for field intel tightens the zone. The marked area still contains every objective. Raid uses the same grids and reveals the target when friendlies close in, or when the garrison is in contact. Cargo camps, Clear Area camps, and two Area of Operations objectives share one prop set: a three-tent camp, a mortar pit, or a comms relay.
 
-Cargo camps, Clear Area camps, and two Area of Operations objectives use a shared prop set: a camp (three tents), a mortar pit, or a comms relay. HVT, Hostage, Search & Destroy, and Asset Retrieval use 100 m grid search zones and shared `mil_*` map markers. Searching a dead enemy for field intel tightens the zone. The marked area still contains every objective. Raid uses the same grid zones and reveals the objective when friendly forces close in, or the garrison is in contact.
+Most objectives get up to four OPFOR checkpoints on nearby roads. One faces the base. They stay when patrols are off, and they leave when the mission ends. Empty unarmored trucks park near town objectives. A truck a player has taken stays taken. Ambient town blocks and corridor blocks still need patrols on.
 
-**Intercept Convoy** is temporarily hidden in the Missions GUI (`FADE_disabledMissionTypes`) while route and spawn fixes finish.
+Civilians walk towns drawn from the map. Talk to them for tips, and search buildings for intel. Lobby settings choose who may do each. A started mission gets a procedural name and a SMEAC-style brief. The map diary holds scenario notes and a joint-fires reference. MOTD boards rotate short messages, and the HQ board shows the current op name.
 
-#### Global [G] (one at a time)
+## The enemy and the kit
 
-| Mission | Summary |
-|--------|---------|
-| Area of Operations | Large fight with multiple objectives in a wide sector. |
-| Asset Retrieval | Recover equipment from enemy ground, then extract. |
-| CAS / Fire Support | Support friendlies under attack. |
-| Clear Area | Assault a town or camp. |
-| CSAR | Recover personnel from a crash site. |
-| Escape & Evasion | Evadees separated in hostile ground; rescue force recovers them. |
-| Geo-Guesser | Navigation drill: map-click guess where you were dropped; ranked scoring. |
-| Hostage | Rescue civilians from a built-up site (free hold action on hostages). |
-| HVT | Find, kill, or capture a priority target. |
-| Intercept Convoy | Stop a moving column before it finishes its route. (disabled in GUI for now) |
-| Invasion | OPFOR beachhead through nearest civil zones; retake INVASION to win. |
-| Point Defense | Hold a 250 m zone against assault waves for a set duration (timer starts when a player enters). |
-| Operation | Clear outer zones, then capture the OPFOR HQ hub. |
-| Raid | Three linked objectives (mixed task types) across the map; target buildings marked. |
-| Search & Destroy | Find and destroy enemy ammo caches in a marked zone. |
+Faction lists come from `CfgFactionClasses`, limited to factions the server can spawn infantry for. Friendly covers EAST, WEST, and GUER. Enemy is limited to sides opposed to the players. GUER counts as hostile to both major sides. The start mix is RHS US Army (desert, then woodland), RHS Russia (MSV), and CDF ground forces when those mods are loaded. Otherwise it is NATO, CSAT, and AAF. Civilians stay the vanilla civilian faction. Apply rejects a faction with no infantry and keeps the previous one. Invalid mixes are corrected on Apply, with a hint. Player side updates on Apply, on join, and on respawn.
 
-#### Single [S] (per player, up to 3)
+OPFOR population, patrols (including a chance they sit in towns), skill, retreat, AAA, grenades, air, and drones are Scenario and lobby settings. Grenades default to Reduced, which caps thrown HE, under-barrel HE, and dedicated grenade launchers. Smoke, flares, and chemlights stay. Scaling garrison, patrol, and QRF size with the number of living players is off unless you turn it on. Population alone still sets the counts. Air and drones default to off. A sensor inside an objective can start that mission's quick reaction force.
 
-| Mission | Summary |
-|--------|---------|
-| Troop Insert | Insert a squad from base to a chosen LZ. |
-| Troop Extract | Pick up a team and return to base. |
-| Cargo / Resupply | Deliver supplies to a forward camp (sling-load optional). |
-| CASEVAC | Evacuate wounded to base. |
-| Mine Clearing | Clear mines or IEDs on a road segment. |
+Gear policy is Unrestricted, friendly faction only, or preset loadouts only. ACE Arsenal on the loadout boxes is on by default. Recruit access is everyone, group leaders, or admin. It spawns friendly AI from faction infantry or custom presets, assigns them to a friendly group, and dismisses them from the Roster tab.
 
-### Vehicles
+## Mods
 
-- Vehicle GUI at the vehicle terminal / board: place aircraft and land vehicles in the base area (within 1000 m on Altis, 500 m on portable maps). Place opens a camera. Space places the vehicle. Esc cancels. Place multiple stays in the camera and starts off.
-- Search, faction filter, optional aircraft whitelist.
-- Manage spawned assets: ammo, fuel, health, pylons / loadouts where the vehicle supports them.
-- Helipad map markers still update when an aircraft is parked on a pad.
+`mission.sqm` references several mods and DLCs. Spawnable equipment is read from the running Arma config, so much of the sandbox still runs without the full set. Loadouts and the Altis base layout need the CTB modlist. Get that list from the CTB Discord.
 
-### Loadouts
+If you want to produce a modless variant of FADE, simply load the scenario in your editor with no mods running, force-load, and re-save it. The scenario will still function.
 
-- Loadout GUI at loadout boxes / boards: presets, session save, apply.
-- Optional ACE Arsenal actions on those boxes (lobby: ACCESS Loadout box ACE Arsenal).
+## Still in progress
 
-### Recruit
+The backlog and design notes are in [TODO.md](TODO.md).
 
-- `hqRecruitBoard`: spawn or dismiss friendly AI with custom presets or faction infantry.
-- Assign recruits to any friendly group; dismiss from the Roster tab.
-- Lobby access: Everyone / Group leaders / Admin.
-
-### Training ranges
-
-- **CQB** shoothouse (`cqbBoard`, `CQB_POS_*`).
-- **Medical** training terminal: ACE + KAT dummies at `MEDICAL_1`.
-- **Firing / AT** and **sniper** ranges with info boards.
-- **FIRES** terminal: call-for-fire practice, fall-of-shot / drone video screens (`terminalFires`, `droneVideoScreen`, `firesScreenPos_*`).
-
-### Base and world
-
-- Fast travel boards around base (base, medical, pads, range, CQB, locker, pub, and related spots). Lobby can restrict teleport-to-player.
-- Within 1000 m of base on Altis (500 m on portable maps), ACE self-interact opens a FADE menu (gear and units, vehicles, scenario). Those entries run the same actions as the loadout boxes, recruit board, vehicle terminal, mission board, fast travel, and map teleport. Heal Me uses the HQ full heal.
-- Within 1000 m of base on Altis (500 m on portable maps), Build (FADE self-interact, under Base) places Eden props, grouped by category and type, with a search box. Place opens a camera. Space places the piece. Esc returns to the menu. Ctrl+Z removes the last piece you placed. Place multiple stays in the camera. Simulation, damage, and simple object are toggles in the menu. The Placed tab lists every placed piece. Select one and press Delete to remove it. Lobby Where can instead allow Build anywhere: outside the base bubble it appears on ACE self-interact itself, and the rest of the FADE menu stays at base. Confirming a single placement opens the menu again. The server records each object. Lobby settings choose who may build, and whether a shared supply pool is charged. The object list is Anything or Realistic. Anything is every prop. Realistic is a set list of fortifications, camp gear, and supplies. An admin can switch that list from the Admin page. If the lobby requires base structures, place Gear, Barracks, Vehicles, and Medical inside the base area. Each building unlocks only that service. Look at a placed piece and use ACE Interact, then Destroy, to take it down. On a placed piece that already has a texture, Write sets the text. Type \n for a new line. Clear erases it.
-- On a map other than Altis, a logged-in admin places the player base, or players suggest a point (60 seconds) and then vote (60 seconds). Ranges stay off. ACE self-interact and Build are the interface there. Map bounds are the terrain square (`0..worldSize`) on every world.
-- Ambient civilians in map-derived zones (`CIV_T_*`); talk for tips; building intel packages; dynamic roadblocks.
-- Terrain survey (`FADE_AoSurvey`) buckets roads, flat ground, forest, and buildings for patrol placement.
-- Map diary briefing with scenario notes and joint-fires reference (`rsc/Briefing.sqf`).
-- MOTD boards rotate messages; HQ main board shows the current procedural op name.
-- Procedural mission lore / SMEAC-style brief content for started missions.
-
-### Lobby parameters (`description.ext`)
-
-Grouped roughly as:
-
-- **ACCESS:** Scenario, Missions, Vehicle, Loadout, Recruit, Fast Travel to player, Scenario Admin, ACE Arsenal on loadout boxes.
-- **CIVILIANS:** Ambient on/off at start, who can interrogate, who can read intel.
-- **GAMEPLAY:** Gear policy, HQ auto-heal.
-- **MISSIONS:** AO strength.
-- **OPFOR:** Air, drones, grenades, patrols, patrol town chance, player scaling, population multiplier.
-- **WORLD:** Starting time and weather.
-- **BUILD:** Who can build (Engineers / Anyone / No-one), logistics (Not required / Required), where (1000 m of base on Altis, 500 m on portable / Anywhere), object list (Anything / Realistic), base structures (Not required / Required).
-- **DEBUG:** Spawn prints, garrison building markers, civilian town markers, script debug tools (including Zeus via Admin tab when enabled).
-
----
-
-## Planned work
-
-Full backlog and design notes: [TODO.md](TODO.md).
-
-**Open items**
-
-- **Shared GUI shell:** every current terminal is a spec in `rsc/FAC_GuiSpecs.sqf` filled into `FAC_Terminal` by `FAC_gui_build`. Civ talk stays radial and uses the shared button and text classes. A client pass is still needed for scroll and for combo menus inside the scroll area.
-- **Intercept Convoy re-enable** (`FADE_disabledMissionTypes`): fix route / road spawn / RPT errors, then show it in the Missions GUI again.
-- **Operation v2:** intel-gated 3×3 km grid with three hidden objectives (civ talk + body search); replaces standalone Hunt (not planned as its own type).
-- **Spoken radio:** `kbTell` voice on top of existing `FADE_aiSideChat` subtitles.
-- **OPFOR roadblocks:** place blocks using `FADE_AoSurvey` road buckets and real player traffic.
-- **Portable FADE:** mod package + Eden base module so FADE can run on maps other than Altis with thin mission glue.
-
-**Already shipped (see Features above, not the open list):** Raid, Invasion, Point Defense, lore, AAA engagement fix, OPFOR drones, field intel / grid search / AoSurvey, any-side factions, HQ recruit board, player-facing copy pass, player construction, non-Altis base pick.
-
----
+- Show Intercept Convoy in the Missions GUI again, once the route spawn is clean.
+- Replace Operation with an intel-gated 3 by 3 km grid and three hidden objectives. Standalone Hunt is not planned.
+- Add engine radio voice (`kbTell`) on top of the existing side-chat subtitles.
 
 ## For contributors
 
-Entry points: `initServer.sqf` (loads `rsc/server/`) and `initPlayerLocal.sqf`. Per-type runners sit in `rsc/missions/`; shared helpers use `FADE_*` (server / world / missions) and `FAC_*` (client GUIs, theme, lobby). Local AI notes may sit in `.cursor/agent-docs/` (gitignored). Tracked Cursor skills under `.cursor/skills/` include humanizer and fade-player-copy.
+Entry points are `initServer.sqf`, which loads `rsc/server/`, and `initPlayerLocal.sqf`. Per-type runners live in `rsc/missions/`. `rsc/Missions.sqf` dispatches them. `FADE_*` is server, world, and mission logic. `FAC_*` is client GUI, theme, and lobby parameters. Local AI notes may sit in `.cursor/agent-docs/` (gitignored). Tracked skills under `.cursor/skills/` include the player-copy and headless-test notes.
 
-**Regression tests:** `[] call FAC_missionTestSuite_execAll` (debug-tools lobby param adds a scroll-wheel action). RPT filter: `[FAC TestSuite]`. Covers compile, RPCs, placement, SMEAC/intel per type, zone pickers, and client GUI scripts. It does not run full playthroughs.
+The debug-tools lobby parameter adds two scroll-wheel actions.
 
-**Mission playthrough tests:** `[] call FAC_playthroughSuite_execAll` (second dev scroll-wheel action). RPT filter: `[FAC Playthrough]`. Runs mission types in about 10 minutes or less with no player input after exec (server teleports and win cheats). Abort with `[] call FAC_playthroughSuite_abort`. Tune budget and phase toggles in `rsc/MissionPlaythroughProfiles.sqf`.
+`[] call FAC_missionTestSuite_execAll` checks compile, RPCs, placement, SMEAC and intel text, zone pickers, and the client GUI scripts. Filter the RPT on `[FAC TestSuite]`. It does not play a mission through.
 
-**Offline SQF lint:** Install the [SQF-VM Language Server](https://marketplace.visualstudio.com/items?itemName=SQF-VM.sqf-vm-language-server) in Cursor/VS Code. From the mission folder: `powershell -ExecutionPolicy Bypass -File ..\..\tools\sqfvm\Invoke-FadeSqfLint.ps1 -InstallIfMissing`. Static analysis only; it does not prove runtime mission behaviour.
+`[] call FAC_playthroughSuite_execAll` runs the mission types in about 10 minutes or less, with no player input after you start it. The server teleports and applies win cheats. Filter on `[FAC Playthrough]`. Abort with `[] call FAC_playthroughSuite_abort`. Budgets and phase toggles are in `rsc/MissionPlaythroughProfiles.sqf`.
 
-**Headless dedicated tests (optional):** `powershell -ExecutionPolicy Bypass -File ..\..\tools\headless\Run-FadeHeadlessTest.ps1`. Modes: `-Mode boot`, `-Mode compile` (default), `-Mode playthrough`, `-Mode all`. Config: `..\..\tools\headless\headless.local.json`. Agent workflow: `.cursor/skills/fade-headless-test/SKILL.md`.
+Offline lint, from a mission folder, after you install the [SQF-VM Language Server](https://marketplace.visualstudio.com/items?itemName=SQF-VM.sqf-vm-language-server):
+
+```
+powershell -ExecutionPolicy Bypass -File ..\..\tools\sqfvm\Invoke-FadeSqfLint.ps1 -InstallIfMissing
+```
+
+That pass is static analysis. It does not prove the mission runs.
+
+Headless dedicated tests:
+
+```
+powershell -ExecutionPolicy Bypass -File ..\..\tools\headless\Run-FadeHeadlessTest.ps1
+```
+
+Modes are `-Mode boot`, `-Mode compile` (the default), `-Mode playthrough`, and `-Mode all`. Local config is `..\..\tools\headless\headless.local.json`.

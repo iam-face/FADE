@@ -20,39 +20,41 @@ class EditorData
 	};
 	class Camera
 	{
-		pos[]={2634.1313,104.43651,556.19189};
-		dir[]={-0.07174129,-0.62474883,0.77752316};
-		up[]={-0.057401136,0.78082579,0.62210637};
-		aside[]={0.99577034,0,0.091878742};
+		pos[]={2613.156,171.05557,525.85547};
+		dir[]={-0.022118274,-0.38133588,0.92417204};
+		up[]={-0.009123927,0.92443657,0.38122678};
+		aside[]={0.99971384,0,0.023926223};
 	};
 };
 binarizationWanted=0;
-sourceName="ctb_fac_fade_portable";
+sourceName="CTB_FAC_FADE_Portable";
 addons[]=
 {
 	"A3_Characters_F",
 	"ace_gforces",
 	"ace_parachute",
-	"gm_weapons_rifles_mp5",
-	"gm_weapons_attachments_side_surefire",
-	"A3_Weapons_F",
-	"A3_Weapons_F_Exp",
+	"A3_Weapons_F_Mod_SMGs_SMG_03",
 	"ace_realisticnames",
+	"ace_scopes",
 	"A3_Weapons_F_Acc",
-	"ace_smallarms",
+	"ace_laserpointer",
+	"A3_Weapons_F_Mod",
+	"RF_Weapons_Pistols_DEagle",
+	"ace_compat_rf_realisticnames",
+	"A3_Weapons_F",
+	"ace_optics",
 	"WW2_SPE_Assets_c_Weapons_InfantryWeapons_c",
-	"A3_Characters_F_Enoch",
+	"ace_nightvision",
+	"ace_hearing",
+	"RF_Characters_Uniform",
 	"ace_medical_treatment",
-	"Characters_f_lxWS",
-	"A3_Characters_F_AoW",
-	"A3_Structures_F_Argo_Signs_Warnings",
-	"A3_Signs_F"
+	"A3_Characters_F_AoW"
 };
 class AddonsMetaData
 {
 	class List
 	{
-		items=14;
+		items=15;
 		class Item0
 		{
 			className="A3_Characters_F";
@@ -69,17 +71,17 @@ class AddonsMetaData
 		};
 		class Item2
 		{
-			className="gm_weapons_rifles_mp5";
-			name="gm_weapons_rifles_mp5";
-			author="Global Mobilization";
-			url="global-mobilization.com";
+			className="A3_Weapons_F_Mod";
+			name="Arma 3 Official Mod - Weapons and Accessories";
+			author="Bohemia Interactive";
+			url="https://www.arma3.com";
 		};
 		class Item3
 		{
-			className="gm_weapons_attachments_side_surefire";
-			name="gm_weapons_attachments_side_surefire";
-			author="Global Mobilization";
-			url="global-mobilization.com";
+			className="ace_scopes";
+			name="ACE3 - Scopes";
+			author="ACE-Team";
+			url="https://ace3.acemod.org/";
 		};
 		class Item4
 		{
@@ -90,62 +92,69 @@ class AddonsMetaData
 		};
 		class Item5
 		{
-			className="A3_Weapons_F_Exp";
-			name="Arma 3 Apex - Weapons and Accessories";
-			author="Bohemia Interactive";
-			url="https://www.arma3.com";
-		};
-		class Item6
-		{
-			className="ace_smallarms";
-			name="ACE3 - Small Arms";
+			className="ace_laserpointer";
+			name="ACE3 - Laser Pointer";
 			author="ACE-Team";
 			url="https://ace3.acemod.org/";
 		};
+		class Item6
+		{
+			className="RF_Weapons";
+			name="Arma 3 Creator DLC: Reaction Forces - Weapons and Accessories";
+			author="Rotators Collective";
+			url="https://reactionforces.rotators.net/";
+		};
 		class Item7
+		{
+			className="ace_compat_rf_realisticnames";
+			name="ACE3 - Reaction Forces Compatibility - Realistic Names";
+			author="ACE-Team";
+			url="https://ace3.acemod.org/";
+		};
+		class Item8
+		{
+			className="ace_optics";
+			name="ACE3 - Optics";
+			author="ACE-Team";
+			url="https://ace3.acemod.org/";
+		};
+		class Item9
 		{
 			className="WW2_SPE_Assets_c_Weapons_InfantryWeapons_c";
 			name="WW2_SPE_Assets_c_Weapons_InfantryWeapons_c";
 		};
-		class Item8
+		class Item10
 		{
-			className="A3_Characters_F_Enoch";
-			name="Arma 3 Contact Platform - Characters and Clothing";
-			author="Bohemia Interactive";
-			url="https://www.arma3.com";
+			className="ace_nightvision";
+			name="ACE3 - Night Vision";
+			author="ACE-Team";
+			url="https://ace3.acemod.org/";
 		};
-		class Item9
+		class Item11
+		{
+			className="ace_hearing";
+			name="ACE3 - Hearing";
+			author="ACE-Team";
+			url="https://ace3.acemod.org/";
+		};
+		class Item12
+		{
+			className="RF_Characters";
+			name="Arma 3 Creator DLC: Reaction Forces - Characters and Clothing";
+			author="Rotators Collective";
+			url="https://reactionforces.rotators.net/";
+		};
+		class Item13
 		{
 			className="ace_medical_treatment";
 			name="ACE3 - Medical Treatment";
 			author="ACE-Team";
 			url="https://ace3.acemod.org/";
 		};
-		class Item10
-		{
-			className="Characters_f_lxWS";
-			name="Arma 3 Creator DLC: Western Sahara - Characters and Clothing";
-			author="Rotators Collective";
-			url="https://sahara.rotators.net/";
-		};
-		class Item11
+		class Item14
 		{
 			className="A3_Characters_F_AoW";
 			name="Arma 3 Art of War - Characters and Clothing";
-			author="Bohemia Interactive";
-			url="https://www.arma3.com";
-		};
-		class Item12
-		{
-			className="A3_Structures_F_Argo";
-			name="Arma 3 Malden - Buildings and Structures";
-			author="Bohemia Interactive";
-			url="https://www.arma3.com";
-		};
-		class Item13
-		{
-			className="A3_Signs_F";
-			name="Arma 3 - Signs";
 			author="Bohemia Interactive";
 			url="https://www.arma3.com";
 		};
@@ -157,10 +166,10 @@ class DynamicSimulation
 };
 dlcs[]=
 {
-	"gm",
-	"Enoch",
+	"OfficialMod",
+	"rf",
 	"Kart",
-	"Argo"
+	"Enoch"
 };
 randomSeed=7991977;
 class ScenarioData
@@ -301,7 +310,7 @@ class Mission
 	};
 	class Entities
 	{
-		items=9;
+		items=7;
 		class Item0
 		{
 			dataType="Group";
@@ -327,28 +336,32 @@ class Mission
 						{
 							class primaryWeapon
 							{
-								name="gm_mp5sd5_blk";
-								flashlight="gm_surefire_l72_red_hoseclamp_blk";
-								firemode="gm_mp5sd5_blk:SemiAuto";
+								name="SMG_03C_TR_black";
+								optics="optic_Aco_smg";
+								flashlight="acc_pointer_IR";
+								firemode="SMG_03C_TR_black:Single";
 								class primaryMuzzleMag
 								{
-									name="30Rnd_9x21_Mag_SMG_02_Tracer_Red";
-									ammoLeft=30;
+									name="50Rnd_570x28_SMG_03";
+									ammoLeft=50;
 								};
 							};
 							class handgun
 							{
-								name="hgun_P07_blk_F";
-								muzzle="muzzle_snds_L";
+								name="hgun_DEagle_gold_RF";
 								class primaryMuzzleMag
 								{
-									name="16Rnd_9x21_red_Mag";
-									ammoLeft=17;
+									name="7Rnd_50AE_Mag_RF";
+									ammoLeft=7;
 								};
+							};
+							class binocular
+							{
+								name="Binocular";
 							};
 							class uniform
 							{
-								typeName="U_O_R_Gorka_01_black_F";
+								typeName="U_C_HeliPilotCoveralls_Black_RF";
 								isBackpack=0;
 								class ItemCargo
 								{
@@ -362,44 +375,44 @@ class Mission
 							};
 							class vest
 							{
-								typeName="V_TacVestIR_blk";
+								typeName="V_PlateCarrier1_blk";
 								isBackpack=0;
 								class MagazineCargo
 								{
 									items=4;
 									class Item0
 									{
-										name="16Rnd_9x21_red_Mag";
-										count=3;
-										ammoLeft=17;
-									};
-									class Item1
-									{
 										name="HandGrenade";
-										count=2;
+										count=3;
 										ammoLeft=1;
 									};
-									class Item2
+									class Item1
 									{
 										name="SmokeShell";
 										count=2;
 										ammoLeft=1;
 									};
+									class Item2
+									{
+										name="50Rnd_570x28_SMG_03";
+										count=5;
+										ammoLeft=50;
+									};
 									class Item3
 									{
-										name="30Rnd_9x21_Red_Mag";
+										name="7Rnd_50AE_Mag_RF";
 										count=3;
-										ammoLeft=30;
+										ammoLeft=7;
 									};
 								};
 							};
-							class backpack
-							{
-								typeName="B_Kitbag_rgr";
-								isBackpack=1;
-							};
 							map="ItemMap";
-							headgear="H_Cap_blk";
+							compass="ItemCompass";
+							watch="ItemWatch";
+							radio="ItemRadio";
+							gps="ItemGPS";
+							hmd="ACE_NVG_Wide_Black";
+							headgear="H_Watchcap_blk";
 						};
 					};
 					id=861;
@@ -3148,77 +3161,6 @@ class Mission
 						{
 							singleType="STRING";
 							value="X-RAY 2-2";
-						};
-					};
-				};
-				nAttributes=1;
-			};
-		};
-		class Item7
-		{
-			dataType="Object";
-			class PositionInfo
-			{
-				position[]={2598.3457,1.4538867,319.22186};
-				angles[]={0,0.10572078,-0};
-			};
-			side="Empty";
-			flags=5;
-			class Attributes
-			{
-				createAsLocalObject=1;
-				disableSimulation=1;
-			};
-			id=16503;
-			type="Land_SignM_forSale_F";
-			atlOffset=5.9604645e-08;
-			class CustomAttributes
-			{
-				class Attribute0
-				{
-					property="allowDamage";
-					expression="_this allowdamage _value;";
-					class Value
-					{
-						class data
-						{
-							singleType="BOOL";
-							value=0;
-						};
-					};
-				};
-				nAttributes=1;
-			};
-		};
-		class Item8
-		{
-			dataType="Object";
-			class PositionInfo
-			{
-				position[]={2597.9929,0.61543798,318.85648};
-				angles[]={0,0.69531661,-0};
-			};
-			side="Empty";
-			flags=5;
-			class Attributes
-			{
-				createAsLocalObject=1;
-				disableSimulation=1;
-			};
-			id=16504;
-			type="TapeSign_F";
-			class CustomAttributes
-			{
-				class Attribute0
-				{
-					property="allowDamage";
-					expression="_this allowdamage _value;";
-					class Value
-					{
-						class data
-						{
-							singleType="BOOL";
-							value=0;
 						};
 					};
 				};

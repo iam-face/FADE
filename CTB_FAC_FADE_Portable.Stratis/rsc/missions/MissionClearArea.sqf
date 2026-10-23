@@ -206,6 +206,9 @@ FADE_runMission_ClearArea = {
         private _caDetect = (_areaRadius + 180) max 320;
         [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
         [_taskId, _center, _basePos, _enemyUnitsCA, _allGroups, _caDetect] call FADE_counterAttackStart;
+        if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+            [_taskId, _center, _basePos] call FADE_missionRoadblocks_spawnAround;
+        };
         private _clearTimeout = 900;
         [_taskId, _allGroups, _spawnedInitial, _markerName, _player, _campObjects, _areaVehicles, _clearTimeout, _misOwnCa, _center, _areaRadius] spawn {
             params ["_taskId", "_allGroups", "_spawnedInitial", "_markerName", "_player", "_campObjects", "_areaVehicles", "_timeout", "_misOwnCa", "_center", "_areaRadius"];

@@ -243,6 +243,9 @@ FADE_runMission_AssetRetrieval = {
         _player setVariable ["FADE_myMissionMarker", _markerName, true];
         private _markerOut = [_taskId, _markerName, _center, _areaRadius, "ColorOrange", "objective", _operationName, -1, -1, [_center]] call FADE_mission_createObjectiveMarker;
         [_taskId, "AssetRetrieval", _center, _markerOut, [], "ColorOrange", "", [_center]] call FADE_fieldIntel_startForMission;
+        if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+            [_taskId, _center, _basePos] call FADE_missionRoadblocks_spawnAround;
+        };
 
         private _grid = mapGridPosition _center;
         private _brief = format ["ASSET RETRIEVAL  -  VEHICLE%1%1Objective area (approx.): Grid %2%1%1Recover the enemy vehicle %3 and return it within %4 m of base. Clear the site, then drive, tow or sling it back. Vehicle must stay recoverable.", toString [10], _grid, _vehicleName, _baseDist] + _briefGuiTail;
@@ -515,6 +518,9 @@ FADE_runMission_AssetRetrieval = {
     _player setVariable ["FADE_myMissionMarker", _markerName, true];
     private _markerOut = [_taskId, _markerName, _center, _areaRadius, "ColorOrange", "objective", _operationName, -1, -1, [_center]] call FADE_mission_createObjectiveMarker;
     [_taskId, "AssetRetrieval", _center, _markerOut, [], "ColorOrange", "", [_center]] call FADE_fieldIntel_startForMission;
+    if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+        [_taskId, _center, _basePos] call FADE_missionRoadblocks_spawnAround;
+    };
 
     private _grid = mapGridPosition _center;
     private _brief = format ["ASSET RETRIEVAL  -  OBJECT%1%1Objective area (approx.): Grid %2%1%1Recover %3 (most likely indoors in a defended building). Clear the site, then Pick up the package.", toString [10], _grid, _assetName] + _briefGuiTail;

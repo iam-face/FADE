@@ -8,6 +8,7 @@
 // Civ-zone spawn: per-zone chance (50% / 100% EE); several attempts per poll until cap. Civ blocks ignore ahead-of-player (stay in town).
 // When FADE_dynamicRoadblockCivZoneOnly (default true) and any zone is active: no corridor/aggressive spawns (avoids random map roads). EE keeps corridor for route pressure.
 // Otherwise: corridor + player→anchor rays + ahead filter, or aggressive spawns near players.
+// Mission objective checkpoints (MissionRoadblocks.sqf) are separate and stay up when Patrols is off.
 // =============================================================================
 
 if (!isServer) exitWith {};

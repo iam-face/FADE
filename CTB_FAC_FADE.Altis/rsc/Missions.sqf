@@ -271,6 +271,12 @@ private _fnc_createMissionTask = {
         ] call _taskBuilder
     };
     [_sf, _taskId, [_taskDesc, _title, ""], _pos, "CREATED", 1, true, _taskType, true] call BIS_fnc_taskCreate;
+    if (!isNil "FADE_parkedOpfor_spawnAt") then {
+        private _parkTypes = missionNamespace getVariable ["FADE_parkedOpforMissionTypes", []];
+        if (_missionType in _parkTypes && { _pos isEqualType [] } && { count _pos >= 2 }) then {
+            [_taskId, _pos] call FADE_parkedOpfor_spawnAt;
+        };
+    };
 };
 
 // Scale OPFOR counts using scenario population setting.

@@ -77,12 +77,12 @@ FAC_lobbyParams_read = {
     missionNamespace setVariable ["FAC_param_opforGrenades", _p param [FAC_LOBBY_IDX_OPFOR_GRENADES, 1]];
     missionNamespace setVariable ["FAC_param_opforPatrols", _p param [FAC_LOBBY_IDX_OPFOR_PATROLS, 1]];
     missionNamespace setVariable ["FAC_param_opforPatrolTownChance", _p param [FAC_LOBBY_IDX_OPFOR_PATROL_TOWN, 0]];
-    missionNamespace setVariable ["FAC_param_opforPlayerScale", _p param [FAC_LOBBY_IDX_OPFOR_PLAYER_SCALE, 1]];
+    missionNamespace setVariable ["FAC_param_opforPlayerScale", _p param [FAC_LOBBY_IDX_OPFOR_PLAYER_SCALE, 0]];
     missionNamespace setVariable ["FAC_param_buildAccess", _p param [FAC_LOBBY_IDX_BUILD_ACCESS, 1]];
     missionNamespace setVariable ["FAC_param_buildLogistics", _p param [FAC_LOBBY_IDX_BUILD_LOGISTICS, 0]];
-    missionNamespace setVariable ["FAC_param_buildArea", _p param [FAC_LOBBY_IDX_BUILD_AREA, 0]];
+    missionNamespace setVariable ["FAC_param_buildArea", _p param [FAC_LOBBY_IDX_BUILD_AREA, 1]];
     if (isNil { missionNamespace getVariable "FAC_param_buildCatalog" }) then {
-        missionNamespace setVariable ["FAC_param_buildCatalog", _p param [FAC_LOBBY_IDX_BUILD_CATALOG, 0]];
+        missionNamespace setVariable ["FAC_param_buildCatalog", _p param [FAC_LOBBY_IDX_BUILD_CATALOG, 1]];
     };
     missionNamespace setVariable ["FAC_param_buildRequire", _p param [FAC_LOBBY_IDX_BUILD_REQUIRE, 0]];
 };
@@ -210,7 +210,7 @@ FAC_lobbyParams_applyScenarioDefaults = {
         default { "Reduced" };
     };
     missionNamespace setVariable ["FADE_opforGrenadeSetting", [_grenadeSetting] call FADE_normalizeOpforGrenadeSetting, true];
-    missionNamespace setVariable ["FADE_opforPlayerScale", (missionNamespace getVariable ["FAC_param_opforPlayerScale", 1]) > 0, true];
+    missionNamespace setVariable ["FADE_opforPlayerScale", (missionNamespace getVariable ["FAC_param_opforPlayerScale", 0]) > 0, true];
     missionNamespace setVariable ["FADE_enemySkill", (_skill max 0) min 1, true];
 
     private _gearPol = missionNamespace getVariable ["FAC_param_gearPolicy", 0];

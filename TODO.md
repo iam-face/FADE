@@ -10,7 +10,6 @@ Backlog for upcoming systems and fixes. Shipped behaviour is summarised in **REA
 |---|------|--------|
 | 1 | Spoken radio messages | Open |
 | 11 | Operation v2 | Open |
-| 12 | OPFOR roadblocks placement | Open |
 | 13 | Portable FADE (mod / multi-map) | Open |
 | 14 | Intercept Convoy re-enable | Open |
 
@@ -129,19 +128,6 @@ No mass replace in v1: migrate the ~10 highest-traffic lines only; leave remaind
 
 ---
 
-## 12. OPFOR roadblocks: revisit placement
-
-**Goal:** Dynamic roadblocks should sit on **roads players actually use**, not arbitrary map segments.
-
-### Expected approach (separate task)
-
-1. Audit current roadblock spawn in **ServerWorld** / ambient OPFOR modules; document current `nearRoads` / random point logic.
-2. When placing a block, call **`FADE_aoSurvey_build`** at candidate civ zone or player-traffic centroid; prefer **`roadsNear`** samples weighted by distance to **BASE_1** exit routes and recent player vehicle positions (if tracked).
-3. Optional: bias toward **`roadsFar`** ring for outer checkpoints vs inner **`roadsNear`** for ambush.
-4. **MissionTestSuite:** placement smoke: block position within 25 m of a road segment.
-
----
-
 ## 13. Portable FADE (multi-map / mod packaging)
 
 **Goal:** Make FADE easy to port beyond Altis. Ship as much as possible as an **Arma 3 mod** so a fresh empty scenario can host FADE with minimal Eden setup.
@@ -212,4 +198,4 @@ When shipping **Operation v2**, **Radio voice**, or **re-enabled Convoy**:
 
 ---
 
-*Last updated: open specs only. Shipped plans removed (Raid, Invasion, Point Defense, lore, AAA, drones, field intel, factions, recruit board, player copy, construction, non-Altis base pick).*
+*Last updated: open specs only. Shipped plans removed (Raid, Invasion, Point Defense, lore, AAA, drones, field intel, factions, recruit board, player copy, construction, non-Altis base pick, objective roadblocks).*

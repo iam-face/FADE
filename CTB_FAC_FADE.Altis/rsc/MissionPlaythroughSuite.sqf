@@ -363,6 +363,7 @@ FAC_playthroughSuite__purgeAllTracked = {
     } forEach ([] call FAC_playthroughSuite__collectOrphanTaskIds);
     missionNamespace setVariable ["FAC_playthroughSuite_taskLog", []];
     if (!isNil "FADE_dynamicRoadblocks_despawnAll") then { [] call FADE_dynamicRoadblocks_despawnAll };
+    if (!isNil "FADE_missionRoadblocks_despawnAll") then { [] call FADE_missionRoadblocks_despawnAll };
 };
 
 // Force full mission cleanup between playthrough steps (slots, markers, entities, civ pins).
