@@ -375,7 +375,7 @@ FADE_build_setCatalog = {
     params [["_player", objNull], ["_mode", 0]];
     if !(_mode isEqualType 0) then { _mode = 0 };
     if (_mode > 0) then { _mode = 1 } else { _mode = 0 };
-    private _cur = missionNamespace getVariable ["FAC_param_buildCatalog", 0];
+    private _cur = missionNamespace getVariable ["FAC_param_buildCatalog", 1];
     if (isNull _player || { !([_player] call FAC_playerCanUseScenarioAdmin) }) exitWith {
         if (!isNull _player) then {
             [_player, "Scenario Admin access denied by lobby settings."] call FADE_build_chat;

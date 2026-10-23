@@ -145,6 +145,9 @@ FADE_runMission_Hostage = {
 
     [_taskId, _allGroups] call FADE_missionEnt_bindGroups;
     [_taskId, _missionCenter, _basePos, _enemyUnits, _allGroups, -1] call FADE_counterAttackStart;
+    if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+        [_taskId, _hoAnchor, _basePos] call FADE_missionRoadblocks_spawnAround;
+    };
 
     [_taskId, _hostages, _basePos, _baseDistForComplete, _markerName, _player, _allGroups, _initialHostageCount, _hoVgHintObjs] spawn {
         params ["_taskId", "_hostages", "_basePos", "_baseDistForComplete", "_markerName", "_player", "_allGroups", "_initialHostageCount", "_hoVgHintObjs"];

@@ -167,7 +167,7 @@ FAC_basePick_waitHtml = {
         _clock = format ["<br/><br/><t align='center' size='1.35'>%1 s</t>", _left];
     };
     format [
-        "<t align='center' size='1.15'>Waiting for players to initialise.</t><br/><br/><t align='center' size='1.05'>Next, mark a point on the map for the player base.</t>%1",
+        "<t align='center' size='1.15'>Waiting for players to initialise.</t><br/><br/><t align='center' size='1.05'>Next, select a point on the map to vote for the player base location.</t>%1",
         _clock
     ]
 };
@@ -211,6 +211,95 @@ FAC_basePick_showWait = {
     };
 };
 
+// Vote card covers x 0.30–0.70, y 0.28–0.70. The map animation centres a point, so shift the centre until the marker sits in clear map.
+FAC_basePick_voteAim = {
+    params ["_map"];
+    private _cardL = 0.30;
+    private _cardT = 0.28;
+    private _cardR = 0.70;
+    private _cardB = 0.70;
+    private _mp = ctrlPosition _map;
+    if (!(_mp isEqualType []) || { count _mp < 4 }) exitWith { [] };
+    private _mx = _mp select 0;
+    private _my = _mp select 1;
+    private _mw = _mp select 2;
+    private _mh = _mp select 3;
+    if (_mw <= 0 || { _mh <= 0 }) exitWith { [] };
+    private _cx = _mx + (_mw / 2);
+    private _cy = _my + (_mh / 2);
+    private _aimX = _cx;
+    private _aimY = _my + (_mh * 0.82);
+    private _onCard = (_aimX > _cardL) && { _aimX < _cardR } && { _aimY > _cardT } && { _aimY < _cardB };
+    if (_onCard) then { _aimY = _my + (_mh * 0.16) };
+    _onCard = (_aimX > _cardL) && { _aimX < _cardR } && { _aimY > _cardT } && { _aimY < _cardB };
+    if (_onCard) then {
+        _aimX = _mx + (_mw * 0.16);
+        _aimY = _cy;
+    };
+    [_cx, _cy, _aimX, _aimY]
+};
+
+FAC_basePick_panToPos = {
+    params ["_pos"];
+    if (!(_pos isEqualType []) || { count _pos < 2 }) exitWith {};
+    private _px = _pos select 0;
+    private _py = _pos select 1;
+    if (!(_px isEqualType 0) || { !(_py isEqualType 0) }) exitWith {};
+    if (!finite _px || { !finite _py }) exitWith {};
+    if (!visibleMap) then { openMap true };
+    private _mapDisp = findDisplay 12;
+    if (isNull _mapDisp) exitWith {};
+    private _map = _mapDisp displayCtrl 51;
+    if (isNull _map) exitWith {};
+    private _zoom = 0.1;
+    private _center = [_px, _py];
+    private _aim = [_map] call FAC_basePick_voteAim;
+    if (count _aim >= 4) then {
+        private _cx = _aim select 0;
+        private _cy = _aim select 1;
+        private _aimX = _aim select 2;
+        private _aimY = _aim select 3;
+        private _cur = ctrlMapScale _map;
+        if (!(_cur isEqualType 0) || { _cur < 0.001 }) then { _cur = _zoom };
+        private _w0 = _map ctrlMapScreenToWorld [_cx, _cy];
+        private _wX = _map ctrlMapScreenToWorld [_cx + 0.02, _cy];
+        private _wY = _map ctrlMapScreenToWorld [_cx, _cy + 0.02];
+        if (
+            _w0 isEqualType [] && { count _w0 >= 2 }
+            && { _wX isEqualType [] } && { count _wX >= 2 }
+            && { _wY isEqualType [] } && { count _wY >= 2 }
+        ) then {
+            private _perX = ((_wX select 0) - (_w0 select 0)) / 0.02;
+            private _perY = ((_wY select 1) - (_w0 select 1)) / 0.02;
+            if (finite _perX && { finite _perY } && { (abs _perX) > 0.01 || { (abs _perY) > 0.01 } }) then {
+                private _k = _zoom / _cur;
+                private _cxW = _px - (_perX * _k * (_aimX - _cx));
+                private _cyW = _py - (_perY * _k * (_aimY - _cy));
+                _center = [
+                    (_cxW max 0) min worldSize,
+                    (_cyW max 0) min worldSize
+                ];
+            };
+        };
+    };
+    ctrlMapAnimClear _map;
+    _map ctrlMapAnimAdd [0.45, _zoom, _center];
+    ctrlMapAnimCommit _map;
+};
+
+FAC_basePick_panToRow = {
+    params ["_list", "_idx"];
+    if (isNull _list || { !(_idx isEqualType 0) } || { _idx < 0 }) exitWith {};
+    private _uid = _list lbData _idx;
+    private _pos = [];
+    {
+        if (_x isEqualType [] && { count _x >= 4 } && { (_x select 0) isEqualTo _uid }) exitWith {
+            _pos = [_x select 2, _x select 3];
+        };
+    } forEach (missionNamespace getVariable ["FADE_basePick_choiceList", []]);
+    [_pos] call FAC_basePick_panToPos;
+};
+
 // findDisplay is null while onLoad is running. Pass the display from onLoad, then fill again once the dialog is open.
 FAC_basePick_fillVoteList = {
     params [["_d", displayNull]];
@@ -219,6 +308,9 @@ FAC_basePick_fillVoteList = {
     if (isNull _d) exitWith {};
     private _list = _d displayCtrl 60980;
     if (isNull _list) exitWith {};
+    private _keep = "";
+    private _prev = lbCurSel _list;
+    if (_prev >= 0) then { _keep = _list lbData _prev };
     lbClear _list;
     {
         if (_x isEqualType [] && { count _x >= 4 }) then {
@@ -241,7 +333,16 @@ FAC_basePick_fillVoteList = {
             };
         };
     } forEach (missionNamespace getVariable ["FADE_basePick_choiceList", []]);
-    if ((lbSize _list) > 0) then { _list lbSetCurSel 0 };
+    private _sel = 0;
+    if (_keep != "") then {
+        for "_i" from 0 to ((lbSize _list) - 1) do {
+            if ((_list lbData _i) isEqualTo _keep) exitWith { _sel = _i };
+        };
+    };
+    if ((lbSize _list) > 0) then {
+        _list lbSetCurSel _sel;
+        [_list, _sel] call FAC_basePick_panToRow;
+    };
 };
 
 FAC_basePick_showDeploy = {
@@ -277,9 +378,20 @@ FAC_basePick_showDeploy = {
             private _card = findDisplay 60963;
             if (!isNull _card) then { _card closeDisplay 1 };
         };
+        private _hq = missionNamespace getVariable ["FADE_basePos", []];
+        if (
+            _hq isEqualType []
+            && { count _hq >= 2 }
+            && { (getPosATL player) distance2D [_hq select 0, _hq select 1] > 40 }
+        ) then {
+            player setPosATL [_hq select 0, _hq select 1, 0];
+        };
         cutText ["", "BLACK IN", 1];
         showHUD [true, true, true, true, true, true, true, true, true, true, false];
         missionNamespace setVariable ["FAC_basePick_deployOn", false];
+        // Welcome hint waits for this. The deploy card clears any hint shown earlier.
+        sleep 1;
+        missionNamespace setVariable ["FAC_basePick_deployFinished", true];
     };
 };
 
@@ -387,6 +499,10 @@ FAC_basePick_fnc = {
                     _disp = findDisplay 60961;
                 };
             };
+        };
+        case "voteFocus": {
+            if !(_params isEqualType []) exitWith {};
+            [_params param [0, controlNull], _params param [1, -1]] call FAC_basePick_panToRow;
         };
         case "vote": {
             private _list = (findDisplay 60961) displayCtrl 60980;

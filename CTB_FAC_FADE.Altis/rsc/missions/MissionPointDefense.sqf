@@ -283,6 +283,9 @@ FADE_runMission_PointDefense = {
     ];
     // Refreshes SMEAC situation/lore at the defend site (same path as Clear Area / HVT / etc.).
     [_player, _taskId, _taskDesc, "Point Defense", _center, "defend", "", _execOverride] call _fnc_createMissionTask;
+    if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+        [_taskId, _center, _basePos] call FADE_missionRoadblocks_spawnAround;
+    };
 
     private _hqBoardFn = missionNamespace getVariable ["FADE_hqMainBoard_setObjectiveBrief", {}];
     if (_hqBoardFn isEqualType {} && { !(_hqBoardFn isEqualTo {}) }) then { [_center] call _hqBoardFn };

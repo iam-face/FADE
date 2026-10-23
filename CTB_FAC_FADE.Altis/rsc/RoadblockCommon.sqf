@@ -44,8 +44,9 @@ FADE_roadblock_barricadeClasses = [
 
 // Returns [objects, groups, vehicle, vgOwner] for state storage (_veh always objNull).
 // vgOwner: cancel pending virtual garrison on despawn (may be "").
+// _garrison false: barricade and road party only. Mission checkpoints use this so houses stay with the mission garrison.
 FADE_roadblock_spawnBundle = {
-    params ["_center", "_dir"];
+    params ["_center", "_dir", ["_garrison", true]];
     private _scaleOpforCount = missionNamespace getVariable ["FADE_scaleOpforCount", {
         params ["_baseCount", ["_minCount", 1], ["_maxCount", -1]];
         private _base = floor (_baseCount max 0);
@@ -118,8 +119,11 @@ FADE_roadblock_spawnBundle = {
     } forEach units _infGrp;
 
     // Ambush party: fill building positions on houses within radius (capped).
-    private _houses = nearestObjects [_center, ["House", "Building"], _garrisonRadius];
+    // Mission objective checkpoints pass _garrison false and skip this.
     private _slots = [];
+    private _vgOwner = "";
+    if (_garrison) then {
+    private _houses = nearestObjects [_center, ["House", "Building"], _garrisonRadius];
     {
         private _b = _x;
         if (isNull _b) then { } else {
@@ -131,9 +135,8 @@ FADE_roadblock_spawnBundle = {
             } forEach (_b buildingPos -1);
         };
     } forEach _houses;
-
-    private _vgOwner = "";
-    if (count _slots > 0) then {
+    };
+    if (_garrison && { count _slots > 0 }) then {
         _slots = _slots call BIS_fnc_arrayShuffle;
         private _nGar = (count _slots) min _garrisonMax;
         private _posATL = [];

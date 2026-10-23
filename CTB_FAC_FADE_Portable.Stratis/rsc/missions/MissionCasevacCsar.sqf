@@ -58,6 +58,9 @@ FADE_runMission_CASEVAC = {
     if (count _cvQrfPos < 3) then { _cvQrfPos = [(_cvQrfPos select 0), (_cvQrfPos select 1), 0] };
     [_taskId, _enemyGroups] call FADE_missionEnt_bindGroups;
     [_taskId, _cvQrfPos, _basePos, _enemyUnits, _enemyGroups, -1] call FADE_counterAttackStart;
+    if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+        [_taskId, _cvQrfPos, _basePos] call FADE_missionRoadblocks_spawnAround;
+    };
 
     ["CASEVAC", _group, _player, _destPos, _basePos, _taskId, _markerName, _enemyGroups] spawn {
         params ["_missionType", "_group", "_player", "_destPos", "_basePos", "_taskId", "_markerName", "_enemyGroups"];
@@ -257,6 +260,9 @@ FADE_runMission_CSAR = {
 
     [_taskId, _enemyGroups] call FADE_missionEnt_bindGroups;
     [_taskId, _crashCenter, _basePos, _enemyUnits, _enemyGroups] call FADE_counterAttackStart;
+    if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+        [_taskId, _crashCenter, _basePos] call FADE_missionRoadblocks_spawnAround;
+    };
 
     // 1 km: survivor sideChat + grid; 500 m: green smoke.
     // After smoke the survivor freezes in place, drops patrol waypoints, and tries to board nearby player vehicles.

@@ -123,7 +123,7 @@ FADE_enemyPatrolTownChance = 0.25;           // Resolved from FADE_opforPatrolTo
 FADE_opforPopulationSetting = "Low";  // "VeryLow" 0.25x, "Low" 0.5x, "Normal" 1x, "High" 1.5x, "VeryHigh" 2x, "Insane" 4x
 FADE_opforLauncherSetting = "Normal";     // "Normal", "Reduced", "Minimal", "None"  -  AT launchers (not MANPADS AA)
 FADE_opforGrenadeSetting = "Reduced";     // same steps: thrown HE, under-barrel HE, dedicated grenade launchers
-FADE_opforPlayerScale = true;             // FADE_scaleOpforCount also follows alive friendly player count
+FADE_opforPlayerScale = false;            // lobby default off; FADE_scaleOpforCount follows player count when on
 FADE_limitGearToFriendlyFaction = false;  // When true, Loadout and Vehicle GUIs restrict to chosen Friendly faction
 FADE_limitToPresetLoadouts = false;          // When true, Loadout GUI allows preset loadouts only
 FADE_teleportToPlayerMode = 0;            // 0 = all players can teleport-to-player, 1 = SL/admin/Zeus only
@@ -549,6 +549,25 @@ FADE_civParkedCrossRoadScan = 24;           // nearRoads radius when looking for
 FADE_civParkedCrossRoadClearM = 6.8;        // min 2D m from crossing segment centerline (center + fore/aft samples)
 FADE_civParkedCrossRoadAngleMin = 38;       // acute angle (deg): above this, other segment counts as "crossing" for clearance
 FADE_civParkedCrossRoadHalfLen = 4.5;       // half vehicle length (m) for fore/aft clearance samples along heading
+// Empty unarmored OPFOR jeeps/trucks parked on town shoulders for the mission, then removed with it.
+FADE_parkedOpforEnabled = true;
+FADE_parkedOpforCountMin = 1;               // per single objective (HVT, hostage, clear area, and the task-hook types)
+FADE_parkedOpforCountMax = 2;
+FADE_parkedOpforMaxPerMission = 8;          // cap across every zone of a raid, invasion, or operation
+FADE_parkedOpforHalfLenCar = 4.5;
+FADE_parkedOpforMinGapCar = 8;
+FADE_parkedOpforHalfLenTruck = 8.5;
+FADE_parkedOpforMinGapTruck = 12;
+FADE_parkedOpforMissionTypes = [
+    "HVT",
+    "Hostage",
+    "ClearArea",
+    "SearchDestroy",
+    "PointDefense",
+    "AssetRetrieval",
+    "MineClearing",
+    "EscapeEvasion"
+];
 FADE_civWanderRadius = 100;  // max distance walking civs move from spawn before looping back
 FADE_civPlayerActivateDist = 900;
 FADE_civPlayerDeactivateDist = 1150;
@@ -602,6 +621,19 @@ FADE_roadblockGarrisonMax = 16;
 FADE_roadblockInfOffRoadMinM = 6;       // roadblock infantry: min lateral offset from road centre (ambush)
 FADE_roadblockInfOffRoadMaxM = 14;      // roadblock infantry: max lateral offset
 FADE_roadblockInfAlongRoadSpreadM = 10; // roadblock infantry: spread along road axis (+/- m from barricade)
+// Mission objective checkpoints (rsc\MissionRoadblocks.sqf). Not gated by Enemy Patrols.
+// Up to 4 barricades on a ring around the objective, 90 degrees apart. One spoke faces base.
+// Barricade + road party only (no building garrison). Empty spokes are skipped.
+// Operation, Escape & Evasion, Intercept Convoy, Geo-Guesser, and Mine Clearing do not call this.
+FADE_missionRoadblocksEnabled = true;
+FADE_missionRoadblockRingM = 220;             // sample distance from the objective (m)
+FADE_missionRoadblockRoadSnapM = 90;          // nearRoads radius at each sample; no wider search
+FADE_missionRoadblockRingMinM = 80;           // reject a road closer than this to the objective
+FADE_missionRoadblockRingMaxM = 350;          // reject a road farther than this from the objective
+FADE_missionRoadblockDedupeM = 120;           // two spokes that hit the same road keep one block
+FADE_missionRoadblockSpokes = 4;
+FADE_missionRoadblockMaxPerTask = 12;         // one cross is 4; raid can cover three zones
+FADE_missionRoadblockMinDistFromBase = 400;   // do not place a block this close to HQ
 // FADE_VirtualGarrison.sqf: spawn building OPFOR when any player is this close (2D); manager sleep interval (server).
 FADE_vgActivateRadiusM = 100;
 FADE_vgPollIntervalS = 10;

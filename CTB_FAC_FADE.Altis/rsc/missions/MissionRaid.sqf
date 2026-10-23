@@ -110,6 +110,9 @@ FADE_runMission_Raid = {
     } forEach _zoneCivIds;
     missionNamespace setVariable ["FADE_raidCivZoneIds_" + _taskId, +_zoneCivIds];
     if (!isNil "FADE_civ_pinZones") then { [_zoneCivIds] call FADE_civ_pinZones };
+    if (!isNil "FADE_parkedOpfor_spawnAt") then {
+        { [_taskId, _x select 1, 1] call FADE_parkedOpfor_spawnAt } forEach _zonesPicked;
+    };
 
     private _zoneVariantsPlanned = [_raidZoneCount] call FADE_raid_pickVariants;
 
@@ -296,6 +299,9 @@ FADE_runMission_Raid = {
 
         private _buildingPos = [_zoneWinPos] call FADE_normPos3;
         [_taskId, _zoneMarkerName, _buildingPos, 0, _markerEnemy, "objective", _zoneCodename, 0] call FADE_mission_createObjectiveMarker;
+        if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+            [_taskId, _buildingPos, _basePos] call FADE_missionRoadblocks_spawnAround;
+        };
 
         if (_zi == 0) then {
             [_sideFriendly, _zoneMarkerName] call FADE_raid_assignMarkersToFriendlies;

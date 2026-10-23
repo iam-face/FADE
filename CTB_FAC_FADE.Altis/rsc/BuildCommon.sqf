@@ -11,7 +11,7 @@ FADE_build_requireOn = {
 
 // Anything is the full scan. Realistic is the hand list. Already placed objects stay.
 FADE_build_fortRows = {
-    if ((missionNamespace getVariable ["FAC_param_buildCatalog", 0]) > 0) exitWith {
+    if ((missionNamespace getVariable ["FAC_param_buildCatalog", 1]) > 0) exitWith {
         missionNamespace getVariable ["FADE_buildCatalogRealistic", []]
     };
     missionNamespace getVariable ["FADE_buildCatalog", []]
@@ -21,7 +21,7 @@ FADE_build_findEntry = {
     params [["_class", ""]];
     if (_class == "") exitWith { [] };
     private _hit = [];
-    if ((missionNamespace getVariable ["FAC_param_buildCatalog", 0]) <= 0) then {
+    if ((missionNamespace getVariable ["FAC_param_buildCatalog", 1]) <= 0) then {
         private _index = missionNamespace getVariable ["FADE_buildCatalogIndex", nil];
         if (!isNil "_index" && { _index isEqualType createHashMap }) then {
             _hit = _index getOrDefault [_class, []];
@@ -153,7 +153,7 @@ FADE_build_logisticsOn = {
 
 // 0 = within FADE_buildRadius of base. 1 = no radius limit. Water is still rejected.
 FADE_build_anywhere = {
-    (missionNamespace getVariable ["FAC_param_buildArea", 0]) > 0
+    (missionNamespace getVariable ["FAC_param_buildArea", 1]) > 0
 };
 
 // "" when the spot is free. Else "water" or "radius".

@@ -77,6 +77,9 @@ private _zones = _zoneEntries apply { _x select 1 };
 } forEach _zoneCivIds;
 missionNamespace setVariable ["FADE_invasionCivZoneIds_" + _taskId, +_zoneCivIds];
 if (!isNil "FADE_civ_pinZones") then { [_zoneCivIds] call FADE_civ_pinZones };
+if (!isNil "FADE_parkedOpfor_spawnAt") then {
+    { [_taskId, _x, 1] call FADE_parkedOpfor_spawnAt } forEach _zones;
+};
 
 private _zoneRadius = 250;
 private _invasionCenter = [_zones select 0] call FADE_normPos3;
@@ -103,6 +106,9 @@ private _invOwner = format ["invasion:%1", _taskId];
 } forEach _zones;
 
 missionNamespace setVariable ["FADE_invasionZoneCenters_" + _taskId, _zones];
+if (!isNil "FADE_missionRoadblocks_spawnAround") then {
+    [_taskId, _invasionCenter, _basePos] call FADE_missionRoadblocks_spawnAround;
+};
 private _held = [];
 { _held pushBack (_forEachIndex != 0) } forEach _zones;
 missionNamespace setVariable ["FADE_invasionHeldState_" + _taskId, +_held];

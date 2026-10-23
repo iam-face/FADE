@@ -728,7 +728,7 @@ FADE_countScenarioFriendlyPlayers = {
 // Anchor written mission baselines at about six players. 0 players (boot) stays 1.
 FADE_opforPlayerScaleForCount = {
     params ["_n"];
-    if !(missionNamespace getVariable ["FADE_opforPlayerScale", true]) exitWith { 1 };
+    if !(missionNamespace getVariable ["FADE_opforPlayerScale", false]) exitWith { 1 };
     _n = round _n;
     if (_n <= 0) exitWith { 1 };
     if (_n <= 1) exitWith { 0.55 };
@@ -753,7 +753,7 @@ FADE_scaleOpforCount = {
     private _playerFactor = [] call FADE_opforPlayerScaleFactor;
     private _scaled = ceil (_base * _pop * _playerFactor);
     private _minUse = _minCount;
-    if ((missionNamespace getVariable ["FADE_opforPlayerScale", true]) && { _playerFactor < 1 } && { _minCount > 0 }) then {
+    if ((missionNamespace getVariable ["FADE_opforPlayerScale", false]) && { _playerFactor < 1 } && { _minCount > 0 }) then {
         _minUse = (ceil (_minCount * _playerFactor)) max 1;
     };
     if (_scaled < _minUse) then { _scaled = _minUse };
