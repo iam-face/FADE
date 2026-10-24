@@ -45,9 +45,10 @@ if (hasInterface) then {
                 private _titleName = [_missionType] call FAC_missionLocationPickGui_fnc_missionDisplayName;
                 private _helpText = if (_missionType == "InterceptConvoy") then {
                     format [
-                        "Random: convoy start and end chosen on roads (min route length applies).%1Map click: choose start, then end (%2 s per click). Each point snaps to the nearest road within 500 m (no min length).%1%1Enemy corridor dots show the expected route.",
+                        "Random places the start and the end on roads. They stay at least the minimum route length apart.%1Click the map for the start. Click again for the end (%2 s per click).%1Each click snaps to the nearest road within 500 m. Keep the clicks at least %3 m apart.%1The map shows the start, the end, and the route line.",
                         toString [10, 10],
-                        missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20]
+                        missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20],
+                        round (missionNamespace getVariable ["FADE_convoyRouteFloorM", 1200])
                     ]
                 } else {
                     if (_missionType == "Raid") then {

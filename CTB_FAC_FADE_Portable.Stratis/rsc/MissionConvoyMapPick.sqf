@@ -18,10 +18,12 @@ FAC_convoyMapPick_fnc_buildEndHint = {
     private _startPos = missionNamespace getVariable ["FAC_convoyMapPick_start", []];
     private _grid = if (count _startPos >= 2) then { mapGridPosition _startPos } else { "?" };
     private _timeout = missionNamespace getVariable ["FADE_missionMapPickTimeoutSec", 20];
+    private _floorM = round (missionNamespace getVariable ["FADE_convoyRouteFloorM", 1200]);
     [_rem, [
         format ["Start: grid %1.", _grid],
-        "Click the map for convoy END.",
-        "Each point snaps to the nearest road within 500 m."
+        "Click the map for the convoy end.",
+        "The click snaps to the nearest road within 500 m.",
+        format ["Keep it at least %1 m from the start.", _floorM]
     ], "", _timeout] call FADE_mapPick_formatCountdownHint
 };
 

@@ -5,3 +5,5 @@ call compile preprocessFileLineNumbers "rsc\fn_bisCpPreInit.sqf";
 call compile preprocessFileLineNumbers "rsc\BaseNpcTalk.sqf";
 // Pylon apply (owner only) and the Rho MH-6 sync override. After ACE/ZEN/mod postInit.
 call compile preprocessFileLineNumbers "rsc\FADE_PylonApply.sqf";
+// AI unconscious kill rule. Runs on server and clients: AI locality follows the group leader.
+call compile preprocessFileLineNumbers "rsc\FADE_AiUnconscious.sqf";

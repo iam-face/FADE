@@ -148,6 +148,10 @@ FAC_gui_spec_scenario = [
     ]]],
     ["page", "admin", [
         ["section", "Admin tools", 60930],
+        ["segments", "Prohibit AI unconscious", "A knocked-out AI soldier dies. Players, civilians, medical dummies, and CASEVAC or CSAR casualties stay down.", [
+            ["Off", 60971, "setProhibitAiUnconscious", [false], "idle"],
+            ["On", 60972, "setProhibitAiUnconscious", [true], "primary"]
+        ]],
         ["segments", "Object list", "Anything is every prop. Realistic is a set list of fortifications, camp gear, and supplies.", [
             ["Anything", 60848, "setBuildCatalog", [0], "primary"],
             ["Realistic", 60849, "setBuildCatalog", [1], "idle"]
@@ -424,40 +428,30 @@ FAC_gui_spec_missions = [
         ["browse", "Browse", 60160],
         ["active", "Active slots", 60161]
     ]],
-    ["page", "browse", ["columns",
-        [
-            ["text", 60133, 0.18, ""],
-            ["list", "Select mission", "", 60110, "fill", 60120, "missionSelChanged", []],
-            ["button", "Start mission...", "", 60121, "startMission", [], "primary"]
-        ],
-        [
-            ["list", "Description", "", 60111, "fill", 60131, "", []]
-        ],
-        "fit"
-    ]],
+    ["page", "browse", []],
     ["page", "active", ["pin",
         [
-            ["hint", "Global is one shared mission. Single is a personal task, up to three at once."]
+            ["hint", "Global is shared, one at a time. Single is yours, up to three."]
         ],
         [
             [
-                ["section", "G1 - Global [max 1]", 60112],
-                ["text", 60130, 0.52, ""],
+                ["section", "Global", 60112],
+                ["structured", 60130, 0.20, ""],
                 ["button", "Abort G1", "", 60150, "abortSlot", ["G1"], "warn"]
             ],
             [
-                ["section", "S1 - Single", 60113],
-                ["text", 60134, 0.52, ""],
+                ["section", "Single 1", 60113],
+                ["structured", 60134, 0.20, ""],
                 ["button", "Abort S1", "", 60151, "abortSlot", ["S1"], "warn"]
             ],
             [
-                ["section", "S2 - Single", 60114],
-                ["text", 60135, 0.52, ""],
+                ["section", "Single 2", 60114],
+                ["structured", 60135, 0.20, ""],
                 ["button", "Abort S2", "", 60152, "abortSlot", ["S2"], "warn"]
             ],
             [
-                ["section", "S3 - Single", 60115],
-                ["text", 60136, 0.52, ""],
+                ["section", "Single 3", 60115],
+                ["structured", 60136, 0.20, ""],
                 ["button", "Abort S3", "", 60153, "abortSlot", ["S3"], "warn"]
             ]
         ],

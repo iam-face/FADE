@@ -305,7 +305,12 @@ FAC_missionTestSuite_runServer = {
             && { (_src find "_pos call FAC_basePick_onMapClick") < 0 }
             && { (_src find "BLACK FADED") < 0 }
             && { (_src find "60962") >= 0 }
-            && { (_src find "FAC_basePick_showDeploy") >= 0 };
+            && { (_src find "FAC_basePick_showDeploy") >= 0 }
+            && { (_src find "FAC_basePick_onPreMissionMap") >= 0 }
+            && { (_src find "getClientStateNumber") >= 0 }
+            && { (_src find "FAC_basePick_inScenario") >= 0 };
+        private _initSv = preprocessFileLineNumbers "initServer.sqf";
+        _ok = _ok && { (_initSv find "FAC_basePick_inScenario") >= 0 };
         if (_ok) then {
             _pass = _pass + 1;
             diag_log "[FAC TestSuite] PASS (server): base-pick map click stores _pos";
@@ -1057,7 +1062,7 @@ FAC_missionTestSuite_runServer = {
         "FADE_missionRun_getContext", "FADE_mission_completeCleanup",
         "FADE_createRegisteredMarker", "FADE_deleteMarkerSafe",
         "FADE_getAlivePlayers", "FADE_getAlivePlayerPositions", "FADE_countFriendlyPlayers",
-        "FADE_ao_pointsWithoutFriendlies",
+        "FADE_ao_pointsWithoutFriendlies", "FADE_ao_findLandPos", "FADE_ao_posNearZoneEdge",
         "FADE_missionErrorHint", "FADE_missionOutcomeHint", "FADE_missionFailHint", "FADE_missionSuccessHint",
         "FADE_textureText_sanitize", "FADE_textureText_wrap",
         "FADE_mission_createRadiusMarker", "FADE_mission_createObjectiveMarker",
@@ -1518,6 +1523,56 @@ FAC_missionTestSuite_runServer = {
         if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_ao_pointsWithoutFriendlies empty input"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_ao_pointsWithoutFriendlies empty input"; };
     };
 
+    if (!isNil "FADE_ao_findLandPos" && { !isNil "FADE_posClearOfWater" } && { !isNil "FADE_jitterMarkerPos" }) then {
+        private _aoBase = missionNamespace getVariable ["FADE_basePos", [0, 0, 0]];
+        private _aoWet = [];
+        private _aoWetTry = [0, 0, 0];
+        private _aoWetI = 0;
+        for "_aoWetI" from 0 to 16 do {
+            if (count _aoWet < 2) then {
+                _aoWetTry = [200 + (_aoWetI * 400), 200, 0];
+                if !([_aoWetTry] call FADE_surfaceIsDry) then { _aoWet = _aoWetTry };
+            };
+        };
+        if (count _aoWet < 2 || { count _aoBase < 2 }) then {
+            diag_log "[FAC TestSuite] SKIP (server): FADE_ao_findLandPos (no wet point)";
+        } else {
+            private _aoFromWet = [_aoWet, 30, 500, 12, 40] call FADE_ao_findLandPos;
+            _ok = count _aoFromWet < 2 || { [_aoFromWet, 40] call FADE_posClearOfWater };
+            private _aoShore = [];
+            private _aoWalk = [0, 0, 0];
+            private _aoStep = 0;
+            private _aoDir = _aoWet getDir _aoBase;
+            for "_aoStep" from 1 to 400 do {
+                if (count _aoShore < 2) then {
+                    _aoWalk = [_aoWet, _aoStep * 10, _aoDir] call BIS_fnc_relPos;
+                    if ([_aoWalk] call FADE_surfaceIsDry && { !([_aoWalk, 40] call FADE_posClearOfWater) }) then { _aoShore = _aoWalk };
+                };
+            };
+            if (count _aoShore >= 2) then {
+                private _aoMoved = [_aoShore, 20, 450, 12, 40] call FADE_ao_findLandPos;
+                _ok = _ok && { count _aoMoved >= 2 } && { [_aoMoved, 40] call FADE_posClearOfWater } && { (_aoMoved distance2D _aoShore) > 8 };
+                if (_ok) then {
+                    private _aoJit = 0;
+                    for "_aoJit" from 0 to 5 do {
+                        private _aoJ = [_aoMoved, 100] call FADE_jitterMarkerPos;
+                        if !([_aoJ] call FADE_surfaceIsDry) then { _ok = false };
+                    };
+                };
+            };
+            if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_ao_findLandPos keeps objectives off the shoreline"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_ao_findLandPos keeps objectives off the shoreline"; };
+        };
+    };
+
+    if (!isNil "FADE_ao_posNearZoneEdge") then {
+        private _aoC = [2000, 5600, 0];
+        private _onWestEdge = [_aoC, 180, [900, 5600, 0], true, 1000, 1000] call FADE_ao_posNearZoneEdge;
+        private _farSouth = [_aoC, 180, [1889, 3444, 0], true, 1000, 1000] call FADE_ao_posNearZoneEdge;
+        private _onEastEdge = [_aoC, 180, [3350, 5600, 0], false, 1000, 1000] call FADE_ao_posNearZoneEdge;
+        _ok = _onWestEdge && { !_farSouth } && { _onEastEdge };
+        if (_ok) then { _pass = _pass + 1; diag_log "[FAC TestSuite] PASS (server): FADE_ao_posNearZoneEdge"; } else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_ao_posNearZoneEdge"; };
+    };
+
     if (!isNil "FADE_textureText_sanitize") then {
         private _san = ["say ""hi"""] call FADE_textureText_sanitize;
         _ok = _san find "'" >= 0 && { _san find (toString [34]) < 0 };
@@ -1597,7 +1652,7 @@ FAC_missionTestSuite_runServer = {
                 if (!isNil "FADE_interceptConvoyRoadRoute") then {
                     private _routeTry = [{ [FADE_basePos] call FADE_interceptConvoyRoadRoute }] call FAC_missionTestSuite__tryCall;
                     _routeTry params ["_routeOk", "_routeRes"];
-                    if (_routeOk && { _routeRes isEqualType [] } && { count _routeRes == 2 }) then {
+                    if (_routeOk && { _routeRes isEqualType [] } && { count _routeRes >= 2 }) then {
                         _dest = _routeRes select 0;
                     };
                 };
@@ -1641,17 +1696,19 @@ FAC_missionTestSuite_runServer = {
             _fail = _fail + 1;
             diag_log format ["[FAC TestSuite] FAIL (server): FADE_interceptConvoyRoadRoute error: %1", _convErr];
         } else {
-            _ok = _convRes isEqualType [] && { count _convRes == 0 || { count _convRes == 2 } };
-            if (_ok && { count _convRes == 2 }) then {
-                private _wpTry = [{ [_convRes select 0, _convRes select 1, 9] call FADE_interceptConvoyRouteWaypoints }] call FAC_missionTestSuite__tryCall;
-                _wpTry params ["_wpOk", "_wpRes", "_wpErr"];
-                if (!_wpOk) then {
-                    _fail = _fail + 1;
-                    diag_log format ["[FAC TestSuite] FAIL (server): FADE_interceptConvoyRouteWaypoints error: %1", _wpErr];
+            _ok = _convRes isEqualType [] && { count _convRes == 0 || { count _convRes >= 2 } };
+            if (_ok && { count _convRes >= 2 }) then {
+                private _convStart = _convRes select 0;
+                private _convEnd = _convRes select ((count _convRes) - 1);
+                private _convFloor = missionNamespace getVariable ["FADE_convoyRouteFloorM", 1200];
+                private _mid = _convRes select (floor ((count _convRes) / 2));
+                _ok = (_convStart distance2D _convEnd) >= (_convFloor - 1) && { count (_mid nearRoads 45) > 0 };
+                if (_ok) then {
+                    _pass = _pass + 1;
+                    diag_log format ["[FAC TestSuite] PASS (server): convoy road path (%1 pts, %2 m)", count _convRes, round (_convStart distance2D _convEnd)];
                 } else {
-                    _ok = _wpRes isEqualType [] && { count _wpRes >= 2 };
-                    if (_ok) then { _pass = _pass + 1; diag_log format ["[FAC TestSuite] PASS (server): convoy route + waypoints (%1 pts)", count _wpRes]; }
-                    else { _fail = _fail + 1; diag_log "[FAC TestSuite] FAIL (server): FADE_interceptConvoyRouteWaypoints short"; };
+                    _fail = _fail + 1;
+                    diag_log format ["[FAC TestSuite] FAIL (server): convoy road path left the road or is short (%1 pts)", count _convRes];
                 };
             } else {
                 if (count _convRes == 0) then {

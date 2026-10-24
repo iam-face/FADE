@@ -15,6 +15,13 @@ call FAC_ensureLoadoutGui;
 params [["_newUnit", objNull], ["_oldUnit", objNull]];
 if (isNull _newUnit) then { _newUnit = player };
 
+// Eden XYZ is the Stratis start. A respawn before the base exists can land back there.
+if (worldName != "Altis" && { !isNil "FAC_basePick_secureSpawnPos" } && { !isNull player } && { alive player }) then {
+    player allowDamage false;
+    [] call FAC_basePick_secureSpawnPos;
+    if (alive player) then { player allowDamage true };
+};
+
 // Eden respawn unit is slot-side (usually WEST); server joinSilent onto FADE_sideFriendly if needed.
 if (!isNull _newUnit && { isPlayer _newUnit }) then {
     [_newUnit] remoteExec ["FADE_requestScenarioFriendlySideSync", 2];

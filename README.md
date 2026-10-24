@@ -38,7 +38,7 @@ Vehicle placement uses the same camera, inside the same bubble. Search and a fac
 
 One **global** mission runs for the whole server. Each player can also hold up to three **single** missions.
 
-Global missions include Area of Operations, Asset Retrieval, CAS / Fire Support, Clear Area, CSAR, Escape and Evasion, Geo-Guesser, Hostage, HVT, Invasion, Point Defense, Operation, Raid, and Search and Destroy. 
+Global missions include Area of Operations, Asset Retrieval, CAS / Fire Support, Clear Area, CSAR, Escape and Evasion, Geo-Guesser, Hostage, HVT, Intercept Convoy, Invasion, Point Defense, Operation, Raid, and Search and Destroy. 
 
 Single missions are Troop Insert, Troop Extract, Cargo / Resupply, CASEVAC, and Mine Clearing.
 
@@ -52,7 +52,7 @@ Civilians walk towns drawn from the map. Talk to them for tips, and search build
 
 Faction lists come from `CfgFactionClasses`, limited to factions the server can spawn infantry for. Friendly covers EAST, WEST, and GUER. Enemy is limited to sides opposed to the players. GUER counts as hostile to both major sides. The start mix is RHS US Army (desert, then woodland), RHS Russia (MSV), and CDF ground forces when those mods are loaded. Otherwise it is NATO, CSAT, and AAF. Civilians stay the vanilla civilian faction. Apply rejects a faction with no infantry and keeps the previous one. Invalid mixes are corrected on Apply, with a hint. Player side updates on Apply, on join, and on respawn.
 
-OPFOR population, patrols (including a chance they sit in towns), skill, retreat, AAA, grenades, air, and drones are Scenario and lobby settings. Grenades default to Reduced, which caps thrown HE, under-barrel HE, and dedicated grenade launchers. Smoke, flares, and chemlights stay. Scaling garrison, patrol, and QRF size with the number of living players is off unless you turn it on. Population alone still sets the counts. Air and drones default to off. A sensor inside an objective can start that mission's quick reaction force.
+OPFOR population, patrols (including a chance they sit in towns), skill, retreat, AAA, grenades, air, and drones are Scenario and lobby settings. Grenades default to Reduced, which caps thrown HE, under-barrel HE, and dedicated grenade launchers. Smoke, flares, and chemlights stay. Scaling garrison, patrol, and QRF size with the number of living players is off unless you turn it on. Population alone still sets the counts. Air and drones default to off. A sensor inside an objective can start that mission's quick reaction force. Knocked-out AI soldiers die while Prohibit AI unconscious is on. That is the default. Players, civilians, medical dummies, and CASEVAC or CSAR casualties can still be unconscious. The lobby and the Scenario Admin tab both set the rule.
 
 Gear policy is Unrestricted, friendly faction only, or preset loadouts only. ACE Arsenal on the loadout boxes is on by default. Recruit access is everyone, group leaders, or admin. It spawns friendly AI from faction infantry or custom presets, assigns them to a friendly group, and dismisses them from the Roster tab.
 
@@ -66,13 +66,12 @@ If you want to produce a modless variant of FADE, simply load the scenario in yo
 
 The backlog and design notes are in [TODO.md](TODO.md).
 
-- Show Intercept Convoy in the Missions GUI again, once the route spawn is clean.
 - Replace Operation with an intel-gated 3 by 3 km grid and three hidden objectives. Standalone Hunt is not planned.
 - Add engine radio voice (`kbTell`) on top of the existing side-chat subtitles.
 
 ## For contributors
 
-Entry points are `initServer.sqf`, which loads `rsc/server/`, and `initPlayerLocal.sqf`. Per-type runners live in `rsc/missions/`. `rsc/Missions.sqf` dispatches them. `FADE_*` is server, world, and mission logic. `FAC_*` is client GUI, theme, and lobby parameters. Local AI notes may sit in `.cursor/agent-docs/` (gitignored). Tracked skills under `.cursor/skills/` include the player-copy and headless-test notes.
+Entry points are `initServer.sqf`, which loads `rsc/server/`, and `initPlayerLocal.sqf`. Per-type runners live in `rsc/missions/`. `rsc/Missions.sqf` dispatches them. `FADE_*` is server, world, and mission logic. `FAC_*` is client GUI, theme, and lobby parameters. `.cursor/` and `.vscode/` are local editor files and are gitignored.
 
 The debug-tools lobby parameter adds two scroll-wheel actions.
 

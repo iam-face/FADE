@@ -133,6 +133,7 @@ FADE_mission_casevacCasualtyPrep = {
             } else {
                 _x setDamage ((damage _x) + 0.15 + random 0.25);
             };
+            _x setVariable ["FADE_keepUnconscious", true, true];
         };
     } forEach units _group;
 };
@@ -155,6 +156,7 @@ FADE_mission_csarPilotWoundPrep = {
             _x setDamage (0.25 + random 0.2);
             _x allowDamage false;
         };
+        _x setVariable ["FADE_keepUnconscious", true, true];
     } forEach units _group;
     [_group] spawn {
         params ["_grp"];

@@ -1,8 +1,0 @@
-{
-  "recommendations": [
-    "SQF-VM.sqf-vm-language-server"
-  ],
-  "unwantedRecommendations": [
-    "Armitxes.sqf"
-  ]
-}

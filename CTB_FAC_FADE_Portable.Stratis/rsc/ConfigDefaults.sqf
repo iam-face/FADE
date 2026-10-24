@@ -105,8 +105,10 @@ FADE_aaa_manpadsRoofChance = 0.20;           // MANPADS try a roof near ground s
 FADE_aaa_manpadsRoofSearchM = 150;           // building search radius around ground anchor
 FADE_aaa_manpadsMinBuildingHeightM = 4;      // skip low sheds / walls (bbox height)
 FADE_aaa_manpadsRoofSamples = 10;            // ray samples per building for flat roof hit
-// Intercept Convoy: minimum straight-line distance (m) between road start and road end (mission picks random roads; no Eden ROAD_SP_*).
+// Intercept Convoy. Random routes use a map-scaled minimum, never below the floor and never above this cap.
+// Map-click routes use the floor. Roads come from the map, not Eden ROAD_SP_*.
 FADE_convoyMinRouteM = 5000;
+FADE_convoyRouteFloorM = 1200;
 // Operation: enemy-held zone spawns an extra patrol vehicle every (min..max) seconds (randomized per tick)
 FADE_operationVehicleResupplyMin = 240;
 FADE_operationVehicleResupplyMax = 360;
@@ -742,7 +744,7 @@ FADE_civZoneActivationDist = 900;
 FADE_profileMissionLoad = false;
 
 // Non-Altis base pick. Seconds on the server clock before the map opens.
-// The server starts a new window if init is still running when this one ends.
+// The window starts once a player has left the pre-mission map and server init has finished.
 FADE_basePick_joinWait = 20;
 // Seconds to mark a point on the map, then seconds to vote. Both use serverTime.
 FADE_basePick_pickWait = 20;

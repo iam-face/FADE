@@ -6,21 +6,25 @@ if (!isServer) exitWith {};
 
 call compile preprocessFileLineNumbers "rsc\Config.sqf";
 
-// Non-Altis: publish the join countdown before the rest of server init.
-// Clients read FADE_basePick_deadline (serverTime). The map stays closed until this ends.
+// Non-Altis: the join countdown is FADE_basePick_deadline (serverTime).
+// It stays unset while players are still on the pre-mission map. A client sets
+// FAC_basePick_inScenario on their unit once that map closes. The 20 s then starts.
 if (worldName != "Altis") then {
     missionNamespace setVariable ["FADE_basePickPhase", "waiting", true];
+    missionNamespace setVariable ["FADE_basePick_deadline", -1, true];
     private _joinWait = missionNamespace getVariable ["FADE_basePick_joinWait", 20];
     if (!(_joinWait isEqualType 0) || { _joinWait < 5 }) then { _joinWait = 20 };
-    missionNamespace setVariable ["FADE_basePick_deadline", serverTime + _joinWait, true];
     [_joinWait] spawn {
         params ["_joinWait"];
-        private _arm = {
-            params ["_joinWait"];
-            missionNamespace setVariable ["FADE_basePick_deadline", serverTime + _joinWait, true];
-        };
         if (fileExists "headless_test.flg") exitWith {
             missionNamespace setVariable ["FADE_basePick_joinDone", true];
+        };
+        private _playing = {
+            private _found = false;
+            {
+                if (!isNull _x && { _x getVariable ["FAC_basePick_inScenario", false] }) exitWith { _found = true };
+            } forEach allPlayers;
+            _found
         };
         waitUntil {
             sleep 0.5;
@@ -28,10 +32,16 @@ if (worldName != "Altis") then {
                 missionNamespace setVariable ["FADE_basePick_joinDone", true];
                 true
             };
-            private _ready = missionNamespace getVariable ["FADE_clientInitReady", false] && { count allPlayers > 0 };
-            private _deadline = missionNamespace getVariable ["FADE_basePick_deadline", 0];
-            if (!_ready && { (serverTime + 1) >= _deadline }) then { [_joinWait] call _arm };
-            _ready && { serverTime >= (missionNamespace getVariable ["FADE_basePick_deadline", 0]) }
+            missionNamespace getVariable ["FADE_clientInitReady", false]
+            && { count allPlayers > 0 }
+            && { [] call _playing }
+        };
+        if (missionNamespace getVariable ["FADE_basePick_joinDone", false]) exitWith {};
+        missionNamespace setVariable ["FADE_basePick_deadline", serverTime + _joinWait, true];
+        waitUntil {
+            sleep 0.5;
+            missionNamespace getVariable ["FADE_baseDefined", false]
+            || { serverTime >= (missionNamespace getVariable ["FADE_basePick_deadline", 0]) }
         };
         missionNamespace setVariable ["FADE_basePick_joinDone", true];
         diag_log format ["[FADE] Base pick join wait finished at serverTime %1.", serverTime];

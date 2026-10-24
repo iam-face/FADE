@@ -31,6 +31,47 @@ FAC_basePick_clearMap = {
     onMapSingleClick (str false);
 };
 
+// Pre-mission map is client state 8 (game loaded) or 9 (briefing shown). Play starts at 10.
+// Singleplayer reports 0, so it has no pre-mission map to leave alone.
+// Wiki example "in game = state > 8" counts the briefing as in game. This check does not.
+FAC_basePick_onPreMissionMap = {
+    if (!hasInterface) exitWith { false };
+    private _state = getClientStateNumber;
+    _state == 8 || { _state == 9 }
+};
+
+// Tells the server this client has left the pre-mission map, so the join countdown can start.
+FAC_basePick_markInScenario = {
+    if (!hasInterface || { isNull player }) exitWith {};
+    if (player getVariable ["FAC_basePick_inScenario", false]) exitWith {};
+    player setVariable ["FAC_basePick_inScenario", true, true];
+};
+
+// One waiter. When the briefing closes, show whatever phase the server has reached.
+FAC_basePick_queueUntilPlay = {
+    if (!hasInterface) exitWith {};
+    if (missionNamespace getVariable ["FAC_basePick_playQueued", false]) exitWith {};
+    missionNamespace setVariable ["FAC_basePick_playQueued", true];
+    [] spawn {
+        waitUntil {
+            if !([] call FAC_basePick_onPreMissionMap) exitWith { true };
+            sleep 0.1;
+            false
+        };
+        waitUntil { sleep 0.1; !isNull player };
+        [] call FAC_basePick_markInScenario;
+        missionNamespace setVariable ["FAC_basePick_playQueued", false];
+        private _phase = missionNamespace getVariable ["FADE_basePickPhase", ""];
+        if (_phase == "" || { _phase == "waiting" }) then {
+            if !(missionNamespace getVariable ["FADE_baseDefined", false]) then {
+                [] call FAC_basePick_showWait;
+            };
+        } else {
+            [_phase, missionNamespace getVariable ["FADE_basePick_choiceList", []]] call FAC_basePick_applyPhase;
+        };
+    };
+};
+
 FAC_basePick_closeUi = {
     if (!hasInterface) exitWith {};
     missionNamespace setVariable ["FAC_basePick_mapLocked", false];
@@ -192,6 +233,7 @@ FAC_basePick_hideWait = {
 
 FAC_basePick_showWait = {
     if (!hasInterface) exitWith {};
+    if ([] call FAC_basePick_onPreMissionMap) exitWith { [] call FAC_basePick_queueUntilPlay };
     if (worldName == "Altis") exitWith {};
     if (missionNamespace getVariable ["FADE_baseDefined", false]) exitWith {};
     if (missionNamespace getVariable ["FAC_basePick_waitOn", false]) exitWith {};
@@ -401,6 +443,8 @@ FAC_basePick_applyPhase = {
         missionNamespace setVariable ["FADE_basePick_choiceList", _choiceList];
     };
     if (!hasInterface) exitWith {};
+    // Map lock, vote card, and the black join screen all sit on top of the briefing map.
+    if ([] call FAC_basePick_onPreMissionMap) exitWith { [] call FAC_basePick_queueUntilPlay };
     if (isNull player) exitWith {};
     if (_phase == "") then { _phase = missionNamespace getVariable ["FADE_basePickPhase", ""] };
     switch (_phase) do {
@@ -515,11 +559,142 @@ FAC_basePick_fnc = {
     };
 };
 
+// Feet within this of ATL 0 count as standing on the ground. Eden Z is Stratis sea level.
+FAC_basePick_groundBand = 2;
+
+// True when the unit's feet are on dry ground inside the map. Height is ATL, so a Stratis Z inside a hill is not.
+FAC_basePick_playerOnGround = {
+    if (isNull player || { !alive player }) exitWith { false };
+    private _p = getPosATL player;
+    if (([_p] call FAC_basePick_rejectReason) != "") exitWith { false };
+    private _z = _p param [2, 0];
+    finite _z && { abs _z <= (missionNamespace getVariable ["FAC_basePick_groundBand", 2]) }
+};
+
+// Same centre spiral as FADE_basePick_findDryFromCenter. Bounds fall back to 0..worldSize, which is what the server publishes.
+FAC_basePick_findDryFromCenter = {
+    private _minX = missionNamespace getVariable ["FADE_mapMinX", 0];
+    private _maxX = missionNamespace getVariable ["FADE_mapMaxX", worldSize];
+    private _minY = missionNamespace getVariable ["FADE_mapMinY", 0];
+    private _maxY = missionNamespace getVariable ["FADE_mapMaxY", worldSize];
+    if (!(_minX isEqualType 0) || { !finite _minX }) then { _minX = 0 };
+    if (!(_maxX isEqualType 0) || { !finite _maxX }) then { _maxX = worldSize };
+    if (!(_minY isEqualType 0) || { !finite _minY }) then { _minY = 0 };
+    if (!(_maxY isEqualType 0) || { !finite _maxY }) then { _maxY = worldSize };
+    private _cx = (_minX + _maxX) / 2;
+    private _cy = (_minY + _maxY) / 2;
+    private _found = [];
+    private _half = ((_maxX - _minX) max (_maxY - _minY)) / 2;
+    for "_i" from 0 to 64 do {
+        private _dist = if (_i == 0) then { 0 } else { (_i / 64) * _half };
+        private _ang = (_i * 47) mod 360;
+        private _try = [[_cx, _cy, 0], _dist, _ang] call BIS_fnc_relPos;
+        if (([_try] call FAC_basePick_rejectReason) == "") exitWith { _found = _try };
+    };
+    if (count _found >= 2) exitWith { _found };
+    private _step = (worldSize / 16) max 400;
+    private _x = _minX;
+    while { _x <= _maxX && { count _found < 2 } } do {
+        private _y = _minY;
+        while { _y <= _maxY && { count _found < 2 } } do {
+            private _try = [_x, _y, 0];
+            if (([_try] call FAC_basePick_rejectReason) == "") then { _found = _try };
+            _y = _y + _step;
+        };
+        _x = _x + _step;
+    };
+    _found
+};
+
+FAC_basePick_setPlayerGround = {
+    params ["_pos"];
+    if (isNull player || { !alive player }) exitWith {};
+    if (!(_pos isEqualType []) || { count _pos < 2 }) exitWith {};
+    private _x = _pos select 0;
+    private _y = _pos select 1;
+    if (!(_x isEqualType 0) || { !(_y isEqualType 0) } || { !finite _x } || { !finite _y }) exitWith {};
+    private _here = getPosATL player;
+    private _z = _here param [2, 0];
+    if ((_here distance2D [_x, _y]) <= 1 && { finite _z } && { abs _z <= (missionNamespace getVariable ["FAC_basePick_groundBand", 2]) }) exitWith {};
+    player setPosATL [_x, _y, 0];
+    diag_log format ["[FADE] Spawn ground %1 ATL %2 -> %3", mapGridPosition _here, _z, [_x, _y, 0]];
+};
+
+// Base committed: stand on FADE_basePos. Otherwise keep a safe Eden spot, snap height on dry land, or move to the centre spiral.
+// FADE_baseDefined nil counts as not committed, so a join can leave the water before the server flag arrives.
+FAC_basePick_secureSpawnPos = {
+    if (isNull player || { !alive player }) exitWith {};
+    if (missionNamespace getVariable ["FADE_baseDefined", false]) then {
+        private _hq = missionNamespace getVariable ["FADE_basePos", []];
+        if (_hq isEqualType [] && { count _hq >= 2 }) then {
+            private _here = getPosATL player;
+            if ((_here distance2D _hq) > 40 || { !([] call FAC_basePick_playerOnGround) }) then {
+                [_hq] call FAC_basePick_setPlayerGround;
+            };
+        };
+    } else {
+        if !([] call FAC_basePick_playerOnGround) then {
+            private _here = getPosATL player;
+            if (([_here] call FAC_basePick_rejectReason) == "") then {
+                [_here] call FAC_basePick_setPlayerGround;
+            } else {
+                private _dry = [] call FAC_basePick_findDryFromCenter;
+                if (count _dry >= 2) then { [_dry] call FAC_basePick_setPlayerGround };
+            };
+        };
+    };
+};
+
+// Same clear as FAC_hqHeal_applyLocal. That function is compiled later in initPlayerLocal.
+FAC_basePick_clearSpawnHurt = {
+    if (isNull player || { !alive player } || { !local player }) exitWith {};
+    player setDamage 0;
+    player setFatigue 0;
+    if ((getBleedingRemaining player) > 0) then { player setBleedingRemaining 0 };
+    if (!isNil "ace_medical_fnc_fullHeal") then { player call ace_medical_fnc_fullHeal };
+};
+
+// allowDamage is local to the unit owner and drops if locality changes. The player unit stays client-local.
+FAC_basePick_armSpawnGround = {
+    if (!hasInterface) exitWith {};
+    if (worldName == "Altis") exitWith {};
+    if (missionNamespace getVariable ["FAC_basePick_spawnArmed", false]) exitWith {};
+    missionNamespace setVariable ["FAC_basePick_spawnArmed", true];
+    if (!isNull player) then { player allowDamage false };
+    [] spawn {
+        waitUntil { !isNull player };
+        player allowDamage false;
+        // Unsafe Eden XYZ is corrected before the base flag arrives, so the join countdown is not spent under water.
+        if !([] call FAC_basePick_playerOnGround) then { [] call FAC_basePick_secureSpawnPos };
+        private _deadline = time + 120;
+        waitUntil {
+            sleep 0.1;
+            !isNil { missionNamespace getVariable "FADE_baseDefined" } || { time >= _deadline }
+        };
+        [] call FAC_basePick_secureSpawnPos;
+        sleep 0.1;
+        [] call FAC_basePick_secureSpawnPos;
+        private _giveUp = time + 30;
+        waitUntil {
+            if (isNull player || { !alive player }) exitWith { true };
+            if ([] call FAC_basePick_playerOnGround) exitWith { true };
+            [] call FAC_basePick_secureSpawnPos;
+            sleep 0.5;
+            time >= _giveUp
+        };
+        if (!isNull player && { alive player }) then {
+            [] call FAC_basePick_clearSpawnHurt;
+            player allowDamage true;
+        };
+    };
+};
+
 FAC_basePick_clientStart = {
     if (!hasInterface) exitWith {};
     if (worldName == "Altis") exitWith {};
     if (missionNamespace getVariable ["FAC_basePick_clientStarted", false]) exitWith {};
     missionNamespace setVariable ["FAC_basePick_clientStarted", true];
+    [] call FAC_basePick_armSpawnGround;
     "FADE_basePickPhase" addPublicVariableEventHandler {
         params ["", "_phase"];
         [_phase] call FAC_basePick_applyPhase;
@@ -534,6 +709,9 @@ FAC_basePick_clientStart = {
             [] call FAC_basePick_showWait;
         };
         waitUntil { sleep 0.2; !isNull player };
+        if !([] call FAC_basePick_onPreMissionMap) then {
+            [] call FAC_basePick_markInScenario;
+        };
         _phase = missionNamespace getVariable ["FADE_basePickPhase", ""];
         if (_phase != "" && { _phase != "waiting" }) then {
             [_phase] call FAC_basePick_applyPhase;

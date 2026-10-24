@@ -175,8 +175,15 @@ FADE_jitterMarkerPos = {
     params [["_pos", [0, 0, 0]], ["_radiusM", 100]];
     private _p = [_pos] call FADE_normPos3;
     if (_radiusM <= 0) exitWith { +_p };
-    private _j = [_p, random _radiusM, random 360] call BIS_fnc_relPos;
-    [(_j select 0), (_j select 1), (_p select 2)]
+    private _best = +_p;
+    private _minOff = (_radiusM * 0.2) min 15;
+    if (_minOff >= _radiusM) then { _minOff = 0 };
+    for "_i" from 0 to 11 do {
+        private _j = [_p, _minOff + random (_radiusM - _minOff), random 360] call BIS_fnc_relPos;
+        _j = [(_j select 0), (_j select 1), (_p select 2)];
+        if ([_j, 12] call FADE_posClearOfWater) exitWith { _best = _j };
+    };
+    _best
 };
 
 FADE_missionOutcomeHint = {

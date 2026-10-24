@@ -12,7 +12,8 @@
 // - Surrender Challenge: player path disabled (see FAC_surrenderChallenge_playerEnabled on server).
 // =============================================================================
 
-// Base pick before the server-ready wait, so the join screen is up while initServer is still running.
+// Base pick functions before the server-ready wait, so remoteExec can find them.
+// The join screen itself waits until this client has left the pre-mission map.
 if (hasInterface) then {
     call compile preprocessFileLineNumbers "rsc\FAC_BasePick.sqf";
     [] call FAC_basePick_clientStart;

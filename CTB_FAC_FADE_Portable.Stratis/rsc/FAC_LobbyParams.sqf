@@ -47,6 +47,8 @@ FAC_LOBBY_IDX_BUILD_LOGISTICS     = 28;
 FAC_LOBBY_IDX_BUILD_AREA          = 29;
 FAC_LOBBY_IDX_BUILD_CATALOG       = 30;
 FAC_LOBBY_IDX_BUILD_REQUIRE       = 31;
+// GAMEPLAY (appended; do not insert above or saved server params shift)
+FAC_LOBBY_IDX_PROHIBIT_AI_UNCONSCIOUS = 32;
 
 FAC_lobbyParams_getArray = {
     if (!isNil "paramsArray" && { paramsArray isEqualType [] }) then { paramsArray } else { [] }
@@ -85,6 +87,7 @@ FAC_lobbyParams_read = {
         missionNamespace setVariable ["FAC_param_buildCatalog", _p param [FAC_LOBBY_IDX_BUILD_CATALOG, 1]];
     };
     missionNamespace setVariable ["FAC_param_buildRequire", _p param [FAC_LOBBY_IDX_BUILD_REQUIRE, 0]];
+    missionNamespace setVariable ["FAC_param_prohibitAiUnconscious", _p param [FAC_LOBBY_IDX_PROHIBIT_AI_UNCONSCIOUS, 1]];
 };
 
 // Population labels match Scenario GUI (Very Low … Insane). Other fields scale with threat tier.
@@ -235,6 +238,12 @@ FAC_lobbyParams_applyScenarioDefaults = {
     if ((missionNamespace getVariable ["FAC_param_hqAutoHeal", 1]) <= 0) then {
         missionNamespace setVariable ["FADE_hqHealIntervalSec", 0, true];
     };
+
+    missionNamespace setVariable [
+        "FADE_prohibitAiUnconscious",
+        (missionNamespace getVariable ["FAC_param_prohibitAiUnconscious", 1]) > 0,
+        true
+    ];
 };
 
 FAC_lobbyParams_publishAccessVars = {
@@ -257,6 +266,8 @@ FAC_lobbyParams_publishAccessVars = {
         "FAC_param_buildArea",
         "FAC_param_buildCatalog",
         "FAC_param_buildRequire",
+        "FAC_param_prohibitAiUnconscious",
+        "FADE_prohibitAiUnconscious",
         "FADE_teleportToPlayerMode",
         "FADE_civiliansEnabled",
         "FADE_limitGearToFriendlyFaction",

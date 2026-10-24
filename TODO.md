@@ -10,8 +10,8 @@ Backlog for upcoming systems and fixes. Shipped behaviour is summarised in **REA
 |---|------|--------|
 | 1 | Spoken radio messages | Open |
 | 11 | Operation v2 | Open |
-| 13 | Portable FADE (mod / multi-map) | Open |
-| 14 | Intercept Convoy re-enable | Open |
+| 13 | Portable FADE (mod / multi-map) | Done |
+| 14 | Intercept Convoy re-enable | In portable |
 
 ---
 
@@ -128,55 +128,34 @@ No mass replace in v1: migrate the ~10 highest-traffic lines only; leave remaind
 
 ---
 
-## 13. Portable FADE (multi-map / mod packaging)
-
-**Goal:** Make FADE easy to port beyond Altis. Ship as much as possible as an **Arma 3 mod** so a fresh empty scenario can host FADE with minimal Eden setup.
-
-### Intent
-
-- Mission maker places a **FADE Player Base** module at a chosen location → that becomes the player base.
-- Base spawn is lean: key terminals / boards only; system auto-finds nearby vehicle and friendly-AI spawn points.
-- System auto-discovers civ zones, reads configs, and bootstraps the rest of the FADE stack.
-- Mission may only need thin glue (`initServer`, `description.ext` hooks) plus optional map-specific props.
-
-### Expected approach (high level)
-
-1. **Mod content:** move shared logic, configs, GUIs, and assets into a mod PBO; keep mission-specific Eden / init glue thin.
-2. **Base module:** Eden/Logic module defines `BASE_1` (or equivalent); auto-place terminals and resolve `HP_*` / `VEH_*` / friendly spawn proxies from nearby terrain.
-3. **World discovery:** replace hard-coded Altis object names / location lists with runtime location / building / road surveys (reuse / extend `FADE_AoSurvey`, civ-zone-from-locations).
-4. **Mission glue:** document minimal file set for a new map scenario.
-
-### Open questions
-
-- [ ] What stays mission-side vs mod-side (radio props, board textures, CQB ranges)?
-- [ ] How to version-match mod + thin mission templates across maps?
-- [ ] Fallback when auto-spawn discovery finds nothing suitable?
-
----
-
 ## 14. Intercept Convoy re-enable
 
 **Goal:** Bring **Intercept Convoy** back into the Missions GUI. It is currently in **`FADE_disabledMissionTypes`** (`ConfigClientDefaults.sqf` default includes `"InterceptConvoy"`).
 
-### Expected approach
+### Approach
 
-1. Audit **`MissionInterceptConvoy.sqf`**, **`fn_FADE_interceptConvoyRoadRoute.sqf`**, and **`MissionConvoyMapPick.sqf`** against current RPT failures (subdivided route waypoints, road spawn helper, corridor markers).
-2. Confirm route picks two road positions ≥ Config min distance without Eden **`ROAD_SP_*`** (ambient civs no longer depend on those; convoy may still use them or pure road search).
-3. Fix spawn / waypoint / marker cleanup so dedicated + playthrough suite pass.
-4. Remove `"InterceptConvoy"` from **`FADE_disabledMissionTypes`** (or clear via Scenario Admin) once green.
-5. Update Missions GUI blurb, Briefing, README mission table note, MissionTestSuite / PlaythroughSuite expectations.
+Work in **`CTB_FAC_FADE_Portable.Stratis`** only. Keep the player contract: global mission, start and end on roads, stop the column before the end (at least 60% destroyed or immobilised). Keep map-click start/end and Random. Do not add a threat-level vehicle table; keep the current soft-plus-a-few-armoured mix and `_scaleOpforCount`.
+
+The route must be a connected road path. `fn_FADE_interceptConvoyRouteWaypoints.sqf` bisects the straight line and snaps each midpoint to the nearest road, so the column and the map line leave the road. Replace that helper with one road-graph walk (`roadsConnectedTo` from the snapped start road to the snapped end road). If no path connects them, return `[]` and keep the existing error hint. Do not use `calculatePath`: it spawns an agent, returns only the first segment, and fires `PathCalculated` twice ([wiki](https://community.bistudio.com/wiki/calculatePath)).
+
+Keep init cheap. The search runs once, inside the mission `spawn` (scheduled). Do not search again from `FADE_startMission`. Snap each end with one `nearRoads` (500 m) and sort at most a few dozen results; sorting a full town set already stalls mission start (`FADE_findOpforGroundVehicleRoadSpawn`). Walk best-first toward the end road and stop at a hard visit cap (about 800). On cap or no link, return `[]`. Delete the 90-try random `nearRoads` loop; random routes try a few civ-zone pairs through the same capped walk. Spawn the column on path points already on the road, so init does not call the road-spawn probe per vehicle. After start, the monitor stays a `sleep 0.5` distance check.
+
+Then slim **`MissionInterceptConvoy.sqf`**:
+
+1. Sample the path into a short MOVE list for the lead (about one point every 200 m). Followers stay one group each, `FOLLOW` on the vehicle ahead, spaced back along the same path. Spawn with **`FADE_spawnCrewedGroundVehicle`**. Drop the 10 s stagger and the speed-under-1 respawn pass.
+2. One monitor loop owns the result: 60% inoperable succeeds; lead vehicle reaching the end fails. Delete the waypoint-statement string that deletes the column. Cleanup stays on **`FADE_mission_completeCleanup`**.
+3. Markers: start, end, and one polyline of the sampled path. Drop the per-point dots.
+4. **`FADE_convoyMinRouteM`**: scale to the playable map (floor about 1200 m, cap at the config value) so a random route can exist on Stratis. Map-click routes use the same floor, not the old 50 m snap.
+5. Remove `"InterceptConvoy"` from **`FADE_disabledMissionTypes`** after the playthrough case passes. Do not use Eden **`ROAD_SP_*`**.
 
 ### Acceptance
 
+Portable code is in. The Altis copy is unchanged. The headless runner still boots Altis, so these boxes wait on a Stratis run.
+
 - [ ] Start from Missions GUI on dedicated without RPT script errors.
-- [ ] Convoy moves along a valid road corridor; ≥60% destroy/immobilise win still works.
+- [ ] Convoy moves along a connected road path; ≥60% destroy/immobilise win still works.
 - [ ] PlaythroughSuite InterceptConvoy case passes.
 - [ ] Not listed in `FADE_disabledMissionTypes` by default.
-
-### Open questions
-
-- [ ] Keep map-click start/end or return to fully random road pairs?
-- [ ] Minimum escort composition for Low / Normal / High OPFOR threat?
 
 ---
 
@@ -198,4 +177,4 @@ When shipping **Operation v2**, **Radio voice**, or **re-enabled Convoy**:
 
 ---
 
-*Last updated: open specs only. Shipped plans removed (Raid, Invasion, Point Defense, lore, AAA, drones, field intel, factions, recruit board, player copy, construction, non-Altis base pick, objective roadblocks).*
+*Last updated: open specs only. Shipped plans removed (Raid, Invasion, Point Defense, lore, AAA, drones, field intel, factions, recruit board, player copy, construction, non-Altis base pick, objective roadblocks, portable template). Development uses `CTB_FAC_FADE_Portable.Stratis`, not a separate mod PBO.*

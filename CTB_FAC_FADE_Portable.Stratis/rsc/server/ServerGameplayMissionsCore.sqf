@@ -119,20 +119,8 @@ FADE_startMission = {
         ] remoteExec ["FADE_showMissionHint", _player];
     } else {
     if (_missionType == "InterceptConvoy" && { _useMapAnchor } && { _useConvoyEnd }) then {
-        private _route = [FADE_basePos, -1, _anchorPos, -1, _convoyEndPos] call FADE_interceptConvoyRoadRoute;
-        if (_route isEqualTo []) exitWith {
-            [_player, "MISSION ERROR", "Could not build a convoy route from your start and end clicks (need roads near each point, both away from base). Try different points or use Random."] call FADE_missionErrorHint;
-        };
-        _route params ["_routeStart", "_routeEnd"];
-        _destPos = +_routeStart;
-        _convoyEndResolved = +_routeEnd;
-        [
-            format [
-                "<t size='1.1' color='#A0D0A0'>Convoy route set</t><br/><t color='#808080'>Start: grid %1<br/>End: grid %2</t>",
-                mapGridPosition _routeStart,
-                mapGridPosition _routeEnd
-            ]
-        ] remoteExec ["FADE_showMissionHint", _player];
+        // The runner builds the road path once. Do not search here.
+        _destPos = +_anchorPos;
     } else {
         if (_useMapAnchor) then {
             private _pick = [_anchorPos, _missionType, _minDistForPos, _needsLZ] call FADE_fnc_pickMissionDestNearMapClick;

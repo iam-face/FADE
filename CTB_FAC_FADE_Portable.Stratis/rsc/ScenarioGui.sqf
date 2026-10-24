@@ -54,7 +54,7 @@ FAC_scenarioGui_factionsContentIdcs = [
     60310, 60311, 60312
 ];
 
-FAC_scenarioGui_adminContentIdcs = [60930, 60943, 60848, 60849, 60895, 60896, 60897, 60898, 60899, 60900, 60901];
+FAC_scenarioGui_adminContentIdcs = [60930, 60943, 60971, 60972, 60848, 60849, 60895, 60896, 60897, 60898, 60899, 60900, 60901];
 
 FAC_scenarioGui_getFactionDisplayName = {
     params ["_faction"];
@@ -523,6 +523,16 @@ FAC_scenarioGui_syncGrenadeBtns = {
     } forEach _map;
 };
 
+FAC_scenarioGui_syncProhibitAiUnconscious = {
+    private _d = findDisplay FAC_scenarioGui_IDD;
+    if (isNull _d) exitWith {};
+    private _on = missionNamespace getVariable ["FADE_prohibitAiUnconscious", true];
+    private _offBtn = _d displayCtrl 60971;
+    private _onBtn = _d displayCtrl 60972;
+    if (!isNull _offBtn) then { [_offBtn, !_on] call FAC_theme_applyTab };
+    if (!isNull _onBtn) then { [_onBtn, _on] call FAC_theme_applyTab };
+};
+
 FAC_scenarioGui_syncBuildCatalog = {
     private _d = findDisplay FAC_scenarioGui_IDD;
     if (isNull _d) exitWith {};
@@ -862,6 +872,7 @@ FAC_scenarioGui_fnc = {
             [] call FAC_scenarioGui_syncAAABtns;
             [] call FAC_scenarioGui_syncLauncherBtns;
     [] call FAC_scenarioGui_syncGrenadeBtns;
+    [] call FAC_scenarioGui_syncProhibitAiUnconscious;
     [] call FAC_scenarioGui_syncBuildCatalog;
     [] call FAC_scenarioGui_syncPlayerScaleBtns;
             [] call FAC_scenarioGui_syncOpforPopBtns;
@@ -1000,6 +1011,17 @@ FAC_scenarioGui_fnc = {
             _params params ["_v"];
             missionNamespace setVariable ["FAC_scenarioGui_launcher", _v];
             [] call FAC_scenarioGui_syncLauncherBtns;
+        };
+        case "setProhibitAiUnconscious": {
+            if !([player] call FAC_playerCanUseScenarioAdmin) exitWith {
+                systemChat "Scenario Admin access denied by lobby settings.";
+            };
+            _params params ["_on"];
+            missionNamespace setVariable ["FADE_prohibitAiUnconscious", _on];
+            [] call FAC_scenarioGui_syncProhibitAiUnconscious;
+            if (!isNil "FADE_prohibitAiUnconscious_set") then {
+                [player, _on] remoteExec ["FADE_prohibitAiUnconscious_set", 2];
+            };
         };
         case "setBuildCatalog": {
             if !([player] call FAC_playerCanUseScenarioAdmin) exitWith {

@@ -1,8 +1,9 @@
 ﻿call compile preprocessFileLineNumbers "rsc\OperationNames.sqf";
 call compile preprocessFileLineNumbers "rsc\MissionLore.sqf";
 missionNamespace setVariable ["FADE_convoyMinRouteM", FADE_convoyMinRouteM];
-FADE_interceptConvoyRoadRoute = compile preprocessFileLineNumbers "rsc\fn_FADE_interceptConvoyRoadRoute.sqf";
+missionNamespace setVariable ["FADE_convoyRouteFloorM", FADE_convoyRouteFloorM];
 FADE_interceptConvoyRouteWaypoints = compile preprocessFileLineNumbers "rsc\fn_FADE_interceptConvoyRouteWaypoints.sqf";
+call compile preprocessFileLineNumbers "rsc\fn_FADE_interceptConvoyRoadRoute.sqf";
 missionNamespace setVariable ["FADE_qrfKnowsAboutThreshold", FADE_qrfKnowsAboutThreshold];
 missionNamespace setVariable ["FADE_qrfDetectionRadius", FADE_qrfDetectionRadius];
 missionNamespace setVariable ["FADE_qrfFirstDelayMin", FADE_qrfFirstDelayMin];

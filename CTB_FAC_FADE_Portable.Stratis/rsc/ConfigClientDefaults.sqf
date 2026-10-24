@@ -10,7 +10,9 @@ if (isNil "FADE_scenarioRedforFaction") then { FADE_scenarioRedforFaction = "OPF
 if (isNil "FADE_scenarioIndepFaction") then { FADE_scenarioIndepFaction = "IND_F"; };
 
 // Mission types hidden from Missions GUI and blocked on start (server uses same list from Config.sqf).
-FADE_disabledMissionTypes = ["InterceptConvoy"];
+FADE_disabledMissionTypes = [];
+// Map-click convoy routes must be at least this long. Server scales random routes in ConfigDefaults.
+FADE_convoyRouteFloorM = 1200;
 
 // Raid map pick (client)
 FADE_raidObjectiveCount = 3;

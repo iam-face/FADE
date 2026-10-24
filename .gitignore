@@ -13,13 +13,9 @@ local_server/
 headless_test.flg
 headless_test_result.txt
 # Dev helpers live in sibling mpmissions\tools\ (outside this mission folder)
-# Agent / AI context: keep shared rules + skills; ignore local agent notes
-.cursor/agent-docs/
-.cursor/*
-!.cursor/rules/
-!.cursor/rules/**
-!.cursor/skills/
-!.cursor/skills/**
+# Local editor and agent files
+.cursor/
+.vscode/
 *.docx
 *.doc
 

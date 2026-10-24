@@ -123,7 +123,7 @@ for "_i" from 1 to _civTMax do {
 };
 missionNamespace setVariable ["FADE_civTriggerNames", _civTriggerNames];
 
-// ROAD_SP_* still used by Intercept Convoy mission; ambient civ road spawns no longer depend on them
+// Eden ROAD_SP_* objects, if the mission has them. Ambient civs and Intercept Convoy do not read this list.
 private _roadPoints = [];
 for "_i" from 1 to 25 do {
     private _obj = missionNamespace getVariable [format ["ROAD_SP_%1", _i], objNull];

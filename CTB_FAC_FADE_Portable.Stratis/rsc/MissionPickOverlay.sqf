@@ -3,7 +3,7 @@
 // =============================================================================
 if (!hasInterface) exitWith {};
 
-FAC_missionPickOverlay_baseIdcs = [60133, 60110, 60111, 60112, 60113, 60114, 60115, 60120, 60131, 60121, 60130, 60134, 60135, 60136, 60150, 60151, 60152, 60153, 60160, 60161, 60101];
+FAC_missionPickOverlay_baseIdcs = [60112, 60113, 60114, 60115, 60120, 60121, 60130, 60131, 60134, 60135, 60136, 60150, 60151, 60152, 60153, 60160, 60161, 60170, 60171, 60172];
 
 FAC_missionPickOverlay_setBaseVisible = {
     params [["_show", true]];
@@ -23,6 +23,10 @@ FAC_missionPickOverlay_setBaseVisible = {
         private _pair = _d getVariable [format ["FAC_gui_pair_%1", ctrlIDC _group], controlNull];
         if (!isNull _pair) then { _pair ctrlShow false };
     } forEach (_d getVariable ["FAC_gui_pages", []]);
+    {
+        private _c = _d displayCtrl _x;
+        if (!isNull _c) then { _c ctrlShow false };
+    } forEach [60121, 60131, 60170, 60171, 60172];
 };
 
 FAC_missionPickOverlay_destroy = {

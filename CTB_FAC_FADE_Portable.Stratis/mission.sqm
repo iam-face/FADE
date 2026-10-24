@@ -20,10 +20,10 @@ class EditorData
 	};
 	class Camera
 	{
-		pos[]={2613.156,171.05557,525.85547};
-		dir[]={-0.022118274,-0.38133588,0.92417204};
-		up[]={-0.009123927,0.92443657,0.38122678};
-		aside[]={0.99971384,0,0.023926223};
+		pos[]={2608.5371,2.6028862,314.58582};
+		dir[]={-0.92708021,-0.34152269,0.15454622};
+		up[]={-0.33687398,0.93987352,0.0561576};
+		aside[]={0.16443299,-3.7252903e-09,0.98638821};
 	};
 };
 binarizationWanted=0;
@@ -39,14 +39,15 @@ addons[]=
 	"A3_Weapons_F_Acc",
 	"ace_laserpointer",
 	"A3_Weapons_F_Mod",
-	"RF_Weapons_Pistols_DEagle",
-	"ace_compat_rf_realisticnames",
+	"A3_Weapons_F_Kart_Pistols_Pistol_Signal_F",
+	"ace_overheating",
+	"A3_Weapons_F_Kart",
+	"ace_grenades",
 	"A3_Weapons_F",
 	"ace_optics",
-	"WW2_SPE_Assets_c_Weapons_InfantryWeapons_c",
 	"ace_nightvision",
 	"ace_hearing",
-	"RF_Characters_Uniform",
+	"A3_Characters_F_Enoch",
 	"ace_medical_treatment",
 	"A3_Characters_F_AoW"
 };
@@ -99,29 +100,31 @@ class AddonsMetaData
 		};
 		class Item6
 		{
-			className="RF_Weapons";
-			name="Arma 3 Creator DLC: Reaction Forces - Weapons and Accessories";
-			author="Rotators Collective";
-			url="https://reactionforces.rotators.net/";
+			className="A3_Weapons_F_Kart";
+			name="Arma 3 Karts - Weapons and Accessories";
+			author="Bohemia Interactive";
+			url="https://www.arma3.com";
 		};
 		class Item7
 		{
-			className="ace_compat_rf_realisticnames";
-			name="ACE3 - Reaction Forces Compatibility - Realistic Names";
+			className="ace_overheating";
+			name="ACE3 - Overheating";
 			author="ACE-Team";
 			url="https://ace3.acemod.org/";
 		};
 		class Item8
 		{
-			className="ace_optics";
-			name="ACE3 - Optics";
+			className="ace_grenades";
+			name="ACE3 - Grenades";
 			author="ACE-Team";
 			url="https://ace3.acemod.org/";
 		};
 		class Item9
 		{
-			className="WW2_SPE_Assets_c_Weapons_InfantryWeapons_c";
-			name="WW2_SPE_Assets_c_Weapons_InfantryWeapons_c";
+			className="ace_optics";
+			name="ACE3 - Optics";
+			author="ACE-Team";
+			url="https://ace3.acemod.org/";
 		};
 		class Item10
 		{
@@ -139,10 +142,10 @@ class AddonsMetaData
 		};
 		class Item12
 		{
-			className="RF_Characters";
-			name="Arma 3 Creator DLC: Reaction Forces - Characters and Clothing";
-			author="Rotators Collective";
-			url="https://reactionforces.rotators.net/";
+			className="A3_Characters_F_Enoch";
+			name="Arma 3 Contact Platform - Characters and Clothing";
+			author="Bohemia Interactive";
+			url="https://www.arma3.com";
 		};
 		class Item13
 		{
@@ -167,7 +170,6 @@ class DynamicSimulation
 dlcs[]=
 {
 	"OfficialMod",
-	"rf",
 	"Kart",
 	"Enoch"
 };
@@ -264,20 +266,7 @@ class CustomAttributes
 				};
 			};
 		};
-		class Attribute1
-		{
-			property="SPE_All_Obj_FX";
-			expression="false";
-			class Value
-			{
-				class data
-				{
-					singleType="BOOL";
-					value=1;
-				};
-			};
-		};
-		nAttributes=2;
+		nAttributes=1;
 	};
 };
 class Mission
@@ -348,11 +337,11 @@ class Mission
 							};
 							class handgun
 							{
-								name="hgun_DEagle_gold_RF";
+								name="hgun_Pistol_Signal_F";
 								class primaryMuzzleMag
 								{
-									name="7Rnd_50AE_Mag_RF";
-									ammoLeft=7;
+									name="6Rnd_GreenSignal_F";
+									ammoLeft=6;
 								};
 							};
 							class binocular
@@ -361,17 +350,8 @@ class Mission
 							};
 							class uniform
 							{
-								typeName="U_C_HeliPilotCoveralls_Black_RF";
+								typeName="U_C_Uniform_Farmer_01_F";
 								isBackpack=0;
-								class ItemCargo
-								{
-									items=1;
-									class Item0
-									{
-										name="ACE_fieldDressing";
-										count=3;
-									};
-								};
 							};
 							class vest
 							{
@@ -400,9 +380,9 @@ class Mission
 									};
 									class Item3
 									{
-										name="7Rnd_50AE_Mag_RF";
-										count=3;
-										ammoLeft=7;
+										name="6Rnd_RedSignal_F";
+										count=2;
+										ammoLeft=6;
 									};
 								};
 							};

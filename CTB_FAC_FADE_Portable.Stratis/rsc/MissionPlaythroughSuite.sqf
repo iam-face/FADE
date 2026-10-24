@@ -24,10 +24,9 @@ FAC_playthroughSuite__counterAttackTypes = [
     "AssetRetrieval", "SearchDestroy", "ClearArea", "CAS", "Raid", "Hostage", "HVT", "CASEVAC", "CSAR"
 ];
 
-FAC_playthroughSuite__longInitTypes = ["AreaOfOperations", "Operation", "Raid", "Invasion", "InterceptConvoy", "AssetRetrieval", "ClearArea", "EscapeEvasion"];
+FAC_playthroughSuite__longInitTypes = ["AreaOfOperations", "Operation", "Raid", "Invasion", "AssetRetrieval", "ClearArea", "EscapeEvasion"];
 FAC_playthroughSuite__initTimeoutSec = 14;
 FAC_playthroughSuite__longInitTimeoutSec = 50;
-FAC_playthroughSuite__convoyInitTimeoutSec = 40;
 FAC_playthroughSuite__cleanupTimeoutSec = 8;
 FAC_playthroughSuite__betweenMissionSec = 0.5;
 FAC_playthroughSuite__enableQrfProbe = false;
@@ -450,6 +449,31 @@ FAC_playthroughSuite__checkInit = {
         };
     };
 
+    if (_missionType == "AreaOfOperations") then {
+        private _aoPts = missionNamespace getVariable [format ["FADE_aoObjectivePositions_%1", _taskId], []];
+        private _aoBad = 0;
+        {
+            if (!(_x isEqualType []) || { count _x < 2 } || { !([_x, 40] call FADE_posClearOfWater) }) then { _aoBad = _aoBad + 1 };
+        } forEach _aoPts;
+        private _aoMk = 0;
+        for "_aoMi" from 0 to 2 do {
+            private _aoMn = "FADE_ao_pt_" + _taskId + str _aoMi;
+            if (markerShape _aoMn == "") then {
+                _aoBad = _aoBad + 1;
+            } else {
+                _aoMk = _aoMk + 1;
+                if !([markerPos _aoMn] call FADE_surfaceIsDry) then { _aoBad = _aoBad + 1 };
+            };
+        };
+        if (count _aoPts == 3 && { _aoMk == 3 } && { _aoBad == 0 }) then {
+            _pass = _pass + 1;
+            _notes pushBack "AO objectives clear of water";
+        } else {
+            _fail = _fail + 1;
+            _notes pushBack format ["AO objective over water or missing (n=%1 markers=%2 bad=%3)", count _aoPts, _aoMk, _aoBad];
+        };
+    };
+
     if (_missionType == "Operation") then {
         private _zones = missionNamespace getVariable [format ["FADE_operationZoneCenters_%1", _taskId], []];
         private _hqIdx = missionNamespace getVariable [format ["FADE_operationHqIdx_%1", _taskId], -1];
@@ -542,14 +566,10 @@ FAC_playthroughSuite__runOne = {
     [_player] call FAC_playthroughSuite__purgeAllTracked;
     sleep 0.25;
 
-    private _baseInit = if (_missionType == "InterceptConvoy") then {
-        FAC_playthroughSuite__convoyInitTimeoutSec
+    private _baseInit = if (_missionType in FAC_playthroughSuite__longInitTypes) then {
+        FAC_playthroughSuite__longInitTimeoutSec
     } else {
-        if (_missionType in FAC_playthroughSuite__longInitTypes) then {
-            FAC_playthroughSuite__longInitTimeoutSec
-        } else {
-            FAC_playthroughSuite__initTimeoutSec
-        }
+        FAC_playthroughSuite__initTimeoutSec
     };
     private _perMission = (([] call FAC_playthroughSuite__budgetRemaining) / (_missionsLeft max 1)) - FAC_playthroughSuite__betweenMissionSec;
     private _timeout = [_baseInit, 3] call FAC_playthroughSuite__budgetCap;

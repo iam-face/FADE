@@ -1,5 +1,49 @@
 // AOMissionInfil.sqf - AO infiltration civ-zone resolution
 if (!isServer) exitWith {};
+
+// Land position whose centre and a ring around it are clear of the sea.
+// surfaceIsWater is false on the shoreline band where a unit still stands in the water.
+FADE_ao_findLandPos = {
+    params ["_anchor", ["_minDist", 25], ["_maxDist", 250], ["_maxAttempts", 12], ["_pad", 40]];
+    if (!(_anchor isEqualType []) || { count _anchor < 2 }) exitWith { [] };
+    private _norm = {
+        params ["_p"];
+        private _out = +_p;
+        if (count _out < 3) then { _out set [2, 0] };
+        _out
+    };
+    private _clear = {
+        params ["_p"];
+        _p isEqualType [] && { count _p >= 2 } && { [_p, _pad] call FADE_posClearOfWater }
+    };
+    if ([_anchor] call _clear) exitWith { [_anchor] call _norm };
+    private _result = [];
+    private _span = (_maxDist - _minDist) max 1;
+    private _tries = _maxAttempts max 1;
+    for "_a" from 0 to (_tries - 1) do {
+        private _dist = _minDist + ((_a % 5) * (_span / 5));
+        private _cand = [_anchor, _dist, (_a * 47) mod 360] call BIS_fnc_relPos;
+        if !([_cand] call FADE_surfaceIsDry) then { continue };
+        _cand = [[_cand, 0, 35, 5, 0, 0.4, 0, [], _cand], _cand] call FADE_findSafePosArray;
+        if ([_cand] call _clear) exitWith { _result = [_cand] call _norm };
+    };
+    _result
+};
+
+// True when _pos sits on the requested edge of the AO square, just outside the border.
+// Depth is along _attackDir (positive = BLUFOR edge). A town on the same half but far down the coast is not on the edge.
+FADE_ao_posNearZoneEdge = {
+    params ["_center", "_attackDir", "_pos", "_wantBluforSide", ["_halfDepth", 1000], ["_halfWidth", 1000], ["_outsideMax", 400]];
+    if (!(_pos isEqualType []) || { count _pos < 2 }) exitWith { false };
+    if (!(_center isEqualType []) || { count _center < 2 }) exitWith { false };
+    private _dx = (_pos select 0) - (_center select 0);
+    private _dy = (_pos select 1) - (_center select 1);
+    private _depth = (_dx * (cos _attackDir)) + (_dy * (sin _attackDir));
+    private _lat = abs ((-_dx * (sin _attackDir)) + (_dy * (cos _attackDir)));
+    private _edgeDepth = if (_wantBluforSide) then { _depth } else { -_depth };
+    _edgeDepth >= (_halfDepth - 80) && { _edgeDepth <= (_halfDepth + _outsideMax) } && { _lat <= (_halfWidth + 200) }
+};
+
 FADE_ao_resolveInfilCivZones = {
     params [
         "_aoCenter",
@@ -73,6 +117,7 @@ FADE_ao_resolveInfilCivZones = {
             private _depth = [_pos] call _fnc_depthScalar;
             private _onSide = if (_wantBluforSide) then { _depth > 0 } else { _depth < 0 };
             if (!_onSide) then { continue };
+            if !([_aoN, _attackDir, _pos, _wantBluforSide, _zoneHalfDepth, _zoneHalfWidth] call FADE_ao_posNearZoneEdge) then { continue };
             _ranked pushBack [_refN distance2D ([_pos] call FADE_normPos3), _id, _pos];
         } forEach _pool;
         [_ranked, [], { _x select 0 }, "ASCEND"] call BIS_fnc_sortBy
@@ -130,7 +175,10 @@ FADE_ao_resolveInfilCivZones = {
     _opforPick params ["_opforId", "_opforZonePos"];
 
     if (_bluId == "") then {
-        private _pool = _eligibleCiv select { ([_x select 1] call _fnc_depthScalar) > 0 };
+        private _pool = _eligibleCiv select {
+            ([_x select 1] call _fnc_depthScalar) > 0
+            && { [_aoN, _attackDir, _x select 1, true, _zoneHalfDepth, _zoneHalfWidth] call FADE_ao_posNearZoneEdge }
+        };
         if (_opforId != "") then {
             _pool = _pool select { !((_x select 0) isEqualTo _opforId) };
             private _opDepth = [_opforZonePos] call _fnc_depthScalar;
@@ -151,7 +199,11 @@ FADE_ao_resolveInfilCivZones = {
         private _excl = if (_bluId == "") then { [] } else { [_bluId] };
         private _rankedOp = [_opforInfilRef, false, _excl, _eligibleCiv] call _fnc_rankedNear;
         if (_rankedOp isEqualTo []) then {
-            private _pool = _eligibleCiv select { !((_x select 0) in _excl) && { ([_x select 1] call _fnc_depthScalar) < 0 } };
+            private _pool = _eligibleCiv select {
+                !((_x select 0) in _excl)
+                && { ([_x select 1] call _fnc_depthScalar) < 0 }
+                && { [_aoN, _attackDir, _x select 1, false, _zoneHalfDepth, _zoneHalfWidth] call FADE_ao_posNearZoneEdge }
+            };
             if (_bluId != "" && { count _pool > 1 }) then {
                 private _bluDepth = [_bluZonePos] call _fnc_depthScalar;
                 private _oppPool = _pool select {
@@ -172,9 +224,15 @@ FADE_ao_resolveInfilCivZones = {
         };
     };
 
-    // No eligible civ zone: fall back to precomputed AO edge references (outside the rectangle).
-    private _bluAnchor = if (_bluZonePos isEqualType [] && { count _bluZonePos >= 2 }) then { _bluZonePos } else { +_bluInfilRef };
-    private _opforAnchor = if (_opforZonePos isEqualType [] && { count _opforZonePos >= 2 }) then { _opforZonePos } else { +_opforInfilRef };
+    // Civ zone only when it already sits on that edge. Otherwise use the edge reference.
+    private _bluAnchor = if (
+        _bluZonePos isEqualType [] && { count _bluZonePos >= 2 }
+        && { [_aoN, _attackDir, _bluZonePos, true, _zoneHalfDepth, _zoneHalfWidth] call FADE_ao_posNearZoneEdge }
+    ) then { _bluZonePos } else { +_bluInfilRef };
+    private _opforAnchor = if (
+        _opforZonePos isEqualType [] && { count _opforZonePos >= 2 }
+        && { [_aoN, _attackDir, _opforZonePos, false, _zoneHalfDepth, _zoneHalfWidth] call FADE_ao_posNearZoneEdge }
+    ) then { _opforZonePos } else { +_opforInfilRef };
     private _bluPos = [_bluAnchor, _bluInfilRef, true] call _fnc_landAt;
     private _opforPos = [_opforAnchor, _opforInfilRef, false] call _fnc_landAt;
     _bluPos = [_bluPos, _bluInfilRef, true] call _fnc_ensureOutsideAo;
@@ -188,6 +246,19 @@ FADE_ao_resolveInfilCivZones = {
         _opforPos = [_opforPos, _opforInfilRef, false] call _fnc_ensureOutsideAo;
         _oppositeOk = [_bluPos, _opforPos] call _fnc_oppositeHalves;
     };
+
+    private _fnc_keepOnEdge = {
+        params ["_pos", "_edgeRef", "_wantBluforSide"];
+        if ([_aoN, _attackDir, _pos, _wantBluforSide, _zoneHalfDepth, _zoneHalfWidth] call FADE_ao_posNearZoneEdge) exitWith { _pos };
+        if ([_aoN, _attackDir, _edgeRef, _wantBluforSide, _zoneHalfDepth, _zoneHalfWidth] call FADE_ao_posNearZoneEdge) exitWith { _edgeRef };
+        private _edgeDir = if (_wantBluforSide) then { _attackDir } else { _attackDir + 180 };
+        [_aoN, _zoneHalfDepth + 100, _edgeDir] call BIS_fnc_relPos
+    };
+    _bluPos = [_bluPos, _bluInfilRef, true] call _fnc_keepOnEdge;
+    _opforPos = [_opforPos, _opforInfilRef, false] call _fnc_keepOnEdge;
+    if (count _bluPos < 3) then { _bluPos set [2, 0] };
+    if (count _opforPos < 3) then { _opforPos set [2, 0] };
+    _oppositeOk = [_bluPos, _opforPos] call _fnc_oppositeHalves;
 
     // #region agent log
     diag_log format [

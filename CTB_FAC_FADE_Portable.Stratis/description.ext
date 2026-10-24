@@ -238,6 +238,14 @@ class Params
         texts[] = {"Not required", "Required"};
         default = 0;
     };
+    // GAMEPLAY (appended so existing paramsArray indices stay put)
+    class FAC_ProhibitAiUnconscious
+    {
+        title = "GAMEPLAY: Prohibit AI unconscious";
+        values[] = {0, 1};
+        texts[] = {"Off", "On"};
+        default = 1;
+    };
 };
 
 // Respawn: override mission.sqm to avoid respawn on mission start (no script calls forceRespawn).
@@ -266,6 +274,8 @@ class RscDisplayEmpty { idd = -1; movingEnable = 1; enableSimulation = 1; };
 
 // Combo in nested dialog controls does not inherit mission RscCombo fields — use this base for combos under RscDisplay* (FIRES drill, Medical training, etc.).
 class FACRscCombo: RscCombo {
+    font = "PuristaMedium";
+    sizeEx = 0.028;
     maxHistoryDelay = 0;
     shadow = 0;
     arrowEmpty = "\a3\ui_f\data\gui\cfg\scrollbar\arrowempty_ca.paa";
@@ -293,7 +303,7 @@ class RscDisplayVehicle: FAC_Terminal {
 };
 
 
-// Manage Missions dialog -- tabbed: Browse | Active slots
+// Manage Missions dialog -- Browse (cards) | Active slots
 class RscDisplayMissions: FAC_Terminal {
     idd = 60002;
     onLoad = "[] spawn { sleep 0.01; ['onLoad', []] call (missionNamespace getVariable ['FAC_missionsGui_fnc', {}]); };";
